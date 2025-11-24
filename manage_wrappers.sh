@@ -551,7 +551,7 @@ else
             ;;
         info)
             # Check for --help
-            if [ "$2" = "--help" ]; then
+            if [ "$1" = "--help" ]; then
                 echo "fplaunch-manage info <name>"
                 echo "Show detailed info for a Flatpak wrapper, including Flatpak info, installed metadata, remote manifest, and Flathub link."
                 exit 0
@@ -561,7 +561,7 @@ else
             ;;
         manifest)
             # Check for --help
-            if [ "$2" = "--help" ]; then
+            if [ "$1" = "--help" ]; then
                 echo "fplaunch-manage manifest <name> [remote|local]"
                 echo "Show Flatpak manifest for a wrapper. Default: remote. Use 'local' for installed version."
                 exit 0
