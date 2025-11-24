@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Uninstall script for Flatpak Launch Wrappers
 
