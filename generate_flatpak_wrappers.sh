@@ -64,9 +64,9 @@ mkdir -p "\$PREF_DIR"
 if [ "\$1" = "--help" ]; then
     echo "Wrapper for \$NAME"
     echo "Usage: \$0 [args]"
-    echo "Run '\$0 --fplaunch-help' for more options."
+    echo "Run '\$0 --fpwrapper-help' for more options."
     exit 0
-elif [ "\$1" = "--fplaunch-help" ]; then
+elif [ "\$1" = "--fpwrapper-help" ]; then
     echo "Wrapper for \$NAME"
     echo "Flatpak ID: \$ID"
     pref=\$(cat "\$PREF_FILE" 2>/dev/null || echo "none")
@@ -74,7 +74,7 @@ elif [ "\$1" = "--fplaunch-help" ]; then
     echo ""
     echo "Available options:"
     echo "  --help                 Show basic usage"
-    echo "  --fplaunch-help        Show this detailed help"
+    echo "  --fpwrapper-help       Show this detailed help"
     echo "  --fpwrapper-info       Show wrapper info"
     echo "  --fpwrapper-config-dir Show Flatpak data directory"
     echo "  --fpwrapper-set-override [system|flatpak]  Set launch preference"
