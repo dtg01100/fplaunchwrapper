@@ -1,0 +1,121 @@
+#!/bin/bash
+
+BIN_DIR="${BIN_DIR:-$HOME/bin}"
+mkdir -p "$BIN_DIR"
+
+# Save BIN_DIR to config
+CONFIG_DIR="$HOME/.config/flatpak-wrappers"
+mkdir -p "$CONFIG_DIR"
+echo "$BIN_DIR" > "$CONFIG_DIR/bin_dir"
+
+# Get list of installed Flatpak app IDs (user and system)
+installed_ids=$( (flatpak list --app --columns=application 2>/dev/null; flatpak list --app --columns=application --system 2>/dev/null) | sort | uniq )
+if [ $? -ne 0 ]; then
+    echo "Error: Flatpak not installed or command failed."
+    exit 1
+fi
+
+# Get list of existing wrapper scripts
+existing_scripts=$(ls "$BIN_DIR" 2>/dev/null | grep -v '^$' || true)
+
+# Cleanup: Remove wrappers for uninstalled apps
+for script in $existing_scripts; do
+    script_path="$BIN_DIR/$script"
+    if [ -f "$script_path" ]; then
+        # Extract ID from script content
+        id=$(grep "flatpak run" "$script_path" | awk '{print $3}' || true)
+        if [ -n "$id" ] && ! echo "$installed_ids" | grep -q "^$id$"; then
+            rm "$script_path"
+            pref_file="$HOME/.config/flatpak-wrappers/$script.pref"
+            [ -f "$pref_file" ] && rm "$pref_file"
+            echo "Removed obsolete wrapper and preference: $script"
+        fi
+    fi
+done
+
+# Create wrappers for installed apps
+echo "$installed_ids" | while read -r id; do
+    if [ -z "$id" ]; then continue; fi
+    # Check blocklist
+    if grep -q "^$id$" "$HOME/.config/flatpak-wrappers/blocklist" 2>/dev/null; then
+        echo "Skipping blocked $id"
+        continue
+    fi
+    name=$(echo "$id" | awk -F. '{print tolower($NF)}')
+    if [ -z "$name" ] || [[ "$name" =~ [^a-z0-9_-] ]]; then
+        echo "Skipping invalid name for $id"
+        continue
+    fi
+    script_path="$BIN_DIR/$name"
+    cat > "$script_path" << EOF
+#!/bin/bash
+
+NAME="$name"
+ID="$id"
+PREF_DIR="\$HOME/.config/flatpak-wrappers"
+PREF_FILE="\$PREF_DIR/\$NAME.pref"
+BIN_DIR_FILE="\$PREF_DIR/bin_dir"
+SCRIPT_BIN_DIR="$BIN_DIR"
+
+mkdir -p "\$PREF_DIR"
+
+if [ -f "\$PREF_FILE" ]; then
+    PREF=\$(cat "\$PREF_FILE")
+else
+    PREF=""
+fi
+
+# Check for system command at launch time
+SYSTEM_EXISTS=false
+if command -v "\$NAME" >/dev/null 2>&1; then
+    CMD_PATH=\$(which "\$NAME")
+    if [[ "\$CMD_PATH" != "\$SCRIPT_BIN_DIR/\$NAME" ]]; then
+        SYSTEM_EXISTS=true
+    fi
+fi
+
+if [ "\$PREF" = "system" ]; then
+    if [ "\$SYSTEM_EXISTS" = true ]; then
+        exec "\$NAME" "\$@"
+    else
+        # System command gone, fall back to flatpak
+        PREF="flatpak"
+        echo "flatpak" > "\$PREF_FILE"
+        exec flatpak run "\$ID" "\$@"
+    fi
+elif [ "\$PREF" = "flatpak" ]; then
+    exec flatpak run "\$ID" "\$@"
+else
+    # No pref set
+    if [ "\$SYSTEM_EXISTS" = true ]; then
+        echo "Multiple options for '\$NAME':"
+        echo "1. System package (\$CMD_PATH)"
+        echo "2. Flatpak app (\$ID)"
+        read -p "Choose (1/2, default 1): " choice
+        choice=\${choice:-1}
+        if [ "\$choice" = "1" ]; then
+            PREF="system"
+            echo "\$PREF" > "\$PREF_FILE"
+            exec "\$NAME" "\$@"
+        elif [ "\$choice" = "2" ]; then
+            PREF="flatpak"
+            echo "\$PREF" > "\$PREF_FILE"
+            exec flatpak run "\$ID" "\$@"
+        else
+            echo "Invalid choice, defaulting to system."
+            PREF="system"
+            echo "\$PREF" > "\$PREF_FILE"
+            exec "\$NAME" "\$@"
+        fi
+    else
+        PREF="flatpak"
+        echo "\$PREF" > "\$PREF_FILE"
+        exec flatpak run "\$ID" "\$@"
+    fi
+fi
+EOF
+    chmod +x "$script_path"
+    echo "Created/updated wrapper: $name"
+done
+
+echo "Flatpak wrapper generation complete."
