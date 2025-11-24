@@ -32,13 +32,15 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 - Run unrestricted: `chrome --fpwrapper-run-unrestricted` for transient full permissions (dangerous).
 - Env vars: Set transient env vars via `fplaunch-manage set-env` (for permanent, use `flatpak override <app> --env=VAR=value`).
 - Set override: `chrome --fpwrapper-set-override [system|flatpak]` to force preference (prompts if not specified).
-- Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`.
+- Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`, `fplaunch-manage info <name>`, `fplaunch-manage manifest <name>`.
 - Install: `fplaunch-manage install <app>` to install a Flatpak and create wrapper.
 - Launch: `fplaunch-manage launch <name>` to launch a wrapper.
-- Examples:
-  - `fplaunch-manage set-alias chrome browser`
-  - `fplaunch-manage export-prefs prefs.tar.gz`
-  - `bash manage_wrappers.sh block com.example.App`
+ - Examples:
+   - `fplaunch-manage set-alias chrome browser`
+   - `fplaunch-manage export-prefs prefs.tar.gz`
+   - `fplaunch-manage info chrome` to show detailed app info and manifest
+   - `fplaunch-manage manifest chrome local > manifest.ini` to save local manifest
+   - `bash manage_wrappers.sh block com.example.App`
 
 ## Scripts
 
@@ -46,7 +48,7 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 - `uninstall.sh`: Removes wrappers, preferences, and systemd units.
 - `fplaunch-generate`: Generates/updates wrappers.
 - `fplaunch-setup-systemd`: Configures systemd for auto-updates.
-- `manage_wrappers.sh`: Management utility with commands: list, remove, remove-pref, set-pref, set-alias, remove-alias, export-prefs, import-prefs, block, unblock, list-blocked, regenerate.
+- `manage_wrappers.sh`: Management utility with commands: list, remove, remove-pref, set-pref, set-alias, remove-alias, export-prefs, import-prefs, block, unblock, list-blocked, regenerate, info, manifest.
 
 ## Requirements
 
