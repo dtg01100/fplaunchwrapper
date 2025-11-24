@@ -10,12 +10,25 @@ if ! command -v flatpak &> /dev/null; then
     echo "Warning: Flatpak is not installed. This utility requires Flatpak to function."
 fi
 
-auto_update_possible=false
 if command -v systemctl &> /dev/null && systemctl --user is-systemd-running &> /dev/null 2>&1; then
-    auto_update_possible=true
     echo "Systemd user available for auto-updates."
 elif command -v crontab &> /dev/null; then
-    auto_update_possible=true
+    echo "Crontab available for auto-updates."
+else
+    echo "Warning: Neither systemd nor crontab available. Auto-updates will not be possible."
+fi
+
+if command -v systemctl &> /dev/null && systemctl --user is-systemd-running &> /dev/null 2>&1; then
+    echo "Systemd user available for auto-updates."
+elif command -v crontab &> /dev/null; then
+    echo "Crontab available for auto-updates."
+else
+    echo "Warning: Neither systemd nor crontab available. Auto-updates will not be possible."
+fi
+
+if command -v systemctl &> /dev/null && systemctl --user is-systemd-running &> /dev/null 2>&1; then
+    echo "Systemd user available for auto-updates."
+elif command -v crontab &> /dev/null; then
     echo "Crontab available for auto-updates."
 else
     echo "Warning: Neither systemd nor crontab available. Auto-updates will not be possible."
@@ -39,7 +52,7 @@ echo "Generating wrappers..."
 bash "$SCRIPT_DIR/generate_flatpak_wrappers.sh" "$BIN_DIR"
 
 # Ask for auto-updates
-read -p "Enable automatic updates? (y/n) [y]: " enable_auto
+read -r -p "Enable automatic updates? (y/n) [y]: " enable_auto
 enable_auto=${enable_auto:-y}
 if [[ $enable_auto =~ ^[Yy]$ ]]; then
     echo "Setting up automatic updates..."
