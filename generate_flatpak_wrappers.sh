@@ -59,7 +59,7 @@ SCRIPT_BIN_DIR="$BIN_DIR"
 
 mkdir -p "\$PREF_DIR"
 
-if [ "\$1" = "--help" ] || [ "\$1" = "--flatpak-info" ]; then
+if [ "\$1" = "--help" ] || [ "\$1" = "--wrapper-info" ]; then
     echo "Wrapper for \$NAME"
     echo "Flatpak ID: \$ID"
     pref=\$(cat "\$PREF_FILE" 2>/dev/null || echo "none")
