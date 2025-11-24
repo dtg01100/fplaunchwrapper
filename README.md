@@ -17,8 +17,8 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 ## Installation
 
 1. Clone or download the scripts.
-2. Run `bash install.sh [optional_bin_dir]` to install (default bin dir: `~/bin`). You'll be prompted to enable automatic updates.
-3. Ensure `~/bin` (or your chosen dir) is in your PATH.
+2. Run `bash install.sh [optional_bin_dir]` to install (default bin dir: `~/.local/bin`). You'll be prompted to enable automatic updates.
+3. Ensure `~/.local/bin` (or your chosen dir) is in your PATH.
 
 ## Usage
 

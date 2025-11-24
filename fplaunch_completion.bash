@@ -5,9 +5,9 @@ _fplaunch_manage() {
     _init_completion || return
 
     # Get BIN_DIR from config
-    local config_dir="$HOME/.config/flatpak-wrappers"
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers"
     local bin_dir_file="$config_dir/bin_dir"
-    local bin_dir="$HOME/bin"
+    local bin_dir="$HOME/.local/bin"
     if [ -f "$bin_dir_file" ]; then
         bin_dir=$(cat "$bin_dir_file")
     fi

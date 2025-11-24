@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WRAPPER_SCRIPT="$SCRIPT_DIR/generate_flatpak_wrappers.sh"
-UNIT_DIR="$HOME/.config/systemd/user"
+UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 FLATPAK_BIN_DIR="$HOME/.local/share/flatpak/exports/bin"
 
 # Check prerequisites

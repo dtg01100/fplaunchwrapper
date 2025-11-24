@@ -3,9 +3,9 @@
 # Uninstall script for Flatpak Launch Wrappers
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$HOME/.config/flatpak-wrappers"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers"
 BIN_DIR_FILE="$CONFIG_DIR/bin_dir"
-BIN_DIR="$HOME/bin"  # default
+BIN_DIR="$HOME/.local/bin"  # default
 if [ -f "$BIN_DIR_FILE" ]; then
     BIN_DIR=$(cat "$BIN_DIR_FILE")
 fi
@@ -27,7 +27,7 @@ systemctl --user disable flatpak-wrappers.path 2>/dev/null || true
 systemctl --user disable flatpak-wrappers.timer 2>/dev/null || true
 
 # Remove systemd unit files
-UNIT_DIR="$HOME/.config/systemd/user"
+UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 rm -f "$UNIT_DIR/flatpak-wrappers.service"
 rm -f "$UNIT_DIR/flatpak-wrappers.path"
 rm -f "$UNIT_DIR/flatpak-wrappers.timer"

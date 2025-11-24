@@ -35,13 +35,13 @@ else
 fi
 
 # Set BIN_DIR from arg or default
-BIN_DIR="${1:-$HOME/bin}"
+BIN_DIR="${1:-$HOME/.local/bin}"
 
-if [ "$BIN_DIR" != "$HOME/bin" ]; then
-    read -r -p "Install to '$BIN_DIR' instead of default '$HOME/bin'? (y/n) [y]: " confirm
+if [ "$BIN_DIR" != "$HOME/.local/bin" ]; then
+    read -r -p "Install to '$BIN_DIR' instead of default '$HOME/.local/bin'? (y/n) [y]: " confirm
     confirm=${confirm:-y}
     if [[ ! $confirm =~ ^[Yy]$ ]]; then
-        BIN_DIR="$HOME/bin"
+        BIN_DIR="$HOME/.local/bin"
         echo "Using default directory: $BIN_DIR"
     fi
 fi
@@ -57,6 +57,11 @@ echo "Installing Flatpak Launch Wrappers to $BIN_DIR..."
 chmod +x "$SCRIPT_DIR/generate_flatpak_wrappers.sh"
 chmod +x "$SCRIPT_DIR/setup_systemd.sh"
 chmod +x "$SCRIPT_DIR/manage_wrappers.sh"
+
+# Copy and make lib scripts executable
+mkdir -p "$BIN_DIR/lib"
+cp "$SCRIPT_DIR/lib/"*.sh "$BIN_DIR/lib/"
+chmod +x "$BIN_DIR/lib/"*.sh
 
 # Export BIN_DIR for generate script
 export BIN_DIR
