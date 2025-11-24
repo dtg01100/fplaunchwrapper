@@ -54,8 +54,8 @@ fi
 echo "Installing Flatpak Launch Wrappers to $BIN_DIR..."
 
 # Make scripts executable
-chmod +x "$SCRIPT_DIR/generate_flatpak_wrappers.sh"
-chmod +x "$SCRIPT_DIR/setup_systemd.sh"
+chmod +x "$SCRIPT_DIR/fplaunch-generate"
+chmod +x "$SCRIPT_DIR/fplaunch-setup-systemd"
 chmod +x "$SCRIPT_DIR/manage_wrappers.sh"
 
 # Copy and make lib scripts executable
@@ -63,21 +63,27 @@ mkdir -p "$BIN_DIR/lib"
 cp "$SCRIPT_DIR/lib/"*.sh "$BIN_DIR/lib/"
 chmod +x "$BIN_DIR/lib/"*.sh
 
+# Copy generate and setup scripts
+cp "$SCRIPT_DIR/fplaunch-generate" "$BIN_DIR/"
+cp "$SCRIPT_DIR/fplaunch-setup-systemd" "$BIN_DIR/"
+chmod +x "$BIN_DIR/fplaunch-generate"
+chmod +x "$BIN_DIR/fplaunch-setup-systemd"
+
 # Export BIN_DIR for generate script
 export BIN_DIR
 
 # Generate initial wrappers
 echo "Generating wrappers..."
-bash "$SCRIPT_DIR/generate_flatpak_wrappers.sh" "$BIN_DIR"
+bash "$SCRIPT_DIR/fplaunch-generate" "$BIN_DIR"
 
 # Ask for auto-updates
 read -r -p "Enable automatic updates? (y/n) [y]: " enable_auto
 enable_auto=${enable_auto:-y}
 if [[ $enable_auto =~ ^[Yy]$ ]]; then
     echo "Setting up automatic updates..."
-    bash "$SCRIPT_DIR/setup_systemd.sh"
+    bash "$BIN_DIR/fplaunch-setup-systemd"
 else
-    echo "Skipping automatic updates. Run 'bash $SCRIPT_DIR/generate_flatpak_wrappers.sh $BIN_DIR' manually to update wrappers."
+    echo "Skipping automatic updates. Run 'bash $BIN_DIR/fplaunch-generate $BIN_DIR' or 'fplaunch-manage regenerate' manually to update wrappers."
 fi
 
 # Copy manager and completion

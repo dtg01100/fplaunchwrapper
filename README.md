@@ -44,8 +44,8 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 
 - `install.sh`: Sets up wrappers and systemd units (accepts optional bin directory).
 - `uninstall.sh`: Removes wrappers, preferences, and systemd units.
-- `generate_flatpak_wrappers.sh`: Generates/updates wrappers.
-- `setup_systemd.sh`: Configures systemd for auto-updates.
+- `fplaunch-generate`: Generates/updates wrappers.
+- `fplaunch-setup-systemd`: Configures systemd for auto-updates.
 - `manage_wrappers.sh`: Management utility with commands: list, remove, remove-pref, set-pref, set-alias, remove-alias, export-prefs, import-prefs, block, unblock, list-blocked, regenerate.
 
 ## Requirements

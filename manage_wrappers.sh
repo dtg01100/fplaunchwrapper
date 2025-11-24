@@ -112,7 +112,7 @@ uninstall_all() {
     systemctl --user daemon-reload 2>/dev/null || true
     
     # Remove cron job if exists
-    WRAPPER_SCRIPT="$SCRIPT_DIR/generate_flatpak_wrappers.sh"
+    WRAPPER_SCRIPT="$SCRIPT_DIR/fplaunch-generate"
     if command -v crontab &> /dev/null; then
         crontab -l 2>/dev/null | grep -v "$WRAPPER_SCRIPT" | crontab - 2>/dev/null || true
     fi
@@ -383,10 +383,10 @@ set_script() {
 
 regenerate() {
     echo "Regenerating all wrappers..."
-    if [ -f "$SCRIPT_DIR/generate_flatpak_wrappers.sh" ]; then
-        "$SCRIPT_DIR/generate_flatpak_wrappers.sh" "$BIN_DIR"
+    if [ -f "$SCRIPT_DIR/fplaunch-generate" ]; then
+        "$SCRIPT_DIR/fplaunch-generate" "$BIN_DIR"
     else
-        echo "Error: generate_flatpak_wrappers.sh not found"
+        echo "Error: fplaunch-generate not found"
         return 1
     fi
 }
