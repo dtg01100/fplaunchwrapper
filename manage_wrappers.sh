@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
 
+# Check for --help as first argument
+if [ "$1" = "--help" ]; then
+    cat << 'EOF'
+Usage: fplaunch-manage <command> [args]
+       fplaunch-manage --help
+
+For command-specific help: fplaunch-manage <command> --help
+
+Flatpak Launch Wrapper management utility.
+EOF
+    exit 0
+fi
+
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers"
 BIN_DIR_FILE="$CONFIG_DIR/bin_dir"
 BIN_DIR="$HOME/.local/bin"  # default
@@ -537,10 +550,22 @@ else
             launch_wrapper "$1"
             ;;
         info)
+            # Check for --help
+            if [ "$2" = "--help" ]; then
+                echo "fplaunch-manage info <name>"
+                echo "Show detailed info for a Flatpak wrapper, including Flatpak info, installed metadata, remote manifest, and Flathub link."
+                exit 0
+            fi
             if [ $# -ne 1 ]; then usage; fi
             show_info "$1"
             ;;
         manifest)
+            # Check for --help
+            if [ "$2" = "--help" ]; then
+                echo "fplaunch-manage manifest <name> [remote|local]"
+                echo "Show Flatpak manifest for a wrapper. Default: remote. Use 'local' for installed version."
+                exit 0
+            fi
             if [ $# -lt 1 ] || [ $# -gt 2 ]; then usage; fi
             show_manifest "$1" "${2:-remote}"
             ;;
