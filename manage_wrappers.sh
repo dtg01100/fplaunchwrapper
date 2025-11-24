@@ -36,6 +36,8 @@ Commands:
   list-blocked         - List blocked Flatpak IDs
   install app [remote] - Install Flatpak app and create wrapper
   launch name          - Launch wrapper by name
+  info name            - Show detailed info for a wrapper
+  manifest name [remote|local] - Show Flatpak manifest for a wrapper (default: remote)
   regenerate           - Regenerate all wrappers
   files                - List all generated files
   uninstall            - Remove all generated files and config
@@ -381,6 +383,60 @@ set_script() {
     echo "Set pre-launch script for $name"
 }
 
+show_manifest() {
+    local name="$1"
+    local type="${2:-remote}"
+    local id
+    if [ ! -f "$BIN_DIR/$name" ]; then
+        echo "Wrapper '$name' not found" >&2
+        return 1
+    fi
+    id=$(grep '^ID=' "$BIN_DIR/$name" | cut -d'"' -f2)
+    if [ -z "$id" ]; then
+        echo "Could not find Flatpak ID for '$name'" >&2
+        return 1
+    fi
+    case "$type" in
+        remote)
+            flatpak remote-info --show-metadata "$(flatpak info "$id" | grep Origin | awk '{print $2}')" "$id" 2>/dev/null || echo "Remote manifest not available" >&2
+            ;;
+        local)
+            flatpak info --show-metadata "$id" 2>/dev/null || echo "Local manifest not available" >&2
+            ;;
+        *)
+            echo "Invalid type: $type. Use 'remote' or 'local'." >&2
+            return 1
+            ;;
+    esac
+}
+
+show_info() {
+    local name="$1"
+    local id
+    if [ ! -f "$BIN_DIR/$name" ]; then
+        echo "Wrapper '$name' not found"
+        return 1
+    fi
+    id=$(grep '^ID=' "$BIN_DIR/$name" | cut -d'"' -f2)
+    if [ -z "$id" ]; then
+        echo "Could not find Flatpak ID for '$name'"
+        return 1
+    fi
+    echo "Wrapper: $name"
+    echo "Flatpak ID: $id"
+    echo
+    echo "Flatpak Info:"
+    flatpak info "$id" 2>/dev/null || echo "Failed to get Flatpak info"
+    echo
+    echo "Installed Metadata:"
+    flatpak info --show-metadata "$id" 2>/dev/null || echo "Installed metadata not available"
+    echo
+    echo "Remote Manifest:"
+    flatpak remote-info --show-metadata "$(flatpak info "$id" | grep Origin | awk '{print $2}')" "$id" 2>/dev/null || echo "Remote manifest not available"
+    echo
+    echo "Flathub Page: https://flathub.org/apps/$id"
+}
+
 regenerate() {
     echo "Regenerating all wrappers..."
     if [ -f "$SCRIPT_DIR/fplaunch-generate" ]; then
@@ -479,6 +535,14 @@ else
         launch)
             if [ $# -ne 1 ]; then usage; fi
             launch_wrapper "$1"
+            ;;
+        info)
+            if [ $# -ne 1 ]; then usage; fi
+            show_info "$1"
+            ;;
+        manifest)
+            if [ $# -lt 1 ] || [ $# -gt 2 ]; then usage; fi
+            show_manifest "$1" "${2:-remote}"
             ;;
         regenerate)
             regenerate
