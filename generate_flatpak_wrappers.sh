@@ -79,7 +79,7 @@ elif [ "\$1" = "--fpwrapper-help" ]; then
     echo "Current preference: \$pref"
     echo ""
     echo "Available options:"
-    echo "  --help                       Show basic usage"
+    echo "  --help                          Show basic usage"
     echo "  --fpwrapper-help             Show this detailed help"
     echo "  --fpwrapper-info             Show wrapper info"
     echo "  --fpwrapper-config-dir       Show Flatpak data directory"

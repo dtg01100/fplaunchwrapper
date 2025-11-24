@@ -75,8 +75,17 @@ else
     echo "Skipping automatic updates. Run 'bash $SCRIPT_DIR/generate_flatpak_wrappers.sh $BIN_DIR' manually to update wrappers."
 fi
 
-# Copy manager to bin dir
+# Copy manager and completion
 cp "$SCRIPT_DIR/manage_wrappers.sh" "$BIN_DIR/fplaunch-manage"
 chmod +x "$BIN_DIR/fplaunch-manage"
+
+if [ -d "$HOME/.bashrc.d" ]; then
+    cp "$SCRIPT_DIR/fplaunch_completion.bash" "$HOME/.bashrc.d/fplaunch_completion.bash"
+    echo "Bash completion installed to ~/.bashrc.d/fplaunch_completion.bash"
+else
+    cp "$SCRIPT_DIR/fplaunch_completion.bash" "$BIN_DIR/fplaunch_completion.bash"
+    echo "Bash completion copied to $BIN_DIR/fplaunch_completion.bash"
+    echo "To enable, add 'source $BIN_DIR/fplaunch_completion.bash' to your ~/.bashrc"
+fi
 
 echo "Installation complete. Wrappers are in $BIN_DIR. Use 'fplaunch-manage' to configure."

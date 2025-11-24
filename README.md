@@ -33,6 +33,8 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 - Env vars: Set transient env vars via `fplaunch-manage set-env` (for permanent, use `flatpak override <app> --env=VAR=value`).
 - Set override: `chrome --fpwrapper-set-override [system|flatpak]` to force preference (prompts if not specified).
 - Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`.
+- Install: `fplaunch-manage install <app>` to install a Flatpak and create wrapper.
+- Launch: `fplaunch-manage launch <name>` to launch a wrapper.
 - Examples:
   - `fplaunch-manage set-alias chrome browser`
   - `fplaunch-manage export-prefs prefs.tar.gz`
