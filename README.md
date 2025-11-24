@@ -21,6 +21,7 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 ## Usage
 
 - Launch apps: `chrome`, `firefox`, etc.
+- Get info: `chrome --flatpak-info` or `chrome --help`.
 - Manage: `bash manage_wrappers.sh` for interactive menu, or use CLI commands like `bash manage_wrappers.sh list`.
 
 ## Scripts
