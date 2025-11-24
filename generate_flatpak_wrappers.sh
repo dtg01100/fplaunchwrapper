@@ -73,9 +73,25 @@ elif [ "\$1" = "--fpwrapper-config-dir" ]; then
     echo "\$config_dir"
     exit 0
 elif [ "\$1" = "--fpwrapper-set-override" ]; then
-    if [ "\$2" = "system" ] || [ "\$2" = "flatpak" ]; then
-        echo "\$2" > "\$PREF_FILE"
-        echo "Preference set to \$2"
+    if [ -z "\$2" ]; then
+        echo "Choose override:"
+        echo "1. system"
+        echo "2. flatpak"
+        read -p "Choice (1/2): " choice
+        if [ "\$choice" = "1" ]; then
+            pref="system"
+        elif [ "\$choice" = "2" ]; then
+            pref="flatpak"
+        else
+            echo "Invalid choice"
+            exit 1
+        fi
+    else
+        pref="\$2"
+    fi
+    if [ "\$pref" = "system" ] || [ "\$pref" = "flatpak" ]; then
+        echo "\$pref" > "\$PREF_FILE"
+        echo "Preference set to \$pref"
     else
         echo "Invalid override: use 'system' or 'flatpak'"
     fi
