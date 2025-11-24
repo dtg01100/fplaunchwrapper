@@ -17,7 +17,7 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 ## Installation
 
 1. Clone or download the scripts.
-2. Run `bash install.sh [optional_bin_dir]` to install (default bin dir: `~/bin`).
+2. Run `bash install.sh [optional_bin_dir]` to install (default bin dir: `~/bin`). You'll be prompted to enable automatic updates.
 3. Ensure `~/bin` (or your chosen dir) is in your PATH.
 
 ## Usage
@@ -42,7 +42,7 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 
 - Bash
 - Flatpak
-- Systemd or crontab (for auto-updates; falls back to crontab if systemd unavailable)
+- Systemd or crontab (optional, for auto-updates; falls back to crontab if systemd unavailable)
 
 ## License
 

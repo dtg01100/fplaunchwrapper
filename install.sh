@@ -21,8 +21,14 @@ export BIN_DIR
 echo "Generating wrappers..."
 bash "$SCRIPT_DIR/generate_flatpak_wrappers.sh" "$BIN_DIR"
 
-# Setup systemd units
-echo "Setting up systemd units..."
-bash "$SCRIPT_DIR/setup_systemd.sh"
+# Ask for auto-updates
+read -p "Enable automatic updates? (y/n) [y]: " enable_auto
+enable_auto=${enable_auto:-y}
+if [[ $enable_auto =~ ^[Yy]$ ]]; then
+    echo "Setting up automatic updates..."
+    bash "$SCRIPT_DIR/setup_systemd.sh"
+else
+    echo "Skipping automatic updates. Run 'bash $SCRIPT_DIR/generate_flatpak_wrappers.sh $BIN_DIR' manually to update wrappers."
+fi
 
 echo "Installation complete. Wrappers are in $BIN_DIR. Use manage_wrappers.sh to configure."
