@@ -4,6 +4,23 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Sanity checks
+echo "Checking dependencies..."
+if ! command -v flatpak &> /dev/null; then
+    echo "Warning: Flatpak is not installed. This utility requires Flatpak to function."
+fi
+
+auto_update_possible=false
+if command -v systemctl &> /dev/null && systemctl --user is-systemd-running &> /dev/null 2>&1; then
+    auto_update_possible=true
+    echo "Systemd user available for auto-updates."
+elif command -v crontab &> /dev/null; then
+    auto_update_possible=true
+    echo "Crontab available for auto-updates."
+else
+    echo "Warning: Neither systemd nor crontab available. Auto-updates will not be possible."
+fi
+
 # Set BIN_DIR from arg or default
 BIN_DIR="${1:-$HOME/bin}"
 
