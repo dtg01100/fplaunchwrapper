@@ -17,6 +17,10 @@ usage() {
     echo "  remove <name>        - Remove a specific wrapper"
     echo "  remove-pref <name>   - Remove preference for a wrapper"
     echo "  set-pref <name> <system|flatpak> - Set preference for a wrapper"
+    echo "  set-alias <name> <alias> - Set an alias for a wrapper"
+    echo "  remove-alias <alias> - Remove an alias"
+    echo "  export-prefs <file>  - Export preferences and blocklist to file"
+    echo "  import-prefs <file>  - Import preferences and blocklist from file"
     echo "  block <id>           - Block a Flatpak ID from getting a wrapper"
     echo "  unblock <id>         - Unblock a Flatpak ID"
     echo "  list-blocked         - List blocked IDs"
@@ -69,6 +73,52 @@ set_pref() {
     pref_file="$CONFIG_DIR/$name.pref"
     echo "$choice" > "$pref_file"
     echo "Set preference for $name to $choice"
+}
+
+set_alias() {
+    name="$1"
+    alias="$2"
+    script_path="$BIN_DIR/$name"
+    alias_path="$BIN_DIR/$alias"
+    if [ ! -f "$script_path" ]; then
+        echo "Wrapper $name not found"
+        return
+    fi
+    if [ -e "$alias_path" ]; then
+        echo "Alias $alias already exists"
+        return
+    fi
+    ln -s "$script_path" "$alias_path"
+    echo "$name $alias" >> "$CONFIG_DIR/aliases"
+    echo "Set alias $alias for $name"
+}
+
+remove_alias() {
+    alias="$1"
+    alias_path="$BIN_DIR/$alias"
+    if [ -L "$alias_path" ]; then
+        rm "$alias_path"
+        sed -i "/ $alias$/d" "$CONFIG_DIR/aliases" 2>/dev/null
+        echo "Removed alias $alias"
+    else
+        echo "Alias $alias not found"
+    fi
+}
+
+export_prefs() {
+    file="$1"
+    tar -czf "$file" -C "$CONFIG_DIR" . 2>/dev/null
+    echo "Exported preferences to $file"
+}
+
+import_prefs() {
+    file="$1"
+    if [ -f "$file" ]; then
+        tar -xzf "$file" -C "$CONFIG_DIR" 2>/dev/null
+        echo "Imported preferences from $file"
+    else
+        echo "File $file not found"
+    fi
 }
 
 block_id() {
@@ -147,12 +197,16 @@ if [ $# -eq 0 ]; then
         echo "2. Remove wrapper"
         echo "3. Remove preference"
         echo "4. Set preference"
-        echo "5. Block ID"
-        echo "6. Unblock ID"
-        echo "7. List blocked IDs"
-        echo "8. Regenerate wrappers"
-        echo "9. Exit"
-        read -p "Choose an option (1-9): " option
+        echo "5. Set alias"
+        echo "6. Remove alias"
+        echo "7. Export preferences"
+        echo "8. Import preferences"
+        echo "9. Block ID"
+        echo "10. Unblock ID"
+        echo "11. List blocked IDs"
+        echo "12. Regenerate wrappers"
+        echo "13. Exit"
+        read -p "Choose an option (1-13): " option
         case $option in
             1)
                 list_wrappers
@@ -174,20 +228,38 @@ if [ $# -eq 0 ]; then
                 fi
                 ;;
             5)
+                if select_wrapper; then
+                    read -p "Enter alias name: " alias
+                    set_alias "$selected" "$alias"
+                fi
+                ;;
+            6)
+                read -p "Enter alias to remove: " alias
+                remove_alias "$alias"
+                ;;
+            7)
+                read -p "Enter export file path: " file
+                export_prefs "$file"
+                ;;
+            8)
+                read -p "Enter import file path: " file
+                import_prefs "$file"
+                ;;
+            9)
                 read -p "Enter Flatpak ID to block: " id
                 block_id "$id"
                 ;;
-            6)
+            10)
                 read -p "Enter Flatpak ID to unblock: " id
                 unblock_id "$id"
                 ;;
-            7)
+            11)
                 list_blocked
                 ;;
-            8)
+            12)
                 regenerate
                 ;;
-            9)
+            13)
                 exit 0
                 ;;
             *)
@@ -211,11 +283,27 @@ else
             if [ $# -ne 1 ]; then usage; fi
             remove_pref "$1"
             ;;
-        set-pref)
-            if [ $# -ne 2 ]; then usage; fi
-            set_pref "$1" "$2"
-            ;;
-        block)
+    set-pref)
+        if [ $# -ne 2 ]; then usage; fi
+        set_pref "$1" "$2"
+        ;;
+    set-alias)
+        if [ $# -ne 2 ]; then usage; fi
+        set_alias "$1" "$2"
+        ;;
+    remove-alias)
+        if [ $# -ne 1 ]; then usage; fi
+        remove_alias "$1"
+        ;;
+    export-prefs)
+        if [ $# -ne 1 ]; then usage; fi
+        export_prefs "$1"
+        ;;
+    import-prefs)
+        if [ $# -ne 1 ]; then usage; fi
+        import_prefs "$1"
+        ;;
+    block)
             if [ $# -ne 1 ]; then usage; fi
             block_id "$1"
             ;;

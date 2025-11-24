@@ -26,9 +26,11 @@ rm -f "$UNIT_DIR/flatpak-wrappers.path"
 rm -f "$UNIT_DIR/flatpak-wrappers.timer"
 systemctl --user daemon-reload 2>/dev/null || true
 
-# Remove wrappers
+# Remove wrappers and aliases
 for script in "$BIN_DIR"/*; do
     if [ -f "$script" ] && grep -q "flatpak run" "$script" 2>/dev/null; then
+        rm "$script"
+    elif [ -L "$script" ]; then
         rm "$script"
     fi
 done
