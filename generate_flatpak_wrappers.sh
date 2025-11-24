@@ -84,13 +84,15 @@ elif [ "\$1" = "--fpwrapper-help" ]; then
     echo "  --fpwrapper-info             Show wrapper info"
     echo "  --fpwrapper-config-dir       Show Flatpak data directory"
     echo "  --fpwrapper-sandbox-info     Show Flatpak sandbox details"
-    echo "  --fpwrapper-set-override [system|flatpak]  Set launch preference"
+    echo "  --fpwrapper-edit-sandbox     Edit Flatpak permissions
+  --fpwrapper-set-override [system|flatpak]  Set launch preference"
     echo ""
     echo "Examples:"
     echo "  \$0 --fpwrapper-info"
     echo "  cd \$(\$0 --fpwrapper-config-dir)"
     echo "  \$0 --fpwrapper-sandbox-info"
-    echo "  \$0 --fpwrapper-set-override system"
+    echo "  \$0 --fpwrapper-edit-sandbox
+  $0 --fpwrapper-set-override system"
     exit 0
 elif [ "\$1" = "--fpwrapper-info" ]; then
     echo "Wrapper for \$NAME"
