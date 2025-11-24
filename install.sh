@@ -37,6 +37,20 @@ fi
 # Set BIN_DIR from arg or default
 BIN_DIR="${1:-$HOME/bin}"
 
+if [ "$BIN_DIR" != "$HOME/bin" ]; then
+    read -r -p "Install to '$BIN_DIR' instead of default '$HOME/bin'? (y/n) [y]: " confirm
+    confirm=${confirm:-y}
+    if [[ ! $confirm =~ ^[Yy]$ ]]; then
+        BIN_DIR="$HOME/bin"
+        echo "Using default directory: $BIN_DIR"
+    fi
+fi
+
+if [ ! -w "$BIN_DIR" ]; then
+    echo "Error: Cannot write to $BIN_DIR"
+    exit 1
+fi
+
 echo "Installing Flatpak Launch Wrappers to $BIN_DIR..."
 
 # Make scripts executable

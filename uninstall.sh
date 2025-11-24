@@ -10,6 +10,12 @@ if [ -f "$BIN_DIR_FILE" ]; then
     BIN_DIR=$(cat "$BIN_DIR_FILE")
 fi
 
+read -r -p "Uninstall Flatpak Launch Wrappers from '$BIN_DIR'? This will remove all wrappers and preferences. (y/n): " confirm
+if [[ ! $confirm =~ ^[Yy]$ ]]; then
+    echo "Uninstallation cancelled."
+    exit 0
+fi
+
 echo "Uninstalling Flatpak Launch Wrappers from $BIN_DIR..."
 
 # Stop and disable systemd units

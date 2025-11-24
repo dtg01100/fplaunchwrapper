@@ -44,10 +44,15 @@ remove_wrapper() {
     name="$1"
     script_path="$BIN_DIR/$name"
     if [ -f "$script_path" ]; then
-        rm "$script_path"
-        pref_file="$CONFIG_DIR/$name.pref"
-        [ -f "$pref_file" ] && rm "$pref_file"
-        echo "Removed wrapper and preference for $name"
+        read -r -p "Are you sure you want to remove wrapper '$name'? (y/n): " confirm
+        if [[ $confirm =~ ^[Yy]$ ]]; then
+            rm "$script_path"
+            pref_file="$CONFIG_DIR/$name.pref"
+            [ -f "$pref_file" ] && rm "$pref_file"
+            echo "Removed wrapper and preference for $name"
+        else
+            echo "Removal cancelled."
+        fi
     else
         echo "Wrapper $name not found"
     fi
@@ -57,8 +62,13 @@ remove_pref() {
     name="$1"
     pref_file="$CONFIG_DIR/$name.pref"
     if [ -f "$pref_file" ]; then
-        rm "$pref_file"
-        echo "Removed preference for $name"
+        read -r -p "Are you sure you want to remove preference for '$name'? (y/n): " confirm
+        if [[ $confirm =~ ^[Yy]$ ]]; then
+            rm "$pref_file"
+            echo "Removed preference for $name"
+        else
+            echo "Removal cancelled."
+        fi
     else
         echo "No preference found for $name"
     fi
@@ -89,18 +99,28 @@ set_alias() {
         echo "Alias $alias already exists"
         return
     fi
-    ln -s "$script_path" "$alias_path"
-    echo "$name $alias" >> "$CONFIG_DIR/aliases"
-    echo "Set alias $alias for $name"
+    read -r -p "Create alias '$alias' for '$name'? (y/n): " confirm
+    if [[ $confirm =~ ^[Yy]$ ]]; then
+        ln -s "$script_path" "$alias_path"
+        echo "$name $alias" >> "$CONFIG_DIR/aliases"
+        echo "Set alias $alias for $name"
+    else
+        echo "Alias creation cancelled."
+    fi
 }
 
 remove_alias() {
     alias="$1"
     alias_path="$BIN_DIR/$alias"
     if [ -L "$alias_path" ]; then
-        rm "$alias_path"
-        sed -i "/ $alias$/d" "$CONFIG_DIR/aliases" 2>/dev/null
-        echo "Removed alias $alias"
+        read -r -p "Remove alias '$alias'? (y/n): " confirm
+        if [[ $confirm =~ ^[Yy]$ ]]; then
+            rm "$alias_path"
+            sed -i "/ $alias$/d" "$CONFIG_DIR/aliases" 2>/dev/null
+            echo "Removed alias $alias"
+        else
+            echo "Removal cancelled."
+        fi
     else
         echo "Alias $alias not found"
     fi
@@ -125,8 +145,13 @@ import_prefs() {
 block_id() {
     id="$1"
     if ! grep -q "^$id$" "$BLOCKLIST" 2>/dev/null; then
-        echo "$id" >> "$BLOCKLIST"
-        echo "Blocked $id"
+        read -r -p "Block Flatpak ID '$id'? Wrappers won't be created for it. (y/n): " confirm
+        if [[ $confirm =~ ^[Yy]$ ]]; then
+            echo "$id" >> "$BLOCKLIST"
+            echo "Blocked $id"
+        else
+            echo "Blocking cancelled."
+        fi
     else
         echo "$id already blocked"
     fi
@@ -135,8 +160,13 @@ block_id() {
 unblock_id() {
     id="$1"
     if grep -q "^$id$" "$BLOCKLIST" 2>/dev/null; then
-        sed -i "/^$id$/d" "$BLOCKLIST"
-        echo "Unblocked $id"
+        read -r -p "Unblock Flatpak ID '$id'? (y/n): " confirm
+        if [[ $confirm =~ ^[Yy]$ ]]; then
+            sed -i "/^$id$/d" "$BLOCKLIST"
+            echo "Unblocked $id"
+        else
+            echo "Unblocking cancelled."
+        fi
     else
         echo "$id not blocked"
     fi
