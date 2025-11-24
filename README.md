@@ -28,6 +28,7 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 - Sandbox info: `chrome --fpwrapper-sandbox-info` to show Flatpak details.
 - Edit sandbox: `chrome --fpwrapper-edit-sandbox` for interactive permission editing.
 - YOLO mode: `chrome --fpwrapper-sandbox-yolo` to grant all permissions (use with caution).
+- Reset sandbox: `chrome --fpwrapper-sandbox-reset` to remove all overrides.
 - Env vars: Set transient env vars via `fplaunch-manage set-env` (for permanent, use `flatpak override <app> --env=VAR=value`).
 - Set override: `chrome --fpwrapper-set-override [system|flatpak]` to force preference (prompts if not specified).
 - Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`.

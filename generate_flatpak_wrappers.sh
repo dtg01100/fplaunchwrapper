@@ -86,6 +86,7 @@ elif [ "\$1" = "--fpwrapper-help" ]; then
     echo "  --fpwrapper-sandbox-info     Show Flatpak sandbox details"
     echo "  --fpwrapper-edit-sandbox     Edit Flatpak permissions
   --fpwrapper-sandbox-yolo     Grant all permissions (dangerous)
+  --fpwrapper-sandbox-reset   Reset sandbox to defaults
   --fpwrapper-set-override [system|flatpak]  Set launch preference"
     echo ""
     echo "Examples:"
@@ -94,6 +95,7 @@ elif [ "\$1" = "--fpwrapper-help" ]; then
     echo "  \$0 --fpwrapper-sandbox-info"
     echo "  \$0 --fpwrapper-edit-sandbox
   $0 --fpwrapper-sandbox-yolo
+  $0 --fpwrapper-sandbox-reset
   $0 --fpwrapper-set-override system"
     exit 0
 elif [ "\$1" = "--fpwrapper-info" ]; then
