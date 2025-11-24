@@ -56,7 +56,6 @@ NAME="$name"
 ID="$id"
 PREF_DIR="\$HOME/.config/flatpak-wrappers"
 PREF_FILE="\$PREF_DIR/\$NAME.pref"
-BIN_DIR_FILE="\$PREF_DIR/bin_dir"
 SCRIPT_BIN_DIR="$BIN_DIR"
 
 mkdir -p "\$PREF_DIR"
@@ -100,7 +99,7 @@ elif [ "\$1" = "--fpwrapper-set-override" ]; then
         echo "Choose override:"
         echo "1. system"
         echo "2. flatpak"
-        read -p "Choice (1/2): " choice
+        read -r -p "Choice (1/2): " choice
         if [ "\$choice" = "1" ]; then
             pref="system"
         elif [ "\$choice" = "2" ]; then
@@ -153,7 +152,7 @@ else
         echo "Multiple options for '\$NAME':"
         echo "1. System package (\$CMD_PATH)"
         echo "2. Flatpak app (\$ID)"
-        read -p "Choose (1/2, default 1): " choice
+        read -r -p "Choose (1/2, default 1): " choice
         choice=\${choice:-1}
         if [ "\$choice" = "1" ]; then
             PREF="system"
