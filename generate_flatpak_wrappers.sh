@@ -85,6 +85,7 @@ elif [ "\$1" = "--fpwrapper-help" ]; then
     echo "  --fpwrapper-config-dir       Show Flatpak data directory"
     echo "  --fpwrapper-sandbox-info     Show Flatpak sandbox details"
     echo "  --fpwrapper-edit-sandbox     Edit Flatpak permissions
+  --fpwrapper-sandbox-yolo     Grant all permissions (dangerous)
   --fpwrapper-set-override [system|flatpak]  Set launch preference"
     echo ""
     echo "Examples:"
@@ -92,6 +93,7 @@ elif [ "\$1" = "--fpwrapper-help" ]; then
     echo "  cd \$(\$0 --fpwrapper-config-dir)"
     echo "  \$0 --fpwrapper-sandbox-info"
     echo "  \$0 --fpwrapper-edit-sandbox
+  $0 --fpwrapper-sandbox-yolo
   $0 --fpwrapper-set-override system"
     exit 0
 elif [ "\$1" = "--fpwrapper-info" ]; then
@@ -107,6 +109,59 @@ elif [ "\$1" = "--fpwrapper-config-dir" ]; then
     exit 0
 elif [ "\$1" = "--fpwrapper-sandbox-info" ]; then
     flatpak info "\$ID"
+    exit 0
+elif [ "\$1" = "--fpwrapper-edit-sandbox" ]; then
+    echo "Flatpak Sandbox Editor for \$ID"
+    echo "Common permissions:"
+    echo "1. Allow filesystem access (e.g., ~/Documents)"
+    echo "2. Allow device access (e.g., --device=dri)"
+    echo "3. Allow network access"
+    echo "4. Reset all overrides"
+    echo "5. Show current overrides"
+    echo "6. YOLO mode (open all permissions)"
+    read -p "Choose an option (1-6): " opt
+    case \$opt in
+        1)
+            read -p "Enter path (e.g., ~/Documents): " path
+            flatpak override "\$ID" --filesystem="\$path"
+            ;;
+        2)
+            read -p "Enter device (e.g., dri): " dev
+            flatpak override "\$ID" --device="\$dev"
+            ;;
+        3)
+            flatpak override "\$ID" --share=network
+            ;;
+        4)
+            flatpak override --reset "\$ID"
+            ;;
+        5)
+            flatpak override "\$ID"
+            ;;
+        6)
+            echo "WARNING: YOLO mode grants extensive permissions and may pose security risks!"
+            read -p "Are you sure? (yes/no): " confirm
+            if [ "\$confirm" = "yes" ]; then
+                flatpak override "\$ID" --filesystem=host --share=network --device=all --allow=devel
+                echo "YOLO mode applied. Use 'flatpak override --reset \$ID' to reset."
+            else
+                echo "Cancelled."
+            fi
+            ;;
+        *)
+            echo "Invalid option"
+            ;;
+    esac
+    exit 0
+elif [ "\$1" = "--fpwrapper-sandbox-yolo" ]; then
+    echo "WARNING: YOLO mode grants extensive permissions and may pose security risks!"
+    read -p "Are you sure? (yes/no): " confirm
+    if [ "\$confirm" = "yes" ]; then
+        flatpak override "\$ID" --filesystem=host --share=network --device=all --allow=devel
+        echo "YOLO mode applied. Use 'flatpak override --reset \$ID' to reset."
+    else
+        echo "Cancelled."
+    fi
     exit 0
 elif [ "\$1" = "--fpwrapper-set-override" ]; then
     if [ -z "\$2" ]; then
