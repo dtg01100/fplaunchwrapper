@@ -61,7 +61,30 @@ SCRIPT_BIN_DIR="$BIN_DIR"
 
 mkdir -p "\$PREF_DIR"
 
-if [ "\$1" = "--help" ] || [ "\$1" = "--fpwrapper-info" ]; then
+if [ "\$1" = "--help" ]; then
+    echo "Wrapper for \$NAME"
+    echo "Usage: \$0 [args]"
+    echo "Run '\$0 --fplaunch-help' for more options."
+    exit 0
+elif [ "\$1" = "--fplaunch-help" ]; then
+    echo "Wrapper for \$NAME"
+    echo "Flatpak ID: \$ID"
+    pref=\$(cat "\$PREF_FILE" 2>/dev/null || echo "none")
+    echo "Current preference: \$pref"
+    echo ""
+    echo "Available options:"
+    echo "  --help                 Show basic usage"
+    echo "  --fplaunch-help        Show this detailed help"
+    echo "  --fpwrapper-info       Show wrapper info"
+    echo "  --fpwrapper-config-dir Show Flatpak data directory"
+    echo "  --fpwrapper-set-override [system|flatpak]  Set launch preference"
+    echo ""
+    echo "Examples:"
+    echo "  \$0 --fpwrapper-info"
+    echo "  cd \$(\$0 --fpwrapper-config-dir)"
+    echo "  \$0 --fpwrapper-set-override system"
+    exit 0
+elif [ "\$1" = "--fpwrapper-info" ]; then
     echo "Wrapper for \$NAME"
     echo "Flatpak ID: \$ID"
     pref=\$(cat "\$PREF_FILE" 2>/dev/null || echo "none")
