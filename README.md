@@ -15,6 +15,7 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 - Customizable wrapper directory
 - Environment variables: Set per-wrapper environment variables
 - Pre-launch scripts: Run custom scripts before launching apps
+- Post-run scripts: Execute cleanup or logging scripts after apps exit
 
 ## Wrapper Features
 
@@ -28,8 +29,12 @@ Each generated wrapper provides these additional options:
 - `--fpwrapper-edit-sandbox` - Interactive sandbox permission editor
 - `--fpwrapper-sandbox-yolo` - Grant all permissions (use with extreme caution)
 - `--fpwrapper-set-override [system|flatpak]` - Force preference for this wrapper
+- `--fpwrapper-set-pre-script <script>` - Set a pre-launch script
+- `--fpwrapper-set-post-script <script>` - Set a post-run script
+- `--fpwrapper-remove-pre-script` - Remove pre-launch script
+- `--fpwrapper-remove-post-script` - Remove post-run script
 
-**Note:** The `--fpwrapper-sandbox-reset` and `--fpwrapper-run-unrestricted` options mentioned in help text are not yet implemented but are planned for future releases.
+**Script Arguments:** Pre-launch and post-run scripts receive: wrapper name, Flatpak ID, target application, and any additional arguments.
 
 ## Installation
 
@@ -64,6 +69,9 @@ Each generated wrapper provides these additional options:
    - `fplaunch-manage manifest chrome local > manifest.ini` to save local manifest
    - `fplaunch-manage set-env chrome MOZ_ENABLE_WAYLAND 1` to set environment variables
    - `fplaunch-manage set-script chrome ~/scripts/chrome-prelaunch.sh` to set pre-launch script
+   - `fplaunch-manage set-post-script chrome ~/scripts/chrome-postrun.sh` to set post-run script
+   - `fplaunch-manage remove-script chrome` to remove pre-launch script
+   - `fplaunch-manage remove-post-script chrome` to remove post-run script
    - `bash manage_wrappers.sh block com.example.App`
 
 ## Scripts
@@ -72,7 +80,7 @@ Each generated wrapper provides these additional options:
 - `uninstall.sh`: Removes wrappers, preferences, and systemd units.
 - `fplaunch-generate`: Generates/updates wrappers.
 - `fplaunch-setup-systemd`: Configures systemd for auto-updates.
-- `manage_wrappers.sh`: Management utility (installed as `fplaunch-manage`) with commands: list, remove, remove-pref, set-pref, set-env, remove-env, list-env, set-pref-all, set-script, set-alias, remove-alias, export-prefs, import-prefs, export-config, import-config, block, unblock, list-blocked, install, launch, regenerate, info, manifest, files, uninstall.
+- `manage_wrappers.sh`: Management utility (installed as `fplaunch-manage`) with commands: list, remove, remove-pref, set-pref, set-env, remove-env, list-env, set-pref-all, set-script, set-post-script, remove-script, remove-post-script, set-alias, remove-alias, export-prefs, import-prefs, export-config, import-config, block, unblock, list-blocked, install, launch, regenerate, info, manifest, files, uninstall.
 - `fplaunch_completion.bash`: Bash completion support.
 
 **Note:** The main management script is called `manage_wrappers.sh` in the source but installed as `fplaunch-manage` for easier access.
@@ -83,6 +91,34 @@ Each generated wrapper provides these additional options:
 - **Optional for auto-updates:** Systemd (user session) or crontab
 - **Optional for management UI:** dialog package (falls back to CLI if not available)
 - **Optional for bash completion:** Standard bash completion setup
+
+## Script Execution
+
+### Pre-launch Scripts
+Pre-launch scripts run before the Flatpak application starts. They are useful for:
+- Setting up environment variables or temporary files
+- Checking system requirements
+- Starting dependent services
+- Displaying warnings or messages
+
+### Post-run Scripts  
+Post-run scripts execute after the Flatpak application exits. They can:
+- Clean up temporary files created by pre-launch scripts
+- Log application usage or exit codes
+- Restart services that were modified
+- Display completion messages
+
+### Script Arguments
+Both pre-launch and post-run scripts receive these arguments:
+1. `$1` - Wrapper name (e.g., "chrome")
+2. `$2` - Flatpak ID (e.g., "com.google.Chrome")  
+3. `$3` - Target application ("flatpak" or system command name)
+4. `$@` - All original arguments passed to the wrapper
+
+### Error Handling
+- Pre-launch script failures prompt user to continue or abort
+- Post-run scripts execute regardless of application exit status
+- Scripts must be executable files with proper permissions
 
 ## License
 

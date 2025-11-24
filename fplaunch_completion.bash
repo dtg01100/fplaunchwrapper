@@ -13,7 +13,7 @@ _fplaunch_manage() {
     fi
 
     case $prev in
-        set-pref|set-env|remove-env|list-env|set-alias|remove-alias|block|unblock|launch)
+        set-pref|set-env|remove-env|list-env|set-script|set-post-script|remove-script|remove-post-script|set-alias|remove-alias|block|unblock|launch)
             # Complete wrapper names
             local wrappers=$(ls "$bin_dir" 2>/dev/null | grep -v fplaunch-manage | tr '\n' ' ')
             COMPREPLY=( $(compgen -W "$wrappers" -- "$cur") )
@@ -31,7 +31,7 @@ _fplaunch_manage() {
             # Complete app names? Hard, skip
             ;;
         *)
-            COMPREPLY=( $(compgen -W "help list remove remove-pref set-pref set-env remove-env list-env set-pref-all set-alias remove-alias export-prefs import-prefs export-config import-config block unblock list-blocked install launch regenerate" -- "$cur") )
+            COMPREPLY=( $(compgen -W "help list remove remove-pref set-pref set-env remove-env list-env set-pref-all set-script set-post-script remove-script remove-post-script set-alias remove-alias export-prefs import-prefs export-config import-config block unblock list-blocked install launch regenerate" -- "$cur") )
             ;;
     esac
 }
@@ -43,7 +43,7 @@ _fplaunch_wrapper() {
     local cur prev
     _init_completion || return
 
-    COMPREPLY=( $(compgen -W "--help --fpwrapper-help --fpwrapper-info --fpwrapper-config-dir --fpwrapper-sandbox-info --fpwrapper-edit-sandbox --fpwrapper-sandbox-yolo --fpwrapper-sandbox-reset --fpwrapper-run-unrestricted --fpwrapper-set-override" -- "$cur") )
+    COMPREPLY=( $(compgen -W "--help --fpwrapper-help --fpwrapper-info --fpwrapper-config-dir --fpwrapper-sandbox-info --fpwrapper-edit-sandbox --fpwrapper-sandbox-yolo --fpwrapper-sandbox-reset --fpwrapper-run-unrestricted --fpwrapper-set-override --fpwrapper-set-pre-script --fpwrapper-set-post-script --fpwrapper-remove-pre-script --fpwrapper-remove-post-script" -- "$cur") )
 }
 
 # Complete for all wrappers

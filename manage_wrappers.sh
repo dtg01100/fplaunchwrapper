@@ -38,6 +38,9 @@ Commands:
   list-env name        - List environment variables for a wrapper
   set-pref-all system|flatpak - Set preference for all wrappers
   set-script name path - Set pre-launch script for a wrapper
+   set-post-script name path - Set post-run script for a wrapper
+   remove-script name - Remove pre-launch script for a wrapper
+   remove-post-script name - Remove post-run script for a wrapper
   set-alias name alias - Set an alias for a wrapper
   remove-alias alias   - Remove an alias
   export-prefs file    - Export preferences and blocklist to file
@@ -383,17 +386,57 @@ set_script() {
     path="$2"
     if [ ! -f "$BIN_DIR/$name" ]; then
         echo "Wrapper $name not found"
-        return
+        return 1
     fi
     if [ ! -f "$path" ]; then
         echo "Script $path not found"
-        return
+        return 1
     fi
     script_dir="$CONFIG_DIR/scripts/$name"
     mkdir -p "$script_dir"
     cp "$path" "$script_dir/pre-launch.sh"
     chmod +x "$script_dir/pre-launch.sh"
     echo "Set pre-launch script for $name"
+}
+
+set_post_script() {
+    name="$1"
+    path="$2"
+    if [ ! -f "$BIN_DIR/$name" ]; then
+        echo "Wrapper $name not found"
+        return 1
+    fi
+    if [ ! -f "$path" ]; then
+        echo "Script $path not found"
+        return 1
+    fi
+    script_dir="$CONFIG_DIR/scripts/$name"
+    mkdir -p "$script_dir"
+    cp "$path" "$script_dir/post-run.sh"
+    chmod +x "$script_dir/post-run.sh"
+    echo "Set post-run script for $name"
+}
+
+remove_script() {
+    name="$1"
+    script_dir="$CONFIG_DIR/scripts/$name"
+    if [ -f "$script_dir/pre-launch.sh" ]; then
+        rm "$script_dir/pre-launch.sh"
+        echo "Removed pre-launch script for $name"
+    else
+        echo "No pre-launch script found for $name"
+    fi
+}
+
+remove_post_script() {
+    name="$1"
+    script_dir="$CONFIG_DIR/scripts/$name"
+    if [ -f "$script_dir/post-run.sh" ]; then
+        rm "$script_dir/post-run.sh"
+        echo "Removed post-run script for $name"
+    else
+        echo "No post-run script found for $name"
+    fi
 }
 
 show_manifest() {
@@ -505,6 +548,18 @@ else
         set-script)
             if [ $# -ne 2 ]; then usage; fi
             set_script "$1" "$2"
+            ;;
+        set-post-script)
+            if [ $# -ne 2 ]; then usage; fi
+            set_post_script "$1" "$2"
+            ;;
+        remove-script)
+            if [ $# -ne 1 ]; then usage; fi
+            remove_script "$1"
+            ;;
+        remove-post-script)
+            if [ $# -ne 1 ]; then usage; fi
+            remove_post_script "$1"
             ;;
         set-alias)
             if [ $# -ne 2 ]; then usage; fi

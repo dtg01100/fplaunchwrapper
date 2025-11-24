@@ -78,27 +78,35 @@ elif [ "\$1" = "--fpwrapper-help" ]; then
     pref=\$(cat "\$PREF_FILE" 2>/dev/null || echo "none")
     echo "Current preference: \$pref"
     echo ""
-    echo "Available options:"
-    echo "  --help                          Show basic usage"
-    echo "  --fpwrapper-help             Show this detailed help"
-    echo "  --fpwrapper-info             Show wrapper info"
-    echo "  --fpwrapper-config-dir       Show Flatpak data directory"
-    echo "  --fpwrapper-sandbox-info     Show Flatpak sandbox details"
-    echo "  --fpwrapper-edit-sandbox     Edit Flatpak permissions
-  --fpwrapper-sandbox-yolo     Grant all permissions (dangerous)
-  --fpwrapper-sandbox-reset   Reset sandbox to defaults
-  --fpwrapper-run-unrestricted Run with unrestricted permissions (transient)
-  --fpwrapper-set-override [system|flatpak]  Set launch preference"
+echo "Available options:"
+     echo "  --help                          Show basic usage"
+     echo "  --fpwrapper-help             Show this detailed help"
+     echo "  --fpwrapper-info             Show wrapper info"
+     echo "  --fpwrapper-config-dir       Show Flatpak data directory"
+     echo "  --fpwrapper-sandbox-info     Show Flatpak sandbox details"
+     echo "  --fpwrapper-edit-sandbox     Edit Flatpak permissions"
+     echo "  --fpwrapper-sandbox-yolo     Grant all permissions (dangerous)"
+     echo "  --fpwrapper-sandbox-reset    Reset sandbox to defaults"
+     echo "  --fpwrapper-run-unrestricted Run with unrestricted permissions (transient)"
+     echo "  --fpwrapper-set-override [system|flatpak]  Set launch preference"
+     echo "  --fpwrapper-set-pre-script <script>        Set pre-launch script"
+     echo "  --fpwrapper-set-post-script <script>       Set post-run script"
+     echo "  --fpwrapper-remove-pre-script               Remove pre-launch script"
+     echo "  --fpwrapper-remove-post-script              Remove post-run script"
     echo ""
-    echo "Examples:"
-    echo "  \$0 --fpwrapper-info"
-    echo "  cd \$(\$0 --fpwrapper-config-dir)"
-    echo "  \$0 --fpwrapper-sandbox-info"
-    echo "  \$0 --fpwrapper-edit-sandbox
-  $0 --fpwrapper-sandbox-yolo
-  $0 --fpwrapper-sandbox-reset
-  $0 --fpwrapper-run-unrestricted
-  $0 --fpwrapper-set-override system"
+echo "Examples:"
+     echo "  \$0 --fpwrapper-info"
+     echo "  cd \$(\$0 --fpwrapper-config-dir)"
+     echo "  \$0 --fpwrapper-sandbox-info"
+     echo "  \$0 --fpwrapper-edit-sandbox"
+     echo "  \$0 --fpwrapper-sandbox-yolo"
+     echo "  \$0 --fpwrapper-sandbox-reset"
+     echo "  \$0 --fpwrapper-run-unrestricted"
+     echo "  \$0 --fpwrapper-set-override system"
+     echo "  \$0 --fpwrapper-set-pre-script ~/scripts/my-pre-script.sh"
+     echo "  \$0 --fpwrapper-set-post-script ~/scripts/my-post-script.sh"
+     echo "  \$0 --fpwrapper-remove-pre-script"
+     echo "  \$0 --fpwrapper-remove-post-script"
     exit 0
 elif [ "\$1" = "--fpwrapper-info" ]; then
     echo "Wrapper for \$NAME"
@@ -168,6 +176,46 @@ elif [ "\$1" = "--fpwrapper-sandbox-yolo" ]; then
     fi
     exit 0
 elif [ "\$1" = "--fpwrapper-set-override" ]; then
+elif [ "\$1" = "--fpwrapper-set-pre-script" ]; then
+    if [ -z "\$2" ]; then
+        echo "Usage: \$0 --fpwrapper-set-pre-script <script_path>"
+        echo "Set a pre-launch script to run before the Flatpak app starts."
+        exit 1
+    fi
+    if [ ! -f "\$2" ]; then
+        echo "Script file not found: \$2"
+        exit 1
+    fi
+    script_dir="\$PREF_DIR/scripts/\$NAME"
+    mkdir -p "\$script_dir"
+    cp "\$2" "\$script_dir/pre-launch.sh"
+    chmod +x "\$script_dir/pre-launch.sh"
+    echo "Pre-launch script set for \$NAME"
+    exit 0
+elif [ "\$1" = "--fpwrapper-set-post-script" ]; then
+    if [ -z "\$2" ]; then
+        echo "Usage: \$0 --fpwrapper-set-post-script <script_path>"
+        echo "Set a post-run script to run after the Flatpak app exits."
+        exit 1
+    fi
+    if [ ! -f "\$2" ]; then
+        echo "Script file not found: \$2"
+        exit 1
+    fi
+    script_dir="\$PREF_DIR/scripts/\$NAME"
+    mkdir -p "\$script_dir"
+    cp "\$2" "\$script_dir/post-run.sh"
+    chmod +x "\$script_dir/post-run.sh"
+    echo "Post-run script set for \$NAME"
+    exit 0
+elif [ "\$1" = "--fpwrapper-remove-pre-script" ]; then
+    rm -f "\$PREF_DIR/scripts/\$NAME/pre-launch.sh"
+    echo "Pre-launch script removed for \$NAME"
+    exit 0
+elif [ "\$1" = "--fpwrapper-remove-post-script" ]; then
+    rm -f "\$PREF_DIR/scripts/\$NAME/post-run.sh"
+    echo "Post-run script removed for \$NAME"
+    exit 0
     if [ -z "\$2" ]; then
         echo "Choose override:"
         echo "1. system"
@@ -193,6 +241,39 @@ elif [ "\$1" = "--fpwrapper-set-override" ]; then
     exit 0
 fi
 
+# Function to execute pre-launch and post-run scripts
+run_scripts() {
+    local target_app="$1"
+    local app_args="$@"
+    
+    # Execute pre-launch script if it exists
+    PRE_LAUNCH_SCRIPT="\$PREF_DIR/scripts/\$NAME/pre-launch.sh"
+    if [ -f "\$PRE_LAUNCH_SCRIPT" ] && [ -x "\$PRE_LAUNCH_SCRIPT" ]; then
+        echo "Running pre-launch script for \$NAME..."
+        "\$PRE_LAUNCH_SCRIPT" "\$NAME" "\$ID" "\$target_app" "\$@" || {
+            echo "Pre-launch script failed. Continue anyway? (y/n) [y]: "
+            read -r confirm
+            confirm=\${confirm:-y}
+            if [[ ! \$confirm =~ ^[Yy]\$ ]]; then
+                echo "Aborted by user."
+                exit 1
+            fi
+        }
+    fi
+}
+
+# Function to handle post-run scripts (to be called before exec)
+setup_post_run() {
+    local target_app="$1"
+    local app_args="$@"
+    
+    # Set up post-run script execution using trap
+    POST_RUN_SCRIPT="\$PREF_DIR/scripts/\$NAME/post-run.sh"
+    if [ -f "\$POST_RUN_SCRIPT" ] && [ -x "\$POST_RUN_SCRIPT" ]; then
+        trap 'echo "Running post-run script for \$NAME..."; "\$POST_RUN_SCRIPT" "\$NAME" "\$ID" "\$target_app" "\$?"; trap - EXIT' EXIT
+    fi
+}
+
 if [ -f "\$PREF_FILE" ]; then
     PREF=\$(cat "\$PREF_FILE")
 else
@@ -210,14 +291,20 @@ fi
 
 if [ "\$PREF" = "system" ]; then
     if [ "\$SYSTEM_EXISTS" = true ]; then
+        run_scripts "\$NAME" "\$@"
+        setup_post_run "\$NAME" "\$@"
         exec "\$NAME" "\$@"
     else
         # System command gone, fall back to flatpak
         PREF="flatpak"
         echo "flatpak" > "\$PREF_FILE"
+        run_scripts "flatpak" "\$@"
+        setup_post_run "flatpak" "\$@"
         exec flatpak run $id "\$@"
     fi
 elif [ "\$PREF" = "flatpak" ]; then
+    run_scripts "flatpak" "\$@"
+    setup_post_run "flatpak" "\$@"
     exec flatpak run $id "\$@"
 else
     # No pref set
@@ -230,20 +317,28 @@ else
         if [ "\$choice" = "1" ]; then
             PREF="system"
             echo "\$PREF" > "\$PREF_FILE"
+            run_scripts "\$NAME" "\$@"
+            setup_post_run "\$NAME" "\$@"
             exec "\$NAME" "\$@"
         elif [ "\$choice" = "2" ]; then
             PREF="flatpak"
             echo "\$PREF" > "\$PREF_FILE"
+            run_scripts "flatpak" "\$@"
+            setup_post_run "flatpak" "\$@"
             exec flatpak run $id "\$@"
         else
             echo "Invalid choice, defaulting to system."
             PREF="system"
             echo "\$PREF" > "\$PREF_FILE"
+            run_scripts "\$NAME" "\$@"
+            setup_post_run "\$NAME" "\$@"
             exec "\$NAME" "\$@"
         fi
     else
         PREF="flatpak"
         echo "\$PREF" > "\$PREF_FILE"
+        run_scripts "flatpak" "\$@"
+        setup_post_run "flatpak" "\$@"
         exec flatpak run $id "\$@"
     fi
 fi
