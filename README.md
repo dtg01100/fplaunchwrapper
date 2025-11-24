@@ -52,7 +52,7 @@ Each generated wrapper provides these additional options:
 
 - Launch apps: `chrome`, `firefox`, etc.
 - Get info: `chrome --fpwrapper-info`, `chrome --help`, or `chrome --fpwrapper-help` for detailed options.
-- Config dir: `cd $(chrome --fpwrapper-config-dir)` to access app data.
+- Config dir: `cd "$(chrome --fpwrapper-config-dir)"` to access app data.
 - Sandbox info: `chrome --fpwrapper-sandbox-info` to show Flatpak details.
 - Edit sandbox: `chrome --fpwrapper-edit-sandbox` for interactive permission editing.
 - YOLO mode: `chrome --fpwrapper-sandbox-yolo` to grant all permissions (use with caution).
