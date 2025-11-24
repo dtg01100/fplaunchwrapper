@@ -29,7 +29,14 @@ for script in "${existing_scripts[@]}"; do
             rm "$script_path"
             pref_file="$HOME/.config/flatpak-wrappers/$script.pref"
             [ -f "$pref_file" ] && rm "$pref_file"
-            echo "Removed obsolete wrapper and preference: $script"
+            # Remove aliases pointing to this wrapper
+            sed -i "/^$script /d" "$HOME/.config/flatpak-wrappers/aliases" 2>/dev/null
+            for alias in "$BIN_DIR"/*; do
+                if [ -L "$alias" ] && [ "$(readlink "$alias" 2>/dev/null)" = "$script_path" ]; then
+                    rm "$alias"
+                fi
+            done
+            echo "Removed obsolete wrapper, preference, and aliases: $script"
         fi
     fi
 done

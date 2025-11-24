@@ -49,22 +49,11 @@ remove_wrapper() {
             rm "$script_path"
             pref_file="$CONFIG_DIR/$name.pref"
             [ -f "$pref_file" ] && rm "$pref_file"
-            # Remove aliases pointing to this wrapper
-            sed -i "/^$name /d" "$CONFIG_DIR/aliases" 2>/dev/null
-            for alias in "$BIN_DIR"/*; do
-                if [ -L "$alias" ] && [ "$(readlink "$alias" 2>/dev/null)" = "$script_path" ]; then
-                    rm "$alias"
-                fi
-            done
-            echo "Removed wrapper, preference, and aliases for $name"
+            echo "Removed wrapper and preference for $name"
         else
-    echo "in else"
-    echo "command=$command"
             echo "Removal cancelled."
         fi
     else
-    echo "in else"
-    echo "command=$command"
         echo "Wrapper $name not found"
     fi
 }
@@ -78,13 +67,9 @@ remove_pref() {
             rm "$pref_file"
             echo "Removed preference for $name"
         else
-    echo "in else"
-    echo "command=$command"
             echo "Removal cancelled."
         fi
     else
-    echo "in else"
-    echo "command=$command"
         echo "No preference found for $name"
     fi
 }
@@ -120,8 +105,6 @@ set_alias() {
         echo "$name $alias" >> "$CONFIG_DIR/aliases"
         echo "Set alias $alias for $name"
     else
-    echo "in else"
-    echo "command=$command"
         echo "Alias creation cancelled."
     fi
 }
@@ -136,13 +119,9 @@ remove_alias() {
             sed -i "/ $alias$/d" "$CONFIG_DIR/aliases" 2>/dev/null
             echo "Removed alias $alias"
         else
-    echo "in else"
-    echo "command=$command"
             echo "Removal cancelled."
         fi
     else
-    echo "in else"
-    echo "command=$command"
         echo "Alias $alias not found"
     fi
 }
@@ -159,8 +138,6 @@ import_prefs() {
         tar -xzf "$file" -C "$CONFIG_DIR" 2>/dev/null
         echo "Imported preferences from $file"
     else
-    echo "in else"
-    echo "command=$command"
         echo "File $file not found"
     fi
 }
@@ -173,13 +150,9 @@ block_id() {
             echo "$id" >> "$BLOCKLIST"
             echo "Blocked $id"
         else
-    echo "in else"
-    echo "command=$command"
             echo "Blocking cancelled."
         fi
     else
-    echo "in else"
-    echo "command=$command"
         echo "$id already blocked"
     fi
 }
@@ -192,13 +165,9 @@ unblock_id() {
             sed -i "/^$id$/d" "$BLOCKLIST"
             echo "Unblocked $id"
         else
-    echo "in else"
-    echo "command=$command"
             echo "Unblocking cancelled."
         fi
     else
-    echo "in else"
-    echo "command=$command"
         echo "$id not blocked"
     fi
 }
@@ -208,8 +177,6 @@ list_blocked() {
     if [ -f "$BLOCKLIST" ]; then
         cat "$BLOCKLIST"
     else
-    echo "in else"
-    echo "command=$command"
         echo "None"
     fi
 }
@@ -220,8 +187,6 @@ regenerate() {
     if [ -f "$wrapper_script" ]; then
         bash "$wrapper_script" "$BIN_DIR"
     else
-    echo "in else"
-    echo "command=$command"
         echo "Wrapper script not found"
     fi
 }
@@ -249,8 +214,6 @@ select_wrapper() {
         echo "Selected: $selected"
         return 0
     else
-    echo "in else"
-    echo "command=$command"
         echo "Invalid choice"
         return 1
     fi
@@ -352,8 +315,6 @@ if [ $# -eq 0 ]; then
             read -r
         done
     else
-    echo "in else"
-    echo "command=$command"
         # Fallback to text-based menu
         while true; do
             echo
@@ -435,13 +396,10 @@ if [ $# -eq 0 ]; then
         done
     fi
 else
-    echo "in else"
-    echo "command=$command"
-    echo "$1=$1"
     command="$1"
     shift
 
-    case $command in
+    case "$command" in
         help)
             usage
             ;;
@@ -475,7 +433,6 @@ else
             regenerate
             ;;
         *)
-            echo "unknown command: $command"
             usage
             ;;
     esac
