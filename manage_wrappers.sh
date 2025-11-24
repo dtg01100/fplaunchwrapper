@@ -13,6 +13,7 @@ mkdir -p "$CONFIG_DIR"
 usage() {
     echo "Usage: $0 <command> [args]"
     echo "Commands:"
+    echo "  help                 - Show this help"
     echo "  list                 - List current wrappers"
     echo "  remove <name>        - Remove a specific wrapper"
     echo "  remove-pref <name>   - Remove preference for a wrapper"
@@ -194,82 +195,86 @@ if [ $# -eq 0 ]; then
         # Use dialog for GUI-like menu
         while true; do
             option=$(dialog --clear --title "Flatpak Wrappers Management" \
-                --menu "Choose an option:" 20 60 13 \
-                1 "List wrappers" \
-                2 "Remove wrapper" \
-                3 "Remove preference" \
-                4 "Set preference" \
-                5 "Set alias" \
-                6 "Remove alias" \
-                7 "Export preferences" \
-                8 "Import preferences" \
-                9 "Block ID" \
-                10 "Unblock ID" \
-                11 "List blocked IDs" \
-                12 "Regenerate wrappers" \
-                13 "Exit" \
+                --menu "Choose an option:" 20 60 14 \
+                1 "Help" \
+                2 "List wrappers" \
+                3 "Remove wrapper" \
+                4 "Remove preference" \
+                5 "Set preference" \
+                6 "Set alias" \
+                7 "Remove alias" \
+                8 "Export preferences" \
+                9 "Import preferences" \
+                10 "Block ID" \
+                11 "Unblock ID" \
+                12 "List blocked IDs" \
+                13 "Regenerate wrappers" \
+                14 "Exit" \
                 2>&1 >/dev/tty)
             clear
             case $option in
                 1)
-                    list_wrappers
+                    usage
                     ;;
                 2)
+                    list_wrappers
+                    ;;
+                3)
                     if select_wrapper; then
                         remove_wrapper "$selected"
                     fi
                     ;;
-                3)
+                4)
                     if select_wrapper; then
                         remove_pref "$selected"
                     fi
                     ;;
-                4)
+                5)
                     if select_wrapper; then
                         pref=$(dialog --inputbox "Enter preference (system/flatpak):" 10 40 2>&1 >/dev/tty)
                         clear
                         set_pref "$selected" "$pref"
                     fi
                     ;;
-                5)
+                6)
                     if select_wrapper; then
                         alias=$(dialog --inputbox "Enter alias name:" 10 40 2>&1 >/dev/tty)
                         clear
                         set_alias "$selected" "$alias"
                     fi
                     ;;
-                6)
+                7)
                     alias=$(dialog --inputbox "Enter alias to remove:" 10 40 2>&1 >/dev/tty)
                     clear
                     remove_alias "$alias"
                     ;;
-                7)
+                8)
                     file=$(dialog --inputbox "Enter export file path:" 10 40 2>&1 >/dev/tty)
                     clear
                     export_prefs "$file"
                     ;;
-                8)
+                9)
                     file=$(dialog --inputbox "Enter import file path:" 10 40 2>&1 >/dev/tty)
                     clear
                     import_prefs "$file"
                     ;;
-                9)
+                10)
                     id=$(dialog --inputbox "Enter Flatpak ID to block:" 10 40 2>&1 >/dev/tty)
                     clear
                     block_id "$id"
                     ;;
-                10)
+                11)
                     id=$(dialog --inputbox "Enter Flatpak ID to unblock:" 10 40 2>&1 >/dev/tty)
                     clear
                     unblock_id "$id"
                     ;;
-                11)
+                12)
                     list_blocked
                     ;;
-                12)
+                13)
                     regenerate
                     ;;
-                13|"")
+                14|"")
                     exit 0
                     ;;
                 *)
@@ -283,20 +288,21 @@ if [ $# -eq 0 ]; then
         # Fallback to text-based menu
         while true; do
             echo
-            echo "Flatpak Wrappers Management Menu"
-            echo "1. List wrappers"
-            echo "2. Remove wrapper"
-            echo "3. Remove preference"
-            echo "4. Set preference"
-            echo "5. Set alias"
-            echo "6. Remove alias"
-            echo "7. Export preferences"
-            echo "8. Import preferences"
-            echo "9. Block ID"
-            echo "10. Unblock ID"
-            echo "11. List blocked IDs"
-            echo "12. Regenerate wrappers"
-            echo "13. Exit"
+        echo "Flatpak Wrappers Management Menu"
+        echo "1. Help"
+        echo "2. List wrappers"
+        echo "3. Remove wrapper"
+        echo "4. Remove preference"
+        echo "5. Set preference"
+        echo "6. Set alias"
+        echo "7. Remove alias"
+        echo "8. Export preferences"
+        echo "9. Import preferences"
+        echo "10. Block ID"
+        echo "11. Unblock ID"
+        echo "12. List blocked IDs"
+        echo "13. Regenerate wrappers"
+        echo "14. Exit"
             read -r -p "Choose an option (1-13): " option
             case $option in
                 1)
@@ -364,6 +370,9 @@ else
     shift
 
     case "$command" in
+        help)
+            usage
+            ;;
         list)
             list_wrappers
             ;;
@@ -375,27 +384,11 @@ else
             if [ $# -ne 1 ]; then usage; fi
             remove_pref "$1"
             ;;
-    set-pref)
-        if [ $# -ne 2 ]; then usage; fi
-        set_pref "$1" "$2"
-        ;;
-    set-alias)
-        if [ $# -ne 2 ]; then usage; fi
-        set_alias "$1" "$2"
-        ;;
-    remove-alias)
-        if [ $# -ne 1 ]; then usage; fi
-        remove_alias "$1"
-        ;;
-    export-prefs)
-        if [ $# -ne 1 ]; then usage; fi
-        export_prefs "$1"
-        ;;
-    import-prefs)
-        if [ $# -ne 1 ]; then usage; fi
-        import_prefs "$1"
-        ;;
-    block)
+        set-pref)
+            if [ $# -ne 2 ]; then usage; fi
+            set_pref "$1" "$2"
+            ;;
+        block)
             if [ $# -ne 1 ]; then usage; fi
             block_id "$1"
             ;;
