@@ -48,4 +48,8 @@ else
     echo "Skipping automatic updates. Run 'bash $SCRIPT_DIR/generate_flatpak_wrappers.sh $BIN_DIR' manually to update wrappers."
 fi
 
-echo "Installation complete. Wrappers are in $BIN_DIR. Use manage_wrappers.sh to configure."
+# Copy manager to bin dir
+cp "$SCRIPT_DIR/manage_wrappers.sh" "$BIN_DIR/fplaunch-manage"
+chmod +x "$BIN_DIR/fplaunch-manage"
+
+echo "Installation complete. Wrappers are in $BIN_DIR. Use 'fplaunch-manage' to configure."
