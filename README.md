@@ -25,6 +25,7 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 - Launch apps: `chrome`, `firefox`, etc.
 - Get info: `chrome --fpwrapper-info` or `chrome --help`.
 - Config dir: `cd $(chrome --fpwrapper-config-dir)` to access app data.
+- Set override: `chrome --fpwrapper-set-override system` to force system package.
 - Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`.
 - Examples:
   - `fplaunch-manage set-alias chrome browser`

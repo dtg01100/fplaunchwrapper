@@ -72,6 +72,14 @@ elif [ "\$1" = "--fpwrapper-config-dir" ]; then
     config_dir="\$HOME/.var/app/\$ID"
     echo "\$config_dir"
     exit 0
+elif [ "\$1" = "--fpwrapper-set-override" ]; then
+    if [ "\$2" = "system" ] || [ "\$2" = "flatpak" ]; then
+        echo "\$2" > "\$PREF_FILE"
+        echo "Preference set to \$2"
+    else
+        echo "Invalid override: use 'system' or 'flatpak'"
+    fi
+    exit 0
 fi
 
 if [ -f "\$PREF_FILE" ]; then
