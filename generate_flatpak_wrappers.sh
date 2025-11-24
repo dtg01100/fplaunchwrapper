@@ -61,14 +61,14 @@ SCRIPT_BIN_DIR="$BIN_DIR"
 
 mkdir -p "\$PREF_DIR"
 
-if [ "\$1" = "--help" ] || [ "\$1" = "--wrapper-info" ]; then
+if [ "\$1" = "--help" ] || [ "\$1" = "--fpwrapper-info" ]; then
     echo "Wrapper for \$NAME"
     echo "Flatpak ID: \$ID"
     pref=\$(cat "\$PREF_FILE" 2>/dev/null || echo "none")
     echo "Preference: \$pref"
     echo "Usage: \$0 [args]"
     exit 0
-elif [ "\$1" = "--config-dir" ]; then
+elif [ "\$1" = "--fpwrapper-config-dir" ]; then
     config_dir="\$HOME/.var/app/\$ID"
     echo "\$config_dir"
     exit 0
