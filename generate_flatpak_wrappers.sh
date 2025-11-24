@@ -67,41 +67,41 @@ SCRIPT_BIN_DIR="$BIN_DIR"
 
 mkdir -p "\$PREF_DIR"
 
-if [ "\$1" = "--help" ]; then
+if [ "\$1" = "--help" ] || [ "\$1" = "-h" ]; then
     echo "Wrapper for \$NAME"
     echo "Usage: \$0 [args]"
-    echo "Run '\$0 --fpwrapper-help' for more options."
+    echo "Run '\$0 --fpwrapper-help' or '\$0 -H' for more options."
     exit 0
-elif [ "\$1" = "--fpwrapper-help" ]; then
+elif [ "\$1" = "--fpwrapper-help" ] || [ "\$1" = "-H" ]; then
     echo "Wrapper for \$NAME"
     echo "Flatpak ID: \$ID"
     pref=\$(cat "\$PREF_FILE" 2>/dev/null || echo "none")
     echo "Current preference: \$pref"
     echo ""
     echo "Available options:"
-    echo "  --help                 Show basic usage"
-    echo "  --fpwrapper-help       Show this detailed help"
-    echo "  --fpwrapper-info       Show wrapper info"
-    echo "  --fpwrapper-config-dir Show Flatpak data directory"
-    echo "  --fpwrapper-set-override [system|flatpak]  Set launch preference"
+    echo "  -h, --help                 Show basic usage"
+    echo "  -H, --fpwrapper-help       Show this detailed help"
+    echo "  -i, --fpwrapper-info       Show wrapper info"
+    echo "  -c, --fpwrapper-config-dir Show Flatpak data directory"
+    echo "  -s, --fpwrapper-set-override [system|flatpak]  Set launch preference"
     echo ""
     echo "Examples:"
-    echo "  \$0 --fpwrapper-info"
-    echo "  cd \$(\$0 --fpwrapper-config-dir)"
-    echo "  \$0 --fpwrapper-set-override system"
+    echo "  \$0 -i"
+    echo "  cd \$(\$0 -c)"
+    echo "  \$0 -s system"
     exit 0
-elif [ "\$1" = "--fpwrapper-info" ]; then
+elif [ "\$1" = "--fpwrapper-info" ] || [ "\$1" = "-i" ]; then
     echo "Wrapper for \$NAME"
     echo "Flatpak ID: \$ID"
     pref=\$(cat "\$PREF_FILE" 2>/dev/null || echo "none")
     echo "Preference: \$pref"
     echo "Usage: \$0 [args]"
     exit 0
-elif [ "\$1" = "--fpwrapper-config-dir" ]; then
+elif [ "\$1" = "--fpwrapper-config-dir" ] || [ "\$1" = "-c" ]; then
     config_dir="\$HOME/.var/app/\$ID"
     echo "\$config_dir"
     exit 0
-elif [ "\$1" = "--fpwrapper-set-override" ]; then
+elif [ "\$1" = "--fpwrapper-set-override" ] || [ "\$1" = "-s" ]; then
     if [ -z "\$2" ]; then
         echo "Choose override:"
         echo "1. system"
