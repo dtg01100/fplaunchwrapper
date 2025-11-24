@@ -68,6 +68,10 @@ if [ "\$1" = "--help" ] || [ "\$1" = "--wrapper-info" ]; then
     echo "Preference: \$pref"
     echo "Usage: \$0 [args]"
     exit 0
+elif [ "\$1" = "--config-dir" ]; then
+    config_dir="\$HOME/.var/app/\$ID"
+    echo "\$config_dir"
+    exit 0
 fi
 
 if [ -f "\$PREF_FILE" ]; then
