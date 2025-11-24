@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BIN_DIR="${BIN_DIR:-$HOME/bin}"
+BIN_DIR="${1:-$HOME/bin}"
 mkdir -p "$BIN_DIR"
 
 # Save BIN_DIR to config
@@ -9,21 +9,22 @@ mkdir -p "$CONFIG_DIR"
 echo "$BIN_DIR" > "$CONFIG_DIR/bin_dir"
 
 # Get list of installed Flatpak app IDs (user and system)
-installed_ids=$( (flatpak list --app --columns=application 2>/dev/null; flatpak list --app --columns=application --system 2>/dev/null) | sort | uniq )
-if [ $? -ne 0 ]; then
+if ! installed_ids=$( (flatpak list --app --columns=application 2>/dev/null; flatpak list --app --columns=application --system 2>/dev/null) | sort | uniq ); then
     echo "Error: Flatpak not installed or command failed."
     exit 1
 fi
 
 # Get list of existing wrapper scripts
-existing_scripts=$(ls "$BIN_DIR" 2>/dev/null | grep -v '^$' || true)
+shopt -s nullglob
+existing_scripts=("$BIN_DIR"/*)
+shopt -u nullglob
 
 # Cleanup: Remove wrappers for uninstalled apps
-for script in $existing_scripts; do
+for script in "${existing_scripts[@]}"; do
     script_path="$BIN_DIR/$script"
     if [ -f "$script_path" ]; then
         # Extract ID from script content
-        id=$(grep "flatpak run" "$script_path" | awk '{print $3}' || true)
+        id=$(grep "flatpak run" "$script_path" | head -1 | awk '{print $4}' | tr -d '"' || true)
         if [ -n "$id" ] && ! echo "$installed_ids" | grep -q "^$id$"; then
             rm "$script_path"
             pref_file="$HOME/.config/flatpak-wrappers/$script.pref"
@@ -90,10 +91,10 @@ if [ "\$PREF" = "system" ]; then
         # System command gone, fall back to flatpak
         PREF="flatpak"
         echo "flatpak" > "\$PREF_FILE"
-        exec flatpak run "\$ID" "\$@"
+        exec flatpak run $id "\$@"
     fi
 elif [ "\$PREF" = "flatpak" ]; then
-    exec flatpak run "\$ID" "\$@"
+    exec flatpak run $id "\$@"
 else
     # No pref set
     if [ "\$SYSTEM_EXISTS" = true ]; then
@@ -109,7 +110,7 @@ else
         elif [ "\$choice" = "2" ]; then
             PREF="flatpak"
             echo "\$PREF" > "\$PREF_FILE"
-            exec flatpak run "\$ID" "\$@"
+            exec flatpak run $id "\$@"
         else
             echo "Invalid choice, defaulting to system."
             PREF="system"
@@ -119,7 +120,7 @@ else
     else
         PREF="flatpak"
         echo "\$PREF" > "\$PREF_FILE"
-        exec flatpak run "\$ID" "\$@"
+        exec flatpak run $id "\$@"
     fi
 fi
 EOF

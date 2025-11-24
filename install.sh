@@ -19,7 +19,7 @@ export BIN_DIR
 
 # Generate initial wrappers
 echo "Generating wrappers..."
-bash "$SCRIPT_DIR/generate_flatpak_wrappers.sh"
+bash "$SCRIPT_DIR/generate_flatpak_wrappers.sh" "$BIN_DIR"
 
 # Setup systemd units
 echo "Setting up systemd units..."

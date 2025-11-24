@@ -33,7 +33,7 @@ list_wrappers() {
     for script in "$BIN_DIR"/*; do
         if [ -f "$script" ] && [ -x "$script" ]; then
             name=$(basename "$script")
-            id=$(grep "flatpak run" "$script" | awk '{print $3}' || echo "unknown")
+            id=$(grep "flatpak run" "$script" | head -1 | awk '{print $4}' | tr -d '"' || echo "unknown")
             echo "  $name -> $id"
         fi
     done
@@ -154,7 +154,7 @@ regenerate() {
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     wrapper_script="$script_dir/generate_flatpak_wrappers.sh"
     if [ -f "$wrapper_script" ]; then
-        bash "$wrapper_script"
+        bash "$wrapper_script" "$BIN_DIR"
     else
         echo "Wrapper script not found"
     fi
@@ -167,7 +167,7 @@ select_wrapper() {
     for script in "$BIN_DIR"/*; do
         if [ -f "$script" ] && [ -x "$script" ]; then
             name=$(basename "$script")
-            id=$(grep "flatpak run" "$script" | awk '{print $3}' || echo "unknown")
+            id=$(grep "flatpak run" "$script" | head -1 | awk '{print $4}' | tr -d '"' || echo "unknown")
             echo "$i. $name -> $id"
             wrappers[$i]="$name"
             ((i++))
@@ -177,8 +177,8 @@ select_wrapper() {
         echo "No wrappers found"
         return 1
     fi
-    read -p "Choose a wrapper (1-$((i-1))): " choice
-    if [[ $choice =~ ^[0-9]+$ ]] && [ $choice -ge 1 ] && [ $choice -lt $i ]; then
+    read -r -p "Choose a wrapper (1-$((i-1))): " choice
+    if [[ $choice =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -lt "$i" ]; then
         selected="${wrappers[$choice]}"
         echo "Selected: $selected"
         return 0
@@ -277,7 +277,7 @@ if [ $# -eq 0 ]; then
                     ;;
             esac
             echo "Press Enter to continue..."
-            read
+            read -r
         done
     else
         # Fallback to text-based menu
@@ -297,7 +297,7 @@ if [ $# -eq 0 ]; then
             echo "11. List blocked IDs"
             echo "12. Regenerate wrappers"
             echo "13. Exit"
-            read -p "Choose an option (1-13): " option
+            read -r -p "Choose an option (1-13): " option
             case $option in
                 1)
                     list_wrappers
@@ -314,34 +314,34 @@ if [ $# -eq 0 ]; then
                     ;;
                 4)
                     if select_wrapper; then
-                        read -p "Enter preference (system/flatpak): " pref
+                        read -r -p "Enter preference (system/flatpak): " pref
                         set_pref "$selected" "$pref"
                     fi
                     ;;
                 5)
                     if select_wrapper; then
-                        read -p "Enter alias name: " alias
+                        read -r -p "Enter alias name: " alias
                         set_alias "$selected" "$alias"
                     fi
                     ;;
                 6)
-                    read -p "Enter alias to remove: " alias
+                    read -r -p "Enter alias to remove: " alias
                     remove_alias "$alias"
                     ;;
                 7)
-                    read -p "Enter export file path: " file
+                    read -r -p "Enter export file path: " file
                     export_prefs "$file"
                     ;;
                 8)
-                    read -p "Enter import file path: " file
+                    read -r -p "Enter import file path: " file
                     import_prefs "$file"
                     ;;
                 9)
-                    read -p "Enter Flatpak ID to block: " id
+                    read -r -p "Enter Flatpak ID to block: " id
                     block_id "$id"
                     ;;
                 10)
-                    read -p "Enter Flatpak ID to unblock: " id
+                    read -r -p "Enter Flatpak ID to unblock: " id
                     unblock_id "$id"
                     ;;
                 11)
