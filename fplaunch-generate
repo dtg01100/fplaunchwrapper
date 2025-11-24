@@ -176,6 +176,29 @@ elif [ "\$1" = "--fpwrapper-sandbox-yolo" ]; then
     fi
     exit 0
 elif [ "\$1" = "--fpwrapper-set-override" ]; then
+    if [ -z "\$2" ]; then
+        echo "Choose override:"
+        echo "1. system"
+        echo "2. flatpak"
+        read -r -p "Choice (1/2): " choice
+        if [ "\$choice" = "1" ]; then
+            pref="system"
+        elif [ "\$choice" = "2" ]; then
+            pref="flatpak"
+        else
+            echo "Invalid choice"
+            exit 1
+        fi
+    else
+        pref="\$2"
+    fi
+    if [ "\$pref" = "system" ] || [ "\$pref" = "flatpak" ]; then
+        echo "\$pref" > "\$PREF_FILE"
+        echo "Preference set to \$pref"
+    else
+        echo "Invalid override: use 'system' or 'flatpak'"
+    fi
+    exit 0
 elif [ "\$1" = "--fpwrapper-set-pre-script" ]; then
     if [ -z "\$2" ]; then
         echo "Usage: \$0 --fpwrapper-set-pre-script <script_path>"
@@ -215,29 +238,6 @@ elif [ "\$1" = "--fpwrapper-remove-pre-script" ]; then
 elif [ "\$1" = "--fpwrapper-remove-post-script" ]; then
     rm -f "\$PREF_DIR/scripts/\$NAME/post-run.sh"
     echo "Post-run script removed for \$NAME"
-    exit 0
-    if [ -z "\$2" ]; then
-        echo "Choose override:"
-        echo "1. system"
-        echo "2. flatpak"
-        read -r -p "Choice (1/2): " choice
-        if [ "\$choice" = "1" ]; then
-            pref="system"
-        elif [ "\$choice" = "2" ]; then
-            pref="flatpak"
-        else
-            echo "Invalid choice"
-            exit 1
-        fi
-    else
-        pref="\$2"
-    fi
-    if [ "\$pref" = "system" ] || [ "\$pref" = "flatpak" ]; then
-        echo "\$pref" > "\$PREF_FILE"
-        echo "Preference set to \$pref"
-    else
-        echo "Invalid override: use 'system' or 'flatpak'"
-    fi
     exit 0
 fi
 
@@ -300,12 +300,12 @@ if [ "\$PREF" = "system" ]; then
         echo "flatpak" > "\$PREF_FILE"
         run_scripts "flatpak" "\$@"
         setup_post_run "flatpak" "\$@"
-        exec flatpak run $id "\$@"
+        exec flatpak run "\$ID" "\$@"
     fi
 elif [ "\$PREF" = "flatpak" ]; then
     run_scripts "flatpak" "\$@"
     setup_post_run "flatpak" "\$@"
-    exec flatpak run $id "\$@"
+    exec flatpak run "\$ID" "\$@"
 else
     # No pref set
     if [ "\$SYSTEM_EXISTS" = true ]; then
@@ -325,7 +325,7 @@ else
             echo "\$PREF" > "\$PREF_FILE"
             run_scripts "flatpak" "\$@"
             setup_post_run "flatpak" "\$@"
-            exec flatpak run $id "\$@"
+            exec flatpak run "\$ID" "\$@"
         else
             echo "Invalid choice, defaulting to system."
             PREF="system"
@@ -339,7 +339,7 @@ else
         echo "\$PREF" > "\$PREF_FILE"
         run_scripts "flatpak" "\$@"
         setup_post_run "flatpak" "\$@"
-        exec flatpak run $id "\$@"
+        exec flatpak run "\$ID" "\$@"
     fi
 fi
 EOF
