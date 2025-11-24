@@ -42,7 +42,7 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 
 - Bash
 - Flatpak
-- Systemd (for auto-updates)
+- Systemd or crontab (for auto-updates; falls back to crontab if systemd unavailable)
 
 ## License
 

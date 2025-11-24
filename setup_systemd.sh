@@ -6,9 +6,9 @@ UNIT_DIR="$HOME/.config/systemd/user"
 FLATPAK_BIN_DIR="$HOME/.local/share/flatpak/exports/bin"
 
 # Check prerequisites
-if ! command -v systemctl &> /dev/null; then
-    echo "Error: systemctl not available."
-    exit 1
+systemd_available=false
+if command -v systemctl &> /dev/null && systemctl --user is-systemd-running &> /dev/null; then
+    systemd_available=true
 fi
 
 if ! command -v flatpak &> /dev/null; then
@@ -60,11 +60,25 @@ Persistent=true
 WantedBy=timers.target
 EOF
 
-# Reload and enable
-systemctl --user daemon-reload
-systemctl --user enable flatpak-wrappers.path
-systemctl --user start flatpak-wrappers.path
-systemctl --user enable flatpak-wrappers.timer
-systemctl --user start flatpak-wrappers.timer
-
-echo "Systemd units installed and started. Wrappers will update automatically on user Flatpak changes and daily (system Flatpak changes require manual run or wait for timer)."
+if [ "$systemd_available" = true ]; then
+    # Reload and enable
+    systemctl --user daemon-reload
+    systemctl --user enable flatpak-wrappers.path
+    systemctl --user start flatpak-wrappers.path
+    systemctl --user enable flatpak-wrappers.timer
+    systemctl --user start flatpak-wrappers.timer
+    echo "Systemd units installed and started. Wrappers will update automatically on user Flatpak changes and daily (system Flatpak changes require manual run or wait for timer)."
+else
+    # Fallback to cron
+    if command -v crontab &> /dev/null; then
+        cron_job="*/30 * * * * $WRAPPER_SCRIPT $BIN_DIR"
+        if ! crontab -l 2>/dev/null | grep -q "$WRAPPER_SCRIPT"; then
+            (crontab -l 2>/dev/null; echo "$cron_job") | crontab -
+            echo "Cron job added for wrapper updates every 30 minutes. (System Flatpak changes require manual run.)"
+        else
+            echo "Cron job already exists. Wrappers will update every 30 minutes."
+        fi
+    else
+        echo "Neither systemd nor crontab available. Please run '$WRAPPER_SCRIPT $BIN_DIR' manually to update wrappers."
+    fi
+fi

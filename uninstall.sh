@@ -2,6 +2,7 @@
 
 # Uninstall script for Flatpak Launch Wrappers
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$HOME/.config/flatpak-wrappers"
 BIN_DIR_FILE="$CONFIG_DIR/bin_dir"
 BIN_DIR="$HOME/bin"  # default
@@ -25,6 +26,11 @@ rm -f "$UNIT_DIR/flatpak-wrappers.service"
 rm -f "$UNIT_DIR/flatpak-wrappers.path"
 rm -f "$UNIT_DIR/flatpak-wrappers.timer"
 systemctl --user daemon-reload 2>/dev/null || true
+
+# Remove cron job if exists
+if command -v crontab &> /dev/null; then
+    crontab -l 2>/dev/null | grep -v "$SCRIPT_DIR/generate_flatpak_wrappers.sh" | crontab -
+fi
 
 # Remove wrappers and aliases
 for script in "$BIN_DIR"/*; do
