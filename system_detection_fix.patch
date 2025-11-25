@@ -1,0 +1,24 @@
+--- a/fplaunch-generate
++++ b/fplaunch-generate
+@@ -275,10 +275,16 @@ if [ -f "$PREF_FILE" ]; then
+ fi
+ 
+ # Check for system command at launch time
+-SYSTEM_EXISTS=false
+-if command -v "\$NAME" >/dev/null 2>&1; then
+-    CMD_PATH=\$(which "\$NAME")
+-    if [[ "\$CMD_PATH" != "\$SCRIPT_BIN_DIR/\$NAME" ]]; then
+-        SYSTEM_EXISTS=true
++SYSTEM_EXISTS=false
++CMD_PATH=""
++
++# Check standard system paths in precedence order, skipping wrapper location
++for sys_dir in "/usr/local/bin" "/usr/bin" "/bin" "/usr/local/sbin" "/usr/sbin" "/sbin"; do
++    candidate="\$sys_dir/\$NAME"
++    if [ -f "\$candidate" ] && [ -x "\$candidate" ] && [ "\$candidate" != "\$SCRIPT_BIN_DIR/\$NAME" ]; then
++        SYSTEM_EXISTS=true
++        CMD_PATH="\$candidate"
++        break
+     fi
+ fi
++done

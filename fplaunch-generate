@@ -67,12 +67,7 @@ SCRIPT_BIN_DIR="$BIN_DIR"
 
 mkdir -p "\$PREF_DIR"
 
-if [ "\$1" = "--help" ]; then
-    echo "Wrapper for \$NAME"
-    echo "Usage: \$0 [args]"
-    echo "Run '\$0 --fpwrapper-help' for more options."
-    exit 0
-elif [ "\$1" = "--fpwrapper-help" ]; then
+if [ "\$1" = "--fpwrapper-help" ]; then
     echo "Wrapper for \$NAME"
     echo "Flatpak ID: \$ID"
     pref=\$(cat "\$PREF_FILE" 2>/dev/null || echo "none")
@@ -95,18 +90,18 @@ echo "Available options:"
      echo "  --fpwrapper-remove-post-script              Remove post-run script"
     echo ""
 echo "Examples:"
-     echo "  \$0 --fpwrapper-info"
-     echo "  cd \"\\\$(\\\$0 --fpwrapper-config-dir)\""
-     echo "  \$0 --fpwrapper-sandbox-info"
-     echo "  \$0 --fpwrapper-edit-sandbox"
-     echo "  \$0 --fpwrapper-sandbox-yolo"
-     echo "  \$0 --fpwrapper-sandbox-reset"
-     echo "  \$0 --fpwrapper-run-unrestricted"
-     echo "  \$0 --fpwrapper-set-override system"
-     echo "  \$0 --fpwrapper-set-pre-script ~/scripts/my-pre-script.sh"
-     echo "  \$0 --fpwrapper-set-post-script ~/scripts/my-post-script.sh"
-     echo "  \$0 --fpwrapper-remove-pre-script"
-     echo "  \$0 --fpwrapper-remove-post-script"
+     echo "  \$NAME --fpwrapper-info"
+     echo "  cd \"\\\$(\\\$NAME --fpwrapper-config-dir)\""
+     echo "  \$NAME --fpwrapper-sandbox-info"
+     echo "  \$NAME --fpwrapper-edit-sandbox"
+     echo "  \$NAME --fpwrapper-sandbox-yolo"
+     echo "  \$NAME --fpwrapper-sandbox-reset"
+     echo "  \$NAME --fpwrapper-run-unrestricted"
+     echo "  \$NAME --fpwrapper-set-override system"
+     echo "  \$NAME --fpwrapper-set-pre-script ~/scripts/my-pre-script.sh"
+     echo "  \$NAME --fpwrapper-set-post-script ~/scripts/my-post-script.sh"
+     echo "  \$NAME --fpwrapper-remove-pre-script"
+     echo "  \$NAME --fpwrapper-remove-post-script"
     exit 0
 elif [ "\$1" = "--fpwrapper-info" ]; then
     echo "Wrapper for \$NAME"
@@ -280,14 +275,19 @@ else
     PREF=""
 fi
 
-# Check for system command at launch time
+# Check for system command at launch time (IMPROVED: PATH-order independent)
 SYSTEM_EXISTS=false
-if command -v "\$NAME" >/dev/null 2>&1; then
-    CMD_PATH=\$(which "\$NAME")
-    if [[ "\$CMD_PATH" != "\$SCRIPT_BIN_DIR/\$NAME" ]]; then
+CMD_PATH=""
+
+# Check standard system paths in precedence order, skipping wrapper location
+for sys_dir in "/usr/local/bin" "/usr/bin" "/bin" "/usr/local/sbin" "/usr/sbin" "/sbin"; do
+    candidate="\$sys_dir/\$NAME"
+    if [ -f "\$candidate" ] && [ -x "\$candidate" ] && [ "\$candidate" != "\$SCRIPT_BIN_DIR/\$NAME" ]; then
         SYSTEM_EXISTS=true
+        CMD_PATH="\$candidate"
+        break
     fi
-fi
+done
 
 if [ "\$PREF" = "system" ]; then
     if [ "\$SYSTEM_EXISTS" = true ]; then

@@ -21,7 +21,7 @@ A utility to create small wrapper scripts for Flatpak applications, allowing you
 
 Each generated wrapper provides these additional options:
 
-- `--help` - Show basic usage
+
 - `--fpwrapper-help` - Show detailed help with all available options
 - `--fpwrapper-info` - Show wrapper and Flatpak app information
 - `--fpwrapper-config-dir` - Show the Flatpak app's configuration directory
@@ -51,7 +51,7 @@ Each generated wrapper provides these additional options:
 ## Usage
 
 - Launch apps: `chrome`, `firefox`, etc.
-- Get info: `chrome --fpwrapper-info`, `chrome --help`, or `chrome --fpwrapper-help` for detailed options.
+- Get info: `chrome --fpwrapper-info` or `chrome --fpwrapper-help` for detailed options.
 - Config dir: `cd "$(chrome --fpwrapper-config-dir)"` to access app data.
 - Sandbox info: `chrome --fpwrapper-sandbox-info` to show Flatpak details.
 - Edit sandbox: `chrome --fpwrapper-edit-sandbox` for interactive permission editing.
