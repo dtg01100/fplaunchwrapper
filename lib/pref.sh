@@ -4,6 +4,7 @@ set_pref() {
     choice="$2"
     if [ "$choice" != "system" ] && [ "$choice" != "flatpak" ]; then
         echo "Invalid choice: use 'system' or 'flatpak'"
+        return 1
     fi
     pref_file="$CONFIG_DIR/$name.pref"
     read -r -p "Set preference for '$name' to '$choice'? (y/n): " confirm
@@ -35,6 +36,7 @@ set_pref_all() {
     pref="$1"
     if [ "$pref" != "system" ] && [ "$pref" != "flatpak" ]; then
         echo "Invalid preference: use 'system' or 'flatpak'"
+        return 1
     fi
     read -r -p "Set preference to '$pref' for all wrappers? (y/n): " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then

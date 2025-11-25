@@ -6,9 +6,11 @@ set_alias() {
     alias_path="$BIN_DIR/$alias"
     if [ ! -f "$script_path" ]; then
         echo "Wrapper $name not found"
+        return 1
     fi
     if [ -e "$alias_path" ]; then
         echo "Alias $alias already exists"
+        return 1
     fi
     read -r -p "Create alias '$alias' for '$name'? (y/n): " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then

@@ -6,6 +6,7 @@ set_env() {
     env_file="$CONFIG_DIR/$name.env"
     if [ ! -f "$BIN_DIR/$name" ]; then
         echo "Wrapper $name not found"
+        return 1
     fi
     read -r -p "Set $var=$value for '$name'? (y/n): " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then

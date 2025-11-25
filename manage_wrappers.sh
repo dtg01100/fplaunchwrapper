@@ -301,6 +301,11 @@ export_prefs() {
 import_prefs() {
     file="$1"
     if [ -f "$file" ]; then
+        # Validate tar contents before extraction
+        if tar -tzf "$file" 2>/dev/null | grep -q '\.\.'; then
+            echo "Error: Archive contains suspicious paths. Import cancelled for security."
+            return 1
+        fi
         tar -xzf "$file" -C "$CONFIG_DIR" 2>/dev/null
         echo "Imported preferences from $file"
     else
@@ -317,6 +322,11 @@ export_config() {
 import_config() {
     file="$1"
     if [ -f "$file" ]; then
+        # Validate tar contents before extraction
+        if tar -tzf "$file" 2>/dev/null | grep -q '\.\.'; then
+            echo "Error: Archive contains suspicious paths. Import cancelled for security."
+            return 1
+        fi
         tar -xzf "$file" -C "$CONFIG_DIR" 2>/dev/null
         echo "Imported full config from $file"
     else

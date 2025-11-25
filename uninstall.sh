@@ -35,7 +35,7 @@ systemctl --user daemon-reload 2>/dev/null || true
 
 # Remove cron job if exists
 if command -v crontab &> /dev/null; then
-    crontab -l 2>/dev/null | grep -v "$SCRIPT_DIR/generate_flatpak_wrappers.sh" | crontab -
+    crontab -l 2>/dev/null | grep -v "$SCRIPT_DIR/fplaunch-generate" | crontab -
 fi
 
 # Remove wrappers, aliases, and manager

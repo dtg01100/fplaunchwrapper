@@ -18,22 +18,6 @@ else
     echo "Warning: Neither systemd nor crontab available. Auto-updates will not be possible."
 fi
 
-if command -v systemctl &> /dev/null && systemctl --user is-systemd-running &> /dev/null 2>&1; then
-    echo "Systemd user available for auto-updates."
-elif command -v crontab &> /dev/null; then
-    echo "Crontab available for auto-updates."
-else
-    echo "Warning: Neither systemd nor crontab available. Auto-updates will not be possible."
-fi
-
-if command -v systemctl &> /dev/null && systemctl --user is-systemd-running &> /dev/null 2>&1; then
-    echo "Systemd user available for auto-updates."
-elif command -v crontab &> /dev/null; then
-    echo "Crontab available for auto-updates."
-else
-    echo "Warning: Neither systemd nor crontab available. Auto-updates will not be possible."
-fi
-
 # Set BIN_DIR from arg or default
 BIN_DIR="${1:-$HOME/.local/bin}"
 
