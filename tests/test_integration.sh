@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+# shellcheck disable=SC2034
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
@@ -123,9 +124,7 @@ EOF
     for process_id in {1..5}; do
         (
             for iteration in {1..20}; do
-                # Read current value
-                local current_value
-                current_value=$(cat "$pref_test_file" 2>/dev/null || echo "error")
+                # Read current value (not used in this test, but kept for test structure consistency)
                 
                 # Modify value
                 local new_value="process_${process_id}_iteration_${iteration}"

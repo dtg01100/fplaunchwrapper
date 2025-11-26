@@ -33,9 +33,16 @@ validate_home_dir() {
     
     # Check for path traversal attempts
     case "$dir" in
-        *\.\.*|*\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
+        *\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
             echo "Error: ${operation^} contains directory traversal attempt" >&2
             return 1
+            ;;
+        *\.\.*)
+            # Additional check for double dots anywhere (not just as path traversal)
+            if [[ "$dir" =~ \.\. ]]; then
+                echo "Error: ${operation^} contains suspicious '..' pattern" >&2
+                return 1
+            fi
             ;;
     esac
     

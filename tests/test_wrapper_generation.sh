@@ -360,9 +360,18 @@ test_aggressive_security_attacks() {
         ((total_attacks++))
         # Test if our security logic blocks directory traversal
         case "$traversal" in
-            *\.\.*|*\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
+            *\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
                 echo "✓ Blocked directory traversal: $traversal"
                 ((attacks_blocked++))
+                ;;
+            *\.\.*)
+                # Additional check for double dots anywhere (not just as path traversal)
+                if [[ "$traversal" =~ \.\. ]]; then
+                    echo "✓ Blocked suspicious '..' pattern: $traversal"
+                    ((attacks_blocked++))
+                else
+                    echo "✗ Failed to block suspicious pattern: $traversal"
+                fi
                 ;;
             *)
                 echo "✗ Failed to block directory traversal: $traversal"
@@ -417,11 +426,12 @@ test_aggressive_security_attacks() {
         ((total_attacks++))
         # Test if our logic would block symlink attacks
         case "$target" in
-            "$TEST_BIN"/*|"$HOME"/*|/tmp/*|/var/*|/home/*/.*|/root/.*/)
+            "$TEST_BIN"/*|/home/*/.local/bin/*|/opt/*/bin/*|/snap/*|"$HOME"/*|/tmp/*|/var/*|/root/.*/)
                 echo "✓ Blocked symlink attack target: $target"
                 ((attacks_blocked++))
                 ;;
-            /home/*/.local/bin/*|/opt/*/bin/*|/snap/*)
+            /home/*/.*)
+                # Handle home dot directories specifically
                 echo "✓ Blocked symlink attack target: $target"
                 ((attacks_blocked++))
                 ;;
