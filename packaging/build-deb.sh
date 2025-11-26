@@ -24,6 +24,7 @@ cp -r \
     lib/ \
     examples/ \
     README.md \
+    QUICKSTART.md \
     "$BUILD_DIR/${PACKAGE_NAME}_${VERSION}/"
 
 # Copy packaging files

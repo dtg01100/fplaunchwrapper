@@ -13,7 +13,7 @@ This directory contains the build scripts and configurations for creating distri
 
 **For Debian packages:**
 ```bash
-sudo apt-get install build-essential devscripts debhelper
+sudo apt-get install build-essential devscripts debhelper fakeroot
 ```
 
 **For RPM packages:**
@@ -35,6 +35,13 @@ sudo zypper install rpm-build  # openSUSE
 ./packaging/build-rpm.sh 1.1.0
 ```
 
+**Test RPM build (validation only):**
+```bash
+./packaging/test-rpm-mock.sh 1.1.0
+```
+
+This validates the RPM spec file and build process without requiring rpmbuild.
+
 Replace `1.1.0` with the desired version number.
 
 ## Package Installation
@@ -44,8 +51,12 @@ Replace `1.1.0` with the desired version number.
 ```bash
 sudo dpkg -i fplaunchwrapper_1.1.0_all.deb
 sudo apt-get install -f  # Install any missing dependencies
+
+# REQUIRED: Per-user setup
 bash /usr/lib/fplaunchwrapper/install.sh
 ```
+
+When you run `install.sh`, you'll be prompted whether to enable automatic updates.
 
 ### Fedora/RHEL/openSUSE
 
@@ -53,8 +64,12 @@ bash /usr/lib/fplaunchwrapper/install.sh
 sudo rpm -i fplaunchwrapper-1.1.0-1.noarch.rpm
 # or
 sudo dnf install fplaunchwrapper-1.1.0-1.noarch.rpm
+
+# REQUIRED: Per-user setup
 bash /usr/lib/fplaunchwrapper/install.sh
 ```
+
+When you run `install.sh`, you'll be prompted whether to enable automatic updates.
 
 ## Package Contents
 

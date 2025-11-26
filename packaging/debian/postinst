@@ -3,14 +3,27 @@ set -e
 
 case "$1" in
     configure)
-        echo "fplaunchwrapper installed to /usr/lib/fplaunchwrapper"
+        echo "=========================================="
+        echo "fplaunchwrapper successfully installed!"
+        echo "=========================================="
         echo ""
-        echo "To set up wrappers for your Flatpak apps, run:"
+        echo "Installation location: /usr/lib/fplaunchwrapper"
+        echo ""
+        echo "IMPORTANT: Per-user setup required"
+        echo ""
+        echo "Each user must run the following command to:"
+        echo "  - Generate wrapper scripts in ~/.local/bin"
+        echo "  - Optionally enable automatic updates"
+        echo ""
         echo "  bash /usr/lib/fplaunchwrapper/install.sh"
         echo ""
-        echo "This will install wrapper scripts to ~/.local/bin and set up automatic updates."
+        echo "The install script will prompt you whether to enable"
+        echo "automatic wrapper updates via systemd or crontab."
         echo ""
-        echo "For more information, see: /usr/share/doc/fplaunchwrapper/README.md"
+        echo "For more information:"
+        echo "  - Documentation: /usr/share/doc/fplaunchwrapper/README.md"
+        echo "  - Quick start: /usr/share/doc/fplaunchwrapper/QUICKSTART.md"
+        echo "=========================================="
         ;;
 esac
 

@@ -1,0 +1,13 @@
+# Build artifacts
+build/
+*.deb
+*.rpm
+*.tar.gz
+*.changes
+*.buildinfo
+
+# Test results
+PACKAGING_TEST_RESULTS.md
+
+# Temporary files
+/tmp/

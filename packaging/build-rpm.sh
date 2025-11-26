@@ -27,6 +27,7 @@ cp -r \
     lib/ \
     examples/ \
     README.md \
+    QUICKSTART.md \
     "$BUILD_DIR/SOURCES/$TARBALL_DIR/"
 
 # Add LICENSE if it doesn't exist

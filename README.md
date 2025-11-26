@@ -45,6 +45,8 @@ Each generated wrapper provides these additional options:
 # Download the .deb from GitHub Releases
 sudo dpkg -i fplaunchwrapper_*.deb
 sudo apt-get install -f  # Install dependencies if needed
+
+# REQUIRED: Run per-user setup
 bash /usr/lib/fplaunchwrapper/install.sh
 ```
 
@@ -52,8 +54,12 @@ bash /usr/lib/fplaunchwrapper/install.sh
 ```bash
 # Download the .rpm from GitHub Releases
 sudo dnf install fplaunchwrapper-*.rpm
+
+# REQUIRED: Run per-user setup
 bash /usr/lib/fplaunchwrapper/install.sh
 ```
+
+**Important**: Package installation only installs files system-wide. Each user must run the `install.sh` script to generate wrappers in their home directory and optionally enable automatic updates.
 
 ### From Source
 

@@ -15,6 +15,7 @@ override_dh_auto_install:
 	# Install documentation
 	mkdir -p debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper
 	cp README.md debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/
+	cp QUICKSTART.md debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/
 	cp -r examples debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/
 	[ -f RELEASE_*.md ] && cp RELEASE_*.md debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/ || true
 	

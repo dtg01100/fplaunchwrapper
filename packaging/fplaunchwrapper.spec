@@ -50,6 +50,7 @@ install -m 755 lib/*.sh %{buildroot}/usr/lib/fplaunchwrapper/lib/
 # Install documentation
 mkdir -p %{buildroot}/usr/share/doc/fplaunchwrapper
 install -m 644 README.md %{buildroot}/usr/share/doc/fplaunchwrapper/
+install -m 644 QUICKSTART.md %{buildroot}/usr/share/doc/fplaunchwrapper/
 cp -r examples %{buildroot}/usr/share/doc/fplaunchwrapper/
 [ -f RELEASE_*.md ] && install -m 644 RELEASE_*.md %{buildroot}/usr/share/doc/fplaunchwrapper/ || true
 
@@ -65,14 +66,27 @@ install -m 644 fplaunch_completion.bash %{buildroot}/usr/share/bash-completion/c
 /usr/share/bash-completion/completions/fplaunch-manage
 
 %post
-echo "fplaunchwrapper installed to /usr/lib/fplaunchwrapper"
+echo "=========================================="
+echo "fplaunchwrapper successfully installed!"
+echo "=========================================="
 echo ""
-echo "To set up wrappers for your Flatpak apps, run:"
+echo "Installation location: /usr/lib/fplaunchwrapper"
+echo ""
+echo "IMPORTANT: Per-user setup required"
+echo ""
+echo "Each user must run the following command to:"
+echo "  - Generate wrapper scripts in ~/.local/bin"
+echo "  - Optionally enable automatic updates"
+echo ""
 echo "  bash /usr/lib/fplaunchwrapper/install.sh"
 echo ""
-echo "This will install wrapper scripts to ~/.local/bin and set up automatic updates."
+echo "The install script will prompt you whether to enable"
+echo "automatic wrapper updates via systemd or crontab."
 echo ""
-echo "For more information, see: /usr/share/doc/fplaunchwrapper/README.md"
+echo "For more information:"
+echo "  - Documentation: /usr/share/doc/fplaunchwrapper/README.md"
+echo "  - Quick start: /usr/share/doc/fplaunchwrapper/QUICKSTART.md"
+echo "=========================================="
 
 %changelog
 * Tue Nov 26 2025 fplaunchwrapper Developers <dev@example.com> - %{version}-1

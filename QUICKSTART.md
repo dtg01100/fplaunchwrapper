@@ -13,8 +13,9 @@ wget https://github.com/dtg01100/fplaunchwrapper/releases/latest/download/fplaun
 sudo dpkg -i fplaunchwrapper_1.1.0_all.deb
 sudo apt-get install -f
 
-# Run user setup
+# IMPORTANT: Run per-user setup (required)
 bash /usr/lib/fplaunchwrapper/install.sh
+# You'll be prompted whether to enable automatic updates
 ```
 
 **Fedora/RHEL:**
@@ -23,9 +24,14 @@ bash /usr/lib/fplaunchwrapper/install.sh
 wget https://github.com/dtg01100/fplaunchwrapper/releases/latest/download/fplaunchwrapper-1.1.0-1.noarch.rpm
 sudo dnf install fplaunchwrapper-1.1.0-1.noarch.rpm
 
-# Run user setup
+# IMPORTANT: Run per-user setup (required)
 bash /usr/lib/fplaunchwrapper/install.sh
+# You'll be prompted whether to enable automatic updates
 ```
+
+**Note**: The package installation only installs files system-wide. Each user must run the `install.sh` script to:
+- Generate wrapper scripts in their `~/.local/bin`
+- Optionally enable automatic wrapper updates (via systemd or crontab)
 
 ### Option 2: From Source
 
