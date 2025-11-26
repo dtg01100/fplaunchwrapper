@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 # Test suite for management functions (aliases, preferences, env vars, etc.)
 # Self-contained tests
+#
+# WHY THESE TESTS MATTER:
+# - Management functions are core user interface - if broken, users can't configure tool
+# - Preferences persistence is critical for user experience
+# - Alias management enables flexible command naming
+# - Environment variables allow customization
+# - Blocklist functionality respects user choices
+# - Export/import enables backup and migration
 
 TEST_DIR="/tmp/fplaunch-mgmt-test-$$"
 TEST_BIN="$TEST_DIR/bin"
@@ -57,6 +65,13 @@ setup() {
 }
 
 # Test 1: Set and retrieve preference
+# WHAT IT TESTS: User preference storage and retrieval for launch behavior
+# WHY IT MATTERS: Core user customization feature - determines system vs flatpak preference
+# WHAT COULD GO WRONG if broken:
+# - User preferences are lost or not saved
+# - System always launches wrong version (system vs flatpak)
+# - Configuration becomes inconsistent
+# - Users lose trust in tool's reliability
 test_set_preference() {
     echo -e "\n${YELLOW}Test 1: Set and retrieve preference${NC}"
     
@@ -98,6 +113,13 @@ EOF
 }
 
 # Test 2: Alias management
+# WHAT IT TESTS: Creating and managing alternative names for wrapper scripts
+# WHY IT MATTERS: Flexibility in command naming, handles conflicts, enables shortcuts
+# WHAT COULD GO WRONG if broken:
+# - Users can't create convenient aliases for long application names
+# - Command conflicts can't be resolved
+# - Symlink management fails, breaking existing aliases
+# - Alias tracking becomes inconsistent
 test_alias_management() {
     echo -e "\n${YELLOW}Test 2: Alias management${NC}"
     

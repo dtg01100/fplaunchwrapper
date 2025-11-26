@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 # Test suite for wrapper generation functionality
 # Self-contained test that doesn't require actual Flatpak installation
+#
+# WHY THESE TESTS MATTER:
+# - Wrapper generation is core functionality - if broken, nothing works
+# - Collision detection prevents overwriting important commands
+# - Blocklist functionality respects user choices and system commands
+# - Environment variable loading enables customization
+# - Pre-launch scripts provide extensibility
+# - Safety checks prevent malicious archive extraction
 
 TEST_DIR="/tmp/fplaunch-test-$$"
 TEST_BIN="$TEST_DIR/bin"
@@ -123,6 +131,13 @@ EOF
 }
 
 # Test 1: Basic wrapper generation
+# WHAT IT TESTS: Core wrapper creation functionality
+# WHY IT MATTERS: This is the fundamental feature - without it, the entire tool fails
+# WHAT COULD GO WRONG if broken:
+# - No wrapper scripts are created
+# - Users can't launch Flatpak applications through wrappers
+# - All downstream functionality (preferences, blocking, etc.) fails
+# - Tool becomes completely unusable
 test_basic_generation() {
     echo -e "\n${YELLOW}Test 1: Basic wrapper generation${NC}"
     
@@ -170,6 +185,13 @@ GENEOF
 }
 
 # Test 2: Collision detection
+# WHAT IT TESTS: Prevents overwriting existing commands or creating conflicting wrappers
+# WHY IT MATTERS: Critical safety feature to prevent breaking system commands
+# WHAT COULD GO WRONG if broken:
+# - Wrapper scripts overwrite important system commands (rm, mv, cp, etc.)
+# - Users accidentally break their system when installing wrappers
+# - Command conflicts cause unpredictable behavior
+# - Security risk if malicious apps try to masquerade as system commands
 test_collision_detection() {
     echo -e "\n${YELLOW}Test 2: Collision detection${NC}"
     
@@ -229,6 +251,13 @@ GENEOF
 }
 
 # Test 3: Blocklist functionality
+# WHAT IT TESTS: Respects user's choice to block certain applications
+# WHY IT MATTERS: User control over what gets wrapped, prevents unwanted wrappers
+# WHAT COULD GO WRONG if broken:
+# - Blocked applications still get wrappers created
+# - Users lose control over their command namespace
+# - System applications get inappropriately wrapped
+# - User preferences are ignored
 test_blocklist() {
     echo -e "\n${YELLOW}Test 3: Blocklist functionality${NC}"
     
