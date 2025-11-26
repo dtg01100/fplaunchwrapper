@@ -2,9 +2,9 @@
 
 ## Overview
 
-fplaunchwrapper uses a sophisticated, multi-layered approach to resolve paths to system binaries, ensuring reliable detection of system packages while avoiding conflicts with its own wrapper scripts. This system is designed to be **PATH-order independent** and **collision-safe**.
+fplaunchwrapper uses a sophisticated, multi-layered approach to resolve paths to system binaries, ensuring reliable detection of system packages while avoiding conflicts with its own wrapper scripts. This system is designed to be **PATH-order independent**, **collision-safe**, and **security-hardened** against various attack vectors.
 
-## The Resolution Process
+## Security-Hardened Resolution Process
 
 ### 1. **Wrapper Script Generation** (`fplaunch-generate`)
 
@@ -13,40 +13,169 @@ When a wrapper is created, the system binary path resolution logic is **embedded
 - Each wrapper has its own self-contained resolution logic
 - No runtime PATH dependency issues
 - Consistent behavior regardless of shell environment
+- **Security hardening is baked in at generation time**
 
-### 2. **System Binary Search Algorithm**
+### 2. **Security-Hardened System Binary Search Algorithm**
 
-The wrapper uses this specific algorithm to find system binaries:
+The wrapper uses this security-focused algorithm to find system binaries:
 
 ```bash
-# Check standard system paths in precedence order, skipping wrapper location
+# Security-hardened PATH parsing with input validation
+# Sanitize PATH to prevent injection attacks
+SAFE_PATH="${PATH:-/usr/local/bin:/usr/bin:/bin}"
+
+# Remove dangerous characters and normalize
+# This prevents PATH injection attacks
+SAFE_PATH=$(echo "$SAFE_PATH" | sed 's/[^a-zA-Z0-9\/\:\.\-\_]/:/g')
+
 SYSTEM_EXISTS=false
 CMD_PATH=""
 
-for sys_dir in "/usr/local/bin" "/usr/bin" "/bin" "/usr/local/sbin" "/usr/sbin" "/sbin"; do
+# Parse PATH defensively
+IFS=':' read -ra PATH_DIRS <<< "$SAFE_PATH"
+for sys_dir in "${PATH_DIRS[@]}"; do
+    # Skip empty directories
+    [ -z "$sys_dir" ] && continue
+    
+    # Skip dangerous patterns (directory traversal)
+    case "$sys_dir" in
+        *\.\.*|*\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
+            echo "SECURITY: Skipping dangerous path: $sys_dir" >&2
+            continue
+            ;;
+    esac
+    
+    # Skip user directories (prevents user script execution)
+    case "$sys_dir" in
+        "$HOME"/*|\~/*)
+            echo "SECURITY: Skipping user directory: $sys_dir" >&2
+            continue
+            ;;
+    esac
+    
+    # Skip paths with suspicious characters
+    if [[ ! "$sys_dir" =~ ^/([a-zA-Z0-9\.\_\-]+/)*[a-zA-Z0-9\.\_\-]+$ ]]; then
+        echo "SECURITY: Skipping malformed path: $sys_dir" >&2
+        continue
+    fi
+    
+    # Skip excessively long paths (potential buffer overflow protection)
+    if [ ${#sys_dir} -gt 256 ]; then
+        echo "SECURITY: Skipping overly long path" >&2
+        continue
+    fi
+    
+    # Skip if directory doesn't exist (prevents false positives)
+    if [ ! -d "$sys_dir" ]; then
+        continue
+    fi
+    
+    # Skip if directory is not readable (security check)
+    if [ ! -r "$sys_dir" ]; then
+        echo "SECURITY: Skipping unreadable directory: $sys_dir" >&2
+        continue
+    fi
+    
     candidate="$sys_dir/$NAME"
-    if [ -f "$candidate" ] && [ -x "$candidate" ] && [ "$candidate" != "$SCRIPT_BIN_DIR/$NAME" ]; then
+    
+    # Additional validation of candidate path
+    # Skip if candidate path is suspicious
+    if [[ "$candidate" =~ [\;\|\&\$\`\<\>] ]]; then
+        echo "SECURITY: Skipping candidate with dangerous characters: $candidate" >&2
+        continue
+    fi
+    
+    # Skip if candidate path is excessively long
+    if [ ${#candidate} -gt 512 ]; then
+        echo "SECURITY: Skipping overly long candidate path" >&2
+        continue
+    fi
+    
+    # Check if this is our own wrapper script - if so, skip it
+    if [ "$candidate" = "$SCRIPT_BIN_DIR/$NAME" ]; then
+        echo "SECURITY: Skipping our own wrapper at $candidate" >&2
+        continue
+    fi
+    
+    # Final security checks before testing file
+    # Ensure candidate is within expected system directories
+    case "$sys_dir" in
+        /usr/local/bin|/usr/bin|/bin|/usr/local/sbin|/usr/sbin|/sbin|/opt/*/bin|/opt/bin)
+            # Allow standard system directories
+            ;;
+        *)
+            echo "SECURITY: Skipping non-system directory: $sys_dir" >&2
+            continue
+            ;;
+    esac
+    
+    # Check if executable exists in this PATH directory
+    if [ -f "$candidate" ] && [ -x "$candidate" ]; then
+        # Additional verification: ensure file is not a symlink to wrapper location
+        if [ -L "$candidate" ]; then
+            link_target=$(readlink -f "$candidate" 2>/dev/null)
+            if [ "$link_target" = "$SCRIPT_BIN_DIR/$NAME" ]; then
+                echo "SECURITY: Skipping symlink to wrapper: $candidate" >&2
+                continue
+            fi
+        fi
+        
+        # Verify file is owned by root or system user (additional security)
+        if [ "$(stat -c %u "$candidate" 2>/dev/null)" != "0" ] && [ "$(stat -c %u "$candidate" 2>/dev/null)" != "1" ]; then
+            echo "SECURITY: Skipping non-system owned file: $candidate" >&2
+            continue
+        fi
+        
         SYSTEM_EXISTS=true
         CMD_PATH="$candidate"
+        echo "SECURITY: Found system binary at $candidate" >&2
         break
     fi
 done
 ```
 
-#### **Key Features:**
+#### **Security Features:**
 
-1. **Explicit Path Order**: Searches `/usr/local/bin` → `/usr/bin` → `/bin` → `/usr/local/sbin` → `/usr/sbin` → `/sbin`
-   - This mirrors the standard Unix filesystem hierarchy
-   - `/usr/local/bin` takes precedence (for locally compiled software)
-   - System binaries in `/bin` and `/usr/bin` are found reliably
+1. **PATH Injection Prevention**: Sanitizes PATH to remove dangerous characters
+   - Prevents `PATH="/tmp/evil;rm -rf /"` style attacks
+   - Only allows alphanumeric, slash, dot, hyphen, and underscore characters
 
-2. **Collision Avoidance**: The critical check `[ "$candidate" != "$SCRIPT_BIN_DIR/$NAME" ]`
-   - Prevents wrapper from calling itself (infinite recursion)
-   - Ensures wrapper in `~/.local/bin/chrome` doesn't call itself instead of `/usr/bin/chrome`
+2. **Directory Traversal Protection**: Blocks `../` patterns
+   - Prevents access to parent directories
+   - Blocks various `../` attack vectors
 
-3. **File System Checks**: Validates both existence (`-f`) and executability (`-x`)
-   - Prevents calling broken symlinks or non-executable files
-   - Ensures the found file is actually runnable
+3. **User Directory Exclusion**: Skips `$HOME/*` and `~/*` paths
+   - Prevents execution of user-controlled scripts
+   - Forces system-only binary resolution
+
+4. **Path Validation**: Regex validation for well-formed paths
+   - Ensures paths follow standard Unix filesystem patterns
+   - Rejects malformed or suspicious path structures
+
+5. **Length Limits**: Protects against buffer overflow attacks
+   - 256-character limit for directory paths
+   - 512-character limit for full candidate paths
+
+6. **Readability Checks**: Verifies directory accessibility
+   - Skips non-existent directories
+   - Skips unreadable directories
+
+7. **Character Filtering**: Blocks dangerous shell metacharacters
+   - Prevents command injection via path components
+   - Blocks `;`, `|`, `&`, `$`, `` ` ``, `<`, `>` characters
+
+8. **System Directory Whitelisting**: Only allows known system directories
+   - `/usr/local/bin`, `/usr/bin`, `/bin`, `/usr/local/sbin`, `/usr/sbin`, `/sbin`
+   - `/opt/*/bin`, `/opt/bin` for third-party system software
+   - Rejects all other directories
+
+9. **Symlink Attack Detection**: Detects and blocks malicious symlinks
+   - Checks if symlink target points to wrapper script
+   - Prevents symlink-based wrapper hijacking
+
+10. **Ownership Verification**: Ensures system ownership
+    - Only allows files owned by root (uid 0) or system user (uid 1)
+    - Prevents execution of user-owned files
 
 ### 3. **Preference-Based Decision Logic**
 

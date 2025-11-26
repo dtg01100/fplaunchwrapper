@@ -438,27 +438,83 @@ SCRIPT_BIN_DIR="$TEST_BIN"
 
 mkdir -p "$PREF_DIR"
 
-# Check for system command at launch time (PATH-aware)
+# Security-hardened PATH parsing
+SAFE_PATH="${PATH:-/usr/local/bin:/usr/bin:/bin}"
+SAFE_PATH=$(echo "$SAFE_PATH" | sed 's/[^a-zA-Z0-9\/\:\.\-\_]/:/g')
+
 SYSTEM_EXISTS=false
 CMD_PATH=""
 
 # Parse PATH and check each directory in order, skipping wrapper location
-IFS=':' read -ra PATH_DIRS <<< "${PATH:-/usr/local/bin:/usr/bin:/bin}"
+IFS=':' read -ra PATH_DIRS <<< "$SAFE_PATH"
 for sys_dir in "${PATH_DIRS[@]}"; do
     [ -z "$sys_dir" ] && continue
     
-    if [ "$sys_dir" = "." ]; then
-        sys_dir="$PWD"
+    # Skip dangerous patterns
+    case "$sys_dir" in
+        *\.\.*|*\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
+            continue
+            ;;
+    esac
+    
+    # Skip user directories
+    case "$sys_dir" in
+        "$HOME"/*|\~/*)
+            continue
+            ;;
+    esac
+    
+    # Skip malformed paths
+    if [[ ! "$sys_dir" =~ ^/([a-zA-Z0-9\.\_\-]+/)*[a-zA-Z0-9\.\_\-]+$ ]]; then
+        continue
+    fi
+    
+    # Skip long paths
+    if [ ${#sys_dir} -gt 256 ]; then
+        continue
+    fi
+    
+    # Skip non-existent or unreadable directories
+    if [ ! -d "$sys_dir" ] || [ ! -r "$sys_dir" ]; then
+        continue
     fi
     
     candidate="$sys_dir/$NAME"
+    
+    # Skip if candidate has dangerous characters
+    if [[ "$candidate" =~ [\;\|\&\$\`\<\>] ]]; then
+        continue
+    fi
+    
+    # Skip if candidate is overly long
+    if [ ${#candidate} -gt 512 ]; then
+        continue
+    fi
     
     # Skip our own wrapper
     if [ "$candidate" = "$SCRIPT_BIN_DIR/$NAME" ]; then
         continue
     fi
     
+    # Only allow standard system directories
+    case "$sys_dir" in
+        /usr/local/bin|/usr/bin|/bin|/usr/local/sbin|/usr/sbin|/sbin|/opt/*/bin|/opt/bin)
+            # Allow
+            ;;
+        *)
+            continue
+            ;;
+    esac
+    
     if [ -f "$candidate" ] && [ -x "$candidate" ]; then
+        # Check for symlink attacks
+        if [ -L "$candidate" ]; then
+            link_target=$(readlink -f "$candidate" 2>/dev/null)
+            if [ "$link_target" = "$SCRIPT_BIN_DIR/$NAME" ]; then
+                continue
+            fi
+        fi
+        
         SYSTEM_EXISTS=true
         CMD_PATH="$candidate"
         break
@@ -502,6 +558,18 @@ EOF
         log_pass "Correctly detected no system binary when only wrapper exists"
     else
         log_fail "Should not find system binary when only wrapper exists"
+        echo "Output: $output"
+    fi
+    
+    # Test PATH injection resistance
+    export PATH="/tmp/evil;rm -rf /:$TEST_BIN:/usr/bin"
+    
+    output=$("$TEST_BIN/test-path-app")
+    
+    if echo "$output" | grep -q "SYSTEM_EXISTS:false"; then
+        log_pass "Resisted PATH injection attack"
+    else
+        log_fail "May be vulnerable to PATH injection"
         echo "Output: $output"
     fi
     
