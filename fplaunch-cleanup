@@ -36,6 +36,7 @@ This script removes per-user artifacts created by fplaunchwrapper:
 - systemd user units (flatpak-wrappers.*) and disables them
 - Cron job entries created by fplaunch-setup-systemd fallback
 - Bash completion drop-in at ~/.bashrc.d/fplaunch_completion.bash
+- Man pages at ~/.local/share/man (from manual install)
 
 It does NOT uninstall the system package. Run this BEFORE removing the package
 if you want to clean your home directory.
@@ -80,6 +81,7 @@ cat << SUM
 - Config directory:  $CONFIG_DIR
 - systemd units in:  $UNIT_DIR
 - Bash completion:   ~/.bashrc.d/fplaunch_completion.bash
+- Man pages:         ~/.local/share/man
 SUM
 
 if ! confirm "Proceed with cleanup?"; then
@@ -149,7 +151,23 @@ if [ -f "$HOME/.bashrc.d/fplaunch_completion.bash" ]; then
   log_do "Removing bash completion drop-in: ~/.bashrc.d/fplaunch_completion.bash" rm -f "$HOME/.bashrc.d/fplaunch_completion.bash"
 fi
 
-# 5) Remove config directory
+# 5) Remove man pages (from manual install)
+MAN_DIR="$HOME/.local/share/man"
+if [ -d "$MAN_DIR" ]; then
+  for manpage in "$MAN_DIR/man1/fplaunch-"*.1 "$MAN_DIR/man7/fplaunchwrapper."*; do
+    if [ -f "$manpage" ]; then
+      log_do "Removing man page: $manpage" rm -f "$manpage"
+    fi
+  done
+  # Clean up empty man directories
+  if ! $DRY_RUN; then
+    rmdir "$MAN_DIR/man1" 2>/dev/null || true
+    rmdir "$MAN_DIR/man7" 2>/dev/null || true
+    rmdir "$MAN_DIR" 2>/dev/null || true
+  fi
+fi
+
+# 6) Remove config directory
 if [ -d "$CONFIG_DIR" ]; then
   log_do "Removing config directory: $CONFIG_DIR" rm -rf "$CONFIG_DIR"
 fi

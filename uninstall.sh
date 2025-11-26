@@ -50,7 +50,27 @@ for script in "$BIN_DIR"/*; do
     fi
 done
 
+# Remove installed scripts and lib directory
+rm -f "$BIN_DIR/fplaunch-generate"
+rm -f "$BIN_DIR/fplaunch-setup-systemd"
+rm -f "$BIN_DIR/fplaunch-cleanup"
+rm -rf "$BIN_DIR/lib"
+
+# Remove bash completion
+rm -f "$HOME/.bashrc.d/fplaunch_completion.bash"
+
+# Remove man pages
+MAN_DIR="$HOME/.local/share/man"
+if [ -d "$MAN_DIR" ]; then
+    rm -f "$MAN_DIR/man1/fplaunch-"*.1 2>/dev/null || true
+    rm -f "$MAN_DIR/man7/fplaunchwrapper."* 2>/dev/null || true
+    # Clean up empty directories
+    rmdir "$MAN_DIR/man1" 2>/dev/null || true
+    rmdir "$MAN_DIR/man7" 2>/dev/null || true
+    rmdir "$MAN_DIR" 2>/dev/null || true
+fi
+
 # Remove config directory
 rm -rf "$CONFIG_DIR"
 
-echo "Uninstallation complete. Wrappers, preferences, and systemd units removed."
+echo "Uninstallation complete. All wrappers, preferences, man pages, and systemd units removed."

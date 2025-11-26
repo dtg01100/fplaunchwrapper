@@ -116,6 +116,14 @@ test_manual_install_minimal() {
         fail "Lib directory missing or empty"
     fi
     
+    # Verify man pages installed
+    if [ -f "$test_home/.local/share/man/man1/fplaunch-manage.1" ] && \
+       [ -f "$test_home/.local/share/man/man7/fplaunchwrapper.7" ]; then
+        pass "Man pages installed"
+    else
+        fail "Man pages missing"
+    fi
+    
     # Verify NO systemd units created (non-interactive, no auto-updates)
     if [ ! -d "$test_home/.config/systemd/user" ] || \
        [ ! -f "$test_home/.config/systemd/user/flatpak-wrappers.service" ]; then
@@ -181,6 +189,14 @@ test_cleanup_complete() {
         pass "Lib directory removed"
     else
         fail "Lib directory still exists"
+    fi
+    
+    # Verify man pages removed
+    if [ ! -d "$test_home/.local/share/man/man1" ] || \
+       [ ! -f "$test_home/.local/share/man/man1/fplaunch-manage.1" ]; then
+        pass "Man pages removed"
+    else
+        fail "Man pages still exist"
     fi
     
     # Cleanup

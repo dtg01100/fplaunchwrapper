@@ -100,13 +100,27 @@ cp "$SCRIPT_DIR/fplaunch_completion.bash" "$HOME/.bashrc.d/fplaunch_completion.b
 echo "Bash completion installed to ~/.bashrc.d/fplaunch_completion.bash"
 echo "To enable, add 'source ~/.bashrc.d/fplaunch_completion.bash' to your ~/.bashrc"
 
+# Install man pages to user's local man directory
+if [ -d "$SCRIPT_DIR/docs/man" ]; then
+    MAN_DIR="$HOME/.local/share/man"
+    echo "Installing man pages to $MAN_DIR..."
+    mkdir -p "$MAN_DIR/man1" "$MAN_DIR/man7"
+    cp "$SCRIPT_DIR/docs/man/"*.1 "$MAN_DIR/man1/" 2>/dev/null || true
+    cp "$SCRIPT_DIR/docs/man/"*.7 "$MAN_DIR/man7/" 2>/dev/null || true
+    
+    # Update MANPATH if not already set
+    if ! echo "$MANPATH" | grep -q "$MAN_DIR"; then
+        echo "Note: Add '$MAN_DIR' to your MANPATH to view man pages."
+        echo "      Add to ~/.bashrc: export MANPATH=\"$MAN_DIR:\$MANPATH\""
+    fi
+fi
+
 echo ""
 echo "Installation complete!"
 echo "Wrappers are in $BIN_DIR"
 echo ""
-echo "For help, see:"
+echo "For help:"
+echo "  - man fplaunchwrapper    (overview)"
+echo "  - man fplaunch-manage    (command reference)"
+echo "  - fplaunch-manage help   (quick help)"
 echo "  - README.md in this directory"
-echo "  - Run 'fplaunch-manage help'"
-if command -v man >/dev/null 2>&1 && [ -f "$SCRIPT_DIR/docs/man/fplaunchwrapper.7" ]; then
-    echo "  - View man pages: man -l $SCRIPT_DIR/docs/man/fplaunchwrapper.7"
-fi
