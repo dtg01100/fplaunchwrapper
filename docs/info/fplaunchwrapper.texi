@@ -1,0 +1,593 @@
+\input texinfo   @c -*-texinfo-*-
+@c %**start of header
+@setfilename fplaunchwrapper.info
+@settitle fplaunchwrapper Manual
+@documentencoding UTF-8
+@c %**end of header
+
+@copying
+This manual is for fplaunchwrapper (version 1.1), a suite of tools for
+managing Flatpak wrapper scripts.
+
+Copyright @copyright{} 2025 fplaunchwrapper contributors
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3
+or any later version published by the Free Software Foundation.
+@end quotation
+@end copying
+
+@titlepage
+@title fplaunchwrapper
+@subtitle Convenient command-line access to Flatpak applications
+@author fplaunchwrapper contributors
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top fplaunchwrapper
+
+This manual documents fplaunchwrapper version 1.1.
+
+@insertcopying
+@end ifnottex
+
+@menu
+* Introduction::        What is fplaunchwrapper?
+* Installation::        How to install fplaunchwrapper
+* Commands::            Command reference
+* Configuration::       Configuration files and settings
+* Examples::            Common usage examples
+* Troubleshooting::     Common problems and solutions
+* Index::               Complete index
+@end menu
+
+@node Introduction
+@chapter Introduction
+
+@cindex introduction
+@cindex flatpak wrappers
+@cindex wrapper scripts
+
+fplaunchwrapper is a suite of tools that automatically generates and manages
+wrapper scripts for Flatpak applications, allowing you to launch them as if
+they were native system commands.
+
+Flatpak applications are typically invoked with @command{flatpak run <application-id>}
+which can be cumbersome for daily use. This package creates simple wrapper
+scripts that allow you to type just the application name (e.g., @command{firefox}
+instead of @command{flatpak run org.mozilla.Firefox}).
+
+@section Features
+
+@itemize @bullet
+@item Automatic wrapper generation for installed Flatpak applications
+@item Preference system to choose between system and Flatpak versions
+@item Environment variable support per application
+@item Pre/post-launch script hooks
+@item Alias support for multiple names per application
+@item Blocklist to prevent specific apps from having wrappers
+@item Optional automatic regeneration when apps change
+@item Configuration export/import for backups
+@end itemize
+
+@node Installation
+@chapter Installation
+
+@cindex installation
+@cindex setup
+
+@section Package Installation
+
+For Debian/Ubuntu:
+@example
+sudo apt install fplaunchwrapper
+fplaunch-manage regenerate
+fplaunch-setup-systemd  # Optional: enable auto-updates
+@end example
+
+For Fedora:
+@example
+sudo dnf install fplaunchwrapper
+fplaunch-manage regenerate
+fplaunch-setup-systemd  # Optional: enable auto-updates
+@end example
+
+@section Manual Installation
+
+@example
+git clone https://github.com/dtg01100/fplaunchwrapper.git
+cd fplaunchwrapper
+bash install.sh
+source ~/.bashrc.d/fplaunch_completion.bash
+fplaunch-setup-systemd  # Optional: enable auto-updates
+@end example
+
+@node Commands
+@chapter Commands
+
+@cindex commands
+@cindex command reference
+
+@menu
+* fplaunch-manage::        Main management command
+* fplaunch-generate::      Generate wrapper scripts
+* fplaunch-setup-systemd:: Configure auto-updates
+* fplaunch-cleanup::       Remove all artifacts
+@end menu
+
+@node fplaunch-manage
+@section fplaunch-manage
+
+@cindex fplaunch-manage
+@cindex management
+
+The primary tool for managing Flatpak wrapper scripts.
+
+@subsection Wrapper Management Commands
+
+@table @command
+@item list
+List all current wrapper scripts with their Flatpak application IDs.
+
+@item search @var{keyword}
+Search for wrappers by name, Flatpak ID, or description (case-insensitive).
+
+@item remove @var{name}
+Remove a specific wrapper script and its configuration.
+
+@item regenerate
+Regenerate all wrapper scripts. Useful after Flatpak updates.
+
+@item files
+List all generated files (wrappers, configs, aliases).
+
+@item uninstall
+Remove all generated files and configuration.
+@end table
+
+@subsection Preference Commands
+
+@table @command
+@item set-pref @var{name} @{system|flatpak@}
+Set launch preference for a wrapper. @samp{system} prefers native commands,
+@samp{flatpak} prefers the Flatpak version.
+
+@item remove-pref @var{name}
+Remove the launch preference, reverting to default behavior.
+
+@item set-pref-all @{system|flatpak@}
+Set launch preference for all wrappers at once.
+
+@item export-prefs @var{file}
+Export preferences and blocklist to a file.
+
+@item import-prefs @var{file}
+Import preferences and blocklist from a file.
+
+@item export-config @var{file}
+Export full configuration (preferences, environment, aliases).
+
+@item import-config @var{file}
+Import full configuration from a file.
+@end table
+
+@subsection Environment Variable Commands
+
+@table @command
+@item set-env @var{name} @var{var} @var{value}
+Set an environment variable for a wrapper.
+
+@item remove-env @var{name} @var{var}
+Remove an environment variable.
+
+@item list-env @var{name}
+List all environment variables for a wrapper.
+@end table
+
+@subsection Script Commands
+
+@table @command
+@item set-script @var{name} @var{path}
+Set a pre-launch script to run before the wrapper executes.
+
+@item set-post-script @var{name} @var{path}
+Set a post-run script to execute after the wrapper completes.
+
+@item remove-script @var{name}
+Remove the pre-launch script.
+
+@item remove-post-script @var{name}
+Remove the post-run script.
+@end table
+
+@subsection Alias Commands
+
+@table @command
+@item set-alias @var{name} @var{alias}
+Create an alias (symlink) to a wrapper.
+
+@item remove-alias @var{alias}
+Remove an alias symlink.
+@end table
+
+@subsection Blocklist Commands
+
+@table @command
+@item block @var{id}
+Block a Flatpak application ID from wrapper generation.
+
+@item unblock @var{id}
+Remove a Flatpak ID from the blocklist.
+
+@item list-blocked
+List all blocked Flatpak application IDs.
+@end table
+
+@subsection Application Commands
+
+@table @command
+@item install @var{app} [@var{remote}]
+Install a Flatpak application and create its wrapper.
+
+@item launch @var{name}
+Launch a wrapper by name.
+
+@item info @var{name}
+Show detailed information about a wrapper.
+
+@item manifest @var{name} [@{remote|local@}]
+Display the Flatpak manifest for a wrapper.
+@end table
+
+@node fplaunch-generate
+@section fplaunch-generate
+
+@cindex fplaunch-generate
+@cindex wrapper generation
+
+Automatically creates wrapper scripts for all installed Flatpak applications.
+
+@subsection Synopsis
+
+@command{fplaunch-generate} [@var{bin_dir}]
+
+@subsection Description
+
+Scans both user and system-wide Flatpak installations, generates wrapper
+scripts, and performs cleanup of wrappers for uninstalled applications.
+
+The optional @var{bin_dir} argument specifies where wrappers are created.
+Defaults to @file{~/.local/bin}.
+
+@subsection Behavior
+
+@itemize @bullet
+@item Extracts application names from Flatpak IDs
+@item Checks for name collisions with existing commands
+@item Respects the blocklist
+@item Creates executable wrapper scripts with metadata
+@item Applies configured preferences
+@item Loads environment variables and scripts
+@item Removes wrappers for uninstalled apps
+@end itemize
+
+@node fplaunch-setup-systemd
+@section fplaunch-setup-systemd
+
+@cindex fplaunch-setup-systemd
+@cindex auto-updates
+@cindex systemd
+
+Configures automatic wrapper regeneration when Flatpak applications change.
+
+@subsection Synopsis
+
+@command{fplaunch-setup-systemd}
+
+@subsection Description
+
+Sets up systemd user units (if available) or cron jobs to monitor Flatpak's
+export directory and trigger wrapper regeneration automatically.
+
+@subsection With systemd
+
+@itemize @bullet
+@item Creates a path unit watching @file{~/.local/share/flatpak/exports/bin}
+@item Creates a service unit running @command{fplaunch-generate}
+@item Optionally creates a timer unit for periodic regeneration
+@item Enables and starts the path unit
+@end itemize
+
+@subsection With cron
+
+@itemize @bullet
+@item Creates a cron job running @command{fplaunch-generate} periodically
+@item Default schedule: every hour
+@item Users can customize by editing their crontab
+@end itemize
+
+@subsection User Consent
+
+This command represents explicit user consent to modify home directory
+configuration. It should never be run automatically by package installers.
+
+@node fplaunch-cleanup
+@section fplaunch-cleanup
+
+@cindex fplaunch-cleanup
+@cindex cleanup
+@cindex removal
+
+Removes all fplaunchwrapper artifacts from the user's home directory.
+
+@subsection Synopsis
+
+@command{fplaunch-cleanup} [@option{-y}|@option{--yes}] [@option{--dry-run}]
+[@option{--bin-dir} @var{dir}]
+
+@subsection Options
+
+@table @option
+@item -y
+@itemx --yes
+Proceed without confirmation.
+
+@item --dry-run
+Show what would be removed without deleting.
+
+@item --bin-dir @var{dir}
+Override the wrapper binary directory.
+
+@item -h
+@itemx --help
+Display help and exit.
+@end table
+
+@subsection Removed Artifacts
+
+@itemize @bullet
+@item All wrapper scripts identified by header marker
+@item Alias symlinks pointing to wrappers
+@item Management scripts (fplaunch-manage, etc.)
+@item Library directory
+@item All configuration in @file{~/.config/flatpak-wrappers}
+@item Systemd user units (stopped, disabled, removed)
+@item Cron jobs referencing fplaunch-generate
+@item Bash completion drop-in
+@end itemize
+
+@node Configuration
+@chapter Configuration
+
+@cindex configuration
+@cindex config files
+
+@section Configuration Directory
+
+All configuration is stored in @file{~/.config/flatpak-wrappers/} (or
+@file{$XDG_CONFIG_HOME/flatpak-wrappers/} if set).
+
+@section Configuration Files
+
+@table @file
+@item bin_dir
+Path to the wrapper script directory.
+
+@item blocklist
+List of blocked Flatpak application IDs (one per line).
+
+@item aliases
+Alias definitions (format: @samp{wrapper_name alias_name}).
+
+@item @var{name}.pref
+Preference file for wrapper @var{name}. Contains @samp{system} or @samp{flatpak}.
+
+@item @var{name}.env
+Environment variables for wrapper @var{name} (format: @samp{VAR=value}).
+
+@item scripts/pre/@var{name}.sh
+Pre-launch script for wrapper @var{name}.
+
+@item scripts/post/@var{name}.sh
+Post-run script for wrapper @var{name}.
+@end table
+
+@section Wrapper Script Behavior
+
+Generated wrapper scripts follow this sequence:
+
+@enumerate
+@item Check if a system native command exists with the same name
+@item Respect the preference setting (system vs. flatpak)
+@item Load environment variables from configuration
+@item Execute pre-launch script if configured
+@item Run the Flatpak application with passed arguments
+@item Execute post-run script if configured
+@end enumerate
+
+@node Examples
+@chapter Examples
+
+@cindex examples
+@cindex usage examples
+
+@section Basic Usage
+
+Generate initial wrappers:
+@example
+fplaunch-manage regenerate
+@end example
+
+List all wrappers:
+@example
+fplaunch-manage list
+@end example
+
+Search for Firefox:
+@example
+fplaunch-manage search firefox
+@end example
+
+@section Preferences
+
+Prefer system Firefox over Flatpak:
+@example
+fplaunch-manage set-pref firefox system
+@end example
+
+Set all wrappers to prefer Flatpak:
+@example
+fplaunch-manage set-pref-all flatpak
+@end example
+
+@section Environment Variables
+
+Enable Wayland for Firefox:
+@example
+fplaunch-manage set-env firefox MOZ_ENABLE_WAYLAND 1
+@end example
+
+List Firefox environment variables:
+@example
+fplaunch-manage list-env firefox
+@end example
+
+@section Aliases
+
+Create a short alias:
+@example
+fplaunch-manage set-alias firefox ff
+@end example
+
+Remove an alias:
+@example
+fplaunch-manage remove-alias ff
+@end example
+
+@section Blocklist
+
+Block an unwanted application:
+@example
+fplaunch-manage block org.example.UnwantedApp
+@end example
+
+List blocked applications:
+@example
+fplaunch-manage list-blocked
+@end example
+
+@section Configuration Backup
+
+Export configuration:
+@example
+fplaunch-manage export-config ~/fplaunch-backup.tar.gz
+@end example
+
+Import configuration:
+@example
+fplaunch-manage import-config ~/fplaunch-backup.tar.gz
+@end example
+
+@section Auto-Updates
+
+Enable automatic wrapper regeneration:
+@example
+fplaunch-setup-systemd
+@end example
+
+Check status (systemd):
+@example
+systemctl --user status flatpak-wrappers.path
+@end example
+
+Disable auto-updates (systemd):
+@example
+systemctl --user disable --now flatpak-wrappers.path
+systemctl --user disable --now flatpak-wrappers.timer
+@end example
+
+@section Cleanup
+
+Preview cleanup:
+@example
+fplaunch-cleanup --dry-run
+@end example
+
+Clean up before uninstalling:
+@example
+fplaunch-cleanup --yes
+@end example
+
+@node Troubleshooting
+@chapter Troubleshooting
+
+@cindex troubleshooting
+@cindex problems
+@cindex debugging
+
+@section Wrappers Not Being Created
+
+@enumerate
+@item Check if Flatpak is installed: @command{flatpak --version}
+@item Verify applications are installed: @command{flatpak list --app}
+@item Check the blocklist: @command{fplaunch-manage list-blocked}
+@item Manually regenerate: @command{fplaunch-manage regenerate}
+@end enumerate
+
+@section Wrapper Doesn't Launch Application
+
+@enumerate
+@item Check wrapper exists: @command{which firefox}
+@item View wrapper info: @command{fplaunch-manage info firefox}
+@item Check Flatpak ID is correct: @command{flatpak list --app}
+@item Try running Flatpak directly: @command{flatpak run org.mozilla.Firefox}
+@end enumerate
+
+@section Auto-Updates Not Working
+
+For systemd:
+@example
+systemctl --user status flatpak-wrappers.path
+systemctl --user status flatpak-wrappers.timer
+journalctl --user -u flatpak-wrappers.service
+@end example
+
+For cron:
+@example
+crontab -l | grep fplaunch
+@end example
+
+@section Name Collisions
+
+If multiple Flatpak apps want the same wrapper name:
+
+@enumerate
+@item First app gets the base name (e.g., @command{code})
+@item Second app gets an alternate (e.g., @command{code2})
+@item Use aliases to create preferred names
+@item Use blocklist to prevent unwanted wrappers
+@end enumerate
+
+@section Clean Uninstall
+
+To completely remove fplaunchwrapper:
+
+@example
+fplaunch-cleanup --yes
+sudo apt remove fplaunchwrapper     # Debian/Ubuntu
+sudo dnf remove fplaunchwrapper     # Fedora
+@end example
+
+@node Index
+@unnumbered Index
+
+@printindex cp
+
+@bye

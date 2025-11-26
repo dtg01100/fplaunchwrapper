@@ -1,0 +1,110 @@
+.TH FPLAUNCH-SETUP-SYSTEMD 1 "November 2025" "fplaunchwrapper 1.1" "User Commands"
+.SH NAME
+fplaunch-setup-systemd \- configure automatic wrapper regeneration
+.SH SYNOPSIS
+.B fplaunch-setup-systemd
+.SH DESCRIPTION
+.B fplaunch-setup-systemd
+configures automatic regeneration of Flatpak wrapper scripts whenever Flatpak
+applications are installed, updated, or removed. This ensures your wrappers
+stay synchronized with your installed applications.
+.PP
+The script sets up systemd user units (if available) or falls back to cron jobs
+to monitor Flatpak's export directory and trigger wrapper regeneration automatically.
+.SH BEHAVIOR
+.SS With systemd (preferred)
+When systemd is available:
+.IP \(bu 3
+Creates a systemd path unit that watches
+.I ~/.local/share/flatpak/exports/bin
+.IP \(bu 3
+Creates a corresponding service unit that runs
+.B fplaunch-generate
+.IP \(bu 3
+Optionally creates a timer unit for periodic regeneration
+.IP \(bu 3
+Enables and starts the path unit
+.SS With cron (fallback)
+When systemd is unavailable:
+.IP \(bu 3
+Creates a cron job that runs
+.B fplaunch-generate
+periodically
+.IP \(bu 3
+Default schedule: every hour
+.IP \(bu 3
+Users can customize the schedule by editing their crontab
+.SH USER CONSENT
+This script represents explicit user consent to modify their home directory
+configuration. It should be run manually by the user, never automatically
+by package installation scripts.
+.PP
+The created systemd units or cron jobs are per-user and do not require
+root privileges.
+.SH FILES
+.TP
+.I ~/.config/systemd/user/flatpak-wrappers.service
+Systemd service unit that runs fplaunch-generate.
+.TP
+.I ~/.config/systemd/user/flatpak-wrappers.path
+Systemd path unit that triggers the service when Flatpak exports change.
+.TP
+.I ~/.config/systemd/user/flatpak-wrappers.timer
+Optional systemd timer unit for periodic regeneration.
+.TP
+.I crontab
+If systemd is unavailable, a cron job entry is added to the user's crontab.
+.SH EXAMPLES
+.TP
+Enable automatic updates:
+.B fplaunch-setup-systemd
+.TP
+Check systemd unit status:
+.B systemctl --user status flatpak-wrappers.path
+.TP
+Disable automatic updates:
+.B systemctl --user disable --now flatpak-wrappers.path flatpak-wrappers.timer
+.TP
+View systemd logs:
+.B journalctl --user -u flatpak-wrappers.service
+.SH DISABLING AUTO-UPDATES
+.SS For systemd:
+.nf
+systemctl --user disable --now flatpak-wrappers.path
+systemctl --user disable --now flatpak-wrappers.timer
+.fi
+.SS For cron:
+Edit your crontab with
+.B crontab -e
+and remove the line containing
+.BR fplaunch-generate .
+.SH ENVIRONMENT
+.TP
+.B XDG_CONFIG_HOME
+If set, systemd units are created in \fI$XDG_CONFIG_HOME/systemd/user\fR
+instead of \fI~/.config/systemd/user\fR.
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+Error (Flatpak not installed or wrapper script not found)
+.SH NOTES
+This script must be run by the user after installation. Package managers
+should not invoke it automatically, as it modifies user configuration.
+.PP
+The systemd path unit monitors the Flatpak exports directory for changes.
+The timer unit provides periodic regeneration as a safety net in case path
+monitoring misses changes.
+.SH SEE ALSO
+.BR fplaunch-generate (1),
+.BR fplaunch-manage (1),
+.BR systemd.path (5),
+.BR systemd.timer (5),
+.BR crontab (1),
+.BR crontab (5)
+.SH AUTHOR
+Written by the fplaunchwrapper contributors.
+.SH BUGS
+Report bugs at: https://github.com/dtg01100/fplaunchwrapper/issues

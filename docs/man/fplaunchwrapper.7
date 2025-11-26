@@ -1,0 +1,207 @@
+.TH FPLAUNCHWRAPPER 7 "November 2025" "fplaunchwrapper 1.1" "Miscellaneous"
+.SH NAME
+fplaunchwrapper \- convenient command-line access to Flatpak applications
+.SH DESCRIPTION
+.B fplaunchwrapper
+is a suite of tools that automatically generates and manages wrapper scripts
+for Flatpak applications, allowing you to launch them as if they were native
+system commands.
+.PP
+Flatpak applications are typically invoked with
+.B flatpak run <application-id>
+which can be cumbersome for daily use. This package creates simple wrapper
+scripts that allow you to type just the application name (e.g.,
+.B firefox
+instead of
+.BR "flatpak run org.mozilla.Firefox" ).
+.SH COMPONENTS
+.TP
+.BR fplaunch-manage (1)
+Main management tool for creating, configuring, and managing wrapper scripts.
+.TP
+.BR fplaunch-generate (1)
+Script that generates wrapper scripts for installed Flatpak applications.
+.TP
+.BR fplaunch-setup-systemd (1)
+Configures automatic wrapper regeneration when apps are installed/updated.
+.TP
+.BR fplaunch-cleanup (1)
+Removes all fplaunchwrapper artifacts from the user's home directory.
+.SH FEATURES
+.SS Automatic Wrapper Generation
+Scans installed Flatpak applications and creates wrapper scripts automatically.
+.SS Preference System
+Choose between system native commands and Flatpak versions on a per-application
+basis.
+.SS Environment Variables
+Set environment variables that are passed to Flatpak applications when launched.
+.SS Pre/Post-Launch Scripts
+Execute custom scripts before or after running applications.
+.SS Alias Support
+Create multiple names for the same application.
+.SS Blocklist
+Prevent specific Flatpak applications from having wrappers generated.
+.SS Auto-Updates
+Optional automatic regeneration when Flatpak apps are installed or removed.
+.SS Configuration Export/Import
+Backup and restore your wrapper configuration.
+.SH WORKFLOW
+.SS Initial Setup (Package Installation)
+.IP 1. 3
+Install the fplaunchwrapper package
+.IP 2. 3
+Run
+.B fplaunch-manage regenerate
+to create initial wrappers
+.IP 3. 3
+Optionally run
+.B fplaunch-setup-systemd
+to enable auto-updates
+.SS Initial Setup (Manual Installation)
+.IP 1. 3
+Run
+.B bash install.sh
+from the source directory
+.IP 2. 3
+Source
+.I ~/.bashrc.d/fplaunch_completion.bash
+for tab completion
+.IP 3. 3
+Optionally run
+.B fplaunch-setup-systemd
+to enable auto-updates
+.SS Daily Usage
+.IP \(bu 3
+Launch apps by typing their wrapper name: \fBfirefox\fR, \fBcode\fR, etc.
+.IP \(bu 3
+Use
+.B fplaunch-manage
+to configure preferences, environment variables, and scripts
+.IP \(bu 3
+Wrappers auto-update (if configured) when Flatpak apps change
+.SS Removal
+.IP 1. 3
+Run
+.B fplaunch-cleanup --yes
+to remove all artifacts
+.IP 2. 3
+Uninstall the package (if installed via package manager)
+.SH CONFIGURATION
+All configuration is stored in:
+.PP
+.I ~/.config/flatpak-wrappers/
+.PP
+This directory contains:
+.IP \(bu 3
+.I bin_dir
+- Path to wrapper script directory
+.IP \(bu 3
+.I blocklist
+- Blocked Flatpak application IDs
+.IP \(bu 3
+.I aliases
+- Alias definitions
+.IP \(bu 3
+.I *.pref
+- Per-application preferences
+.IP \(bu 3
+.I *.env
+- Per-application environment variables
+.IP \(bu 3
+.I scripts/pre/
+- Pre-launch scripts
+.IP \(bu 3
+.I scripts/post/
+- Post-run scripts
+.SH WRAPPER SCRIPT BEHAVIOR
+Generated wrapper scripts:
+.IP 1. 3
+Check if a system native command exists with the same name
+.IP 2. 3
+Respect the preference setting (system vs. flatpak)
+.IP 3. 3
+Load environment variables from configuration
+.IP 4. 3
+Execute pre-launch script if configured
+.IP 5. 3
+Run the Flatpak application with passed arguments
+.IP 6. 3
+Execute post-run script if configured
+.SH SECURITY CONSIDERATIONS
+.SS Script Generation
+Wrapper scripts are regenerated from templates and should not be manually
+edited. The regeneration process ensures they stay in sync with the installed
+Flatpak applications.
+.SS Tar Extraction Safety
+Export/import operations use tar but include path traversal protections to
+prevent malicious archives from writing outside the intended directory.
+.SS User Consent
+Systemd units and cron jobs are only created when the user explicitly runs
+.BR fplaunch-setup-systemd .
+Package installation never automatically modifies user configuration.
+.SH EXAMPLES
+.TP
+Generate initial wrappers:
+.B fplaunch-manage regenerate
+.TP
+List all available wrappers:
+.B fplaunch-manage list
+.TP
+Prefer system Firefox over Flatpak version:
+.B fplaunch-manage set-pref firefox system
+.TP
+Set environment variable for an app:
+.B fplaunch-manage set-env firefox MOZ_ENABLE_WAYLAND 1
+.TP
+Create an alias:
+.B fplaunch-manage set-alias org.mozilla.firefox ff
+.TP
+Enable automatic updates:
+.B fplaunch-setup-systemd
+.TP
+Export configuration for backup:
+.B fplaunch-manage export-config ~/fplaunch-backup.tar.gz
+.TP
+Clean up before uninstalling:
+.B fplaunch-cleanup --yes
+.SH FILES
+.TP
+.I /usr/lib/fplaunchwrapper/
+System installation directory (package install)
+.TP
+.I /usr/bin/fplaunch-*
+User-facing command symlinks (package install)
+.TP
+.I ~/.local/bin/
+Default wrapper script directory
+.TP
+.I ~/.config/flatpak-wrappers/
+User configuration directory
+.TP
+.I ~/.bashrc.d/fplaunch_completion.bash
+Bash completion script
+.TP
+.I ~/.config/systemd/user/flatpak-wrappers.*
+Systemd user units (if enabled)
+.SH ENVIRONMENT
+.TP
+.B XDG_CONFIG_HOME
+If set, configuration uses \fI$XDG_CONFIG_HOME/flatpak-wrappers\fR instead
+of \fI~/.config/flatpak-wrappers\fR.
+.TP
+.B CI
+When set, install.sh runs in non-interactive mode and skips auto-update setup.
+.SH SEE ALSO
+.BR fplaunch-manage (1),
+.BR fplaunch-generate (1),
+.BR fplaunch-setup-systemd (1),
+.BR fplaunch-cleanup (1),
+.BR flatpak (1)
+.PP
+Full documentation:
+.I /usr/share/doc/fplaunchwrapper/
+(if installed via package)
+.SH AUTHOR
+Written by the fplaunchwrapper contributors.
+.SH BUGS
+Report bugs at: https://github.com/dtg01100/fplaunchwrapper/issues

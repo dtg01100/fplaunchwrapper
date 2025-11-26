@@ -1,0 +1,177 @@
+.TH FPLAUNCH-MANAGE 1 "November 2025" "fplaunchwrapper 1.1" "User Commands"
+.SH NAME
+fplaunch-manage \- manage Flatpak wrapper scripts
+.SH SYNOPSIS
+.B fplaunch-manage
+.I command
+.RI [ args ]
+.br
+.B fplaunch-manage
+.B \-\-help
+.SH DESCRIPTION
+.B fplaunch-manage
+is the primary management tool for Flatpak Launch Wrappers. It allows you to
+create, configure, and manage wrapper scripts that provide convenient command-line
+access to Flatpak applications.
+.PP
+Flatpak Launch Wrappers automatically create shell scripts in your PATH that launch
+Flatpak applications, allowing you to run them as if they were native commands.
+.SH COMMANDS
+.SS Wrapper Management
+.TP
+.B list
+List all current wrapper scripts with their corresponding Flatpak application IDs.
+.TP
+.BI "search " keyword
+Search for wrappers by name, Flatpak ID, or description. Case-insensitive.
+.TP
+.BI "remove " name
+Remove a specific wrapper script and its associated configuration.
+.TP
+.B regenerate
+Regenerate all wrapper scripts. Useful after Flatpak updates or configuration changes.
+.TP
+.B files
+List all generated files (wrappers, configs, aliases).
+.TP
+.B uninstall
+Remove all generated files and configuration. Equivalent to running
+.BR fplaunch-cleanup (1).
+.SS Preferences
+.TP
+.BI "set-pref " "name system" | flatpak
+Set launch preference for a specific wrapper. \fBsystem\fR prefers native system
+commands, \fBflatpak\fR prefers the Flatpak version.
+.TP
+.BI "remove-pref " name
+Remove the launch preference for a wrapper, reverting to default behavior.
+.TP
+.BI "set-pref-all " "system" | flatpak
+Set launch preference for all wrappers at once.
+.TP
+.BI "export-prefs " file
+Export preferences and blocklist to a file for backup or transfer.
+.TP
+.BI "import-prefs " file
+Import preferences and blocklist from a previously exported file.
+.TP
+.BI "export-config " file
+Export full configuration including preferences, environment variables, and aliases.
+.TP
+.BI "import-config " file
+Import full configuration from a previously exported file.
+.SS Environment Variables
+.TP
+.BI "set-env " "name var value"
+Set an environment variable that will be passed to the wrapper when launched.
+.TP
+.BI "remove-env " "name var"
+Remove a previously set environment variable.
+.TP
+.BI "list-env " name
+List all environment variables configured for a wrapper.
+.SS Scripts
+.TP
+.BI "set-script " "name path"
+Set a pre-launch script to run before the wrapper executes. The script receives
+the wrapper name and arguments.
+.TP
+.BI "set-post-script " "name path"
+Set a post-run script to execute after the wrapper completes.
+.TP
+.BI "remove-script " name
+Remove the pre-launch script for a wrapper.
+.TP
+.BI "remove-post-script " name
+Remove the post-run script for a wrapper.
+.SS Aliases
+.TP
+.BI "set-alias " "name alias"
+Create an alias (symlink) to a wrapper. Allows multiple names for the same application.
+.TP
+.BI "remove-alias " alias
+Remove an alias symlink.
+.SS Blocklist
+.TP
+.BI "block " id
+Block a Flatpak application ID from wrapper generation. Useful for preventing
+unwanted wrappers.
+.TP
+.BI "unblock " id
+Remove a Flatpak ID from the blocklist.
+.TP
+.B list-blocked
+List all blocked Flatpak application IDs.
+.SS Application Management
+.TP
+.BI "install " "app " [ remote ]
+Install a Flatpak application and automatically create its wrapper.
+.TP
+.BI "launch " name
+Launch a wrapper by name.
+.TP
+.BI "info " name
+Show detailed information about a wrapper including its ID, preferences, environment
+variables, and scripts.
+.TP
+.BI "manifest " "name " [ remote | local ]
+Display the Flatpak manifest for a wrapper. Defaults to remote manifest.
+.SS Help
+.TP
+.B help
+Show usage information.
+.SH FILES
+.TP
+.I ~/.config/flatpak-wrappers/
+Configuration directory for all wrapper settings.
+.TP
+.I ~/.config/flatpak-wrappers/bin_dir
+File containing the path to the wrapper script directory.
+.TP
+.I ~/.config/flatpak-wrappers/blocklist
+List of blocked Flatpak application IDs.
+.TP
+.I ~/.config/flatpak-wrappers/*.pref
+Preference files for individual wrappers.
+.TP
+.I ~/.config/flatpak-wrappers/*.env
+Environment variable files for individual wrappers.
+.TP
+.I ~/.config/flatpak-wrappers/aliases
+Alias configuration file.
+.TP
+.I ~/.local/bin/
+Default location for wrapper scripts (configurable).
+.SH EXAMPLES
+.TP
+List all wrappers:
+.B fplaunch-manage list
+.TP
+Search for Firefox-related wrappers:
+.B fplaunch-manage search firefox
+.TP
+Set preference to use Flatpak version:
+.B fplaunch-manage set-pref firefox flatpak
+.TP
+Create an alias:
+.B fplaunch-manage set-alias firefox ff
+.TP
+Block an application from wrapper generation:
+.B fplaunch-manage block org.example.UnwantedApp
+.TP
+Export configuration for backup:
+.B fplaunch-manage export-config ~/fplaunch-backup.tar.gz
+.SH ENVIRONMENT
+.TP
+.B XDG_CONFIG_HOME
+If set, configuration is stored in \fI$XDG_CONFIG_HOME/flatpak-wrappers\fR
+instead of \fI~/.config/flatpak-wrappers\fR.
+.SH SEE ALSO
+.BR fplaunch-generate (1),
+.BR fplaunch-setup-systemd (1),
+.BR fplaunch-cleanup (1),
+.BR flatpak (1)
+.SH AUTHOR
+Written by the fplaunchwrapper contributors.
+.SH BUGS
+Report bugs at: https://github.com/dtg01100/fplaunchwrapper/issues

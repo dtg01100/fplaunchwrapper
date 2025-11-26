@@ -100,4 +100,13 @@ cp "$SCRIPT_DIR/fplaunch_completion.bash" "$HOME/.bashrc.d/fplaunch_completion.b
 echo "Bash completion installed to ~/.bashrc.d/fplaunch_completion.bash"
 echo "To enable, add 'source ~/.bashrc.d/fplaunch_completion.bash' to your ~/.bashrc"
 
-echo "Installation complete. Wrappers are in $BIN_DIR. Use 'fplaunch-manage' to configure."
+echo ""
+echo "Installation complete!"
+echo "Wrappers are in $BIN_DIR"
+echo ""
+echo "For help, see:"
+echo "  - README.md in this directory"
+echo "  - Run 'fplaunch-manage help'"
+if command -v man >/dev/null 2>&1 && [ -f "$SCRIPT_DIR/docs/man/fplaunchwrapper.7" ]; then
+    echo "  - View man pages: man -l $SCRIPT_DIR/docs/man/fplaunchwrapper.7"
+fi

@@ -2,7 +2,7 @@ Source: fplaunchwrapper
 Section: utils
 Priority: optional
 Maintainer: fplaunchwrapper Developers <dev@example.com>
-Build-Depends: debhelper (>= 10), bash
+Build-Depends: debhelper (>= 10), bash, texinfo
 Standards-Version: 4.5.0
 Homepage: https://github.com/dtg01100/fplaunchwrapper
 

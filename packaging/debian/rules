@@ -3,6 +3,10 @@
 %:
 	dh $@
 
+override_dh_auto_build:
+	# Build info pages
+	make info || echo "Warning: Could not build info pages (texinfo not available)"
+
 override_dh_auto_install:
 	# Install to /usr/lib/fplaunchwrapper
 	mkdir -p debian/fplaunchwrapper/usr/lib/fplaunchwrapper
@@ -25,6 +29,21 @@ override_dh_auto_install:
 	cp QUICKSTART.md debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/
 	cp -r examples debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/
 	[ -f RELEASE_*.md ] && cp RELEASE_*.md debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/ || true
+	
+	# Install man pages
+	mkdir -p debian/fplaunchwrapper/usr/share/man/man1
+	mkdir -p debian/fplaunchwrapper/usr/share/man/man7
+	cp docs/man/fplaunch-manage.1 debian/fplaunchwrapper/usr/share/man/man1/
+	cp docs/man/fplaunch-generate.1 debian/fplaunchwrapper/usr/share/man/man1/
+	cp docs/man/fplaunch-setup-systemd.1 debian/fplaunchwrapper/usr/share/man/man1/
+	cp docs/man/fplaunch-cleanup.1 debian/fplaunchwrapper/usr/share/man/man1/
+	cp docs/man/fplaunchwrapper.7 debian/fplaunchwrapper/usr/share/man/man7/
+	
+	# Install info pages (if successfully built)
+	if [ -f docs/info/fplaunchwrapper.info ]; then \
+	  mkdir -p debian/fplaunchwrapper/usr/share/info; \
+	  cp docs/info/fplaunchwrapper.info debian/fplaunchwrapper/usr/share/info/; \
+	fi
 	
 	# Install bash completion
 	mkdir -p debian/fplaunchwrapper/usr/share/bash-completion/completions
