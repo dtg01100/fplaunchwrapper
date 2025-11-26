@@ -15,13 +15,13 @@ mkdir -p "$BUILD_DIR/${PACKAGE_NAME}_${VERSION}"
 
 # Copy source files
 cp -r \
-    install.sh \
-    uninstall.sh \
     fplaunch-generate \
     fplaunch-setup-systemd \
+    fplaunch-cleanup \
     manage_wrappers.sh \
     fplaunch_completion.bash \
     lib/ \
+    docs/ \
     examples/ \
     README.md \
     QUICKSTART.md \

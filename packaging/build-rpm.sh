@@ -11,19 +11,19 @@ echo "Building RPM package for $PACKAGE_NAME version $VERSION"
 
 # Clean and create build directories
 rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+mkdir -p "$BUILD_DIR"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
 
 # Create source tarball
 TARBALL_DIR="${PACKAGE_NAME}-${VERSION}"
 mkdir -p "$BUILD_DIR/SOURCES/$TARBALL_DIR"
 
 cp -r \
-    install.sh \
-    uninstall.sh \
     fplaunch-generate \
     fplaunch-setup-systemd \
+    fplaunch-cleanup \
     manage_wrappers.sh \
     fplaunch_completion.bash \
+    docs/ \
     lib/ \
     examples/ \
     README.md \
@@ -35,7 +35,7 @@ if [ ! -f LICENSE ]; then
     cat > "$BUILD_DIR/SOURCES/$TARBALL_DIR/LICENSE" << 'EOF'
 MIT License
 
-Copyright (c) 2025 fplaunchwrapper developers
+Copyright (c) 2025 fplaunchwrapper Developers
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -75,10 +75,17 @@ cp packaging/fplaunchwrapper.spec "$BUILD_DIR/SPECS/"
 sed -i "s/%{version}/$VERSION/g" "$BUILD_DIR/SPECS/fplaunchwrapper.spec"
 
 # Build the RPM
-rpmbuild --define "_topdir $(pwd)/$BUILD_DIR" \
-         -bb "$BUILD_DIR/SPECS/fplaunchwrapper.spec"
+rpmbuild \
+    --define "_topdir $(pwd)/$BUILD_DIR" \
+    --define "_sourcedir $(pwd)/$BUILD_DIR/SOURCES" \
+    --define "_builddir $(pwd)/$BUILD_DIR/BUILD" \
+    --define "_buildrootdir $(pwd)/$BUILD_DIR/BUILDROOT" \
+    --define "_rpmdir $(pwd)/$BUILD_DIR/RPMS" \
+    --define "_specdir $(pwd)/$BUILD_DIR/SPECS" \
+    --define "_srcrpmdir $(pwd)/$BUILD_DIR/SRPMS" \
+    -bb "$BUILD_DIR/SPECS/fplaunchwrapper.spec"
 
 # Move package to root
-mv "$BUILD_DIR/RPMS"/*/*.rpm .
+mv "$BUILD_DIR"/RPMS/*/*.rpm .
 
 echo "RPM package built successfully: ${PACKAGE_NAME}-${VERSION}-1.noarch.rpm"

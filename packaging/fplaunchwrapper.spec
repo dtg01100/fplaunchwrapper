@@ -8,7 +8,6 @@ URL:            https://github.com/dtg01100/fplaunchwrapper
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch
-BuildRequires:  texinfo
 Requires:       bash >= 4.0, flatpak
 Recommends:     systemd, dialog
 
@@ -30,8 +29,8 @@ Features include:
 %setup -q
 
 %build
-# Build info pages
-make info || echo "Warning: Could not build info pages (texinfo not available)"
+# Skip info page generation to avoid texinfo dependency
+echo "Info page generation skipped to avoid texinfo dependency"
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -64,10 +63,10 @@ install -m 644 docs/man/fplaunch-setup-systemd.1 %{buildroot}/usr/share/man/man1
 install -m 644 docs/man/fplaunch-cleanup.1 %{buildroot}/usr/share/man/man1/
 install -m 644 docs/man/fplaunchwrapper.7 %{buildroot}/usr/share/man/man7/
 
-# Install info pages (if successfully built)
+# Info pages are not included in the package to avoid texinfo dependency
+# Remove info file if it was built (to avoid dependency detection)
 if [ -f docs/info/fplaunchwrapper.info ]; then
-  mkdir -p %{buildroot}/usr/share/info
-  install -m 644 docs/info/fplaunchwrapper.info %{buildroot}/usr/share/info/
+  echo "Info file built but will be excluded from package to avoid texinfo dependency"
 fi
 
 # Install bash completion
@@ -89,17 +88,12 @@ ln -s ../lib/fplaunchwrapper/fplaunch-cleanup %{buildroot}/usr/bin/fplaunch-clea
 /usr/share/bash-completion/completions/fplaunch-manage
 /usr/share/man/man1/fplaunch-*.1*
 /usr/share/man/man7/fplaunchwrapper.7*
-%{?_infodir}/fplaunchwrapper.info*
 /usr/bin/fplaunch-manage
 /usr/bin/fplaunch-generate
 /usr/bin/fplaunch-setup-systemd
 /usr/bin/fplaunch-cleanup
 
 %post
-if [ -f %{_infodir}/fplaunchwrapper.info ]; then
-  /sbin/install-info %{_infodir}/fplaunchwrapper.info %{_infodir}/dir 2>/dev/null || :
-fi
-
 echo "=========================================="
 echo "fplaunchwrapper successfully installed!"
 echo "=========================================="
@@ -116,16 +110,10 @@ echo ""
 echo "Documentation:"
 echo "  man fplaunchwrapper"
 echo "  man fplaunch-manage"
-echo "  info fplaunchwrapper"
 echo ""
 echo "Cleanup (before uninstall, per user):"
 echo "       fplaunch-cleanup"
 echo "=========================================="
-
-%preun
-if [ "$1" = 0 ] && [ -f %{_infodir}/fplaunchwrapper.info ]; then
-  /sbin/install-info --delete %{_infodir}/fplaunchwrapper.info %{_infodir}/dir 2>/dev/null || :
-fi
 
 %changelog
 * Tue Nov 26 2025 fplaunchwrapper Developers <dev@example.com> - %{version}-1
