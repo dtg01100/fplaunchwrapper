@@ -27,6 +27,18 @@ if [ -n "${CI:-}" ] || [ ! -t 0 ]; then
     NON_INTERACTIVE=1
 fi
 
+# Validate BIN_DIR is within user's home directory
+case "$BIN_DIR" in
+    "$HOME"/*|"$HOME")
+        # Valid: within home directory
+        ;;
+    *)
+        echo "Error: Installation directory must be within your home directory ($HOME)"
+        echo "Attempted: $BIN_DIR"
+        exit 1
+        ;;
+esac
+
 # If custom BIN_DIR provided and interactive, confirm
 if [ "$BIN_DIR" != "$HOME/.local/bin" ] && [ "$NON_INTERACTIVE" -eq 0 ]; then
     read -r -p "Install to '$BIN_DIR' instead of default '$HOME/.local/bin'? (y/n) [y]: " confirm

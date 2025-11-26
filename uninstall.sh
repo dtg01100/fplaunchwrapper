@@ -10,6 +10,19 @@ if [ -f "$BIN_DIR_FILE" ]; then
     BIN_DIR=$(cat "$BIN_DIR_FILE")
 fi
 
+# Validate BIN_DIR is within user's home directory
+case "$BIN_DIR" in
+    "$HOME"/*|"$HOME")
+        # Valid: within home directory
+        ;;
+    *)
+        echo "Error: Uninstallation directory must be within your home directory ($HOME)"
+        echo "Found: $BIN_DIR"
+        echo "This script only operates on user installations."
+        exit 1
+        ;;
+esac
+
 read -r -p "Uninstall Flatpak Launch Wrappers from '$BIN_DIR'? This will remove all wrappers and preferences. (y/n): " confirm
 if [[ ! $confirm =~ ^[Yy]$ ]]; then
     echo "Uninstallation cancelled."
