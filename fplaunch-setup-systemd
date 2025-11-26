@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers"
-BIN_DIR="$(cat "$CONFIG_DIR/bin_dir" 2>/dev/null || echo "$HOME/.local/bin")"
+
+# Source common utilities
+if [ -f "$SCRIPT_DIR/lib/common.sh" ]; then
+    # shellcheck source=lib/common.sh
+    source "$SCRIPT_DIR/lib/common.sh"
+elif [ -f "${SCRIPT_DIR%/bin}/lib/common.sh" ]; then
+    # When installed, lib is relative to bin parent
+    # shellcheck source=lib/common.sh
+    source "${SCRIPT_DIR%/bin}/lib/common.sh"
+fi
+
+init_paths
 WRAPPER_SCRIPT="$SCRIPT_DIR/fplaunch-generate"
-UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+UNIT_DIR=$(get_systemd_unit_dir)
 FLATPAK_BIN_DIR="$HOME/.local/share/flatpak/exports/bin"
 
 # Check prerequisites

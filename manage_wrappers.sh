@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source common utilities
+if [ -f "$SCRIPT_DIR/lib/common.sh" ]; then
+    # shellcheck source=lib/common.sh
+    source "$SCRIPT_DIR/lib/common.sh"
+elif [ -f "${SCRIPT_DIR%/bin}/lib/common.sh" ]; then
+    # When installed, lib is relative to bin parent
+    # shellcheck source=lib/common.sh
+    source "${SCRIPT_DIR%/bin}/lib/common.sh"
+fi
+
 # Check for --help as first argument
 if [ "$1" = "--help" ]; then
     cat << 'EOF'
@@ -13,16 +25,10 @@ EOF
     exit 0
 fi
 
-CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers"
-BIN_DIR_FILE="$CONFIG_DIR/bin_dir"
-BIN_DIR="$HOME/.local/bin"  # default
-if [ -f "$BIN_DIR_FILE" ]; then
-    BIN_DIR=$(cat "$BIN_DIR_FILE")
-fi
+init_paths
 BLOCKLIST="$CONFIG_DIR/blocklist"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-mkdir -p "$CONFIG_DIR"
+ensure_config_dir
 
 usage() {
     cat << 'EOF'

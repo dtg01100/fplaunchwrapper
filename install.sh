@@ -4,6 +4,12 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Source common utilities
+if [ -f "$SCRIPT_DIR/lib/common.sh" ]; then
+    # shellcheck source=lib/common.sh
+    source "$SCRIPT_DIR/lib/common.sh"
+fi
+
 # Sanity checks
 echo "Checking dependencies..."
 if ! command -v flatpak &> /dev/null; then
@@ -28,16 +34,9 @@ if [ -n "${CI:-}" ] || [ ! -t 0 ]; then
 fi
 
 # Validate BIN_DIR is within user's home directory
-case "$BIN_DIR" in
-    "$HOME"/*|"$HOME")
-        # Valid: within home directory
-        ;;
-    *)
-        echo "Error: Installation directory must be within your home directory ($HOME)"
-        echo "Attempted: $BIN_DIR"
-        exit 1
-        ;;
-esac
+if ! validate_home_dir "$BIN_DIR" "installation"; then
+    exit 1
+fi
 
 # If custom BIN_DIR provided and interactive, confirm
 if [ "$BIN_DIR" != "$HOME/.local/bin" ] && [ "$NON_INTERACTIVE" -eq 0 ]; then
