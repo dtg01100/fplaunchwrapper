@@ -340,19 +340,51 @@ else
     PREF=""
 fi
 
-# Check for system command at launch time (IMPROVED: PATH-order independent)
+# Check for system command at launch time (RESPECTS ACTUAL PATH ORDER)
 SYSTEM_EXISTS=false
 CMD_PATH=""
 
-# Check standard system paths in precedence order, skipping wrapper location
-for sys_dir in "/usr/local/bin" "/usr/bin" "/bin" "/usr/local/sbin" "/usr/sbin" "/sbin"; do
+# Parse PATH and check each directory in order, skipping wrapper location
+IFS=':' read -ra PATH_DIRS <<< "\${PATH:-/usr/local/bin:/usr/bin:/bin}"
+for sys_dir in "\${PATH_DIRS[@]}"; do
+    # Skip empty directories
+    [ -z "\$sys_dir" ] && continue
+    
+    # Normalize directory path
+    if [ "\$sys_dir" = "." ]; then
+        sys_dir="\$PWD"
+    fi
+    
     candidate="\$sys_dir/\$NAME"
-    if [ -f "\$candidate" ] && [ -x "\$candidate" ] && [ "\$candidate" != "\$SCRIPT_BIN_DIR/\$NAME" ]; then
+    
+    # Check if this is our own wrapper script - if so, skip it
+    if [ "\$candidate" = "\$SCRIPT_BIN_DIR/\$NAME" ]; then
+        echo "DEBUG: Skipping our own wrapper at \$candidate" >&2
+        continue
+    fi
+    
+    # Check if executable exists in this PATH directory
+    if [ -f "\$candidate" ] && [ -x "\$candidate" ]; then
         SYSTEM_EXISTS=true
         CMD_PATH="\$candidate"
+        echo "DEBUG: Found system binary at \$candidate" >&2
         break
     fi
 done
+
+# Fallback to hardcoded paths if PATH parsing fails (safety net)
+if [ "\$SYSTEM_EXISTS" = false ]; then
+    echo "DEBUG: PATH parsing found nothing, checking fallback paths" >&2
+    for sys_dir in "/usr/local/bin" "/usr/bin" "/bin" "/usr/local/sbin" "/usr/sbin" "/sbin"; do
+        candidate="\$sys_dir/\$NAME"
+        if [ -f "\$candidate" ] && [ -x "\$candidate" ] && [ "\$candidate" != "\$SCRIPT_BIN_DIR/\$NAME" ]; then
+            SYSTEM_EXISTS=true
+            CMD_PATH="\$candidate"
+            echo "DEBUG: Found system binary in fallback path: \$candidate" >&2
+            break
+        fi
+    done
+fi
 
 if [ "\$PREF" = "system" ]; then
     if [ "\$SYSTEM_EXISTS" = true ]; then

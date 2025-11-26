@@ -301,9 +301,128 @@ GENEOF
     assert_file_not_exists "$TEST_BIN/firefox"
 }
 
-# Test 4: Invalid name handling
+# Test 4: PATH-based system binary resolution
+# WHAT IT TESTS: Respects actual system PATH order and skips wrapper script
+# WHY IT MATTERS: Ensures wrapper doesn't interfere with system command resolution
+# WHAT COULD GO WRONG if broken:
+# - Wrapper calls itself instead of system command (infinite recursion)
+# - Wrong system command executed due to hardcoded path assumptions
+# - PATH modifications by user don't affect resolution
+# - Wrapper in early PATH position breaks system command access
+test_path_based_resolution() {
+    echo -e "\n${YELLOW}Test 4: PATH-based system binary resolution${NC}"
+    
+    # Create test environment with multiple possible locations
+    local test_sys_bin="$TEST_DIR/system_bin"
+    local test_local_bin="$TEST_DIR/local_bin"
+    local test_wrapper_bin="$TEST_BIN"
+    
+    mkdir -p "$test_sys_bin" "$test_local_bin" "$test_wrapper_bin"
+    
+    # Create mock system binary (should be found if wrapper not in PATH)
+    cat > "$test_sys_bin/testapp" << 'EOF'
+#!/bin/bash
+echo "SYSTEM_BINARY:$0"
+EOF
+    chmod +x "$test_sys_bin/testapp"
+    
+    # Create mock local binary (lower priority)
+    cat > "$test_local_bin/testapp" << 'EOF'
+#!/bin/bash
+echo "LOCAL_BINARY:$0"
+EOF
+    chmod +x "$test_local_bin/testapp"
+    
+    # Create wrapper script (should be skipped when checking for system binary)
+    cat > "$test_wrapper_bin/testapp" << 'EOF'
+#!/bin/bash
+echo "WRAPPER:$0"
+EOF
+    chmod +x "$test_wrapper_bin/testapp"
+    
+    # Test 1: Wrapper in PATH before system binary
+    local original_path="$PATH"
+    export PATH="$test_wrapper_bin:$test_sys_bin:$test_local_bin"
+    
+    cat > "$TEST_BIN/test-path-resolution" << 'EOF'
+#!/usr/bin/env bash
+NAME="testapp"
+SCRIPT_BIN_DIR="$1"
+PREF_FILE="$2"
+
+# Parse PATH and check each directory in order, skipping wrapper location
+SYSTEM_EXISTS=false
+CMD_PATH=""
+
+IFS=':' read -ra PATH_DIRS <<< "${PATH:-/usr/local/bin:/usr/bin:/bin}"
+for sys_dir in "${PATH_DIRS[@]}"; do
+    [ -z "$sys_dir" ] && continue
+    
+    if [ "$sys_dir" = "." ]; then
+        sys_dir="$PWD"
+    fi
+    
+    candidate="$sys_dir/$NAME"
+    
+    # Skip our own wrapper
+    if [ "$candidate" = "$SCRIPT_BIN_DIR/$NAME" ]; then
+        echo "SKIPPED_WRAPPER:$candidate"
+        continue
+    fi
+    
+    if [ -f "$candidate" ] && [ -x "$candidate" ]; then
+        SYSTEM_EXISTS=true
+        CMD_PATH="$candidate"
+        echo "FOUND:$candidate"
+        break
+    fi
+done
+
+if [ "$SYSTEM_EXISTS" = true ]; then
+    echo "RESULT:Found system binary at $CMD_PATH"
+else
+    echo "RESULT:No system binary found"
+fi
+EOF
+    chmod +x "$TEST_BIN/test-path-resolution"
+    
+    # Run test with wrapper in PATH first
+    local result
+    result=$("$TEST_BIN/test-path-resolution" "$test_wrapper_bin" "$TEST_CONFIG/testapp.pref")
+    
+    echo "PATH resolution test result:"
+    echo "$result"
+    
+    # Should find system binary, not wrapper
+    if echo "$result" | grep -q "FOUND:$test_sys_bin/testapp"; then
+        echo -e "${GREEN}✓${NC} Correctly skipped wrapper and found system binary"
+        ((TESTS_PASSED++))
+    else
+        echo -e "${RED}✗${NC} Failed to find correct system binary"
+        echo "Expected to find: $test_sys_bin/testapp"
+        ((TESTS_FAILED++))
+    fi
+    
+    # Test 2: No system binary available
+    export PATH="$test_wrapper_bin"
+    
+    result=$("$TEST_BIN/test-path-resolution" "$test_wrapper_bin" "$TEST_CONFIG/testapp.pref")
+    
+    if echo "$result" | grep -q "No system binary found"; then
+        echo -e "${GREEN}✓${NC} Correctly detected no system binary available"
+        ((TESTS_PASSED++))
+    else
+        echo -e "${RED}✗${NC} Should not find system binary when only wrapper exists"
+        ((TESTS_FAILED++))
+    fi
+    
+    # Restore original PATH
+    export PATH="$original_path"
+}
+
+# Test 5: Invalid name handling
 test_invalid_names() {
-    echo -e "\n${YELLOW}Test 4: Invalid name handling${NC}"
+    echo -e "\n${YELLOW}Test 5: Invalid name handling${NC}"
     
     cat > "$TEST_BIN/test-invalid" << 'GENEOF'
 #!/usr/bin/env bash
@@ -604,6 +723,7 @@ main() {
     test_basic_generation
     test_collision_detection
     test_blocklist
+    test_path_based_resolution
     test_invalid_names
     test_env_loading
     test_pre_launch_script
