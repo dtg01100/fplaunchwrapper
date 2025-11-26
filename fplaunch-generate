@@ -369,13 +369,23 @@ for sys_dir in "\${PATH_DIRS[@]}"; do
             ;;
     esac
     
-    # Skip absolute paths that look like user directories
-    case "\$sys_dir" in
-        "\$HOME"/*|\~/*)
-            echo "SECURITY: Skipping user directory: \$sys_dir" >&2
+# Skip absolute paths that look like user directories
+    case "$sys_dir" in
+        "$HOME"/*|\~/*|/tmp/*|/var/*|/home/*/.*|/root/.*/)
+            echo "SECURITY: Skipping user/private directory: $sys_dir" >&2
+            continue
+            ;;
+        /home/*/.local/bin/*|/opt/*/bin/*|/snap/*)
+            echo "SECURITY: Skipping user-controlled system directory: $sys_dir" >&2
             continue
             ;;
     esac
+    
+    # Skip paths with null bytes or encoding attacks
+    if [[ "$sys_dir" =~ [\\x00\\u0000%C0%2e]|.*:x:[0-9]+: ]]; then
+        echo "SECURITY: Skipping encoded/suspicious path: $sys_dir" >&2
+        continue
+    fi
     
     # Skip paths with suspicious characters
     if [[ ! "\$sys_dir" =~ ^/([a-zA-Z0-9\.\_\-]+/)*[a-zA-Z0-9\.\_\-]+$ ]]; then

@@ -86,43 +86,109 @@ test_validate_home_dir_valid() {
 # - System becomes unstable, unbootable, or corrupted
 # - Creates security vulnerabilities through path hijacking
 # - Breaks existing software installations and system integrity
-test_validate_home_dir_invalid() {
-    echo "Test 2: validate_home_dir rejects system paths"
+# - Advanced attack scenarios including symlink attacks, path traversal, encoding attacks
+test_validate_home_dir_aggressive() {
+    echo "Test 2: validate_home_dir rejects system paths and attack attempts"
     
-    # Test /usr/bin - primary system binary directory (MUST be protected)
-    if ! validate_home_dir "/usr/bin" "test" 2>/dev/null; then
-        pass "Rejects /usr/bin"
+    # Attack 1: Direct system directory attempts
+    local system_dirs=("/usr/bin" "/usr/local/bin" "/bin" "/sbin" "/usr/sbin" "/opt/bin" "/snap/bin")
+    for sys_dir in "${system_dirs[@]}"; do
+        if ! validate_home_dir "$sys_dir" "test" 2>/dev/null; then
+            pass "Rejects system directory: $sys_dir"
+        else
+            fail "Should reject system directory: $sys_dir"
+        fi
+    done
+    
+    # Attack 2: Path traversal attempts
+    echo "Testing path traversal attacks..."
+    local traversal_attacks=(
+        "/home/user/../../../etc"
+        "/home/user/../../../../root"
+        "/tmp/evil/../../../usr/bin"
+        "/var/www/../../../bin"
+        "/opt/app/../../../sbin"
+        "/home/user/./././../../../etc/shadow"
+    )
+    
+    for attack in "${traversal_attacks[@]}"; do
+        if ! validate_home_dir "$attack" "test" 2>/dev/null; then
+            pass "Blocked path traversal: $attack"
+        else
+            fail "Failed to block path traversal: $attack"
+        fi
+    done
+    
+    # Attack 3: Symlink attacks
+    echo "Testing symlink attacks..."
+    local temp_symlink="/tmp/test_symlink_$$"
+    local attacks_blocked=0
+    
+    # Create malicious symlinks
+    ln -sf "/usr/bin" "$temp_symlink" 2>/dev/null && {
+        if ! validate_home_dir "$temp_symlink" "test" 2>/dev/null; then
+            pass "Blocked symlink to /usr/bin"
+            ((attacks_blocked++))
+        else
+            fail "Failed to block symlink to /usr/bin"
+        fi
+        rm -f "$temp_symlink"
+    }
+    
+    ln -sf "/etc" "$temp_symlink" 2>/dev/null && {
+        if ! validate_home_dir "$temp_symlink" "test" 2>/dev/null; then
+            pass "Blocked symlink to /etc"
+            ((attacks_blocked++))
+        else
+            fail "Failed to block symlink to /etc"
+        fi
+        rm -f "$temp_symlink"
+    }
+    
+    # Attack 4: Encoding and Unicode attacks
+    echo "Testing encoding attacks..."
+    local encoding_attacks=(
+        "/tmp/evil%2e%2e%2f"
+        "/tmp/evil%C0%AE%C0%AE/"
+        "/tmp/evil\x2e\x2e\x2f"
+        "/tmp/evil\\u002e\\u002e\\u002f"
+    )
+    
+    for encoding in "${encoding_attacks[@]}"; do
+        if ! validate_home_dir "$encoding" "test" 2>/dev/null; then
+            pass "Blocked encoding attack: $encoding"
+            ((attacks_blocked++))
+        else
+            fail "Failed to block encoding attack: $encoding"
+        fi
+    done
+    
+    # Attack 5: Extremely long paths
+    echo "Testing buffer overflow attempts..."
+    local long_path="/very/long/path/that/exceeds/reasonable/limits/and/could/cause/buffer/overflow/issues/that/never/ends/and/keeps/going/forever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever/and/ever"
+    
+    if ! validate_home_dir "$long_path" "test" 2>/dev/null; then
+        pass "Blocked excessively long path (${#long_path} chars)"
     else
-        fail "Should reject /usr/bin"
+        fail "Failed to block long path attack (${#long_path} chars)"
     fi
     
-    # Test /opt/bin - alternative system directory for third-party software
-    if ! validate_home_dir "/opt/bin" "test" 2>/dev/null; then
-        pass "Rejects /opt/bin"
-    else
-        fail "Should reject /opt/bin"
-    fi
+    # Attack 6: Race condition attempts (simulate rapid changes)
+    echo "Testing race condition resilience..."
+    local race_test="/tmp/race_test_$$"
+    for i in {1..5}; do
+        mkdir -p "$race_test"
+        # Rapidly change directory permissions and ownership
+        chmod 777 "$race_test" 2>/dev/null
+        if ! validate_home_dir "$race_test" "test" 2>/dev/null; then
+            pass "Race condition test $i: Correctly rejected non-home directory"
+        else
+            fail "Race condition test $i: Should reject non-home directory"
+        fi
+        rm -rf "$race_test"
+    done
     
-    # Test /usr/local/bin - system directory for locally compiled packages
-    if ! validate_home_dir "/usr/local/bin" "test" 2>/dev/null; then
-        pass "Rejects /usr/local/bin"
-    else
-        fail "Should reject /usr/local/bin"
-    fi
-    
-    # Test /bin - essential system binaries (critical protection needed)
-    if ! validate_home_dir "/bin" "test" 2>/dev/null; then
-        pass "Rejects /bin"
-    else
-        fail "Should reject /bin"
-    fi
-    
-    # Test /tmp - outside HOME directory (should be rejected for consistency)
-    if ! validate_home_dir "/tmp/test" "test" 2>/dev/null; then
-        pass "Rejects /tmp paths"
-    else
-        fail "Should reject /tmp paths"
-    fi
+    echo "Advanced security boundary testing completed"
 }
 
 # Test 3: is_wrapper_file detects generated wrappers
@@ -133,45 +199,135 @@ test_validate_home_dir_invalid() {
 # - Management commands fail to find wrappers
 # - Orphaned wrapper files remain after cleanup
 # - Security risk if malicious scripts masquerade as wrappers
-test_is_wrapper_file() {
-    echo "Test 3: is_wrapper_file detects wrapper files"
+# - Advanced attack scenarios including impersonation, corruption, and race conditions
+test_is_wrapper_file_aggressive() {
+    echo "Test 3: is_wrapper_file_aggressive detects wrapper files and evades attacks"
     
     mkdir -p "$TEST_BIN"
     
-    # Create a valid wrapper file with proper header
-    cat > "$TEST_BIN/test-wrapper" << 'EOF'
+    # Test 1: Valid wrapper detection
+    echo "Testing valid wrapper detection..."
+    cat > "$TEST_BIN/valid-wrapper" << 'EOF'
 #!/usr/bin/env bash
 # Generated by fplaunchwrapper
 
-NAME="test-wrapper"
-ID="com.example.Test"
+NAME="valid-wrapper"
+ID="com.example.ValidApp"
 EOF
     
-    if is_wrapper_file "$TEST_BIN/test-wrapper"; then
+    if is_wrapper_file "$TEST_BIN/valid-wrapper"; then
         pass "Detects valid wrapper file"
     else
-        fail "Should detect valid wrapper file"
+        fail "Failed to detect valid wrapper file"
     fi
     
-    # Create a non-wrapper file to ensure we don't get false positives
-    cat > "$TEST_BIN/not-wrapper" << 'EOF'
+    # Attack 1: Malicious script impersonation attempts
+    echo "Testing wrapper impersonation attacks..."
+    local impersonation_attacks=(
+        "#!/bin/bash\n# Fake wrapper script\nmalicious_code_here"
+        "#!/usr/bin/env python\n# Generated by fplaunchwrapper\nimport os; os.system('rm -rf /')"
+        "#!/usr/bin/env node\n/* Generated by fplaunchwrapper */\nrequire('child_process').exec('sudo rm -rf /')"
+        "#!/usr/bin/env bash\n# Generated by FAKE-wrapper\nrm -rf /tmp/dangerous"
+        "#!/usr/bin/env bash\nNAME=\"evil\"\nID=\"malicious\"\necho \"harmless\""
+    )
+    
+    local attacks_blocked=0
+    for i in "${!impersonation_attacks[@]}"; do
+        local attack_file="$TEST_BIN/attack_$i"
+        printf "%s\n" "${impersonation_attacks[$i]}" > "$attack_file"
+        
+        if ! is_wrapper_file "$attack_file" 2>/dev/null; then
+            pass "Blocked impersonation attack $i"
+            ((attacks_blocked++))
+        else
+            fail "Failed to block impersonation attack $i"
+        fi
+    done
+    
+    # Attack 2: Corrupted wrapper attempts
+    echo "Testing corrupted wrapper detection..."
+    local corrupted_wrappers=(
+        "#!/usr/bin/env bash\n# Generated by fplaunchwrapper\n# [CORRUPTED DATA]"
+        "#!/usr/bin/env bash\n# Generated by fplaunchwrapper\n[MISSING REQUIRED FIELDS]"
+        "#!/usr/bin/env bash\n# Generated by fplaunchwrapper\n\n# [TRUNCATED]"
+        ""
+        "#!/usr/bin/env bash\n# Generated by different-tool"
+    )
+    
+    for i in "${!corrupted_wrappers[@]}"; do
+        local corrupt_file="$TEST_BIN/corrupt_$i"
+        printf "%s\n" "${corrupted_wrappers[$i]}" > "$corrupt_file"
+        
+        if ! is_wrapper_file "$corrupt_file" 2>/dev/null; then
+            pass "Correctly rejected corrupted wrapper $i"
+            ((attacks_blocked++))
+        else
+            fail "Failed to reject corrupted wrapper $i"
+        fi
+    done
+    
+    # Attack 3: Symlink attacks
+    echo "Testing symlink attacks..."
+    local real_wrapper="$TEST_BIN/real_wrapper"
+    local fake_target="$TEST_BIN/fake_target"
+    local malicious_symlink="$TEST_BIN/malicious_symlink"
+    
+    # Create a real wrapper
+    cat > "$real_wrapper" << 'EOF'
 #!/usr/bin/env bash
-# Just a regular script
-echo "Hello"
+# Generated by fplaunchwrapper
+
+NAME="real-app"
+ID="com.example.RealApp"
 EOF
     
-    if ! is_wrapper_file "$TEST_BIN/not-wrapper"; then
-        pass "Rejects non-wrapper file"
+    # Create a malicious symlink pointing to the wrapper
+    ln -sf "$real_wrapper" "$malicious_symlink" 2>/dev/null
+    
+    if ! is_wrapper_file "$malicious_symlink" 2>/dev/null; then
+        pass "Symlink detection works correctly"
+        ((attacks_blocked++))
     else
-        fail "Should reject non-wrapper file"
+        fail "Symlink detection failed"
     fi
     
-    # Test non-existent file handling
-    if ! is_wrapper_file "$TEST_BIN/nonexistent"; then
-        pass "Rejects non-existent file"
+    # Attack 4: Race condition attempts
+    echo "Testing race condition attacks..."
+    local race_file="$TEST_BIN/race_test"
+    for i in {1..3}; do
+        # Create file with wrapper content
+        cat > "$race_file" << EOF
+#!/usr/bin/env bash
+# Generated by fplaunchwrapper
+
+NAME="race-test-$i"
+ID="com.example.RaceTest$i"
+EOF
+        
+        # Rapidly change content
+        printf "#!/bin/bash\n# Fake wrapper\nrm -rf /\n" > "$race_file" &
+        sleep 0.001
+        if is_wrapper_file "$race_file" 2>/dev/null; then
+            fail "Race condition test $i failed"
+        else
+            pass "Race condition test $i passed"
+            ((attacks_blocked++))
+        fi
+    done
+    
+    # Attack 5: Encoding attacks
+    echo "Testing encoding bypass attempts..."
+    local encoding_file="$TEST_BIN/encoding_test"
+    printf "#!/usr/bin/env bash\n# Generated by fplaunchwrapper%c\nNAME=\"test\"%cID=\"com.example.Test\"\n" $'\x00' $'\x00' > "$encoding_file"
+    
+    if ! is_wrapper_file "$encoding_file" 2>/dev/null; then
+        pass "Blocked encoding attack"
+        ((attacks_blocked++))
     else
-        fail "Should reject non-existent file"
+        fail "Failed to block encoding attack"
     fi
+    
+    echo "Aggressive wrapper detection testing completed"
 }
 
 # Test 4: get_wrapper_id extracts correct ID
@@ -376,9 +532,9 @@ echo
 
 test_validate_home_dir_valid
 echo
-test_validate_home_dir_invalid
+test_validate_home_dir_aggressive
 echo
-test_is_wrapper_file
+test_is_wrapper_file_aggressive
 echo
 test_get_wrapper_id
 echo

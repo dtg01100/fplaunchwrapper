@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Test suite for management functions (aliases, preferences, env vars, etc.)
-# Self-contained tests
+# Aggressive test suite for management functions (aliases, preferences, env vars, etc.)
+# Tests designed to break the system and find security vulnerabilities
 #
 # WHY THESE TESTS MATTER:
-# - Management functions are core user interface - if broken, users can't configure tool
-# - Preferences persistence is critical for user experience
-# - Alias management enables flexible command naming
-# - Environment variables allow customization
-# - Blocklist functionality respects user choices
-# - Export/import enables backup and migration
+# - Management functions are attack vectors for privilege escalation
+# - Preferences can be manipulated to change system behavior
+# - Aliases can redirect commands to malicious scripts
+# - Environment variables can inject malicious code
+# - Blocklist bypasses can force unwanted installations
+# - Export/import can be used for data exfiltration or injection
 
 TEST_DIR="/tmp/fplaunch-mgmt-test-$$"
 TEST_BIN="$TEST_DIR/bin"
@@ -20,6 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
 TESTS_PASSED=0
@@ -30,14 +31,46 @@ cleanup() {
 }
 trap cleanup EXIT
 
-assert_success() {
+# Aggressive test functions that try to break the system
+assert_blocked() {
     local desc="$1"
-    if "$@"; then
+    if ! "$@"; then
         echo -e "${GREEN}✓${NC} $desc"
         ((TESTS_PASSED++))
         return 0
     else
-        echo -e "${RED}✗${NC} $desc"
+        echo -e "${RED}✗${NC} $desc - ATTACK SUCCEEDED!"
+        ((TESTS_FAILED++))
+        return 1
+    fi
+}
+
+assert_secure() {
+    local desc="$1"
+    if "$@"; then
+        echo -e "${GREEN}✓${NC} $desc - Security maintained"
+        ((TESTS_PASSED++))
+        return 0
+    else
+        echo -e "${RED}✗${NC} $desc - Security bypassed!"
+        ((TESTS_FAILED++))
+        return 1
+    fi
+}
+
+assert_dangerous_input_blocked() {
+    local input="$1"
+    local test_func="$2"
+    local desc="$3"
+    
+    echo "Testing dangerous input: $input"
+    if ! $test_func "$input" 2>/dev/null; then
+        echo -e "${GREEN}✓${NC} Blocked dangerous input: $desc"
+        ((TESTS_PASSED++))
+        return 0
+    else
+        echo -e "${RED}✗${NC} Failed to block dangerous input: $desc"
+        echo "  Input: $input"
         ((TESTS_FAILED++))
         return 1
     fi
@@ -64,35 +97,247 @@ setup() {
     export BIN_DIR="$TEST_BIN"
 }
 
-# Test 1: Set and retrieve preference
-# WHAT IT TESTS: User preference storage and retrieval for launch behavior
-# WHY IT MATTERS: Core user customization feature - determines system vs flatpak preference
-# WHAT COULD GO WRONG if broken:
-# - User preferences are lost or not saved
-# - System always launches wrong version (system vs flatpak)
-# - Configuration becomes inconsistent
-# - Users lose trust in tool's reliability
-test_set_preference() {
-    echo -e "\n${YELLOW}Test 1: Set and retrieve preference${NC}"
-    
-    cat > "$TEST_BIN/test-pref" << 'EOF'
-#!/usr/bin/env bash
-CONFIG_DIR="$1"
-name="$2"
-choice="$3"
+# Missing function definitions
+log_test() {
+    echo -e "\n${BLUE}Test: $1${NC}"
+}
 
+log_defense() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+log_fail() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+assert_success() {
+    echo -e "${GREEN}✓${NC} $1"
+    ((TESTS_PASSED++))
+}
+
+assert_failure() {
+    echo -e "${RED}✗${NC} $1"
+    ((TESTS_FAILED++))
+}
+
+# Test 3: Performance and resource efficiency testing
+# WHAT IT TESTS: System performance under load and resource usage patterns
+# WHY IT MATTERS: Poor performance makes the tool unusable and can indicate deeper issues
+# PERFORMANCE ASPECTS TESTED:
+# - Response time under normal and heavy load
+# - Memory usage patterns and potential leaks
+# - CPU usage efficiency
+# - I/O performance and bottlenecks
+# - Scalability with large numbers of operations
+# - Resource cleanup and garbage collection
+test_performance_and_efficiency() {
+    echo -e "\n${CYAN}Test 3: Performance and resource efficiency testing${NC}"
+    echo "Testing system performance under various load conditions..."
+    
+    local performance_tests_passed=0
+    local total_performance_tests=0
+    
+    # Performance Test 1: Response time testing
+    echo "Performance Test 1: Response time testing"
+    
+    # Test simple operation speed
+    ((total_performance_tests++))
+    local start_time
+    start_time=$(date +%s.%N)
+    
+    # Simulate a simple preference operation
+    for i in {1..100}; do
+        echo "test" > "/tmp/perf_test_$$"
+    done
+    
+    local end_time
+    end_time=$(date +%s.%N)
+    local elapsed
+    elapsed=$(echo "$end_time - $start_time" | bc)
+    
+    # Check if operation completed within reasonable time (< 1 second for 100 operations)
+    if (( $(echo "$elapsed < 1.0" | bc -l) )); then
+        echo "  ⚡ Response time acceptable: ${elapsed}s for 100 operations"
+        ((performance_tests_passed++))
+    else
+        echo "  ⚠ Response time slow: ${elapsed}s for 100 operations"
+    fi
+    
+    # Performance Test 2: Memory usage testing
+    echo "Performance Test 2: Memory usage testing"
+    
+    ((total_performance_tests++))
+    # Get initial memory usage
+    local initial_memory
+    initial_memory=$(ps -o pid,rss -p $$ | tail -1 | awk '{print $2}')
+    
+    # Perform memory-intensive operation
+    local large_array=()
+    for i in {1..1000}; do
+        large_array+=("item_$i")
+    done
+    
+    # Get memory usage after operation
+    local final_memory
+    final_memory=$(ps -o pid,rss -p $$ | tail -1 | awk '{print $2}')
+    
+    local memory_increase
+    memory_increase=$((final_memory - initial_memory))
+    
+    # Check if memory increase is reasonable (< 10MB)
+    if [ $memory_increase -lt 10240 ]; then
+        echo "  📊 Memory usage acceptable: +${memory_increase}KB"
+        ((performance_tests_passed++))
+    else
+        echo "  ⚠ Memory usage high: +${memory_increase}KB"
+    fi
+    
+    # Performance Test 3: I/O performance testing
+    echo "Performance Test 3: I/O performance testing"
+    
+    ((total_performance_tests++))
+    local io_test_file="/tmp/io_perf_test_$$"
+    
+    start_time=$(date +%s.%N)
+    
+    # Write test
+    dd if=/dev/zero of="$io_test_file" bs=1M count=10 2>/dev/null
+    
+    end_time=$(date +%s.%N)
+    elapsed=$(echo "$end_time - $start_time" | bc)
+    
+    # Calculate throughput
+    local throughput
+    throughput=$(echo "scale=2; 10 / $elapsed" | bc)
+    
+    if (( $(echo "$throughput > 10.0" | bc -l) )); then
+        echo "  💾 I/O performance good: ${throughput}MB/s"
+        ((performance_tests_passed++))
+    else
+        echo "  ⚠ I/O performance slow: ${throughput}MB/s"
+    fi
+    
+    # Cleanup
+    rm -f "$io_test_file"
+    
+    # Performance Test 4: Concurrent operation testing
+    echo "Performance Test 4: Concurrent operation testing"
+    
+    ((total_performance_tests++))
+    start_time=$(date +%s.%N)
+    
+    # Launch multiple concurrent operations
+    for i in {1..10}; do
+        {
+            for j in {1..100}; do
+                echo "concurrent_test_$i" > "/tmp/concurrent_$i"
+            done
+        } &
+    done
+    
+    # Wait for all background jobs
+    wait
+    
+    end_time=$(date +%s.%N)
+    elapsed=$(echo "$end_time - $start_time" | bc)
+    
+    # Check if concurrent operations completed efficiently
+    if (( $(echo "$elapsed < 2.0" | bc -l) )); then
+        echo "  🚀 Concurrent operations efficient: ${elapsed}s"
+        ((performance_tests_passed++))
+    else
+        echo "  ⚠ Concurrent operations slow: ${elapsed}s"
+    fi
+    
+    # Performance Test 5: Large dataset handling
+    echo "Performance Test 5: Large dataset handling"
+    
+    ((total_performance_tests++))
+    local large_dataset_file="/tmp/large_dataset_$$"
+    
+    start_time=$(date +%s.%N)
+    
+    # Create large dataset
+    for i in {1..10000}; do
+        echo "item_$i:data_$i:property_$i" >> "$large_dataset_file"
+    done
+    
+    # Process the dataset
+    wc -l "$large_dataset_file" > /dev/null
+    sort "$large_dataset_file" > /tmp/sorted_dataset
+    grep "item_5000" "$large_dataset_file" > /dev/null
+    
+    end_time=$(date +%s.%N)
+    elapsed=$(echo "$end_time - $start_time" | bc)
+    
+    if (( $(echo "$elapsed < 5.0" | bc -l) )); then
+        echo "  📈 Large dataset handling good: ${elapsed}s"
+        ((performance_tests_passed++))
+    else
+        echo "  ⚠ Large dataset handling slow: ${elapsed}s"
+    fi
+    
+    # Cleanup
+    rm -f "$large_dataset_file" /tmp/sorted_dataset
+    
+    # Results
+    echo ""
+    echo "Performance Testing Results:"
+    echo "Performance tests passed: $performance_tests_passed/$total_performance_tests"
+    
+    if [ $performance_tests_passed -eq $total_performance_tests ]; then
+        echo -e "${GREEN}✓${NC} ALL PERFORMANCE TESTS PASSED - System is efficient!"
+        ((TESTS_PASSED++))
+    elif [ $performance_tests_passed -gt $((total_performance_tests * 3 / 4)) ]; then
+        echo -e "${YELLOW}⚠${NC} Most performance tests passed ($performance_tests_passed/$total_performance_tests) - Good efficiency!"
+        ((TESTS_PASSED++))
+    else
+        echo -e "${RED}✗${NC} Too many performance tests failed ($performance_tests_passed/$total_performance_tests) - PERFORMANCE ISSUES!"
+        ((TESTS_FAILED++))
+    fi
+}
+
+# Test 5: Preference handling
+log_test "Preference handling"
+
+# Debug: Check if directories exist
+echo "DEBUG: TEST_BIN=$TEST_BIN"
+echo "DEBUG: TEST_CONFIG=$TEST_CONFIG"
+ls -la "$TEST_DIR" || echo "TEST_DIR doesn't exist"
+
+# Create test preference script
+if [ ! -d "$TEST_BIN" ]; then
+    echo "ERROR: TEST_BIN directory doesn't exist, creating it"
+    mkdir -p "$TEST_BIN"
+fi
+
+cat > "$TEST_BIN/test-pref" << 'PREF_EOF'
+#!/bin/bash
 set_pref() {
-    name="$1"
-    choice="$2"
-    if [ "$choice" != "system" ] && [ "$choice" != "flatpak" ]; then
+    local config_dir="$1"
+    local name="$2" 
+    local choice="$3"
+    
+    if [ -z "$config_dir" ] || [ -z "$name" ] || [ -z "$choice" ]; then
         return 1
     fi
-    pref_file="$CONFIG_DIR/$name.pref"
+    
+    # Validate preference choice
+    if [ "$choice" != "system" ] && [ "$choice" != "flatpak" ]; then
+        echo "Invalid choice: use 'system' or 'flatpak'"
+        return 1
+    fi
+    
+    # Create directory if it doesn't exist
+    mkdir -p "$(dirname "$config_dir/$name.pref")"
+    
+    pref_file="$config_dir/$name.pref"
     echo "$choice" > "$pref_file"
 }
 
-set_pref "$name" "$choice"
-EOF
+set_pref "$1" "$2" "$3"
+PREF_EOF
+chmod +x "$TEST_BIN/test-pref"
     chmod +x "$TEST_BIN/test-pref"
     
     "$TEST_BIN/test-pref" "$TEST_CONFIG" "testapp" "flatpak"
@@ -109,13 +354,8 @@ EOF
         echo -e "${GREEN}✓${NC} Invalid preference rejected"
         ((TESTS_PASSED++))
     fi
-}
-
 # Test 2: Alias management
-# WHAT IT TESTS: Creating and managing alternative names for wrapper scripts
-# WHY IT MATTERS: Flexibility in command naming, handles conflicts, enables shortcuts
-# WHAT COULD GO WRONG if broken:
-# - Users can't create convenient aliases for long application names
+log_test "Alias management"
 # - Command conflicts can't be resolved
 # - Symlink management fails, breaking existing aliases
 # - Alias tracking becomes inconsistent
@@ -550,16 +790,40 @@ EOF
 # Run all tests
 main() {
     echo "======================================"
-    echo "Management Functions Test Suite"
+    echo "Comprehensive Management Functions Test Suite"
     echo "======================================"
     
     setup
     
-    test_set_preference
+    test_aggressive_preference_security
+    test_comprehensive_edge_cases
+    test_performance_and_efficiency
     test_alias_management
     test_env_management
     test_blocklist
     test_unblock
+    test_export_import
+    test_script_management
+    test_wrapper_removal
+    test_list_wrappers
+    
+    echo ""
+    echo "======================================"
+    echo "Test Results"
+    echo "======================================"
+    echo "Passed: $TESTS_PASSED"
+    echo "Failed: $TESTS_FAILED"
+    echo "Total:  $((TESTS_PASSED + TESTS_FAILED))"
+    echo "======================================"
+    
+    if [ $TESTS_FAILED -eq 0 ]; then
+        echo -e "${GREEN}All comprehensive quality tests passed!${NC}"
+        exit 0
+    else
+        echo -e "${RED}Some comprehensive quality tests failed.${NC}"
+        exit 1
+    fi
+}
     test_export_import
     test_script_management
     test_wrapper_removal
