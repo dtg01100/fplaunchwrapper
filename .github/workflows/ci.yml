@@ -65,7 +65,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        dnf install -y flatpak dialog bash
+        dnf install -y flatpak dialog bash python3
         flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     
     - name: Run test suite
@@ -91,7 +91,7 @@ jobs:
     - name: Install dependencies
       run: |
         apt-get update
-        apt-get install -y flatpak dialog bash git
+        apt-get install -y flatpak dialog bash git python3
         flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     
     - name: Run test suite
@@ -115,7 +115,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pacman -Syu --noconfirm flatpak dialog bash git
+        pacman -Syu --noconfirm flatpak dialog bash git python
         flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     
     - name: Run test suite
