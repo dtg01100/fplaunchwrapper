@@ -21,7 +21,8 @@ detect_system_command_optimized() {
     # Also check for additional system paths that might be in PATH
     # but exclude user-specific and package manager directories
     if command -v awk >/dev/null 2>&1; then
-        local additional_paths=$(echo "$PATH" | awk -F: '{
+        local additional_paths
+    additional_paths=$(echo "$PATH" | awk -F: '{
             for(i=1;i<=NF;i++) {
                 path = $i
                 gsub(/\/$/, "", path)  # Remove trailing slash
@@ -108,9 +109,12 @@ demonstrate_detection() {
     echo
     
     # Run optimized detection
-    local result=$(detect_system_command_optimized "$name" "$script_bin_dir")
-    local system_exists=$(echo "$result" | cut -d: -f1)
-    local cmd_path=$(echo "$result" | cut -d: -f2)
+    local result
+    result=$(detect_system_command_optimized "$name" "$script_bin_dir")
+    local system_exists
+    system_exists=$(echo "$result" | cut -d: -f1)
+    local cmd_path
+    cmd_path=$(echo "$result" | cut -d: -f2)
     
     echo "Detection results:"
     if [ "$system_exists" = "true" ]; then
@@ -139,7 +143,8 @@ compare_with_current() {
     # Current logic (PATH-dependent)
     echo "Current logic:"
     if command -v "$name" >/dev/null 2>&1; then
-        local current_path=$(which "$name")
+        local current_path
+        current_path=$(which "$name")
         echo "  Found via PATH: $current_path"
         if [[ "$current_path" != "$script_bin_dir/$name" ]]; then
             echo "  SYSTEM_EXISTS: true (different command found)"
@@ -153,9 +158,12 @@ compare_with_current() {
     
     # Optimized logic
     echo "Optimized logic:"
-    local result=$(detect_system_command_optimized "$name" "$script_bin_dir")
-    local system_exists=$(echo "$result" | cut -d: -f1)
-    local cmd_path=$(echo "$result" | cut -d: -f2)
+    local result
+    result=$(detect_system_command_optimized "$name" "$script_bin_dir")
+    local system_exists
+    system_exists=$(echo "$result" | cut -d: -f1)
+    local cmd_path
+    cmd_path=$(echo "$result" | cut -d: -f2)
     
     if [ "$system_exists" = "true" ]; then
         echo "  SYSTEM_EXISTS: true"
@@ -170,7 +178,8 @@ compare_with_current() {
     if [ "$system_exists" = "true" ] && ! command -v "$name" >/dev/null 2>&1; then
         echo "🚨 CRITICAL IMPROVEMENT: Current logic would miss this system command!"
     elif [ "$system_exists" = "true" ] && command -v "$name" >/dev/null 2>&1; then
-        local current_path=$(which "$name")
+        local current_path
+        current_path=$(which "$name")
         if [[ "$current_path" = "$script_bin_dir/$name" ]]; then
             echo "🚨 PATH-ORDER ISSUE: Current logic fails due to wrapper precedence"
             echo "   Optimized logic correctly finds: $cmd_path"
@@ -209,9 +218,9 @@ echo "Replace this section in fplaunch-generate (around line 278-285):"
 echo
 echo "# OLD CODE:"
 echo 'SYSTEM_EXISTS=false'
-echo 'if command -v "$NAME" >/dev/null 2>&1; then'
-echo '    CMD_PATH=$(which "$NAME")'
-echo '    if [[ "$CMD_PATH" != "$SCRIPT_BIN_DIR/$NAME" ]]; then'
+echo "if command -v \"$name\" >/dev/null 2>&1; then"
+echo "    CMD_PATH=\$(which \"$name\")"
+echo "    if [[ \"\$CMD_PATH\" != \"$script_bin_dir/\$name\" ]]; then"
 echo '        SYSTEM_EXISTS=true'
 echo '    fi'
 echo 'fi'
@@ -222,10 +231,10 @@ echo 'CMD_PATH=""'
 echo ''
 echo '# Check standard system paths in precedence order'
 echo 'for sys_dir in "/usr/local/bin" "/usr/bin" "/bin" "/usr/local/sbin" "/usr/sbin" "/sbin"; do'
-echo '    candidate="$sys_dir/$NAME"'
-echo '    if [ -f "$candidate" ] && [ -x "$candidate" ] && [ "$candidate" != "$SCRIPT_BIN_DIR/$NAME" ]; then'
+echo "    candidate=\"\$sys_dir/\$NAME\""
+echo "    if [ -f \"\$candidate\" ] && [ -x \"\$candidate\" ] && [ \"\$candidate\" != \"$script_bin_dir/\$name\" ]; then"
 echo '        SYSTEM_EXISTS=true'
-echo '        CMD_PATH="$candidate"'
+echo "        CMD_PATH=\"\$candidate\""
 echo '        break'
 echo '    fi'
 echo 'done'

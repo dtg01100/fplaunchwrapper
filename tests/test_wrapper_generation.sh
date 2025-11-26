@@ -818,7 +818,7 @@ main() {
     echo "Total:  $((TESTS_PASSED + TESTS_FAILED))"
     echo "======================================"
     
-    if [ $TESTS_FAILED -eq 0 ]; then
+    if [ "$TESTS_FAILED" -eq 0 ]; then
         echo -e "${GREEN}All tests passed!${NC}"
         exit 0
     else

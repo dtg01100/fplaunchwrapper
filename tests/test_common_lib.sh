@@ -26,7 +26,6 @@ source "$SCRIPT_DIR/lib/common.sh"
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
 NC='\033[0m'
 
 TESTS_PASSED=0
@@ -403,7 +402,7 @@ echo "Failed: $TESTS_FAILED"
 echo "Total:  $((TESTS_PASSED + TESTS_FAILED))"
 echo "======================================"
 
-if [ $TESTS_FAILED -eq 0 ]; then
+if [ "$TESTS_FAILED" -eq 0 ]; then
     echo -e "${GREEN}✓${NC} Common library tests passed"
     exit 0
 else

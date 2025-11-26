@@ -7,7 +7,6 @@ set -e
 # Configuration
 TEST_BIN_DIR="/tmp/fplaunch-test-bin"
 TEST_CONFIG_DIR="/tmp/fplaunch-test-config"
-SCRIPT_DIR="$(dirname "$0")"
 
 # Cleanup function
 cleanup() {

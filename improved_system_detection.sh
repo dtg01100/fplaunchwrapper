@@ -19,11 +19,12 @@ get_system_paths() {
     # Add system directories from PATH that aren't user-specific
     if command -v awk >/dev/null 2>&1; then
         # Get unique system directories from PATH, exclude user dirs
-        local path_system_dirs=$(echo "$PATH" | awk -F: '{
+        local path_system_dirs
+        path_system_dirs=$(echo "$PATH" | awk -F: -v home_dir="${HOME}" '{
             for(i=1;i<=NF;i++) {
                 if ($i ~ "^/usr" || $i ~ "^/bin" || $i ~ "^/sbin") {
                     gsub(/\/$/, "", $i)  # Remove trailing slash
-                    if ($i !~ "'"${HOME}"'" && $i !~ "snap" && $i !~ "flatpak" && $i !~ "conda" && $i !~ "pyenv") {
+                    if ($i !~ home_dir && $i !~ "snap" && $i !~ "flatpak" && $i !~ "conda" && $i !~ "pyenv") {
                         print $i
                     }
                 }
@@ -32,7 +33,7 @@ get_system_paths() {
         
         # Combine standard and PATH-derived paths
         for path in "${standard_paths[@]}"; do
-            if [ -d "$path" ] && [ -r "$path" ] && [[ ! "$system_paths" =~ "$path" ]]; then
+            if [ -d "$path" ] && [ -r "$path" ] && [[ ! "$system_paths" =~ $path ]]; then
                 if [ -z "$system_paths" ]; then
                     system_paths="$path"
                 else
@@ -43,7 +44,8 @@ get_system_paths() {
         
         # Add any additional system paths found in PATH
         for path in $path_system_dirs; do
-            if [ -d "$path" ] && [ -r "$path" ] && [[ ! "$system_paths" =~ " $path " ]] && [[ ! "$system_paths" == "$path" ]]; then
+            local path_pattern=" $path "
+            if [ -d "$path" ] && [ -r "$path" ] && [[ ! "$system_paths" =~ $path_pattern ]] && [[ ! "$system_paths" == "$path" ]]; then
                 system_paths="$system_paths $path"
             fi
         done
@@ -72,7 +74,8 @@ detect_system_command() {
     local cmd_path=""
     
     # Get all system paths
-    local system_paths=$(get_system_paths)
+    local system_paths
+    system_paths=$(get_system_paths)
     
     # Look for system command in system paths (NOT in script_bin_dir)
     for sys_dir in $system_paths; do
@@ -101,9 +104,12 @@ example_usage() {
     echo
     
     # Use improved detection
-    local result=$(detect_system_command "$name" "$script_bin_dir")
-    local system_exists=$(echo "$result" | cut -d: -f1)
-    local cmd_path=$(echo "$result" | cut -d: -f2)
+    local result
+    result=$(detect_system_command "$name" "$script_bin_dir")
+    local system_exists
+    system_exists=$(echo "$result" | cut -d: -f1)
+    local cmd_path
+    cmd_path=$(echo "$result" | cut -d: -f2)
     
     echo "Improved detection results:"
     echo "  SYSTEM_EXISTS: $system_exists"
@@ -113,7 +119,8 @@ example_usage() {
     # Compare with current logic
     echo "Current wrapper logic:"
     if command -v "$name" >/dev/null 2>&1; then
-        local current_path=$(which "$name")
+        local current_path
+        current_path=$(which "$name")
         echo "  Found: $current_path"
         if [[ "$current_path" != "$script_bin_dir/$name" ]]; then
             echo "  SYSTEM_EXISTS: true"

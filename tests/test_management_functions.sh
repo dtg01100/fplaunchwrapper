@@ -32,7 +32,7 @@ trap cleanup EXIT
 
 assert_success() {
     local desc="$1"
-    if [ $? -eq 0 ]; then
+    if "$@"; then
         echo -e "${GREEN}✓${NC} $desc"
         ((TESTS_PASSED++))
         return 0
@@ -102,13 +102,12 @@ EOF
     assert_equals "flatpak" "$actual" "Preference file contains correct value"
     
     # Test invalid preference
-    "$TEST_BIN/test-pref" "$TEST_CONFIG" "testapp" "invalid" 2>/dev/null
-    if [ $? -ne 0 ]; then
-        echo -e "${GREEN}✓${NC} Invalid preference rejected"
-        ((TESTS_PASSED++))
-    else
+    if "$TEST_BIN/test-pref" "$TEST_CONFIG" "testapp" "invalid" 2>/dev/null; then
         echo -e "${RED}✗${NC} Invalid preference not rejected"
         ((TESTS_FAILED++))
+    else
+        echo -e "${GREEN}✓${NC} Invalid preference rejected"
+        ((TESTS_PASSED++))
     fi
 }
 
@@ -264,13 +263,12 @@ EOF
     fi
     
     # Test duplicate blocking
-    "$TEST_BIN/test-block" "$TEST_CONFIG" "com.example.App"
-    if [ $? -ne 0 ]; then
-        echo -e "${GREEN}✓${NC} Duplicate block prevented"
-        ((TESTS_PASSED++))
-    else
+    if "$TEST_BIN/test-block" "$TEST_CONFIG" "com.example.App"; then
         echo -e "${RED}✗${NC} Duplicate block not prevented"
         ((TESTS_FAILED++))
+    else
+        echo -e "${GREEN}✓${NC} Duplicate block prevented"
+        ((TESTS_PASSED++))
     fi
 }
 
@@ -576,7 +574,7 @@ main() {
     echo "Total:  $((TESTS_PASSED + TESTS_FAILED))"
     echo "======================================"
     
-    if [ $TESTS_FAILED -eq 0 ]; then
+    if [ "$TESTS_FAILED" -eq 0 ]; then
         echo -e "${GREEN}All tests passed!${NC}"
         exit 0
     else
