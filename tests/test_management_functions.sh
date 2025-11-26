@@ -2,8 +2,6 @@
 # Test suite for management functions (aliases, preferences, env vars, etc.)
 # Self-contained tests
 
-set -e
-
 TEST_DIR="/tmp/fplaunch-mgmt-test-$$"
 TEST_BIN="$TEST_DIR/bin"
 TEST_CONFIG="$TEST_DIR/config/flatpak-wrappers"

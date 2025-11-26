@@ -2,11 +2,9 @@
 # Test suite for wrapper generation functionality
 # Self-contained test that doesn't require actual Flatpak installation
 
-set -e
-
 TEST_DIR="/tmp/fplaunch-test-$$"
 TEST_BIN="$TEST_DIR/bin"
-TEST_CONFIG="$TEST_DIR/config"
+TEST_CONFIG="$TEST_DIR"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Colors for output
@@ -232,6 +230,9 @@ GENEOF
 # Test 3: Blocklist functionality
 test_blocklist() {
     echo -e "\n${YELLOW}Test 3: Blocklist functionality${NC}"
+    
+    # Clean up previous test wrappers
+    rm -f "$TEST_BIN/chrome" "$TEST_BIN/firefox" "$TEST_BIN"/test-*
     
     mkdir -p "$TEST_CONFIG/flatpak-wrappers"
     echo "org.mozilla.Firefox" > "$TEST_CONFIG/flatpak-wrappers/blocklist"
@@ -469,9 +470,15 @@ test_tar_safety() {
     
     # Create malicious archive with path traversal
     mkdir -p "$TEST_DIR/malicious"
-    mkdir -p "$TEST_DIR/malicious/../../etc"
-    echo "malicious" > "$TEST_DIR/malicious/../../etc/passwd"
-    tar -czf "$TEST_DIR/malicious.tar.gz" -C "$TEST_DIR/malicious" . 2>/dev/null || true
+    echo "malicious" > "$TEST_DIR/malicious/passwd"
+    # Use --transform to create a path traversal in the archive
+    tar -czf "$TEST_DIR/malicious.tar.gz" -C "$TEST_DIR/malicious" --transform='s,^,../../etc/,' passwd 2>/dev/null || {
+        # Fallback: create archive manually with dangerous path
+        mkdir -p "$TEST_DIR/maltemp"
+        echo "malicious" > "$TEST_DIR/maltemp/passwd"
+        (cd "$TEST_DIR/maltemp" && tar -czf "../malicious.tar.gz" --transform='s|passwd|../../etc/passwd|' passwd 2>/dev/null) || \
+        tar -czf "$TEST_DIR/malicious.tar.gz" -C "$TEST_DIR/maltemp" passwd
+    }
     
     cat > "$TEST_BIN/test-tar-import" << 'EOF'
 #!/usr/bin/env bash

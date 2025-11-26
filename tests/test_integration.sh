@@ -2,8 +2,6 @@
 # Integration tests - testing complete workflows
 # Self-contained end-to-end testing
 
-set -e
-
 TEST_DIR="/tmp/fplaunch-integration-test-$$"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
