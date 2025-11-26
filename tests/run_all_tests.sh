@@ -21,6 +21,15 @@ echo -e "${BLUE}Running All Test Suites${NC}"
 echo -e "${BLUE}======================================${NC}"
 echo ""
 
+# Run common library tests
+echo -e "${YELLOW}Running common library tests...${NC}"
+if bash "$SCRIPT_DIR/test_common_lib.sh"; then
+    echo -e "${GREEN}✓ Common library tests passed${NC}"
+else
+    echo -e "${RED}✗ Common library tests failed${NC}"
+fi
+echo ""
+
 # Run wrapper generation tests
 echo -e "${YELLOW}Running wrapper generation tests...${NC}"
 if bash "$SCRIPT_DIR/test_wrapper_generation.sh"; then
