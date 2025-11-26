@@ -3,11 +3,13 @@
 # Self-contained end-to-end testing
 
 TEST_DIR="/tmp/fplaunch-integration-test-$$"
+# shellcheck disable=SC2034  # SCRIPT_DIR kept for potential future use
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+# shellcheck disable=SC2034  # YELLOW kept for consistency with other test files
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
@@ -356,7 +358,7 @@ test_export_modify_import() {
     fi
     
     # Modify
-    rm -rf "$test_config"/*
+    rm -rf "${test_config:?}"/*
     echo "flatpak" > "$test_config/app1.pref"  # Changed
     
     # Import

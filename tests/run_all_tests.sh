@@ -4,7 +4,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034  # Variables kept for potential future aggregation
 TOTAL_PASSED=0
+# shellcheck disable=SC2034
 TOTAL_FAILED=0
 
 # Colors

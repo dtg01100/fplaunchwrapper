@@ -5,6 +5,7 @@
 TEST_DIR="/tmp/fplaunch-test-$$"
 TEST_BIN="$TEST_DIR/bin"
 TEST_CONFIG="$TEST_DIR"
+# shellcheck disable=SC2034  # SCRIPT_DIR kept for potential future use
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Colors for output

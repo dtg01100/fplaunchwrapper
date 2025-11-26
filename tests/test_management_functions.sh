@@ -5,6 +5,7 @@
 TEST_DIR="/tmp/fplaunch-mgmt-test-$$"
 TEST_BIN="$TEST_DIR/bin"
 TEST_CONFIG="$TEST_DIR/config/flatpak-wrappers"
+# shellcheck disable=SC2034  # SCRIPT_DIR kept for potential future use
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Colors
@@ -321,7 +322,7 @@ EOF
     fi
     
     # Test import
-    rm -rf "$TEST_CONFIG"/*
+    rm -rf "${TEST_CONFIG:?}"/*
     mkdir -p "$TEST_CONFIG"
     
     cat > "$TEST_BIN/test-import" << 'EOF'
