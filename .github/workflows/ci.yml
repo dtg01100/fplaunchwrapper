@@ -19,8 +19,8 @@ jobs:
       with:
         scandir: '.'
         severity: warning
-        ignore_paths: '.git .github tests/fixtures build improved_system_detection.sh optimized_system_detection.sh test_name_clashes.sh test_real_world_clashes.sh system_detection_fix.patch'
-        ignore_names: 'README.md'
+        ignore_paths: '.git .github tests/fixtures build system_detection_fix.patch'
+        ignore_names: 'README.md fplaunch_completion.bash improved_system_detection.sh optimized_system_detection.sh test_name_clashes.sh test_real_world_clashes.sh'
 
   test-ubuntu:
     name: Test on Ubuntu

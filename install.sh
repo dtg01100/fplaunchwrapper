@@ -21,7 +21,14 @@ fi
 # Set BIN_DIR from arg or default
 BIN_DIR="${1:-$HOME/.local/bin}"
 
-if [ "$BIN_DIR" != "$HOME/.local/bin" ]; then
+# Non-interactive mode detection (CI or no TTY)
+NON_INTERACTIVE=0
+if [ -n "${CI:-}" ] || [ ! -t 0 ]; then
+    NON_INTERACTIVE=1
+fi
+
+# If custom BIN_DIR provided and interactive, confirm
+if [ "$BIN_DIR" != "$HOME/.local/bin" ] && [ "$NON_INTERACTIVE" -eq 0 ]; then
     read -r -p "Install to '$BIN_DIR' instead of default '$HOME/.local/bin'? (y/n) [y]: " confirm
     confirm=${confirm:-y}
     if [[ ! $confirm =~ ^[Yy]$ ]]; then
@@ -30,6 +37,11 @@ if [ "$BIN_DIR" != "$HOME/.local/bin" ]; then
     fi
 fi
 
+# Ensure BIN_DIR exists and is writable
+if ! mkdir -p "$BIN_DIR" 2>/dev/null; then
+    echo "Error: Cannot create directory $BIN_DIR"
+    exit 1
+fi
 if [ ! -w "$BIN_DIR" ]; then
     echo "Error: Cannot write to $BIN_DIR"
     exit 1
@@ -60,9 +72,14 @@ export BIN_DIR
 echo "Generating wrappers..."
 bash "$SCRIPT_DIR/fplaunch-generate" "$BIN_DIR"
 
-# Ask for auto-updates
-read -r -p "Enable automatic updates? (y/n) [y]: " enable_auto
-enable_auto=${enable_auto:-y}
+# Ask for auto-updates (skip in CI/non-interactive)
+if [ "$NON_INTERACTIVE" -eq 0 ]; then
+    read -r -p "Enable automatic updates? (y/n) [y]: " enable_auto
+    enable_auto=${enable_auto:-y}
+else
+    enable_auto=n
+fi
+
 if [[ $enable_auto =~ ^[Yy]$ ]]; then
     echo "Setting up automatic updates..."
     bash "$BIN_DIR/fplaunch-setup-systemd"
