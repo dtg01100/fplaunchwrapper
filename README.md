@@ -46,8 +46,11 @@ Each generated wrapper provides these additional options:
 sudo dpkg -i fplaunchwrapper_*.deb
 sudo apt-get install -f  # Install dependencies if needed
 
-# REQUIRED: Run per-user setup
-bash /usr/lib/fplaunchwrapper/install.sh
+# Generate wrapper scripts for your user
+fplaunch-manage regenerate
+
+# (Optional) Enable automatic updates
+fplaunch-setup-systemd
 ```
 
 **Fedora/RHEL:**
@@ -55,11 +58,14 @@ bash /usr/lib/fplaunchwrapper/install.sh
 # Download the .rpm from GitHub Releases
 sudo dnf install fplaunchwrapper-*.rpm
 
-# REQUIRED: Run per-user setup
-bash /usr/lib/fplaunchwrapper/install.sh
+# Generate wrapper scripts for your user
+fplaunch-manage regenerate
+
+# (Optional) Enable automatic updates
+fplaunch-setup-systemd
 ```
 
-**Important**: Package installation only installs files system-wide. Each user must run the `install.sh` script to generate wrappers in their home directory and optionally enable automatic updates.
+**Important**: Package installation installs system files and commands. Each user must run `fplaunch-manage regenerate` to generate wrappers in their home directory and optionally `fplaunch-setup-systemd` to enable automatic updates.
 
 ### From Source
 
@@ -98,18 +104,17 @@ bash /usr/lib/fplaunchwrapper/install.sh
    - `fplaunch-manage set-post-script chrome ~/scripts/chrome-postrun.sh` to set post-run script
    - `fplaunch-manage remove-script chrome` to remove pre-launch script
    - `fplaunch-manage remove-post-script chrome` to remove post-run script
-   - `bash manage_wrappers.sh block com.example.App`
+   - `fplaunch-manage block com.example.App` to block an app
 
-## Scripts
+## Commands
 
-- `install.sh`: Sets up wrappers and systemd units (accepts optional bin directory).
-- `uninstall.sh`: Removes wrappers, preferences, and systemd units.
+- `fplaunch-manage`: Main management utility with commands: list, search, remove, remove-pref, set-pref, set-env, remove-env, list-env, set-pref-all, set-script, set-post-script, remove-script, remove-post-script, set-alias, remove-alias, export-prefs, import-prefs, export-config, import-config, block, unblock, list-blocked, install, launch, regenerate, info, manifest, files, uninstall.
 - `fplaunch-generate`: Generates/updates wrappers.
 - `fplaunch-setup-systemd`: Configures systemd for auto-updates.
-- `manage_wrappers.sh`: Management utility (installed as `fplaunch-manage`) with commands: list, search, remove, remove-pref, set-pref, set-env, remove-env, list-env, set-pref-all, set-script, set-post-script, remove-script, remove-post-script, set-alias, remove-alias, export-prefs, import-prefs, export-config, import-config, block, unblock, list-blocked, install, launch, regenerate, info, manifest, files, uninstall.
-- `fplaunch_completion.bash`: Bash completion support.
-
-**Note:** The main management script is called `manage_wrappers.sh` in the source but installed as `fplaunch-manage` for easier access.
+- `fplaunch-cleanup`: Removes all per-user artifacts (run before uninstalling).
+- `install.sh`: Manual installation script (for source installs, accepts optional bin directory).
+- `uninstall.sh`: Manual uninstallation script (for source installs).
+- Bash completion: Automatically configured for all commands.
 
 ## Requirements
 

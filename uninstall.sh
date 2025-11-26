@@ -55,7 +55,7 @@ rm -f "$BIN_DIR/fplaunch-generate"
 rm -f "$BIN_DIR/fplaunch-setup-systemd"
 rm -f "$BIN_DIR/fplaunch-cleanup"
 if [ -n "$BIN_DIR" ] && [ -d "$BIN_DIR/lib" ]; then
-    rm -rf "$BIN_DIR/lib"
+    rm -rf "${BIN_DIR:?}/lib"
 fi
 
 # Remove bash completion
