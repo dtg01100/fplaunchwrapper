@@ -62,9 +62,9 @@ echo "Running RPM build in chroot..."
 sudo chroot "$CHROOT_DIR" /build/build.sh "$VERSION"
 
 # Copy result back
-if [ -f "$CHROOT_DIR/build/"*.rpm ]; then
+if compgen -G "$CHROOT_DIR/build/"*.rpm > /dev/null; then
     sudo cp "$CHROOT_DIR/build/"*.rpm .
-    sudo chown $(id -u):$(id -g) *.rpm
+    sudo chown "$(id -u):$(id -g)" ./*.rpm
     echo ""
     echo "=========================================="
     echo "RPM package built successfully!"
