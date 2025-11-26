@@ -6,7 +6,7 @@
 override_dh_auto_install:
 	# Install to /usr/lib/fplaunchwrapper
 	mkdir -p debian/fplaunchwrapper/usr/lib/fplaunchwrapper
-	cp install.sh uninstall.sh fplaunch-generate fplaunch-setup-systemd manage_wrappers.sh fplaunch_completion.bash debian/fplaunchwrapper/usr/lib/fplaunchwrapper/
+	cp install.sh uninstall.sh fplaunch-cleanup fplaunch-generate fplaunch-setup-systemd manage_wrappers.sh fplaunch_completion.bash debian/fplaunchwrapper/usr/lib/fplaunchwrapper/
 	cp -r lib debian/fplaunchwrapper/usr/lib/fplaunchwrapper/
 	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/*.sh
 	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/fplaunch-*

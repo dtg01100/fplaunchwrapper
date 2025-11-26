@@ -38,6 +38,7 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p %{buildroot}/usr/lib/fplaunchwrapper
 install -m 755 install.sh %{buildroot}/usr/lib/fplaunchwrapper/
 install -m 755 uninstall.sh %{buildroot}/usr/lib/fplaunchwrapper/
+install -m 755 fplaunch-cleanup %{buildroot}/usr/lib/fplaunchwrapper/
 install -m 755 fplaunch-generate %{buildroot}/usr/lib/fplaunchwrapper/
 install -m 755 fplaunch-setup-systemd %{buildroot}/usr/lib/fplaunchwrapper/
 install -m 755 manage_wrappers.sh %{buildroot}/usr/lib/fplaunchwrapper/

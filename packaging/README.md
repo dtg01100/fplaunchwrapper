@@ -56,7 +56,7 @@ sudo apt-get install -f  # Install any missing dependencies
 bash /usr/lib/fplaunchwrapper/install.sh
 ```
 
-When you run `install.sh`, you'll be prompted whether to enable automatic updates.
+When you run `install.sh`, you'll be prompted whether to enable automatic updates. Systemd units are not enabled by default; enabling them is a user action and signals intent.
 
 ### Fedora/RHEL/openSUSE
 
@@ -69,7 +69,7 @@ sudo dnf install fplaunchwrapper-1.1.0-1.noarch.rpm
 bash /usr/lib/fplaunchwrapper/install.sh
 ```
 
-When you run `install.sh`, you'll be prompted whether to enable automatic updates.
+When you run `install.sh`, you'll be prompted whether to enable automatic updates. Systemd units are not enabled by default; enabling them is a user action and signals intent.
 
 ## Package Contents
 
@@ -80,8 +80,18 @@ Both packages install to:
 
 The user installation script (`install.sh`) must be run after package installation to:
 - Generate wrapper scripts in `~/.local/bin`
-- Set up systemd user units for automatic updates
+- Optionally enable systemd user units for automatic updates (only when the user runs it)
 - Configure user preferences
+
+### Pre-uninstall Cleanup (Recommended)
+
+Before uninstalling the system package, each user can clean their home directory by running:
+
+```bash
+bash /usr/lib/fplaunchwrapper/fplaunch-cleanup
+```
+
+This removes generated wrappers, aliases, user configs, systemd user units, cron entries, and the bash completion drop-in. It does not remove the system package.
 
 ## Automated Releases
 
