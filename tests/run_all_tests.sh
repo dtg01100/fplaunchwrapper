@@ -48,6 +48,15 @@ else
 fi
 echo ""
 
+# Run install/cleanup tests
+echo -e "${YELLOW}Running install/cleanup tests...${NC}"
+if bash "$SCRIPT_DIR/test_install_cleanup.sh"; then
+    echo -e "${GREEN}✓ Install/cleanup tests passed${NC}"
+else
+    echo -e "${RED}✗ Install/cleanup tests failed${NC}"
+fi
+echo ""
+
 echo -e "${BLUE}======================================${NC}"
 echo -e "${BLUE}All test suites completed${NC}"
 echo -e "${BLUE}======================================${NC}"

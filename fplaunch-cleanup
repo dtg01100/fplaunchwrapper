@@ -131,9 +131,16 @@ if [ -d "$BIN_DIR" ]; then
     fi
   done
   shopt -u nullglob
-  # Remove manager if present
-  if [ -f "$BIN_DIR/fplaunch-manage" ]; then
-    log_do "Removing manager: $BIN_DIR/fplaunch-manage" rm -f "$BIN_DIR/fplaunch-manage"
+  # Remove installed scripts if present (from manual install)
+  for script in fplaunch-manage fplaunch-generate fplaunch-setup-systemd fplaunch-cleanup; do
+    if [ -f "$BIN_DIR/$script" ]; then
+      log_do "Removing script: $BIN_DIR/$script" rm -f "$BIN_DIR/$script"
+    fi
+  done
+  # Remove lib directory if installed (from manual install)
+  # Manual install creates $BIN_DIR/lib, package install creates /usr/lib/fplaunchwrapper
+  if [ -d "$BIN_DIR/lib" ]; then
+    log_do "Removing library directory: $BIN_DIR/lib" rm -rf "$BIN_DIR/lib"
   fi
 fi
 
