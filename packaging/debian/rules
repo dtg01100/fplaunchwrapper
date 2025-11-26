@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	# Install to /usr/lib/fplaunchwrapper
+	mkdir -p debian/fplaunchwrapper/usr/lib/fplaunchwrapper
+	cp install.sh uninstall.sh fplaunch-generate fplaunch-setup-systemd manage_wrappers.sh fplaunch_completion.bash debian/fplaunchwrapper/usr/lib/fplaunchwrapper/
+	cp -r lib debian/fplaunchwrapper/usr/lib/fplaunchwrapper/
+	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/*.sh
+	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/fplaunch-*
+	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/lib/*.sh
+	
+	# Install documentation
+	mkdir -p debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper
+	cp README.md debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/
+	cp -r examples debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/
+	[ -f RELEASE_*.md ] && cp RELEASE_*.md debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/ || true
+	
+	# Install bash completion
+	mkdir -p debian/fplaunchwrapper/usr/share/bash-completion/completions
+	cp fplaunch_completion.bash debian/fplaunchwrapper/usr/share/bash-completion/completions/fplaunch-manage
+
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -rf build
+
+override_dh_installdocs:
+	dh_installdocs README.md

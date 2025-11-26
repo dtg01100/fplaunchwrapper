@@ -38,6 +38,25 @@ Each generated wrapper provides these additional options:
 
 ## Installation
 
+### From Package (Recommended)
+
+**Debian/Ubuntu:**
+```bash
+# Download the .deb from GitHub Releases
+sudo dpkg -i fplaunchwrapper_*.deb
+sudo apt-get install -f  # Install dependencies if needed
+bash /usr/lib/fplaunchwrapper/install.sh
+```
+
+**Fedora/RHEL:**
+```bash
+# Download the .rpm from GitHub Releases
+sudo dnf install fplaunchwrapper-*.rpm
+bash /usr/lib/fplaunchwrapper/install.sh
+```
+
+### From Source
+
 1. Clone or download the scripts.
 2. Run `bash install.sh [optional_bin_dir]` to install (default bin dir: `~/.local/bin`). You'll be prompted to enable automatic updates.
 3. Ensure `~/.local/bin` (or your chosen dir) is in your PATH.
@@ -58,7 +77,8 @@ Each generated wrapper provides these additional options:
 - YOLO mode: `chrome --fpwrapper-sandbox-yolo` to grant all permissions (use with caution).
 - Set override: `chrome --fpwrapper-set-override [system|flatpak]` to force preference (prompts if not specified).
 - Env vars: Set transient env vars via `fplaunch-manage set-env` (for permanent, use `flatpak override <app> --env=VAR=value`).
-- Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`, `fplaunch-manage info <name>`, `fplaunch-manage manifest <name>`.
+- Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`, `fplaunch-manage search <keyword>`, `fplaunch-manage info <name>`.
+- Search: `fplaunch-manage search <keyword>` to find wrappers by name, ID, or description.
 - Install: `fplaunch-manage install <app>` to install a Flatpak and create wrapper.
 - Launch: `fplaunch-manage launch <name>` to launch a wrapper.
   - Examples:
@@ -80,7 +100,7 @@ Each generated wrapper provides these additional options:
 - `uninstall.sh`: Removes wrappers, preferences, and systemd units.
 - `fplaunch-generate`: Generates/updates wrappers.
 - `fplaunch-setup-systemd`: Configures systemd for auto-updates.
-- `manage_wrappers.sh`: Management utility (installed as `fplaunch-manage`) with commands: list, remove, remove-pref, set-pref, set-env, remove-env, list-env, set-pref-all, set-script, set-post-script, remove-script, remove-post-script, set-alias, remove-alias, export-prefs, import-prefs, export-config, import-config, block, unblock, list-blocked, install, launch, regenerate, info, manifest, files, uninstall.
+- `manage_wrappers.sh`: Management utility (installed as `fplaunch-manage`) with commands: list, search, remove, remove-pref, set-pref, set-env, remove-env, list-env, set-pref-all, set-script, set-post-script, remove-script, remove-post-script, set-alias, remove-alias, export-prefs, import-prefs, export-config, import-config, block, unblock, list-blocked, install, launch, regenerate, info, manifest, files, uninstall.
 - `fplaunch_completion.bash`: Bash completion support.
 
 **Note:** The main management script is called `manage_wrappers.sh` in the source but installed as `fplaunch-manage` for easier access.

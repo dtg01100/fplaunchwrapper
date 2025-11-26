@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-packages:
+    name: Build Distribution Packages
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set version from tag
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Building version $VERSION"
+    
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential devscripts debhelper rpm
+    
+    - name: Build Debian package
+      run: |
+        ./packaging/build-deb.sh ${{ steps.version.outputs.VERSION }}
+    
+    - name: Build RPM package
+      run: |
+        ./packaging/build-rpm.sh ${{ steps.version.outputs.VERSION }}
+    
+    - name: Create tarball
+      run: |
+        VERSION=${{ steps.version.outputs.VERSION }}
+        mkdir -p fplaunchwrapper-$VERSION
+        cp -r *.sh *.bash fplaunch-* lib/ examples/ README.md RELEASE_*.md fplaunchwrapper-$VERSION/
+        tar -czf fplaunchwrapper-$VERSION.tar.gz fplaunchwrapper-$VERSION
+    
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        if [ -f "RELEASE_v${{ steps.version.outputs.VERSION }}.md" ]; then
+          cat "RELEASE_v${{ steps.version.outputs.VERSION }}.md" > release_notes.md
+        else
+          echo "Release v${{ steps.version.outputs.VERSION }}" > release_notes.md
+          echo "" >> release_notes.md
+          echo "See [README.md](README.md) for installation and usage instructions." >> release_notes.md
+        fi
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          *.deb
+          *.rpm
+          *.tar.gz
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: packages
+        path: |
+          *.deb
+          *.rpm
+          *.tar.gz

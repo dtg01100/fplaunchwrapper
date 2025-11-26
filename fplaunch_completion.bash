@@ -13,7 +13,7 @@ _fplaunch_manage() {
     fi
 
     case $prev in
-        set-pref|set-env|remove-env|list-env|set-script|set-post-script|remove-script|remove-post-script|set-alias|remove-alias|block|unblock|launch)
+        set-pref|set-env|remove-env|list-env|set-script|set-post-script|remove-script|remove-post-script|set-alias|remove-alias|block|unblock|launch|search)
             # Complete wrapper names
             local wrappers=$(ls "$bin_dir" 2>/dev/null | grep -v fplaunch-manage | tr '\n' ' ')
             COMPREPLY=( $(compgen -W "$wrappers" -- "$cur") )
@@ -31,7 +31,7 @@ _fplaunch_manage() {
             # Complete app names? Hard, skip
             ;;
         *)
-            COMPREPLY=( $(compgen -W "help list remove remove-pref set-pref set-env remove-env list-env set-pref-all set-script set-post-script remove-script remove-post-script set-alias remove-alias export-prefs import-prefs export-config import-config block unblock list-blocked install launch regenerate" -- "$cur") )
+            COMPREPLY=( $(compgen -W "help list search remove remove-pref set-pref set-env remove-env list-env set-pref-all set-script set-post-script remove-script remove-post-script set-alias remove-alias export-prefs import-prefs export-config import-config block unblock list-blocked install launch regenerate info manifest files uninstall" -- "$cur") )
             ;;
     esac
 }

@@ -1,0 +1,6 @@
+fplaunchwrapper (@VERSION@) unstable; urgency=medium
+
+  * New release version @VERSION@
+  * See README.md and RELEASE_*.md for changes
+
+ -- fplaunchwrapper Developers <dev@example.com>  @DATE@

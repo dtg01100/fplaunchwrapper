@@ -1,0 +1,25 @@
+Source: fplaunchwrapper
+Section: utils
+Priority: optional
+Maintainer: fplaunchwrapper Developers <dev@example.com>
+Build-Depends: debhelper (>= 10), bash
+Standards-Version: 4.5.0
+Homepage: https://github.com/dtg01100/fplaunchwrapper
+
+Package: fplaunchwrapper
+Architecture: all
+Depends: bash (>= 4.0), flatpak, ${misc:Depends}
+Recommends: systemd, dialog
+Description: Simplified launcher wrappers for Flatpak applications
+ Creates small wrapper scripts for Flatpak applications, allowing you to
+ launch them by their simplified name (e.g., 'chrome' instead of
+ 'flatpak run com.google.Chrome').
+ .
+ Features include:
+  - Automatic wrapper generation for user and system Flatpak apps
+  - Conflict resolution between system packages and Flatpak apps
+  - Customizable aliases and preferences
+  - Environment variable management per wrapper
+  - Pre-launch and post-run script support
+  - Sandbox permission management
+  - Automatic updates via systemd or crontab

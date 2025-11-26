@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        echo "fplaunchwrapper installed to /usr/lib/fplaunchwrapper"
+        echo ""
+        echo "To set up wrappers for your Flatpak apps, run:"
+        echo "  bash /usr/lib/fplaunchwrapper/install.sh"
+        echo ""
+        echo "This will install wrapper scripts to ~/.local/bin and set up automatic updates."
+        echo ""
+        echo "For more information, see: /usr/share/doc/fplaunchwrapper/README.md"
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
