@@ -35,8 +35,9 @@ shopt -u nullglob
 for script in "${existing_scripts[@]}"; do
     if is_wrapper_file "$script"; then
         # Extract ID from script content
-        id=$(grep "flatpak run" "$script" | head -1 | awk '{print $4}' | tr -d '"' || true)
-        if [ -n "$id" ] && ! echo "$installed_ids" | grep -q "^$id$"; then
+        id=$(get_wrapper_id "$script")
+        # Check if ID is no longer installed using grep on multiline string
+        if [ -n "$id" ] && ! grep -q "^$id$" <<< "$installed_ids"; then
             script_name=$(basename "$script")
             rm "$script"
             pref_file="$CONFIG_DIR/$script_name.pref"

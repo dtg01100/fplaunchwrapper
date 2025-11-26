@@ -120,7 +120,7 @@ if [ -d "$SCRIPT_DIR/docs/man" ]; then
     cp "$SCRIPT_DIR/docs/man/"*.7 "$MAN_DIR/man7/" 2>/dev/null || true
     
     # Update MANPATH if not already set
-    if ! echo "$MANPATH" | grep -q "$MAN_DIR"; then
+    if [[ ":$MANPATH:" != *":$MAN_DIR:"* ]]; then
         echo "Note: Add '$MAN_DIR' to your MANPATH to view man pages."
         echo "      Add to ~/.bashrc: export MANPATH=\"$MAN_DIR:\$MANPATH\""
     fi

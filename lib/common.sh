@@ -41,6 +41,24 @@ is_wrapper_file() {
     return 1
 }
 
+# Extract Flatpak ID from a wrapper script
+get_wrapper_id() {
+    local script="$1"
+    local id
+    
+    # Wrappers contain: ID="com.example.App"
+    id=$(grep "^ID=" "$script" | head -1 | cut -d'"' -f2 2>/dev/null || true)
+    echo "$id"
+}
+
+# Extract wrapper name from script path
+get_wrapper_name() {
+    local script="$1"
+    
+    # Wrappers contain: NAME="appname"
+    basename "$script"
+}
+
 # Ensure config directory exists
 ensure_config_dir() {
     CONFIG_DIR="${CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers}"
