@@ -6,11 +6,18 @@
 override_dh_auto_install:
 	# Install to /usr/lib/fplaunchwrapper
 	mkdir -p debian/fplaunchwrapper/usr/lib/fplaunchwrapper
-	cp install.sh uninstall.sh fplaunch-cleanup fplaunch-generate fplaunch-setup-systemd manage_wrappers.sh fplaunch_completion.bash debian/fplaunchwrapper/usr/lib/fplaunchwrapper/
+	cp fplaunch-cleanup fplaunch-generate fplaunch-setup-systemd manage_wrappers.sh fplaunch_completion.bash debian/fplaunchwrapper/usr/lib/fplaunchwrapper/
 	cp -r lib debian/fplaunchwrapper/usr/lib/fplaunchwrapper/
 	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/*.sh
 	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/fplaunch-*
 	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/lib/*.sh
+	
+	# Provide user-facing commands in /usr/bin via symlinks
+	mkdir -p debian/fplaunchwrapper/usr/bin
+	ln -s ../lib/fplaunchwrapper/manage_wrappers.sh debian/fplaunchwrapper/usr/bin/fplaunch-manage
+	ln -s ../lib/fplaunchwrapper/fplaunch-generate debian/fplaunchwrapper/usr/bin/fplaunch-generate
+	ln -s ../lib/fplaunchwrapper/fplaunch-setup-systemd debian/fplaunchwrapper/usr/bin/fplaunch-setup-systemd
+	ln -s ../lib/fplaunchwrapper/fplaunch-cleanup debian/fplaunchwrapper/usr/bin/fplaunch-cleanup
 	
 	# Install documentation
 	mkdir -p debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper

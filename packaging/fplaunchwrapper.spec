@@ -36,8 +36,6 @@ rm -rf $RPM_BUILD_ROOT
 
 # Install to /usr/lib/fplaunchwrapper
 mkdir -p %{buildroot}/usr/lib/fplaunchwrapper
-install -m 755 install.sh %{buildroot}/usr/lib/fplaunchwrapper/
-install -m 755 uninstall.sh %{buildroot}/usr/lib/fplaunchwrapper/
 install -m 755 fplaunch-cleanup %{buildroot}/usr/lib/fplaunchwrapper/
 install -m 755 fplaunch-generate %{buildroot}/usr/lib/fplaunchwrapper/
 install -m 755 fplaunch-setup-systemd %{buildroot}/usr/lib/fplaunchwrapper/
@@ -59,34 +57,42 @@ cp -r examples %{buildroot}/usr/share/doc/fplaunchwrapper/
 mkdir -p %{buildroot}/usr/share/bash-completion/completions
 install -m 644 fplaunch_completion.bash %{buildroot}/usr/share/bash-completion/completions/fplaunch-manage
 
+# Provide user-facing commands in /usr/bin via symlinks
+mkdir -p %{buildroot}/usr/bin
+ln -s ../lib/fplaunchwrapper/manage_wrappers.sh %{buildroot}/usr/bin/fplaunch-manage
+ln -s ../lib/fplaunchwrapper/fplaunch-generate %{buildroot}/usr/bin/fplaunch-generate
+ln -s ../lib/fplaunchwrapper/fplaunch-setup-systemd %{buildroot}/usr/bin/fplaunch-setup-systemd
+ln -s ../lib/fplaunchwrapper/fplaunch-cleanup %{buildroot}/usr/bin/fplaunch-cleanup
+
 %files
 %license LICENSE
 %doc README.md
 /usr/lib/fplaunchwrapper/
 /usr/share/doc/fplaunchwrapper/
 /usr/share/bash-completion/completions/fplaunch-manage
+/usr/bin/fplaunch-manage
+/usr/bin/fplaunch-generate
+/usr/bin/fplaunch-setup-systemd
+/usr/bin/fplaunch-cleanup
 
 %post
 echo "=========================================="
 echo "fplaunchwrapper successfully installed!"
 echo "=========================================="
 echo ""
-echo "Installation location: /usr/lib/fplaunchwrapper"
+echo "User setup:"
+echo "  1) Generate wrappers in ~/.local/bin:"
+echo "       fplaunch-manage regenerate"
+echo "  2) (Optional) Enable automatic updates (user systemd):"
+echo "       fplaunch-setup-systemd"
 echo ""
-echo "IMPORTANT: Per-user setup required"
+echo "Note: Systemd user units are not enabled by default; running"
+echo "      fplaunch-setup-systemd is a user-initiated action and signals intent."
 echo ""
-echo "Each user must run the following command to:"
-echo "  - Generate wrapper scripts in ~/.local/bin"
-echo "  - Optionally enable automatic updates"
+echo "Cleanup (before uninstall, per user):"
+echo "       fplaunch-cleanup"
 echo ""
-echo "  bash /usr/lib/fplaunchwrapper/install.sh"
-echo ""
-echo "The install script will prompt you whether to enable"
-echo "automatic wrapper updates via systemd or crontab."
-echo ""
-echo "For more information:"
-echo "  - Documentation: /usr/share/doc/fplaunchwrapper/README.md"
-echo "  - Quick start: /usr/share/doc/fplaunchwrapper/QUICKSTART.md"
+echo "Docs: /usr/share/doc/fplaunchwrapper"
 echo "=========================================="
 
 %changelog
