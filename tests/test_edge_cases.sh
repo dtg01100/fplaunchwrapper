@@ -11,10 +11,15 @@ CONFIG_DIR_BASE="/tmp/fplaunch-edge-$$/config/flatpak-wrappers"
 mkdir -p "$BIN_DIR_BASE" "$CONFIG_DIR_BASE"
 
 # Source libs (functions expect BIN_DIR/CONFIG_DIR globals)
+# shellcheck source=../lib/common.sh disable=SC1091
 source "$LIB_DIR/common.sh"
+# shellcheck source=../lib/wrapper.sh disable=SC1091
 source "$LIB_DIR/wrapper.sh"
+# shellcheck source=../lib/alias.sh disable=SC1091
 source "$LIB_DIR/alias.sh"
+# shellcheck source=../lib/pref.sh disable=SC1091
 source "$LIB_DIR/pref.sh"
+# shellcheck source=../lib/env.sh disable=SC1091
 source "$LIB_DIR/env.sh"
 
 pass_count=0
@@ -136,7 +141,7 @@ fi
 
 # Summary
 TOTAL=$((pass_count+fail_count))
-echo "\n======================================"
+printf "\n======================================\n"
 echo "Edge Case Test Results"
 echo "======================================"
 echo "Passed: $pass_count"

@@ -356,6 +356,7 @@ test_aggressive_security_attacks() {
         "/tmp/symlink_to_etc/../../../etc/fstab"
     )
     
+    # shellcheck disable=SC2221,SC2222,SC1001
     for traversal in "${traversal_attacks[@]}"; do
         ((total_attacks++))
         # Test if our security logic blocks directory traversal
@@ -413,6 +414,7 @@ test_aggressive_security_attacks() {
         "/tmp/evil_wrapper"
     )
     
+    # shellcheck disable=SC2221,SC2222
     for target in "${symlink_targets[@]}"; do
         ((total_attacks++))
         # Test if our logic would block symlink attacks
@@ -440,6 +442,7 @@ test_aggressive_security_attacks() {
         "SHELL=/bin/evil_shell"
     )
     
+    # shellcheck disable=SC1001
     for env_attack in "${env_attacks[@]}"; do
         ((total_attacks++))
         # Test if our logic validates environment variables
@@ -475,10 +478,10 @@ test_aggressive_security_attacks() {
     echo "Security Attack Test Results:"
     echo "Attacks blocked: $attacks_blocked/$total_attacks"
     
-    if [ $attacks_blocked -eq $total_attacks ]; then
+    if [ "$attacks_blocked" -eq "$total_attacks" ]; then
         echo -e "${GREEN}✓${NC} ALL ATTACKS SUCCESSFULLY BLOCKED - Security is robust!"
         ((TESTS_PASSED++))
-    elif [ $attacks_blocked -gt $((total_attacks * 3 / 4)) ]; then
+    elif [ "$attacks_blocked" -gt $((total_attacks * 3 / 4)) ]; then
         echo -e "${YELLOW}⚠${NC} Most attacks blocked ($attacks_blocked/$total_attacks) - Some improvements needed"
         ((TESTS_PASSED++))
     else
