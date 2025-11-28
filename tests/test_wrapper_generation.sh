@@ -556,8 +556,8 @@ com.example.name.with.dots"
 while read -r id; do
     [ -z "$id" ] && continue
     name=$(echo "$id" | awk -F. '{print tolower($NF)}')
-    # Enforce spec: only [a-z0-9_\-] allowed, non-empty
-    if [ -z "$name" ] || [[ "$name" =~ [^a-z0-9_\-] ]]; then
+    # Enforce spec: only [a-z0-9_\-] allowed, non-empty, and no leading/trailing hyphens
+    if [ -z "$name" ] || [[ "$name" =~ [^a-z0-9_\-] ]] || [[ "$name" == -* ]] || [[ "$name" == *- ]]; then
         echo "Skipping invalid: $id -> $name"
         continue
     fi

@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+# shellcheck disable=SC2034
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
@@ -125,6 +126,7 @@ EOF
             for iteration in {1..20}; do
                 # Read current value
                 local current_value
+                # shellcheck disable=SC2034
                 current_value=$(cat "$pref_test_file" 2>/dev/null || echo "error")
                 
                 # Modify value
@@ -849,10 +851,10 @@ EOF
     
     # Test with wrapper in PATH before system location
     local original_path="$PATH"
-    export PATH="$TEST_BIN:$TEST_DIR/system:$PATH"
+    export PATH="$test_bin:$TEST_DIR/system:$PATH"
     
     local output
-    output=$("$TEST_BIN/test-path-app")
+    output=$("$test_bin/test-path-app")
     
     # Should detect system binary exists and point to it
     if echo "$output" | grep -q "SYSTEM_EXISTS:true" && echo "$output" | grep -q "$TEST_DIR/system/test-path-app"; then
@@ -863,9 +865,9 @@ EOF
     fi
     
     # Test with only wrapper available
-    export PATH="$TEST_BIN"
+    export PATH="$test_bin"
     
-    output=$("$TEST_BIN/test-path-app")
+    output=$("$test_bin/test-path-app")
     
     if echo "$output" | grep -q "SYSTEM_EXISTS:false"; then
         log_pass "Correctly detected no system binary when only wrapper exists"
@@ -875,9 +877,9 @@ EOF
     fi
     
     # Test PATH injection resistance
-    export PATH="/tmp/evil;rm -rf /:$TEST_BIN:/usr/bin"
+    export PATH="/tmp/evil;rm -rf /:$test_bin:/usr/bin"
     
-    output=$("$TEST_BIN/test-path-app")
+    output=$("$test_bin/test-path-app")
     
     if echo "$output" | grep -q "SYSTEM_EXISTS:false"; then
         log_pass "Resisted PATH injection attack"

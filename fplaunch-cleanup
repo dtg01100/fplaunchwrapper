@@ -19,7 +19,6 @@ fi
 
 init_paths
 UNIT_DIR=$(get_systemd_unit_dir)
-BIN_DIR_DEFAULT="$HOME/.local/bin"
 
 DRY_RUN=false
 ASSUME_YES=false

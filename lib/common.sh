@@ -32,6 +32,7 @@ validate_home_dir() {
     fi
     
     # Check for path traversal attempts
+    # shellcheck disable=SC2221,SC2222
     case "$dir" in
         *\.\.*|*\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
             echo "Error: ${operation^} contains directory traversal attempt" >&2

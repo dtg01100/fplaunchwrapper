@@ -272,7 +272,7 @@ EOF
     ((total_attacks++))
     
     local race_file="$test_home/race_test"
-    for i in {1..3}; do
+    for _ in {1..3}; do
         # Rapid file creation/modification
         echo "legitimate_content" > "$race_file" &
         sleep 0.001
@@ -438,6 +438,7 @@ test_aggressive_documentation_security() {
     )
     
     for path in "${traversal_paths[@]}"; do
+        # shellcheck disable=SC2221,SC2222
         case "$path" in
             *\.\.*|*\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
                 echo "  ✓ Blocked path traversal in documentation: $path"

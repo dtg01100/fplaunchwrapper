@@ -229,7 +229,7 @@ test_performance_and_efficiency() {
     # Launch multiple concurrent operations
     for i in {1..10}; do
         {
-            for j in {1..100}; do
+            for _ in {1..100}; do
                 echo "concurrent_test_$i" > "/tmp/concurrent_$i"
             done
         } &
@@ -824,27 +824,4 @@ main() {
         exit 1
     fi
 }
-    test_export_import
-    test_script_management
-    test_wrapper_removal
-    test_list_wrappers
-    
-    echo ""
-    echo "======================================"
-    echo "Test Results"
-    echo "======================================"
-    echo -e "${GREEN}Passed: $TESTS_PASSED${NC}"
-    echo -e "${RED}Failed: $TESTS_FAILED${NC}"
-    echo "Total:  $((TESTS_PASSED + TESTS_FAILED))"
-    echo "======================================"
-    
-    if [ "$TESTS_FAILED" -eq 0 ]; then
-        echo -e "${GREEN}All tests passed!${NC}"
-        exit 0
-    else
-        echo -e "${RED}Some tests failed!${NC}"
-        exit 1
-    fi
-}
-
 main "$@"
