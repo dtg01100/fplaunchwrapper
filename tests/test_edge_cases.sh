@@ -76,7 +76,7 @@ fi
 
 create_wrapper_for_id "$SPACE_ID" || true
 # Expect invalid name to be skipped (contains space)
-if [[ ! -f "$BIN_DIR_BASE/app" && ! -f "$BIN_DIR_BASE/my\ app" ]]; then
+if [[ ! -f "$BIN_DIR_BASE/app" && ! -f "$BIN_DIR_BASE/my app" ]]; then
   report_pass "Space-containing app ID correctly treated as invalid"
 else
   report_fail "Space-containing app name incorrectly generated"
