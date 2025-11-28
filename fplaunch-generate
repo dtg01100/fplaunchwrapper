@@ -70,7 +70,8 @@ while read -r id; do
     fi
     
     name=$(echo "$id" | awk -F. '{print tolower($NF)}')
-    if [ -z "$name" ] || [[ "$name" =~ [^a-z0-9_\-] ]]; then
+    # Enforce allowed characters and disallow leading/trailing hyphens
+    if [ -z "$name" ] || [[ "$name" =~ [^a-z0-9_\-] ]] || [[ "$name" == -* ]] || [[ "$name" == *- ]]; then
         echo "Skipping invalid name for $id"
         continue
     fi
@@ -370,7 +371,6 @@ for sys_dir in "\${PATH_DIRS[@]}"; do
     esac
     
 # Skip absolute paths that look like user directories
-    : "${sys_dir?}" # shellcheck disable=SC2154 - Variable is defined in for loop above
     case "$sys_dir" in
         "$HOME"/*|\~/*|/tmp/*|/var/*|/home/*/.*|/root/.*/)
             echo "SECURITY: Skipping user/private directory: $sys_dir" >&2

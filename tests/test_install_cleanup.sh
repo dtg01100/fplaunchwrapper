@@ -272,7 +272,6 @@ EOF
     ((total_attacks++))
     
     local race_file="$test_home/race_test"
-    # shellcheck disable=SC2034
     for i in {1..3}; do
         # Rapid file creation/modification
         echo "legitimate_content" > "$race_file" &
@@ -440,16 +439,9 @@ test_aggressive_documentation_security() {
     
     for path in "${traversal_paths[@]}"; do
         case "$path" in
-            *\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
+            *\.\.*|*\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
                 echo "  ✓ Blocked path traversal in documentation: $path"
                 ((attacks_blocked++))
-                ;;
-            *\.\.*)
-                # Additional check for double dots anywhere (not just as path traversal)
-                if [[ "$path" =~ \.\. ]]; then
-                    echo "  ✓ Blocked path traversal in documentation: $path"
-                    ((attacks_blocked++))
-                fi
                 ;;
         esac
     done

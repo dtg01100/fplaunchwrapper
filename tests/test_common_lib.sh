@@ -269,6 +269,7 @@ EOF
     # Attack 3: Symlink attacks
     echo "Testing symlink attacks..."
     local real_wrapper="$TEST_BIN/real_wrapper"
+    local fake_target="$TEST_BIN/fake_target"
     local malicious_symlink="$TEST_BIN/malicious_symlink"
     
     # Create a real wrapper

@@ -66,6 +66,15 @@ else
 fi
 echo ""
 
+# Run edge case tests
+echo -e "${YELLOW}Running edge case tests...${NC}"
+if bash "$SCRIPT_DIR/test_edge_cases.sh"; then
+    echo -e "${GREEN}✓ Edge case tests passed${NC}"
+else
+    echo -e "${RED}✗ Edge case tests failed${NC}"
+fi
+echo ""
+
 echo -e "${BLUE}======================================${NC}"
 echo -e "${BLUE}All test suites completed${NC}"
 echo -e "${BLUE}======================================${NC}"
