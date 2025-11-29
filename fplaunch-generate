@@ -163,7 +163,8 @@ elif [ "\$1" = "--fpwrapper-info" ]; then
     echo "Usage: \$0 [args]"
     exit 0
 elif [ "\$1" = "--fpwrapper-config-dir" ]; then
-    config_dir="\$HOME/.var/app/\$ID"
+    # Use XDG Base Directory specification for config directory
+    config_dir="${XDG_DATA_HOME:-$HOME/.local}/share/applications/$ID"
     echo "\$config_dir"
     exit 0
 elif [ "\$1" = "--fpwrapper-sandbox-info" ]; then
@@ -385,8 +386,14 @@ for sys_dir in "\${PATH_DIRS[@]}"; do
     esac
     
     # Skip paths with null bytes or encoding attacks
-    if [[ "$sys_dir" =~ [\\x00\\u0000%C0%2e]|.*:x:[0-9]+: ]]; then
+    if [[ "$sys_dir" =~ \\x00|\\u0000|%C0%2e|%2e%2e ]]; then
         echo "SECURITY: Skipping encoded/suspicious path: $sys_dir" >&2
+        continue
+    fi
+    
+    # Skip paths with command injection patterns
+    if [[ "$sys_dir" =~ :[xX][0-9a-zA-Z_-]+: ]]; then
+        echo "SECURITY: Skipping potential command injection: $sys_dir" >&2
         continue
     fi
     
@@ -417,8 +424,14 @@ for sys_dir in "\${PATH_DIRS[@]}"; do
     
     # Additional validation of candidate path
     # Skip if candidate path is suspicious
-    if [[ "\$candidate" =~ [\;\|\&\$\`\<\>] ]]; then
-        echo "SECURITY: Skipping candidate with dangerous characters: \$candidate" >&2
+    if [[ "$candidate" =~ [\;\|\&\$\`\<\>] ]]; then
+        echo "SECURITY: Skipping candidate with dangerous characters: $candidate" >&2
+        continue
+    fi
+    
+    # Additional validation: ensure candidate is a regular file (not symlink)
+    if [ -L "$candidate" ]; then
+        echo "SECURITY: Skipping symlink candidate: $candidate" >&2
         continue
     fi
     
@@ -458,8 +471,20 @@ for sys_dir in "\${PATH_DIRS[@]}"; do
         fi
         
         # Verify file is owned by root or system user (additional security)
-        if [ "\$(stat -c %u "\$candidate" 2>/dev/null)" != "0" ] && [ "\$(stat -c %u "\$candidate" 2>/dev/null)" != "1" ]; then
-            echo "SECURITY: Skipping non-system owned file: \$candidate" >&2
+        # Use more robust system binary detection
+        local file_uid
+        file_uid=$(stat -c %u "$candidate" 2>/dev/null)
+        local is_system_binary=false
+        
+        # Check for common system UIDs (root, bin, daemon, etc.)
+        case "$file_uid" in
+            0|1|2|3|4|6|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|65534|65535)
+                is_system_binary=true
+                ;;
+        esac
+        
+        if [ "$is_system_binary" = false ]; then
+            echo "SECURITY: Skipping non-system owned file: $candidate (UID: $file_uid)" >&2
             continue
         fi
         
@@ -491,43 +516,64 @@ if [ "\$PREF" = "system" ]; then
         run_and_cleanup "\$NAME" "\$@"
     else
         # System command gone, fall back to flatpak
-        PREF="flatpak"
-        echo "flatpak" > "\$PREF_FILE"
+        # Atomic preference update to prevent race conditions
+        local temp_pref_file
+        temp_pref_file=$(mktemp "$PREF_FILE.tmp.XXXXXX")
+        echo "flatpak" > "$temp_pref_file"
+        mv "$temp_pref_file" "$PREF_FILE"
+        
         load_env_vars
-        run_pre_launch_script "\$@"
-        run_and_cleanup flatpak run "\$ID" "\$@"
+        run_pre_launch_script "$@"
+        run_and_cleanup flatpak run "$ID" "$@"
     fi
 elif [ "\$PREF" = "flatpak" ]; then
     load_env_vars
     run_pre_launch_script "\$@"
     run_and_cleanup flatpak run "\$ID" "\$@"
-else
-    # No pref set
-    if [ "\$SYSTEM_EXISTS" = true ]; then
-        echo "Multiple options for '\$NAME':"
-        echo "1. System package (\$CMD_PATH)"
-        echo "2. Flatpak app (\$ID)"
-        read -r -p "Choose (1/2, default 1): " choice
-        choice=\${choice:-1}
-        if [ "\$choice" = "1" ]; then
-            PREF="system"
-            echo "\$PREF" > "\$PREF_FILE"
+    else
+        # No pref set
+        if [ "$SYSTEM_EXISTS" = true ]; then
+            # Sensible default: prefer system package when available
+            local default_choice="system"
+            local choice_reason="system package available"
+            
+            echo "Multiple options for '$NAME':"
+            echo "1. System package ($CMD_PATH)"
+            echo "2. Flatpak app ($ID)"
+            echo ""
+            read -r -p "Choose (1/2, default 1 - $choice_reason): " choice
+            choice=${choice:-1}
+            
+            if [ "$choice" = "1" ]; then
+                PREF="system"
+            elif [ "$choice" = "2" ]; then
+                PREF="flatpak"
+            else
+                echo "Invalid choice '$choice', using default: $default_choice"
+                PREF="$default_choice"
+            fi
+            
+            # Atomic preference update
+            local temp_pref_file
+            temp_pref_file=$(mktemp "$PREF_FILE.tmp.XXXXXX")
+            echo "$PREF" > "$temp_pref_file"
+            mv "$temp_pref_file" "$PREF_FILE"
+            
             load_env_vars
-            run_pre_launch_script "\$@"
-            run_and_cleanup "\$NAME" "\$@"
-        elif [ "\$choice" = "2" ]; then
-            PREF="flatpak"
-            echo "\$PREF" > "\$PREF_FILE"
-            load_env_vars
-            run_pre_launch_script "\$@"
-            run_and_cleanup flatpak run "\$ID" "\$@"
+            run_pre_launch_script "$@"
+            
+            if [ "$PREF" = "system" ]; then
+                run_and_cleanup "$NAME" "$@"
+            else
+                run_and_cleanup flatpak run "$ID" "$@"
+            fi
         else
-            echo "Invalid choice, defaulting to system."
-            PREF="system"
-            echo "\$PREF" > "\$PREF_FILE"
+            # Only flatpak available
+            PREF="flatpak"
+            echo "$PREF" > "$PREF_FILE"
             load_env_vars
-            run_pre_launch_script "\$@"
-            run_and_cleanup "\$NAME" "\$@"
+            run_pre_launch_script "$@"
+            run_and_cleanup flatpak run "$ID" "$@"
         fi
     else
         PREF="flatpak"

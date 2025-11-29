@@ -15,7 +15,18 @@ fi
 init_paths
 WRAPPER_SCRIPT="$SCRIPT_DIR/fplaunch-generate"
 UNIT_DIR=$(get_systemd_unit_dir)
-FLATPAK_BIN_DIR="$HOME/.local/share/flatpak/exports/bin"
+    # Detect Flatpak installation directory dynamically
+    if [ -d "$HOME/.local/share/flatpak/exports/bin" ]; then
+        FLATPAK_BIN_DIR="$HOME/.local/share/flatpak/exports/bin"
+    elif [ -d "/var/lib/flatpak/exports/bin" ]; then
+        FLATPAK_BIN_DIR="/var/lib/flatpak/exports/bin"
+    elif command -v flatpak >/dev/null 2>&1; then
+        # Try to get from flatpak itself
+        FLATPAK_BIN_DIR=$(dirname "$(command -v flatpak | awk '{print $3}')")
+    else
+        echo "Warning: Could not detect Flatpak bin directory, using default"
+        FLATPAK_BIN_DIR="$HOME/.local/share/flatpak/exports/bin"
+    fi
 
 # Check prerequisites
 systemd_available=false
@@ -65,7 +76,6 @@ Description=Timer for Flatpak wrapper generation
 
 [Timer]
 OnCalendar=daily
-OnBootSec=5min
 Persistent=true
 
 [Install]
@@ -83,12 +93,12 @@ if [ "$systemd_available" = true ]; then
 else
     # Fallback to cron
     if command -v crontab &> /dev/null; then
-        cron_job="*/30 * * * * $WRAPPER_SCRIPT $BIN_DIR"
+        cron_job="0 */6 * * * $WRAPPER_SCRIPT $BIN_DIR"
         if ! crontab -l 2>/dev/null | grep -q "$WRAPPER_SCRIPT"; then
             (crontab -l 2>/dev/null; echo "$cron_job") | crontab -
-            echo "Cron job added for wrapper updates every 30 minutes. (System Flatpak changes require manual run.)"
+            echo "Cron job added for wrapper updates every 6 hours. (System Flatpak changes require manual run.)"
         else
-            echo "Cron job already exists. Wrappers will update every 30 minutes."
+            echo "Cron job already exists. Wrappers will update every 6 hours."
         fi
     else
         echo "Neither systemd nor crontab available. Please run '$WRAPPER_SCRIPT $BIN_DIR' manually to update wrappers."
