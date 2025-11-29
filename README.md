@@ -33,8 +33,53 @@ Each generated wrapper provides these additional options:
 - `--fpwrapper-set-post-script <script>` - Set a post-run script
 - `--fpwrapper-remove-pre-script` - Remove pre-launch script
 - `--fpwrapper-remove-post-script` - Remove post-run script
+- `--fpwrapper-force-interactive` - Force interactive mode (useful in scripts)
 
 **Script Arguments:** Pre-launch and post-run scripts receive: wrapper name, Flatpak ID, target application, and any additional arguments.
+
+## Interactive vs Non-Interactive Behavior
+
+Wrappers automatically detect their execution context and behave accordingly:
+
+### Interactive Mode (Terminal)
+When run from an interactive terminal, wrappers provide full functionality:
+- Preference prompts and management
+- Interactive sandbox editing
+- Help and information commands
+- All wrapper features available
+
+### Non-Interactive Mode (.desktop files, scripts, IDEs)
+When run from non-interactive contexts, wrappers automatically bypass themselves:
+- Search PATH for next executable with the same name
+- Execute system command directly if found
+- Fall back to Flatpak if no system command exists
+- No prompts or interactive features
+- Clean, predictable behavior for desktop environments
+
+### Force Interactive Mode
+
+You can force interactive mode in scripts using the environment variable:
+
+```bash
+# Force interactive mode in a script
+FPWRAPPER_FORCE=interactive firefox --fpwrapper-help
+
+# Or use the built-in flag
+firefox --fpwrapper-force-interactive --help
+```
+
+**Use Cases:**
+- **Scripting**: Force wrapper features in automated scripts
+- **Testing**: Ensure wrapper functionality works as expected
+- **Debugging**: Access wrapper help and diagnostics in scripts
+- **Custom Launchers**: Create custom desktop entries that use wrapper features
+
+## Advanced Usage
+
+For detailed information about interactive mode control, scripting, and advanced features, see:
+
+- **[docs/FPWRAPPER_FORCE.md](docs/FPWRAPPER_FORCE.md)** - Complete guide to `FPWRAPPER_FORCE` environment variable
+- **[docs/ADVANCED_USAGE.md](docs/ADVANCED_USAGE.md)** - Advanced scripting and automation examples
 
 ## Installation
 

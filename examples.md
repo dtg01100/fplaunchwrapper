@@ -1,4 +1,31 @@
-# Pre-launch and Post-run Script Examples
+# fplaunchwrapper Examples
+
+This document provides practical examples for using fplaunchwrapper in various scenarios.
+
+## Interactive Mode Control
+
+### Using FPWRAPPER_FORCE in Scripts
+
+```bash
+#!/bin/bash
+# Get wrapper information in a script
+FPWRAPPER_FORCE=interactive firefox --fpwrapper-info > firefox-info.txt
+
+# Force wrapper features for configuration
+FPWRAPPER_FORCE=interactive chrome --fpwrapper-set-override system
+```
+
+### Custom Desktop Entry with Wrapper Features
+
+```ini
+[Desktop Entry]
+Name=Firefox Debug Mode
+Exec=firefox --fpwrapper-force-interactive --fpwrapper-info
+Icon=firefox
+Type=Application
+```
+
+## Pre-launch and Post-run Script Examples
 
 These examples show the basic functionality for Linux users who want to customize their Flatpak application launches.
 

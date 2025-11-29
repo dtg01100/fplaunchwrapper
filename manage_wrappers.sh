@@ -12,6 +12,17 @@ elif [ -f "${SCRIPT_DIR%/bin}/lib/common.sh" ]; then
     source "${SCRIPT_DIR%/bin}/lib/common.sh"
 fi
 
+# Source library functions
+for lib in pref env alias script launch; do
+    if [ -f "$SCRIPT_DIR/lib/$lib.sh" ]; then
+        # shellcheck source=lib/$lib.sh
+        source "$SCRIPT_DIR/lib/$lib.sh"
+    elif [ -f "${SCRIPT_DIR%/bin}/lib/$lib.sh" ]; then
+        # shellcheck source=lib/$lib.sh
+        source "${SCRIPT_DIR%/bin}/lib/$lib.sh"
+    fi
+done
+
 # Check for --help as first argument
 if [ "$1" = "--help" ]; then
     cat << 'EOF'
@@ -64,6 +75,16 @@ Commands:
   regenerate           - Regenerate all wrappers
   files                - List all generated files
   uninstall            - Remove all generated files and config
+
+Interactive Behavior:
+  Wrappers automatically detect execution context:
+  • Interactive (terminal): Full wrapper functionality with prompts
+  • Non-interactive (.desktop, scripts): Bypass wrapper, run system command
+  • Force interactive: FPWRAPPER_FORCE=interactive or --fpwrapper-force-interactive
+
+Examples:
+  FPWRAPPER_FORCE=interactive firefox --fpwrapper-info
+  firefox --fpwrapper-force-interactive --help
 EOF
     exit 1
 }
@@ -188,8 +209,7 @@ list_files() {
 }
 
 uninstall_all() {
-    read -r -p "Uninstall Flatpak Launch Wrappers? This will remove all wrappers, preferences, and config. (y/n): " confirm
-    if [[ ! $confirm =~ ^[Yy]$ ]]; then
+    if ! confirm_action "Uninstall Flatpak Launch Wrappers? This will remove all wrappers, preferences, and config."; then
         echo "Uninstallation cancelled."
         return 1
     fi
@@ -197,25 +217,11 @@ uninstall_all() {
     echo "Uninstalling Flatpak Launch Wrappers..."
     
     # Stop and disable systemd units
-    systemctl --user stop flatpak-wrappers.service 2>/dev/null || true
-    systemctl --user stop flatpak-wrappers.path 2>/dev/null || true
-    systemctl --user stop flatpak-wrappers.timer 2>/dev/null || true
-    systemctl --user disable flatpak-wrappers.service 2>/dev/null || true
-    systemctl --user disable flatpak-wrappers.path 2>/dev/null || true
-    systemctl --user disable flatpak-wrappers.timer 2>/dev/null || true
-    
-    # Remove systemd unit files
-    UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-    rm -f "$UNIT_DIR/flatpak-wrappers.service"
-    rm -f "$UNIT_DIR/flatpak-wrappers.path"
-    rm -f "$UNIT_DIR/flatpak-wrappers.timer"
-    systemctl --user daemon-reload 2>/dev/null || true
+    cleanup_systemd_units
     
     # Remove cron job if exists
     WRAPPER_SCRIPT="$SCRIPT_DIR/fplaunch-generate"
-    if command -v crontab &> /dev/null; then
-        crontab -l 2>/dev/null | grep -v "$WRAPPER_SCRIPT" | crontab - 2>/dev/null || true
-    fi
+    manage_cron_entry remove "$WRAPPER_SCRIPT"
     
     # Remove wrappers and manager
     for script in "$BIN_DIR"/*; do
@@ -245,8 +251,7 @@ remove_wrapper() {
     name="$1"
     script_path="$BIN_DIR/$name"
     if [ -f "$script_path" ]; then
-        read -r -p "Are you sure you want to remove wrapper '$name'? (y/n): " confirm
-        if [[ $confirm =~ ^[Yy]$ ]]; then
+        if confirm_action "Are you sure you want to remove wrapper '$name'?"; then
             rm "$script_path"
             pref_file="$CONFIG_DIR/$name.pref"
             [ -f "$pref_file" ] && rm "$pref_file"
@@ -266,167 +271,11 @@ remove_wrapper() {
     fi
 }
 
-remove_pref() {
-    name="$1"
-    pref_file="$CONFIG_DIR/$name.pref"
-    if [ -f "$pref_file" ]; then
-        read -r -p "Are you sure you want to remove preference for '$name'? (y/n): " confirm
-        if [[ $confirm =~ ^[Yy]$ ]]; then
-            rm "$pref_file"
-            echo "Removed preference for $name"
-        else
-            echo "Removal cancelled."
-        fi
-    else
-        echo "No preference found for $name"
-    fi
-}
 
-set_pref() {
-    name="$1"
-    choice="$2"
-    if [ "$choice" != "system" ] && [ "$choice" != "flatpak" ]; then
-        echo "Invalid choice: use 'system' or 'flatpak'"
-        return
-    fi
-    pref_file="$CONFIG_DIR/$name.pref"
-    echo "$choice" > "$pref_file"
-    echo "Set preference for $name to $choice"
-}
 
-set_env() {
-    name="$1"
-    var="$2"
-    value="$3"
-    env_file="$CONFIG_DIR/$name.env"
-    if [ ! -f "$BIN_DIR/$name" ]; then
-        echo "Wrapper $name not found"
-        return
-    fi
-    echo "export $var=\"$value\"" >> "$env_file"
-    echo "Set $var for $name"
-}
 
-remove_env() {
-    name="$1"
-    var="$2"
-    env_file="$CONFIG_DIR/$name.env"
-    if [ -f "$env_file" ]; then
-        sed -i "/export $var=/d" "$env_file"
-        echo "Removed $var for $name"
-    else
-        echo "No env file for $name"
-    fi
-}
 
-list_env() {
-    name="$1"
-    env_file="$CONFIG_DIR/$name.env"
-    if [ -f "$env_file" ]; then
-        echo "Environment variables for $name:"
-        cat "$env_file"
-    else
-        echo "No environment variables set for $name"
-    fi
-}
 
-set_pref_all() {
-    pref="$1"
-    if [ "$pref" != "system" ] && [ "$pref" != "flatpak" ]; then
-        echo "Invalid preference: use 'system' or 'flatpak'"
-        return
-    fi
-    for script in "$BIN_DIR"/*; do
-        if [ -f "$script" ] && grep -q "Generated by fplaunchwrapper" "$script" 2>/dev/null; then
-            name=$(basename "$script")
-            set_pref "$name" "$pref"
-        fi
-    done
-}
-
-set_alias() {
-    name="$1"
-    alias_name="$2"
-    script_path="$BIN_DIR/$name"
-    alias_path="$BIN_DIR/$alias_name"
-    
-    if [ ! -f "$script_path" ]; then
-        echo "Wrapper $name not found"
-        return
-    fi
-    
-    if [ -e "$alias_path" ]; then
-        echo "Alias $alias_name already exists"
-        return
-    fi
-    
-    ln -s "$script_path" "$alias_path"
-    echo "$alias_name $name" >> "$CONFIG_DIR/aliases"
-    echo "Created alias $alias_name -> $name"
-}
-
-remove_alias() {
-    alias_name="$1"
-    alias_path="$BIN_DIR/$alias_name"
-    
-    if [ -L "$alias_path" ]; then
-        rm "$alias_path"
-        sed -i "/^$alias_name /d" "$CONFIG_DIR/aliases" 2>/dev/null
-        echo "Removed alias $alias_name"
-    else
-        echo "Alias $alias_name not found"
-    fi
-}
-
-export_prefs() {
-    file="$1"
-    # Use find to safely handle filenames with spaces
-    local pref_files
-    pref_files=$(find "$CONFIG_DIR" -maxdepth 1 -name "*.pref" -type f -exec basename {} \; 2>/dev/null)
-    if [ -n "$pref_files" ]; then
-        # shellcheck disable=SC2086
-        tar -czf "$file" -C "$CONFIG_DIR" blocklist $pref_files 2>/dev/null
-    else
-        tar -czf "$file" -C "$CONFIG_DIR" blocklist 2>/dev/null
-    fi
-    echo "Exported preferences to $file"
-}
-
-import_prefs() {
-    file="$1"
-    if [ -f "$file" ]; then
-        # Validate tar contents before extraction
-        if tar -tzf "$file" 2>/dev/null | grep -q '\.\.'; then
-            echo "Error: Archive contains suspicious paths. Import cancelled for security."
-            return 1
-        fi
-        tar -xzf "$file" -C "$CONFIG_DIR" 2>/dev/null
-        echo "Imported preferences from $file"
-    else
-        echo "File $file not found"
-    fi
-}
-
-export_config() {
-    file="$1"
-    tar -czf "$file" -C "$CONFIG_DIR" . 2>/dev/null
-    echo "Exported full config to $file"
-}
-
-import_config() {
-    file="$1"
-    if [ -f "$file" ]; then
-        # Validate tar contents before extraction
-        if tar -tzf "$file" 2>/dev/null | grep -q '\.\.'; then
-            echo "Error: Archive contains suspicious paths. Import cancelled for security."
-            return 1
-        fi
-        tar -xzf "$file" -C "$CONFIG_DIR" 2>/dev/null
-        echo "Imported full config from $file"
-    else
-        echo "File $file not found"
-    fi
-}
 
 block_id() {
     id="$1"
@@ -476,72 +325,10 @@ install_app() {
     fi
 }
 
-launch_wrapper() {
-    name="$1"
-    if [ -f "$BIN_DIR/$name" ]; then
-        "$BIN_DIR/$name" &
-    else
-        echo "Wrapper $name not found."
-    fi
-}
 
-set_script() {
-    name="$1"
-    path="$2"
-    if [ ! -f "$BIN_DIR/$name" ]; then
-        echo "Wrapper $name not found"
-        return 1
-    fi
-    if [ ! -f "$path" ]; then
-        echo "Script $path not found"
-        return 1
-    fi
-    script_dir="$CONFIG_DIR/scripts/$name"
-    mkdir -p "$script_dir"
-    cp "$path" "$script_dir/pre-launch.sh"
-    chmod +x "$script_dir/pre-launch.sh"
-    echo "Set pre-launch script for $name"
-}
 
-set_post_script() {
-    name="$1"
-    path="$2"
-    if [ ! -f "$BIN_DIR/$name" ]; then
-        echo "Wrapper $name not found"
-        return 1
-    fi
-    if [ ! -f "$path" ]; then
-        echo "Script $path not found"
-        return 1
-    fi
-    script_dir="$CONFIG_DIR/scripts/$name"
-    mkdir -p "$script_dir"
-    cp "$path" "$script_dir/post-run.sh"
-    chmod +x "$script_dir/post-run.sh"
-    echo "Set post-run script for $name"
-}
 
-remove_script() {
-    name="$1"
-    script_dir="$CONFIG_DIR/scripts/$name"
-    if [ -f "$script_dir/pre-launch.sh" ]; then
-        rm "$script_dir/pre-launch.sh"
-        echo "Removed pre-launch script for $name"
-    else
-        echo "No pre-launch script found for $name"
-    fi
-}
 
-remove_post_script() {
-    name="$1"
-    script_dir="$CONFIG_DIR/scripts/$name"
-    if [ -f "$script_dir/post-run.sh" ]; then
-        rm "$script_dir/post-run.sh"
-        echo "Removed post-run script for $name"
-    else
-        echo "No post-run script found for $name"
-    fi
-}
 
 show_manifest() {
     local name="$1"
