@@ -10,6 +10,17 @@
 # - Blocklist bypasses can force unwanted installations
 # - Export/import can be used for data exfiltration or injection
 
+# Developer workstation safety check - never run as root
+if [ "$(id -u)" = "0" ]; then
+    echo "ERROR: Refusing to run tests as root for safety"
+    echo "This project should never be run with root privileges"
+    exit 1
+fi
+
+# Set testing environment
+export TESTING=1
+export CI=1
+
 TEST_DIR="/tmp/fplaunch-mgmt-test-$$"
 TEST_BIN="$TEST_DIR/bin"
 TEST_CONFIG="$TEST_DIR/config/flatpak-wrappers"

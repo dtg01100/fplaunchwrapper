@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+# Safety check - never run as root
+if [ "$(id -u)" = "0" ]; then
+    echo "ERROR: manage_wrappers.sh should never be run as root for safety"
+    echo "This tool is designed for user-level wrapper management only"
+    exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source common utilities

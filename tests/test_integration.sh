@@ -2,6 +2,17 @@
 # Aggressive integration tests - testing complete workflows under attack
 # Self-contained end-to-end testing designed to break the system
 
+# Developer workstation safety check - never run as root
+if [ "$(id -u)" = "0" ]; then
+    echo "ERROR: Refusing to run tests as root for safety"
+    echo "This project should never be run with root privileges"
+    exit 1
+fi
+
+# Set testing environment
+export TESTING=1
+export CI=1
+
 TEST_DIR="/tmp/fplaunch-integration-test-$$"
 # shellcheck disable=SC2034  # SCRIPT_DIR kept for potential future use
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

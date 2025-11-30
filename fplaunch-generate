@@ -1,5 +1,29 @@
 #!/usr/bin/env bash
 
+# Safety check - never run as root
+if [ "$(id -u)" = "0" ]; then
+    echo "ERROR: fplaunch-generate should never be run as root for safety"
+    echo "This tool is designed for user-level wrapper management only"
+    exit 1
+fi
+
+# Validate HOME directory
+if [ -z "${HOME:-}" ] || [ ! -d "$HOME" ]; then
+    echo "Error: HOME directory is not set or not accessible: ${HOME:-<not set>}"
+    echo ""
+    echo "Alternative: You can set a custom HOME directory by setting:"
+    echo "  export HOME=/path/to/your/home"
+    exit 1
+fi
+
+# Validate PATH
+if [ -z "${PATH:-}" ]; then
+    echo "Warning: PATH is not set, some functionality may not work"
+    echo ""
+    echo "Alternative: You can set a custom PATH by setting:"
+    echo "  export PATH=/path/to/your/bin:/usr/bin:/bin"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source common utilities
@@ -12,16 +36,79 @@ elif [ -f "${SCRIPT_DIR%/bin}/lib/common.sh" ]; then
     source "${SCRIPT_DIR%/bin}/lib/common.sh"
 fi
 
+# Validate BIN_DIR
+if [ -z "${1:-}" ]; then
+    echo "Error: No BIN_DIR specified"
+    echo "Usage: $0 [BIN_DIR]"
+    exit 1
+fi
+
 BIN_DIR="${1:-$HOME/bin}"
-mkdir -p "$BIN_DIR"
+
+# Validate BIN_DIR sits under HOME
+if ! validate_home_dir "$(dirname "$BIN_DIR")" >/dev/null 2>&1; then
+    echo "Error: BIN_DIR must be under your HOME directory: $BIN_DIR" >&2
+    echo "Please choose a location under your home directory or set BIN_DIR accordingly." >&2
+    echo "Alternative: You can specify a different bin directory:"
+    echo "  $0 /path/to/your/bin"
+    echo "  export BIN_DIR=/path/to/your/bin"
+    exit 1
+fi
+
+# Try to create BIN_DIR with error handling
+if ! mkdir -p "$BIN_DIR" 2>/dev/null; then
+    echo "Error: Cannot create BIN_DIR: $BIN_DIR" >&2
+    echo "Please check permissions and disk space." >&2
+    echo ""
+    echo "Alternative: You can specify a different bin directory:"
+    echo "  $0 /path/to/your/bin"
+    echo "  export BIN_DIR=/path/to/your/bin"
+    exit 1
+fi
 
 # Save BIN_DIR to config
-ensure_config_dir
+if ! ensure_config_dir; then
+    echo "Error: Failed to create config directory" >&2
+    exit 1
+fi
+
+# Ensure enough disk space
+if ! check_disk_space "$BIN_DIR" 10; then
+    echo "Error: Not enough disk space available in $BIN_DIR" >&2
+    echo "Please free space or choose a different BIN_DIR." >&2
+    exit 1
+fi
+
 echo "$BIN_DIR" > "$CONFIG_DIR/bin_dir"
 
+# Acquire global lock for this operation to prevent race conditions
+if ! acquire_lock; then
+    echo "Error: Failed to acquire lock for generation" >&2
+    exit 1
+fi
+trap 'release_lock' EXIT
+
 # Get list of installed Flatpak app IDs (user and system)
-if ! installed_ids=$( (flatpak list --app --columns=application 2>/dev/null; flatpak list --app --columns=application --system 2>/dev/null) | sort | uniq ); then
-    echo "Error: Flatpak not installed or command failed."
+if ! FLATPAK_BIN=$(find_executable flatpak 2>/dev/null); then
+    echo "Error: Flatpak not found in PATH."
+    echo "Please install Flatpak or ensure it's in your PATH."
+    echo ""
+    echo "Installation instructions:"
+    echo "  Ubuntu/Debian: sudo apt install flatpak"
+    echo "  Fedora: sudo dnf install flatpak"
+    echo "  Arch: sudo pacman -S flatpak"
+    echo "  Or visit: https://flatpak.org/setup/"
+    exit 1
+fi
+
+if ! installed_ids=$( ("$FLATPAK_BIN" list --app --columns=application 2>/dev/null; "$FLATPAK_BIN" list --app --columns=application --system 2>/dev/null) | sort | uniq ); then
+    echo "Error: Flatpak command failed."
+    echo "Please check Flatpak installation."
+    echo ""
+    echo "Troubleshooting:"
+    echo "  - Run: $FLATPAK_BIN --version"
+    echo "  - Run: $FLATPAK_BIN list --app"
+    echo "  - Check if Flatpak service is running"
     exit 1
 fi
 
@@ -39,24 +126,49 @@ for script in "${existing_scripts[@]}"; do
         # Check if ID is no longer installed using grep on multiline string
         if [ -n "$id" ] && ! grep -q "^$id$" <<< "$installed_ids"; then
             script_name=$(basename "$script")
-            rm "$script"
+            # Remove wrapper with error handling
+            if ! rm "$script" 2>/dev/null; then
+                echo "Warning: Could not remove wrapper: $script"
+            else
+                echo "Removed obsolete wrapper: $script_name"
+            fi
+            # Remove preference file with error handling
             pref_file="$CONFIG_DIR/$script_name.pref"
-            [ -f "$pref_file" ] && rm "$pref_file"
+            if [ -f "$pref_file" ]; then
+                if ! rm "$pref_file" 2>/dev/null; then
+                    echo "Warning: Could not remove preference file: $pref_file"
+                fi
+            fi
             # Remove aliases pointing to this wrapper
-            sed -i "/^$script_name /d" "$CONFIG_DIR/aliases" 2>/dev/null
+            if [ -f "$CONFIG_DIR/aliases" ]; then
+                if ! sed -i "/^$script_name /d" "$CONFIG_DIR/aliases" 2>/dev/null; then
+                    echo "Warning: Could not remove alias for: $script_name"
+                fi
+            fi
+            # Remove symbolic links pointing to this wrapper
             for alias in "$BIN_DIR"/*; do
                 if [ -L "$alias" ] && [ "$(readlink "$alias" 2>/dev/null)" = "$script" ]; then
-                    rm "$alias"
+                    if ! rm "$alias" 2>/dev/null; then
+                        echo "Warning: Could not remove symlink: $alias"
+                    fi
                 fi
             done
-            echo "Removed obsolete wrapper, preference, and aliases: $script_name"
         fi
     fi
 done
 
 # Create wrappers for installed apps
-# Simple collision detection using temp file
-COLLISION_FILE=$(mktemp)
+# Simple collision detection using temp file with error handling
+if ! COLLISION_FILE=$(safe_mktemp "collision.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /tmp)"); then
+    echo "Error: Cannot create temporary file for collision detection"
+    echo "Please check file permissions and disk space"
+    echo ""
+    echo "Alternative: You can set a custom temp directory by setting:"
+    echo "  export TMPDIR=/path/to/your/temp"
+    echo "  export TMP=/path/to/your/temp"
+    echo "  export TEMP=/path/to/your/temp"
+    exit 1
+fi
 
 while read -r id; do
     if [ -z "$id" ]; then continue; fi
@@ -67,7 +179,7 @@ while read -r id; do
         continue
     fi
     
-    name=$(echo "$id" | awk -F. '{print tolower($NF)}')
+    name=$(sanitize_id_to_name "$id")
     # Enforce allowed characters and disallow leading/trailing hyphens
     if [ -z "$name" ] || [[ "$name" =~ [^a-z0-9_\-] ]] || [[ "$name" == -* ]] || [[ "$name" == *- ]]; then
         echo "Skipping invalid name for $id"
@@ -126,11 +238,12 @@ fi
 
 # Non-interactive bypass: skip wrapper and continue PATH search
 if ! is_interactive; then
-    # Find next executable in PATH (skip our wrapper)
-    IFS=: read -ra PATH_DIRS <<< "\$PATH"
-    for dir in "\${PATH_DIRS[@]}"; do
-        if [ -x "\$dir/\$NAME" ] && [ "\$dir/\$NAME" != "\$SCRIPT_BIN_DIR/\$NAME" ]; then
-            exec "\$dir/\$NAME" "\$@"
+# Find next executable in PATH (skip our wrapper)
+    IFS=: read -ra PATH_DIRS <<< "$PATH"
+    for dir in "${PATH_DIRS[@]}"; do
+        [ -z "$dir" ] && continue
+        if [ -x "$dir/$NAME" ] && [ "$dir/$NAME" != "$SCRIPT_BIN_DIR/$NAME" ]; then
+            exec "$dir/$NAME" "$@"
         fi
     done
     
@@ -185,7 +298,7 @@ elif [ "\$1" = "--fpwrapper-info" ]; then
     exit 0
 elif [ "\$1" = "--fpwrapper-config-dir" ]; then
     # Use XDG Base Directory specification for config directory
-    config_dir="${XDG_DATA_HOME:-$HOME/.local}/share/applications/$ID"
+    config_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications/$ID"
     echo "\$config_dir"
     exit 0
 elif [ "\$1" = "--fpwrapper-sandbox-info" ]; then
@@ -385,7 +498,7 @@ if [ "\$PREF" = "system" ]; then
         # System command gone, fall back to flatpak
         # Atomic preference update to prevent race conditions
         local temp_pref_file
-        temp_pref_file=$(mktemp "$PREF_FILE.tmp.XXXXXX")
+        temp_pref_file=$(safe_mktemp "tmp.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /tmp)")
         echo "flatpak" > "$temp_pref_file"
         mv "$temp_pref_file" "$PREF_FILE"
         
@@ -422,8 +535,13 @@ else
         
         # Atomic preference update
         local temp_pref_file
-        temp_pref_file=$(mktemp "$PREF_FILE.tmp.XXXXXX")
-        echo "\$PREF" > "$temp_pref_file"
+temp_pref_file=$(safe_mktemp "tmp.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /tmp)")
+        if [ -z "$temp_pref_file" ]; then
+            echo "Error: Failed to create temp file for preference update" >&2
+            echo "Please check file permissions and disk space." >&2
+            exit 1
+        fi
+        echo "$PREF" > "$temp_pref_file"
         mv "$temp_pref_file" "$PREF_FILE"
         
         load_env_vars
@@ -464,7 +582,7 @@ if [ "\$PREF" = "system" ]; then
         # System command gone, fall back to flatpak
         # Atomic preference update to prevent race conditions
         local temp_pref_file
-        temp_pref_file=$(mktemp "$PREF_FILE.tmp.XXXXXX")
+        temp_pref_file=$(safe_mktemp "tmp.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /tmp)")
         echo "flatpak" > "$temp_pref_file"
         mv "$temp_pref_file" "$PREF_FILE"
         
@@ -501,7 +619,12 @@ else
         
         # Atomic preference update
         local temp_pref_file
-        temp_pref_file=$(mktemp "$PREF_FILE.tmp.XXXXXX")
+        temp_pref_file=$(safe_mktemp "tmp.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /tmp)")
+        if [ -z "$temp_pref_file" ]; then
+            echo "Error: Failed to create temp file for preference update" >&2
+            echo "Please check file permissions and disk space." >&2
+            exit 1
+        fi
         echo "$PREF" > "$temp_pref_file"
         mv "$temp_pref_file" "$PREF_FILE"
         
@@ -561,6 +684,11 @@ if [ ${#wrapper_collision_log[@]} -gt 0 ]; then
         echo "  $name: Skipped apps:${wrapper_collision_log[$name]}"
     done
     echo "Use 'fplaunch-manage set-alias' to create alternative names for skipped apps."
+fi
+
+# Clean up collision file
+if [ -f "$COLLISION_FILE" ]; then
+    rm -f "$COLLISION_FILE" 2>/dev/null || echo "Warning: Could not clean up collision file"
 fi
 
 echo "Flatpak wrapper generation complete."

@@ -4,6 +4,17 @@ set -euo pipefail
 # Edge Case Test Suite for fplaunchwrapper
 # Covers: Unicode/space names, long names, alias cycles, symlink loops, systemd setup smoke
 
+# Developer workstation safety check - never run as root
+if [ "$(id -u)" = "0" ]; then
+    echo "ERROR: Refusing to run tests as root for safety"
+    echo "This project should never be run with root privileges"
+    exit 1
+fi
+
+# Set testing environment
+export TESTING=1
+export CI=1
+
 PROJECT_ROOT="$(cd "$(dirname "$0")"/.. && pwd)"
 LIB_DIR="$PROJECT_ROOT/lib"
 BIN_DIR_BASE="/tmp/fplaunch-edge-$$/bin"
