@@ -73,7 +73,6 @@ ensure_developer_safety() {
 
 # Ensure developer safety before proceeding
 ensure_developer_safety
-}
 
 # Create isolated test environment
 setup_test_env() {

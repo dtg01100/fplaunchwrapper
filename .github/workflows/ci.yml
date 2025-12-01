@@ -42,11 +42,13 @@ jobs:
     
     - name: Test installation
       run: |
-        bash install.sh
+        # Create test user for installation (CI runs as root)
+        useradd -m -s /bin/bash testuser
+        su - testuser -c "CI=1 bash $PWD/install.sh"
         # Verify installation
-        test -f ~/.local/bin/fplaunch-manage
-        test -f ~/.local/bin/fplaunch-generate
-        test -f ~/.local/bin/fplaunch-setup-systemd
+        su - testuser -c "test -f ~/.local/bin/fplaunch-manage"
+        su - testuser -c "test -f ~/.local/bin/fplaunch-generate"
+        su - testuser -c "test -f ~/.local/bin/fplaunch-setup-systemd"
     
     - name: Test management commands
       run: |
@@ -75,9 +77,12 @@ jobs:
     
     - name: Test installation
       run: |
-        bash install.sh
-        test -f ~/.local/bin/fplaunch-manage
-        test -f ~/.local/bin/fplaunch-generate
+        # Create test user for installation (CI runs as root)
+        useradd -m -s /bin/bash testuser
+        su - testuser -c "CI=1 bash $PWD/install.sh"
+        # Verify installation
+        su - testuser -c "test -f ~/.local/bin/fplaunch-manage"
+        su - testuser -c "test -f ~/.local/bin/fplaunch-generate"
 
   test-debian:
     name: Test on Debian
@@ -101,8 +106,11 @@ jobs:
     
     - name: Test installation
       run: |
-        bash install.sh
-        test -f ~/.local/bin/fplaunch-manage
+        # Create test user for installation (CI runs as root)
+        useradd -m -s /bin/bash testuser
+        su - testuser -c "CI=1 bash $PWD/install.sh"
+        # Verify installation
+        su - testuser -c "test -f ~/.local/bin/fplaunch-manage"
 
   test-arch:
     name: Test on Arch Linux
@@ -125,5 +133,8 @@ jobs:
     
     - name: Test installation
       run: |
-        bash install.sh
-        test -f ~/.local/bin/fplaunch-manage
+        # Create test user for installation (CI runs as root)
+        useradd -m -s /bin/bash testuser
+        su - testuser -c "CI=1 bash $PWD/install.sh"
+        # Verify installation
+        su - testuser -c "test -f ~/.local/bin/fplaunch-manage"
