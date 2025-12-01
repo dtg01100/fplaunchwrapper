@@ -27,6 +27,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Color codes for output
@@ -365,6 +366,7 @@ test_unicode_encoding_issues() {
     
     # Test with Unicode app names
     local unicode_app
+    # shellcheck disable=SC2034
     unicode_app="Üñîçødé-App"
     local unicode_id="com.weird.ÜñîçødéApp"
     

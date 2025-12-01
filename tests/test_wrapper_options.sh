@@ -94,6 +94,7 @@ case "$1" in
         echo "com.example.TestApp"
         ;;
     "run")
+        shift
         echo "Mock flatpak run $*"
         exit 0
         ;;
@@ -227,7 +228,7 @@ elif [ "\$1" = "--fpwrapper-sandbox-yolo" ]; then
     echo "WARNING: YOLO mode will grant ALL permissions to \$ID"
     echo "This is dangerous and should only be used for testing!"
     echo ""
-    read -p "Are you sure you want to continue? [y/N] " response
+    read -r -p "Are you sure you want to continue? [y/N] " response
     case "\$response" in
         [yY]|[yY][eE][sS])
             echo "Granting all permissions to \$ID..."

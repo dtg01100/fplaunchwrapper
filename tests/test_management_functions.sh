@@ -372,8 +372,8 @@ test_performance_and_efficiency() {
 log_test "Preference handling"
 
 # Debug: Check if directories exist
-echo "DEBUG: TEST_BIN=$TEST_BIN"
-echo "DEBUG: TEST_CONFIG=$TEST_CONFIG"
+[ "${DEBUG:-}" = "1" ] && echo "DEBUG: TEST_BIN=$TEST_BIN"
+[ "${DEBUG:-}" = "1" ] && echo "DEBUG: TEST_CONFIG=$TEST_CONFIG"
 ls -la "$TEST_DIR" || echo "TEST_DIR doesn't exist"
 
 # Create test preference script

@@ -318,8 +318,8 @@ set -e
 case "$1" in
     remove|purge)
         echo "Cleaning up fplaunchwrapper..."
-        echo "DEBUG: postrm env HOME=$HOME XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-notset}"
-        echo "DEBUG: removing ${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.service and timer"
+        [ "${DEBUG:-}" = "1" ] && echo "DEBUG: postrm env HOME=$HOME XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-notset}"
+        [ "${DEBUG:-}" = "1" ] && echo "DEBUG: removing ${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.service and timer"
         rm -vf "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.service"
         rm -vf "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.timer"
         ls -la "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user" || true

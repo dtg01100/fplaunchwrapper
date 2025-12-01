@@ -27,6 +27,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)" || true
 
 # Color codes for output
@@ -80,7 +81,7 @@ echo -e "${RED}╚════════════════════�
 echo ""
 
 # Interactive confirmation
-read -p "Do you understand the risks and want to proceed? (type 'I UNDERSTAND THE RISKS'): " confirmation
+read -r -p "Do you understand the risks and want to proceed? (type 'I UNDERSTAND THE RISKS'): " confirmation
 if [ "$confirmation" != "I UNDERSTAND THE RISKS" ]; then
     echo -e "${RED}Adversarial test cancelled. Confirmation not provided.${NC}"
     exit 1

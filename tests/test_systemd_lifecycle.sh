@@ -84,6 +84,9 @@ setup_test_env() {
     export XDG_DATA_HOME="$test_home/.local/share"
     export PATH="$test_home/bin:$PATH"
     export SYSTEMD_UNIT_DIR="$test_home/.config/systemd/user"
+
+    # Ensure mock systemd state does not leak from previous tests
+    rm -rf "$test_home/.mock-systemd-state"
     
     # Create mock systemctl command
     cat > "$test_home/bin/systemctl" << 'EOF'
@@ -92,6 +95,7 @@ setup_test_env() {
 # Mock systemctl that simulates systemd operations
 STATE_DIR="$HOME/.mock-systemd-state"
 mkdir -p "$STATE_DIR"
+[ "${DEBUG:-}" = "1" ] && echo "DEBUG: systemctl invoked with HOME=$HOME STATE_DIR=$STATE_DIR"
 
 case "$1" in
     "--user")
@@ -100,6 +104,14 @@ case "$1" in
             "daemon-reload")
                 echo "Mock: systemctl --user daemon-reload"
                 touch "$STATE_DIR/daemon-reloaded"
+                # Clean up state for removed unit files
+                for f in "$STATE_DIR"/enabled-* "$STATE_DIR"/started-*; do
+                    [ -e "$f" ] || continue
+                    svc=$(basename "$f" | sed -e 's/^enabled-//' -e 's/^started-//')
+                    if [ ! -f "$HOME/.config/systemd/user/$svc" ]; then
+                        rm -f "$STATE_DIR/enabled-$svc" "$STATE_DIR/started-$svc"
+                    fi
+                done
                 exit 0
                 ;;
             "enable")
@@ -150,8 +162,7 @@ case "$1" in
                 ;;
             "is-enabled")
                 service="$2"
-                unit_file="$HOME/.config/systemd/user/$service"
-                if [ -f "$unit_file" ] && [ -f "$STATE_DIR/enabled-$service" ]; then
+                if [ -f "$STATE_DIR/enabled-$service" ]; then
                     echo "enabled"
                     exit 0
                 else
@@ -209,10 +220,17 @@ cleanup_test_env() {
     rm -rf "$test_home"
 }
 
+reset_mock_systemd_state() {
+    rm -rf "$HOME/.mock-systemd-state"
+}
+
 # Create systemd service files
 create_systemd_service() {
     local test_home="$1"
     local unit_dir="$test_home/.config/systemd/user"
+
+    # Ensure mock state is reset before creating service files
+    reset_mock_systemd_state || true
     
     # Create fplaunch-update.service
     cat > "$unit_dir/fplaunch-update.service" << EOF
@@ -577,6 +595,10 @@ main() {
     # Setup test environment
     local test_home
     test_home=$(setup_test_env)
+    export HOME="$test_home"
+    export XDG_CONFIG_HOME="$test_home/.config"
+    export XDG_DATA_HOME="$test_home/.local/share"
+    export PATH="$test_home/bin:$PATH"
     
     # Run tests
     test_service_creation "$test_home"

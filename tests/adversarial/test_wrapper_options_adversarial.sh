@@ -37,6 +37,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034
+# shellcheck disable=SC2034
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Color codes for output
@@ -90,7 +92,7 @@ echo -e "${RED}╚════════════════════�
 echo ""
 
 # Interactive confirmation
-read -p "Do you understand the risks and want to proceed? (type 'I UNDERSTAND THE RISKS'): " confirmation
+read -r -p "Do you understand the risks and want to proceed? (type 'I UNDERSTAND THE RISKS'): " confirmation
 if [ "$confirmation" != "I UNDERSTAND THE RISKS" ]; then
     echo -e "${RED}Adversarial test cancelled. Confirmation not provided.${NC}"
     exit 1
@@ -289,7 +291,7 @@ elif [ "\$1" = "--fpwrapper-sandbox-yolo" ]; then
     echo "WARNING: YOLO mode will grant ALL permissions to \$ID"
     echo "This is dangerous and should only be used for testing!"
     echo ""
-    read -p "Are you sure you want to continue? [y/N] " response
+    read -r -p "Are you sure you want to continue? [y/N] " response
     case "\$response" in
         [yY]|[yY][eE][sS])
             echo "Granting all permissions to \$ID..."
