@@ -364,7 +364,8 @@ test_unicode_encoding_issues() {
     weird "Testing with Unicode and encoding issues"
     
     # Test with Unicode app names
-    local unicode_app="Üñîçødé-App"
+    local unicode_app
+    unicode_app="Üñîçødé-App"
     local unicode_id="com.weird.ÜñîçødéApp"
     
     # Create mock flatpak with Unicode

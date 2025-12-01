@@ -267,7 +267,8 @@ test_wrapper_generation_attacks() {
     fi
     
     # Test 3: Extremely long app name
-    local long_name=$(printf 'A%.0s' {1..1000})
+    local long_name
+    long_name=$(printf 'A%.0s' {1..1000})
     # Create mock flatpak with long name
     echo "com.test.$long_name" > "$test_home/mock-flatpak-list"
     if fplaunch-generate "$test_home/bin" 2>/dev/null; then
@@ -449,7 +450,8 @@ test_wrapper_script_attacks() {
     fi
     
     # Test 2: Script injection in app name
-    local script_name="$(echo 'malicious; cat /etc/passwd' | tr -d '\n')"
+    local script_name
+    script_name=$(echo 'malicious; cat /etc/passwd' | tr -d '\n')
     echo "com.test.App" > "$test_home/mock-flatpak-list"
     
     if fplaunch-generate "$test_home/bin" 2>/dev/null; then
@@ -764,7 +766,8 @@ EOF
     fi
     
     # Test 3: Environment variable injection
-    FPWRAPPER_FORCE="desktop; rm -rf /tmp/*" output=$("$test_home/bin/testapp" --fpwrapper-info 2>&1 || true)
+    local output
+    FPWRAPPER_FORCE="desktop; rm -rf /tmp/*"; output=$("$test_home/bin/testapp" --fpwrapper-info 2>&1 || true)
     if [ -f "/tmp/malicious" ]; then
         fail "Wrapper execution allows environment variable injection"
     else

@@ -21,6 +21,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+# shellcheck disable=SC2034
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
@@ -219,7 +220,7 @@ case "$1" in
         echo "Configuring fplaunchwrapper..."
         
         # Create config directory
-        mkdir -p "$HOME/.config/flatpak-wrappers"
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers"
         
         # Create bin directory
         mkdir -p "$HOME/bin"
