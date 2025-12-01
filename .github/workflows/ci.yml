@@ -35,6 +35,11 @@ jobs:
         sudo apt-get install -y flatpak dialog
         sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     
+    - name: Run test suite
+      run: |
+        cd tests
+        bash run_all_tests.sh
+    
     - name: Test installation
       run: |
         # Ubuntu runs as non-root, so we can install directly
@@ -43,21 +48,6 @@ jobs:
         test -f ~/.local/bin/fplaunch-manage
         test -f ~/.local/bin/fplaunch-generate
         test -f ~/.local/bin/fplaunch-setup-systemd
-    
-    - name: Run test suite
-      run: |
-        cd tests
-        bash run_all_tests.sh
-    
-    - name: Test installation
-      run: |
-        # Create test user for installation (CI runs as root)
-        useradd -m -s /bin/bash testuser
-        su - testuser -c "CI=1 bash $PWD/install.sh"
-        # Verify installation
-        su - testuser -c "test -f ~/.local/bin/fplaunch-manage"
-        su - testuser -c "test -f ~/.local/bin/fplaunch-generate"
-        su - testuser -c "test -f ~/.local/bin/fplaunch-setup-systemd"
     
     - name: Test management commands
       run: |
