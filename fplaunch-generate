@@ -494,7 +494,7 @@ load_env_vars() {
 run_and_cleanup() {
     # Run the command and capture exit code
     "\$@"
-    local exit_code=\$?
+    exit_code=\$?
     
     # Run post-run script if it exists
     run_post_run_script "\$exit_code"
@@ -546,8 +546,8 @@ else
     # No pref set - interactive prompt (we know we're interactive here)
     if [ "\$SYSTEM_EXISTS" = true ]; then
         # Interactive CLI with system package available
-        local default_choice="system"
-        local choice_reason="system package available"
+        default_choice="system"
+        choice_reason="system package available"
         
         echo "Multiple options for '\$NAME':"
         echo "1. System package (\$CMD_PATH)"
@@ -630,8 +630,8 @@ else
     # No pref set - only show interactive prompt in interactive CLI
     if is_interactive && [ "$SYSTEM_EXISTS" = true ]; then
         # Interactive CLI with system package available
-        local default_choice="system"
-        local choice_reason="system package available"
+        default_choice="system"
+        choice_reason="system package available"
         
         echo "Multiple options for '$NAME':"
         echo "1. System package ($CMD_PATH)"
