@@ -11,6 +11,12 @@
 # - Safety checks prevent malicious archive extraction
 
 # Developer workstation safety check - never run as root
+# Source shared helpers for CI and safety
+# shellcheck source=./test_helpers.sh disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/test_helpers.sh"
+
+# Ensure developer safety before proceeding
+ensure_developer_safety
 if [ "$(id -u)" = "0" ] && ! is_ci && [ "${TESTING:-}" != "1" ]; then
     echo "ERROR: Refusing to run tests as root for safety"
     echo "This project should never be run with root privileges"

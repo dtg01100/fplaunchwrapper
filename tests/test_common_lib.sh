@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Test suite for lib/common.sh utility functions
+# Source shared helpers for CI and safety
+# shellcheck source=./test_helpers.sh disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/test_helpers.sh"
 # Tests critical security and helper functions that are used across the entire codebase
 #
 # WHY THESE TESTS MATTER:

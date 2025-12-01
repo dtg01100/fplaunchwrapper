@@ -4,7 +4,7 @@
 set -e
 
 # Developer workstation safety check - never run as root
-if [ "$(id -u)" = "0" ] && [ -z "${CI:-}" ]; then
+if [ "$(id -u)" = "0" ] && ! is_ci; then
     echo "ERROR: Refusing to run tests as root for safety"
     echo "This project should never be run with root privileges"
     exit 1
@@ -12,7 +12,8 @@ fi
 
 # Set testing environment
 export TESTING=1
-export CI=1
+# Do not force CI in top-level runner; tests will source helpers and set CI as needed
+# export CI=1
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC2034  # Variables kept for potential future aggregation
