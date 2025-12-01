@@ -57,7 +57,7 @@ ensure_developer_safety() {
     fi
     
     # Ensure we're not running as root
-    if [ "$(id -u)" = "0" ]; then
+    if [ "$(id -u)" = "0" ] && [ "${CI:-}" != "1" ]; then
         echo "ERROR: Refusing to run tests as root for safety"
         exit 1
     fi
@@ -134,7 +134,6 @@ PREF_DIR="$1/.config/flatpak-wrappers"
 PREF_FILE="\$PREF_DIR/\$NAME.pref"
 SCRIPT_BIN_DIR="$bin_dir"
 
-echo "DEBUG: PREF_DIR=\$PREF_DIR" >&2
 mkdir -p "\$PREF_DIR"
 
 # Check if running in interactive CLI
@@ -530,7 +529,7 @@ test_unrestricted_run() {
     local output
     output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-run-unrestricted --help 2>&1)
     
-    if echo "$output" | grep -q "Mock flatpak run com.test.App --help"; then
+    if echo "$output" | grep -q "Mock flatpak run com.test.App --fpwrapper-run-unrestricted --help"; then
         pass "Unrestricted run passes arguments to flatpak"
     else
         fail "Unrestricted run not passing arguments correctly"

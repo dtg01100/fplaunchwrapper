@@ -5,7 +5,7 @@ set -euo pipefail
 # Covers: Unicode/space names, long names, alias cycles, symlink loops, systemd setup smoke
 
 # Developer workstation safety check - never run as root
-if [ "$(id -u)" = "0" ]; then
+if [ "$(id -u)" = "0" ] && [ "${CI:-}" != "1" ]; then
     echo "ERROR: Refusing to run tests as root for safety"
     echo "This project should never be run with root privileges"
     exit 1

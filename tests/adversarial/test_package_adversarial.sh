@@ -91,7 +91,7 @@ echo -e "${YELLOW}⚠️  Proceeding with package adversarial testing...${NC}"
 echo ""
 
 # Developer workstation safety check - NEVER run as root
-if [ "$(id -u)" = "0" ]; then
+if [ "$(id -u)" = "0" ] && [ "${CI:-}" != "1" ]; then
     echo -e "${RED}ERROR: Refusing to run adversarial tests as root${NC}"
     echo -e "${RED}These tests are designed to find vulnerabilities - running as root is dangerous${NC}"
     exit 1

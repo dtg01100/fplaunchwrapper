@@ -56,7 +56,7 @@ ensure_developer_safety() {
     fi
     
     # Ensure we're not running as root
-    if [ "$(id -u)" = "0" ]; then
+    if [ "$(id -u)" = "0" ] && [ "${CI:-}" != "1" ]; then
         echo "ERROR: Refusing to run tests as root for safety"
         echo "This project should never be run with root privileges"
         exit 1
