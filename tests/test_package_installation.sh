@@ -151,20 +151,17 @@ mkdir -p "$STATE_DIR"
 
 case "$1" in
     "-q")
-        case "$2" in
-            "fplaunchwrapper")
-                echo "fplaunchwrapper-1.3.0-1.x86_64"
-                exit 0
-                ;;
-            "-a")
-                echo "fplaunchwrapper-1.3.0-1.x86_64"
-                exit 0
-                ;;
-            *)
-                echo "package $2 is not installed"
-                exit 1
-                ;;
-        esac
+        if [ "$2" = "fplaunchwrapper" ] || [ "$2" = "-a" ]; then
+            echo "fplaunchwrapper-1.3.0-1.x86_64"
+            exit 0
+        else
+            echo "package $2 is not installed"
+            exit 1
+        fi
+        ;;
+    "-qa")
+        echo "fplaunchwrapper-1.3.0-1.x86_64"
+        exit 0
         ;;
     "-e")
         package="$2"
@@ -246,7 +243,7 @@ EOF
     
     # Simulate postinst execution
     local output
-    output=$("$test_home/postinst" configure 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local/share" PATH="$test_home/bin:$PATH" "$test_home/postinst" configure 2>&1)
     
     if echo "$output" | grep -q "Configuring fplaunchwrapper"; then
         pass "Postinst script started correctly"
@@ -261,7 +258,7 @@ EOF
     fi
     
     # Verify directories were created
-    if [ -d "$test_home/.config/flatpak-wrappers" ]; then
+    if [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers" ]; then
         pass "Config directory created"
     else
         fail "Config directory not created"
@@ -321,10 +318,15 @@ set -e
 case "$1" in
     remove|purge)
         echo "Cleaning up fplaunchwrapper..."
+        echo "DEBUG: postrm env HOME=$HOME XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-notset}"
+        echo "DEBUG: removing ${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.service and timer"
+        rm -vf "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.service"
+        rm -vf "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.timer"
+        ls -la "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user" || true
         
         # Remove systemd service files
-        rm -f "$HOME/.config/systemd/user/fplaunch-update.service"
-        rm -f "$HOME/.config/systemd/user/fplaunch-update.timer"
+        rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.service"
+        rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.timer"
         
         # Reload systemd daemon
         if command -v systemctl >/dev/null 2>&1; then
@@ -355,7 +357,7 @@ EOF
     
     # Simulate prerm execution
     local output
-    output=$("$test_home/prerm" remove 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local/share" PATH="$test_home/bin:$PATH" "$test_home/prerm" remove 2>&1)
     
     if echo "$output" | grep -q "Preparing to remove fplaunchwrapper"; then
         pass "Prerm script started correctly"
@@ -364,7 +366,7 @@ EOF
     fi
     
     # Simulate postrm execution
-    output=$("$test_home/postrm" remove 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local/share" PATH="$test_home/bin:$PATH" "$test_home/postrm" remove 2>&1)
     
     if echo "$output" | grep -q "Cleaning up fplaunchwrapper"; then
         pass "Postrm script started correctly"
@@ -408,7 +410,7 @@ set -e
 echo "Installing fplaunchwrapper RPM..."
 
 # Create config directory
-mkdir -p "$HOME/.config/flatpak-wrappers"
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers"
 
 # Create bin directory
 mkdir -p "$HOME/bin"
@@ -428,7 +430,7 @@ EOF
     
     # Simulate post-install execution
     local output
-    output=$("$test_home/post-install" 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local/share" PATH="$test_home/bin:$PATH" "$test_home/post-install" 2>&1)
     
     if echo "$output" | grep -q "Installing fplaunchwrapper RPM"; then
         pass "RPM post-install script started correctly"
@@ -443,7 +445,7 @@ EOF
     fi
     
     # Verify directories were created
-    if [ -d "$test_home/.config/flatpak-wrappers" ]; then
+    if [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers" ]; then
         pass "RPM config directory created"
     else
         fail "RPM config directory not created"
@@ -493,8 +495,8 @@ set -e
 echo "Cleaning up fplaunchwrapper RPM..."
 
 # Remove systemd service files
-rm -f "$HOME/.config/systemd/user/fplaunch-update.service"
-rm -f "$HOME/.config/systemd/user/fplaunch-update.timer"
+rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.service"
+rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/fplaunch-update.timer"
 
 # Reload systemd daemon
 if command -v systemctl >/dev/null 2>&1; then
@@ -517,7 +519,7 @@ EOF
     
     # Simulate pre-uninstall execution
     local output
-    output=$("$test_home/pre-uninstall" 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local/share" PATH="$test_home/bin:$PATH" "$test_home/pre-uninstall" 2>&1)
     
     if echo "$output" | grep -q "Preparing to remove fplaunchwrapper RPM"; then
         pass "RPM pre-uninstall script started correctly"
@@ -526,7 +528,7 @@ EOF
     fi
     
     # Simulate post-uninstall execution
-    output=$("$test_home/post-uninstall" 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local/share" PATH="$test_home/bin:$PATH" "$test_home/post-uninstall" 2>&1)
     
     if echo "$output" | grep -q "Cleaning up fplaunchwrapper RPM"; then
         pass "RPM post-uninstall script started correctly"
@@ -575,8 +577,8 @@ set -e
 echo "Upgrading fplaunchwrapper..."
 
 # Create backup of user data
-if [ -d "$HOME/.config/flatpak-wrappers" ]; then
-    cp -r "$HOME/.config/flatpak-wrappers" "$HOME/.config/flatpak-wrappers.backup"
+if [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers" ]; then
+    cp -r "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers" "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers.backup"
     echo "User data backed up"
 fi
 
@@ -584,15 +586,15 @@ fi
 echo "Upgrade operations complete"
 
 # Restore user data if backup exists
-if [ -d "$HOME/.config/flatpak-wrappers.backup" ]; then
+if [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers.backup" ]; then
     # Preserve user preferences and aliases during upgrade
     if [ -f "$HOME/.config/flatpak-wrappers.backup/testapp.pref" ]; then
-        cp "$HOME/.config/flatpak-wrappers.backup/testapp.pref" "$HOME/.config/flatpak-wrappers/"
+        cp "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers.backup/testapp.pref" "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers/"
         echo "User preferences restored"
     fi
     
     if [ -f "$HOME/.config/flatpak-wrappers.backup/aliases" ]; then
-        cp "$HOME/.config/flatpak-wrappers.backup/aliases" "$HOME/.config/flatpak-wrappers/"
+        cp "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers.backup/aliases" "${XDG_CONFIG_HOME:-$HOME/.config}/flatpak-wrappers/"
         echo "User aliases restored"
     fi
     
@@ -608,7 +610,7 @@ EOF
     
     # Simulate upgrade execution
     local output
-    output=$("$test_home/upgrade" 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local/share" PATH="$test_home/bin:$PATH" "$test_home/upgrade" 2>&1)
     
     if echo "$output" | grep -q "Upgrading fplaunchwrapper"; then
         pass "Upgrade script started correctly"
