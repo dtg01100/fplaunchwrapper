@@ -3,6 +3,10 @@
 
 set -e
 
+# Source shared test helpers for CI detection and safety
+# shellcheck source=./test_helpers.sh disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/test_helpers.sh"
+
 # Developer workstation safety check - never run as root
 if [ "$(id -u)" = "0" ] && ! is_ci; then
     echo "ERROR: Refusing to run tests as root for safety"
