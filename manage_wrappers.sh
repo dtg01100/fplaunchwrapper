@@ -80,6 +80,9 @@ Commands:
   info name            - Show detailed info for a wrapper
   manifest name [remote|local] - Show Flatpak manifest for a wrapper (default: remote)
   regenerate           - Regenerate all wrappers
+  discover             - Discover advanced features and examples
+  status               - Show configuration overview and status
+  doctor               - Run diagnostics to troubleshoot issues
   files                - List all generated files
   uninstall            - Remove all generated files and config
 
@@ -401,6 +404,275 @@ regenerate() {
     fi
 }
 
+discover_features() {
+    echo "🚀 fplaunchwrapper Features You Might Like"
+    echo ""
+    echo "📝 Pre-launch Scripts: Run commands before apps start"
+    echo "   Example: fplaunch-manage set-script firefox ~/scripts/firefox-setup.sh"
+    echo "   Use case: Set up VPN, mount drives, or configure environment"
+    echo ""
+    echo "🧹 Post-run Scripts: Clean up after apps exit"
+    echo "   Example: fplaunch-manage set-post-script firefox ~/scripts/firefox-cleanup.sh"
+    echo "   Use case: Disconnect VPN, backup data, or clean temp files"
+    echo ""
+    echo "🔧 Environment Variables: Set per-app environment"
+    echo "   Example: fplaunch-manage set-env firefox MOZ_ENABLE_WAYLAND 1"
+    echo "   Use case: Force Wayland, set themes, or configure paths"
+    echo ""
+    echo "🎯 Smart Preferences: Choose system vs Flatpak automatically"
+    echo "   Example: fplaunch-manage set-pref chrome system"
+    echo "   Use case: Prefer system Chrome when available, fallback to Flatpak"
+    echo ""
+    echo "🔍 Sandbox Management: Control Flatpak permissions"
+    echo "   Example: firefox --fpwrapper-edit-sandbox"
+    echo "   Use case: Grant filesystem access, enable devices, or network"
+    echo ""
+    echo "⚡ Quick Actions: Direct wrapper commands"
+    echo "   Example: firefox --fpwrapper-info"
+    echo "   Use case: Get info, edit sandbox, or reset permissions"
+    echo ""
+    echo "📚 Learn more:"
+    echo "   examples/script-usage-guide.md    # Script examples"
+    echo "   examples/pre-launch-examples.md    # Pre-launch ideas"
+    echo "   examples/post-run-examples.md     # Post-run ideas"
+    echo "   man fplaunchwrapper               # Full documentation"
+    echo ""
+    echo "💡 Try these commands to get started:"
+    echo "   fplaunch-manage list              # See your wrappers"
+    echo "   fplaunch-manage search browser    # Find browser apps"
+    echo "   firefox --fpwrapper-help          # See all options"
+}
+
+show_status() {
+    echo "📊 fplaunchwrapper Status"
+    echo ""
+    
+    # Installation info
+    echo "📁 Installation:"
+    echo "   Bin directory: $BIN_DIR"
+    echo "   Config directory: $CONFIG_DIR"
+    if [ -f "$CONFIG_DIR/bin_dir" ]; then
+        saved_bin_dir=$(cat "$CONFIG_DIR/bin_dir")
+        if [ "$saved_bin_dir" = "$BIN_DIR" ]; then
+            echo "   ✅ Configuration consistent"
+        else
+            echo "   ⚠️  Configuration mismatch (saved: $saved_bin_dir)"
+        fi
+    else
+        echo "   ⚠️  No saved configuration"
+    fi
+    echo ""
+    
+    # Wrapper statistics
+    local wrapper_count=0
+    local blocked_count=0
+    local alias_count=0
+    local script_count=0
+    local env_count=0
+    
+    for script in "$BIN_DIR"/*; do
+        if is_wrapper_file "$script" && [ -x "$script" ]; then
+            wrapper_count=$((wrapper_count + 1))
+        fi
+    done
+    
+    if [ -f "$CONFIG_DIR/blocklist" ]; then
+        blocked_count=$(wc -l < "$CONFIG_DIR/blocklist" 2>/dev/null || echo 0)
+    fi
+    
+    if [ -f "$CONFIG_DIR/aliases" ]; then
+        alias_count=$(wc -l < "$CONFIG_DIR/aliases" 2>/dev/null || echo 0)
+    fi
+    
+    if [ -d "$CONFIG_DIR/scripts" ]; then
+        script_count=$(find "$CONFIG_DIR/scripts" -name "*.sh" 2>/dev/null | wc -l)
+    fi
+    
+    env_count=$(find "$CONFIG_DIR" -name "*.env" 2>/dev/null | wc -l)
+    
+    echo "📦 Statistics:"
+    echo "   Wrappers: $wrapper_count generated"
+    echo "   Blocked: $blocked_count applications"
+    echo "   Aliases: $alias_count configured"
+    echo "   Scripts: $script_count pre/post scripts"
+    echo "   Environment files: $env_count"
+    echo ""
+    
+    # Auto-update status
+    local systemd_status="disabled"
+    local cron_status="disabled"
+    
+    UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    if [ -f "$UNIT_DIR/flatpak-wrappers.service" ]; then
+        if systemctl --user is-enabled flatpak-wrappers.service >/dev/null 2>&1; then
+            systemd_status="enabled"
+        fi
+    fi
+    
+    if crontab -l 2>/dev/null | grep -q "fplaunch-generate"; then
+        cron_status="enabled"
+    fi
+    
+    echo "🔄 Auto-updates:"
+    echo "   Systemd: $systemd_status"
+    echo "   Cron: $cron_status"
+    echo ""
+    
+    # Recent activity (if we can determine it)
+    echo "🔧 Recent activity:"
+    if [ -n "$BIN_DIR" ] && [ -d "$BIN_DIR" ]; then
+        local newest_wrapper
+        newest_wrapper=$(find "$BIN_DIR" -maxdepth 1 -type f -name "*" -executable -exec test -f {} \; -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+        if [ -n "$newest_wrapper" ]; then
+            echo "   Latest wrapper: $(basename "$newest_wrapper")"
+        fi
+    fi
+    
+    # PATH check
+    if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
+        echo "   ⚠️  $BIN_DIR not in PATH"
+    else
+        echo "   ✅ $BIN_DIR in PATH"
+    fi
+}
+
+run_doctor() {
+    echo "🔍 Running fplaunchwrapper diagnostics..."
+    echo ""
+    
+    local issues=0
+    
+    # Check installation
+    echo "📁 Checking installation..."
+    if [ ! -d "$BIN_DIR" ]; then
+        echo "   ❌ BIN_DIR not found: $BIN_DIR"
+        issues=$((issues + 1))
+    else
+        echo "   ✅ BIN_DIR exists: $BIN_DIR"
+    fi
+    
+    if [ ! -d "$CONFIG_DIR" ]; then
+        echo "   ❌ CONFIG_DIR not found: $CONFIG_DIR"
+        issues=$((issues + 1))
+    else
+        echo "   ✅ CONFIG_DIR exists: $CONFIG_DIR"
+    fi
+    
+    # Check permissions
+    echo ""
+    echo "🔐 Checking permissions..."
+    if [ ! -w "$BIN_DIR" ]; then
+        echo "   ❌ Cannot write to BIN_DIR: $BIN_DIR"
+        issues=$((issues + 1))
+    else
+        echo "   ✅ BIN_DIR writable"
+    fi
+    
+    if [ ! -w "$CONFIG_DIR" ]; then
+        echo "   ❌ Cannot write to CONFIG_DIR: $CONFIG_DIR"
+        issues=$((issues + 1))
+    else
+        echo "   ✅ CONFIG_DIR writable"
+    fi
+    
+    # Check PATH
+    echo ""
+    echo "🛤️  Checking PATH..."
+    if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
+        echo "   ⚠️  $BIN_DIR not in PATH"
+        echo "   💡 Add to PATH: export PATH=\"$BIN_DIR:\$PATH\""
+        issues=$((issues + 1))
+    else
+        echo "   ✅ $BIN_DIR in PATH"
+    fi
+    
+    # Check dependencies
+    echo ""
+    echo "📦 Checking dependencies..."
+    if ! command -v flatpak >/dev/null 2>&1; then
+        echo "   ❌ Flatpak not found"
+        echo "   💡 Install: sudo apt install flatpak (Ubuntu/Debian)"
+        issues=$((issues + 1))
+    else
+        echo "   ✅ Flatpak found: $(flatpak --version | head -1)"
+    fi
+    
+    # Check Flatpak remotes
+    if flatpak remotes >/dev/null 2>&1; then
+        if flatpak remotes | grep -q "flathub"; then
+            echo "   ✅ Flathub remote configured"
+        else
+            echo "   ⚠️  Flathub remote not found"
+            echo "   💡 Add: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo"
+            issues=$((issues + 1))
+        fi
+    fi
+    
+    # Check wrapper functionality
+    echo ""
+    echo "🧪 Testing wrapper functionality..."
+    local test_wrapper=""
+    for script in "$BIN_DIR"/*; do
+        if is_wrapper_file "$script" && [ -x "$script" ]; then
+            test_wrapper="$script"
+            break
+        fi
+    done
+    
+    if [ -n "$test_wrapper" ]; then
+        local wrapper_name
+        wrapper_name=$(basename "$test_wrapper")
+        if "$test_wrapper" --fpwrapper-info >/dev/null 2>&1; then
+            echo "   ✅ Wrapper test passed: $wrapper_name"
+        else
+            echo "   ❌ Wrapper test failed: $wrapper_name"
+            issues=$((issues + 1))
+        fi
+    else
+        echo "   ⚠️  No wrappers found to test"
+        echo "   💡 Run: fplaunch-generate $BIN_DIR"
+    fi
+    
+    # Check auto-updates
+    echo ""
+    echo "🔄 Checking auto-updates..."
+    local update_found=false
+    
+    UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    if [ -f "$UNIT_DIR/flatpak-wrappers.service" ]; then
+        if systemctl --user is-enabled flatpak-wrappers.service >/dev/null 2>&1; then
+            echo "   ✅ Systemd auto-updates enabled"
+            update_found=true
+        else
+            echo "   ⚠️  Systemd service exists but not enabled"
+        fi
+    fi
+    
+    if crontab -l 2>/dev/null | grep -q "fplaunch-generate"; then
+        echo "   ✅ Cron auto-updates enabled"
+        update_found=true
+    fi
+    
+    if [ "$update_found" = false ]; then
+        echo "   ⚠️  No auto-updates configured"
+        echo "   💡 Enable: fplaunch-setup-systemd"
+    fi
+    
+    # Summary
+    echo ""
+    if [ $issues -eq 0 ]; then
+        echo "🎉 All checks passed! fplaunchwrapper is properly configured."
+    else
+        echo "⚠️  Found $issues issue(s) that may affect functionality."
+        echo ""
+        echo "💡 Common fixes:"
+        echo "   - Add to PATH: export PATH=\"$BIN_DIR:\$PATH\""
+        echo "   - Install Flatpak: sudo apt install flatpak"
+        echo "   - Add Flathub: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo"
+        echo "   - Generate wrappers: fplaunch-generate $BIN_DIR"
+    fi
+}
+
 # Main command dispatcher
 if [ $# -eq 0 ]; then
     usage
@@ -531,6 +803,15 @@ else
             ;;
         regenerate)
             regenerate
+            ;;
+        discover)
+            discover_features
+            ;;
+        status)
+            show_status
+            ;;
+        doctor)
+            run_doctor
             ;;
         files)
             list_files

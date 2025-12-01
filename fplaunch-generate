@@ -90,27 +90,40 @@ trap 'release_lock' EXIT
 
 # Get list of installed Flatpak app IDs (user and system)
 if ! FLATPAK_BIN=$(find_executable flatpak 2>/dev/null); then
-    echo "Error: Flatpak not found in PATH."
-    echo "Please install Flatpak or ensure it's in your PATH."
+    echo "❌ Flatpak not found"
     echo ""
-    echo "Installation instructions:"
-    echo "  Ubuntu/Debian: sudo apt install flatpak"
-    echo "  Fedora: sudo dnf install flatpak"
-    echo "  Arch: sudo pacman -S flatpak"
-    echo "  Or visit: https://flatpak.org/setup/"
+    echo "📦 Install Flatpak first:"
+    echo "  Ubuntu/Debian: sudo apt install flatpak && sudo apt install flatpak-plugin-gnome"
+    echo "  Fedora:         sudo dnf install flatpak"
+    echo "  Arch:           sudo pacman -S flatpak"
+    echo "  openSUSE:       sudo zypper install flatpak"
+    echo ""
+    echo "🌐 Or visit: https://flatpak.org/setup/"
+    echo ""
+    echo "💡 After installation, run: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo"
     exit 1
 fi
 
 if ! installed_ids=$( ("$FLATPAK_BIN" list --app --columns=application 2>/dev/null; "$FLATPAK_BIN" list --app --columns=application --system 2>/dev/null) | sort | uniq ); then
-    echo "Error: Flatpak command failed."
-    echo "Please check Flatpak installation."
+    echo "❌ Flatpak command failed"
     echo ""
-    echo "Troubleshooting:"
-    echo "  - Run: $FLATPAK_BIN --version"
-    echo "  - Run: $FLATPAK_BIN list --app"
-    echo "  - Check if Flatpak service is running"
+    echo "🔧 Troubleshooting steps:"
+    echo "  1. Check Flatpak version: $FLATPAK_BIN --version"
+    echo "  2. List apps manually: $FLATPAK_BIN list --app"
+    echo "  3. Check if Flatpak service is running:"
+    echo "     systemctl --user status flatpak-session-helper"
+    echo "  4. Restart Flatpak service:"
+    echo "     systemctl --user restart flatpak-session-helper"
+    echo ""
+    echo "💡 If you just installed Flatpak, you may need to:"
+    echo "   - Add Flathub remote: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo"
+    echo "   - Install some apps: flatpak install flathub org.mozilla.firefox"
     exit 1
 fi
+
+# Count installed apps
+app_count=$(echo "$installed_ids" | grep -c .)
+echo "🔍 Found $app_count Flatpak applications"
 
 # Get list of existing wrapper scripts
 shopt -s nullglob
@@ -118,7 +131,8 @@ existing_scripts=("$BIN_DIR"/*)
 shopt -u nullglob
 
 # Cleanup: Remove wrappers for uninstalled apps
-# Identify wrapper files strictly by checking for the marker in the header
+echo "🧹 Cleaning up obsolete wrappers..."
+local removed_count=0
 for script in "${existing_scripts[@]}"; do
     if is_wrapper_file "$script"; then
         # Extract ID from script content
@@ -130,7 +144,8 @@ for script in "${existing_scripts[@]}"; do
             if ! rm "$script" 2>/dev/null; then
                 echo "Warning: Could not remove wrapper: $script"
             else
-                echo "Removed obsolete wrapper: $script_name"
+                echo "   🗑️  Removed obsolete wrapper: $script_name"
+                removed_count=$((removed_count + 1))
             fi
             # Remove preference file with error handling
             pref_file="$CONFIG_DIR/$script_name.pref"
@@ -157,10 +172,22 @@ for script in "${existing_scripts[@]}"; do
     fi
 done
 
+if [ $removed_count -eq 0 ]; then
+    echo "   ✅ No obsolete wrappers found"
+else
+    echo "   🗑️  Removed $removed_count obsolete wrapper(s)"
+fi
+
 # Create wrappers for installed apps
+echo "📦 Generating wrappers..."
+local created_count=0
+local updated_count=0
+local skipped_count=0
+local blocked_count=0
+
 # Simple collision detection using temp file with error handling
 if ! COLLISION_FILE=$(safe_mktemp "collision.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /tmp)"); then
-    echo "Error: Cannot create temporary file for collision detection"
+    echo "❌ Cannot create temporary file for collision detection"
     echo "Please check file permissions and disk space"
     echo ""
     echo "Alternative: You can set a custom temp directory by setting:"
@@ -175,14 +202,16 @@ while read -r id; do
     
     # Check blocklist
     if grep -q "^$id$" "$CONFIG_DIR/blocklist" 2>/dev/null; then
-        echo "Skipping blocked $id"
+        echo "   🚫 Skipping blocked $id"
+        blocked_count=$((blocked_count + 1))
         continue
     fi
     
     name=$(sanitize_id_to_name "$id")
     # Enforce allowed characters and disallow leading/trailing hyphens
     if [ -z "$name" ] || [[ "$name" =~ [^a-z0-9_\-] ]] || [[ "$name" == -* ]] || [[ "$name" == *- ]]; then
-        echo "Skipping invalid name for $id"
+        echo "   ⚠️  Skipping invalid name for $id: $name"
+        skipped_count=$((skipped_count + 1))
         continue
     fi
     
@@ -190,21 +219,24 @@ while read -r id; do
     
     # Simple collision detection
     if grep -q "^$name:" "$COLLISION_FILE"; then
-        echo "WARNING: Collision for '$name' - skipping $id"
+        echo "   ⚠️  Name collision for '$name' - skipping $id"
+        skipped_count=$((skipped_count + 1))
         continue
     fi
     echo "$name:$id" >> "$COLLISION_FILE"
     
     # Check for collision with existing wrapper from different app
+    local wrapper_existed=false
     if [ -f "$script_path" ] && grep -q "Generated by fplaunchwrapper" "$script_path"; then
+        wrapper_existed=true
         existing_id=$(grep '^ID=' "$script_path" | cut -d'"' -f2)
         if [ "$existing_id" != "$id" ]; then
-            echo "WARNING: Name collision with existing wrapper '$name'"
-            echo "  Existing: $existing_id"
-            echo "  New:      $id"
-            echo "  Skipping $id to preserve existing wrapper."
-            echo "  To replace, remove the existing wrapper first with: fplaunch-manage remove $name"
+            echo "   ⚠️  Name collision with existing wrapper '$name'"
+            echo "      Existing: $existing_id"
+            echo "      New:      $id"
+            echo "      💡 To replace: fplaunch-manage remove $name"
             wrapper_collision_log[$name]="${wrapper_collision_log[$name]} $id"
+            skipped_count=$((skipped_count + 1))
             continue
         fi
     fi
@@ -672,18 +704,33 @@ fi
 fi
 EOF
     chmod +x "$script_path"
-    echo "Created/updated wrapper: $name"
+    
+    if [ "$wrapper_existed" = true ]; then
+        echo "   ✅ Updated wrapper: $name"
+        updated_count=$((updated_count + 1))
+    else
+        echo "   ✅ Created wrapper: $name"
+        created_count=$((created_count + 1))
+    fi
 done < <(echo "$installed_ids")
+
+# Report generation summary
+echo ""
+echo "📊 Generation Summary:"
+echo "   ✅ Created: $created_count new wrappers"
+echo "   🔄 Updated: $updated_count existing wrappers"
+echo "   🚫 Blocked: $blocked_count applications"
+echo "   ⚠️  Skipped: $skipped_count applications"
 
 # Report collision summary if any occurred
 if [ ${#wrapper_collision_log[@]} -gt 0 ]; then
     echo ""
-    echo "=== Collision Summary ==="
-    echo "${#wrapper_collision_log[@]} wrapper name(s) had collisions:"
+    echo "⚠️  Name Collisions:"
+    echo "   ${#wrapper_collision_log[@]} wrapper name(s) had collisions:"
     for name in "${!wrapper_collision_log[@]}"; do
-        echo "  $name: Skipped apps:${wrapper_collision_log[$name]}"
+        echo "     $name: Skipped apps${wrapper_collision_log[$name]}"
     done
-    echo "Use 'fplaunch-manage set-alias' to create alternative names for skipped apps."
+    echo "   💡 Use 'fplaunch-manage set-alias' to create alternative names"
 fi
 
 # Clean up collision file
@@ -691,4 +738,10 @@ if [ -f "$COLLISION_FILE" ]; then
     rm -f "$COLLISION_FILE" 2>/dev/null || echo "Warning: Could not clean up collision file"
 fi
 
-echo "Flatpak wrapper generation complete."
+echo ""
+echo "🎉 Flatpak wrapper generation complete!"
+echo ""
+echo "💡 Next steps:"
+echo "   fplaunch-manage list              # See your wrappers"
+echo "   fplaunch-manage discover           # Discover features"
+echo "   firefox --fpwrapper-help           # See wrapper options"

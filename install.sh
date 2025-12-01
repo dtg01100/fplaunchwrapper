@@ -113,10 +113,65 @@ chmod +x "$BIN_DIR/fplaunch-manage"
 cp "$SCRIPT_DIR/fplaunch-cleanup" "$BIN_DIR/fplaunch-cleanup" 2>/dev/null || true
 chmod +x "$BIN_DIR/fplaunch-cleanup" 2>/dev/null || true
 
+setup_path() {
+    if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
+        # Detect shell and add to appropriate config file
+        local shell_config=""
+        local shell_name=""
+        
+        # Determine current shell
+        if [ -n "${ZSH_VERSION:-}" ] || [ "$SHELL" = "/bin/zsh" ] || [ "$SHELL" = "/usr/bin/zsh" ]; then
+            shell_name="zsh"
+            if [ -f "$HOME/.zshrc" ]; then
+                shell_config="$HOME/.zshrc"
+            elif [ -f "$HOME/.zprofile" ]; then
+                shell_config="$HOME/.zprofile"
+            fi
+        elif [ -n "${BASH_VERSION:-}" ] || [ "$SHELL" = "/bin/bash" ] || [ "$SHELL" = "/usr/bin/bash" ]; then
+            shell_name="bash"
+            if [ -f "$HOME/.bashrc" ]; then
+                shell_config="$HOME/.bashrc"
+            elif [ -f "$HOME/.bash_profile" ]; then
+                shell_config="$HOME/.bash_profile"
+            fi
+        fi
+        
+        # If no config file found, create one based on shell
+        if [ -z "$shell_config" ]; then
+            if [ "$shell_name" = "zsh" ]; then
+                shell_config="$HOME/.zshrc"
+            else
+                shell_config="$HOME/.bashrc"
+            fi
+        fi
+        
+        # Add PATH to config file
+        echo "" >> "$shell_config"
+        echo "# Added by fplaunchwrapper installation" >> "$shell_config"
+        echo "export PATH=\"$BIN_DIR:\$PATH\"" >> "$shell_config"
+        
+        echo "✅ Added $BIN_DIR to PATH in $shell_config"
+        echo "💡 Run 'source $shell_config' or restart your terminal to use wrappers immediately"
+    else
+        echo "✅ $BIN_DIR is already in PATH"
+    fi
+}
+
+setup_path
+
 mkdir -p "$HOME/.bashrc.d"
 cp "$SCRIPT_DIR/fplaunch_completion.bash" "$HOME/.bashrc.d/fplaunch_completion.bash"
 echo "Bash completion installed to ~/.bashrc.d/fplaunch_completion.bash"
-echo "To enable, add 'source ~/.bashrc.d/fplaunch_completion.bash' to your ~/.bashrc"
+
+# Auto-source completion if not already done
+if ! grep -q "fplaunch_completion.bash" "$HOME/.bashrc" 2>/dev/null; then
+    echo "" >> "$HOME/.bashrc"
+    echo "# fplaunchwrapper bash completion" >> "$HOME/.bashrc"
+    echo "source ~/.bashrc.d/fplaunch_completion.bash" >> "$HOME/.bashrc"
+    echo "✅ Bash completion auto-enabled in ~/.bashrc"
+else
+    echo "✅ Bash completion already configured"
+fi
 
 # Install man pages to user's local man directory
 if [ -d "$SCRIPT_DIR/docs/man" ]; then
@@ -133,12 +188,25 @@ if [ -d "$SCRIPT_DIR/docs/man" ]; then
     fi
 fi
 
+show_welcome_message() {
+    echo ""
+    echo "🎉 Welcome to fplaunchwrapper!"
+    echo ""
+    echo "Quick start:"
+    echo "  fplaunch-manage list          # See your wrappers"
+    echo "  firefox                       # Launch Firefox (if installed)"
+    echo "  firefox --fpwrapper-help      # See wrapper options"
+    echo ""
+    echo "Learn more:"
+    echo "  man fplaunchwrapper           # Full documentation"
+    echo "  fplaunch-manage help          # Command help"
+    echo "  fplaunch-manage discover      # Discover features"
+    echo ""
+    echo "💡 Pro tip: Use 'fplaunch-manage discover' to see advanced features!"
+}
+
 echo ""
 echo "Installation complete!"
 echo "Wrappers are in $BIN_DIR"
 echo ""
-echo "For help:"
-echo "  - man fplaunchwrapper    (overview)"
-echo "  - man fplaunch-manage    (command reference)"
-echo "  - fplaunch-manage help   (quick help)"
-echo "  - README.md in this directory"
+show_welcome_message
