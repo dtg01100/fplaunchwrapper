@@ -149,7 +149,8 @@ case "$1" in
                 ;;
             "is-enabled")
                 service="$2"
-                if [ -f "$STATE_DIR/enabled-$service" ]; then
+                unit_file="$HOME/.config/systemd/user/$service"
+                if [ -f "$unit_file" ] && [ -f "$STATE_DIR/enabled-$service" ]; then
                     echo "enabled"
                     exit 0
                 else
@@ -539,7 +540,7 @@ EOF
     
     # Run setup script
     local output
-    output=$("$test_home/bin/fplaunch-setup-systemd" 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" PATH="$test_home/bin:$PATH" "$test_home/bin/fplaunch-setup-systemd" 2>&1)
     
     if echo "$output" | grep -q "Systemd integration setup complete"; then
         pass "Setup script completed successfully"

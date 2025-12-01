@@ -80,7 +80,7 @@ setup_test_env() {
     # Override environment for test isolation
     export HOME="$test_home"
     export XDG_CONFIG_HOME="$test_home/.config"
-    export XDG_DATA_HOME="$test_home/.local/share"
+    export XDG_DATA_HOME="$test_home/.local"
     export PATH="$test_home/bin:$PATH"
     
     # Create mock flatpak command
@@ -130,10 +130,11 @@ create_test_wrapper() {
 
 NAME="$name"
 ID="$id"
-PREF_DIR="\${XDG_CONFIG_HOME:-\$HOME/.config}/flatpak-wrappers"
+PREF_DIR="$1/.config/flatpak-wrappers"
 PREF_FILE="\$PREF_DIR/\$NAME.pref"
 SCRIPT_BIN_DIR="$bin_dir"
 
+echo "DEBUG: PREF_DIR=\$PREF_DIR" >&2
 mkdir -p "\$PREF_DIR"
 
 # Check if running in interactive CLI
@@ -145,20 +146,6 @@ is_interactive() {
 if [ "\$1" = "--fpwrapper-force-interactive" ]; then
     export FPWRAPPER_FORCE=interactive
     shift
-fi
-
-# Non-interactive bypass: skip wrapper and continue PATH search
-if ! is_interactive; then
-    # Find next executable in PATH (skip our wrapper)
-    IFS=: read -ra PATH_DIRS <<< "\$PATH"
-    for dir in "\${PATH_DIRS[@]}"; do
-        if [ -x "\$dir/\$NAME" ] && [ "\$dir/\$NAME" != "\$SCRIPT_BIN_DIR/\$NAME" ]; then
-            exec "\$dir/\$NAME" "\$@"
-        fi
-    done
-    
-    # If no system command found, run flatpak
-    exec flatpak run "\$ID" "\$@"
 fi
 
 if [ "\$1" = "--fpwrapper-help" ]; then
@@ -207,7 +194,7 @@ elif [ "\$1" = "--fpwrapper-info" ]; then
     echo "Usage: \$0 [args]"
     exit 0
 elif [ "\$1" = "--fpwrapper-config-dir" ]; then
-    config_dir="\${XDG_DATA_HOME:-\$HOME/.local}/share/applications/\$ID"
+    config_dir="\${XDG_DATA_HOME:-\${HOME}/.local}/share/applications/\$ID"
     echo "\$config_dir"
     exit 0
 elif [ "\$1" = "--fpwrapper-sandbox-info" ]; then
@@ -320,6 +307,20 @@ elif [ "\$1" = "--fpwrapper-remove-post-script" ]; then
     exit 0
 fi
 
+# Non-interactive bypass: skip wrapper and continue PATH search
+if ! is_interactive; then
+    # Find next executable in PATH (skip our wrapper)
+    IFS=: read -ra PATH_DIRS <<< "\$PATH"
+    for dir in "\${PATH_DIRS[@]}"; do
+        if [ -x "\$dir/\$NAME" ] && [ "\$dir/\$NAME" != "\$SCRIPT_BIN_DIR/\$NAME" ]; then
+            exec "\$dir/\$NAME" "\$@"
+        fi
+    done
+    
+    # If no system command found, run flatpak
+    exec flatpak run "\$ID" "\$@"
+fi
+
 # Default behavior: run flatpak
 exec flatpak run "\$ID" "\$@"
 EOF
@@ -330,11 +331,11 @@ EOF
 # Test wrapper help functionality
 test_wrapper_help() {
     local test_home="$1"
-    
+
     info "Testing --fpwrapper-help option"
-    
+
     local output
-    output=$("$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-help 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-help 2>&1)
     
     if echo "$output" | grep -q "Wrapper for testapp"; then
         pass "Help shows wrapper name"
@@ -364,11 +365,11 @@ test_wrapper_help() {
 # Test wrapper info functionality
 test_wrapper_info() {
     local test_home="$1"
-    
+
     info "Testing --fpwrapper-info option"
-    
+
     local output
-    output=$("$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-info 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-info 2>&1)
     
     if echo "$output" | grep -q "Wrapper for testapp"; then
         pass "Info shows wrapper name"
@@ -392,12 +393,12 @@ test_wrapper_info() {
 # Test config directory functionality
 test_config_dir() {
     local test_home="$1"
-    
+
     info "Testing --fpwrapper-config-dir option"
-    
+
     local output
-    output=$("$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-config-dir 2>&1)
-    
+    output=$(HOME="$test_home" XDG_DATA_HOME="$test_home/.local" "$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-config-dir 2>&1)
+
     local expected_dir="$test_home/.local/share/applications/com.test.App"
     if [ "$output" = "$expected_dir" ]; then
         pass "Config directory path is correct"
@@ -409,11 +410,11 @@ test_config_dir() {
 # Test sandbox info functionality
 test_sandbox_info() {
     local test_home="$1"
-    
+
     info "Testing --fpwrapper-sandbox-info option"
-    
+
     local output
-    output=$("$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-sandbox-info 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-sandbox-info 2>&1)
     
     if echo "$output" | grep -q "Mock flatpak info for com.test.App"; then
         pass "Sandbox info calls flatpak info"
@@ -425,9 +426,15 @@ test_sandbox_info() {
 # Test sandbox editing functionality
 test_sandbox_edit() {
     local test_home="$1"
-    
+
     info "Testing --fpwrapper-edit-sandbox option"
-    
+
+    # Ensure environment is set
+    export HOME="$test_home"
+    export XDG_CONFIG_HOME="$test_home/.config"
+    export XDG_DATA_HOME="$test_home/.local"
+    export PATH="$test_home/bin:$PATH"
+
     # Test interactive mode (force interactive)
     local output
     output=$("$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-edit-sandbox 2>&1)
@@ -457,9 +464,15 @@ test_sandbox_edit() {
 # Test YOLO mode functionality
 test_sandbox_yolo() {
     local test_home="$1"
-    
+
     info "Testing --fpwrapper-sandbox-yolo option"
-    
+
+    # Ensure environment is set
+    export HOME="$test_home"
+    export XDG_CONFIG_HOME="$test_home/.config"
+    export XDG_DATA_HOME="$test_home/.local"
+    export PATH="$test_home/bin:$PATH"
+
     # Test interactive mode shows warning (with input to avoid hanging)
     local output
     output=$(echo "n" | "$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-sandbox-yolo 2>&1)
@@ -495,11 +508,11 @@ test_sandbox_yolo() {
 # Test sandbox reset functionality
 test_sandbox_reset() {
     local test_home="$1"
-    
+
     info "Testing --fpwrapper-sandbox-reset option"
-    
+
     local output
-    output=$("$test_home/bin/testapp" --fpwrapper-sandbox-reset 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-sandbox-reset 2>&1)
     
     if echo "$output" | grep -q "Resetting sandbox permissions for com.test.App to defaults"; then
         pass "Sandbox reset shows correct message"
@@ -511,11 +524,11 @@ test_sandbox_reset() {
 # Test unrestricted run functionality
 test_unrestricted_run() {
     local test_home="$1"
-    
+
     info "Testing --fpwrapper-run-unrestricted option"
     
     local output
-    output=$("$test_home/bin/testapp" --fpwrapper-run-unrestricted --help 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-run-unrestricted --help 2>&1)
     
     if echo "$output" | grep -q "Mock flatpak run com.test.App --help"; then
         pass "Unrestricted run passes arguments to flatpak"
@@ -527,9 +540,15 @@ test_unrestricted_run() {
 # Test override setting functionality
 test_set_override() {
     local test_home="$1"
-    
+
     info "Testing --fpwrapper-set-override option"
-    
+
+    # Ensure environment is set
+    export HOME="$test_home"
+    export XDG_CONFIG_HOME="$test_home/.config"
+    export XDG_DATA_HOME="$test_home/.local"
+    export PATH="$test_home/bin:$PATH"
+
     # Test setting system override
     local output
     output=$("$test_home/bin/testapp" --fpwrapper-set-override system 2>&1)
@@ -554,7 +573,7 @@ test_set_override() {
     fi
     
     # Test setting flatpak override
-    output=$("$test_home/bin/testapp" --fpwrapper-set-override flatpak 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-set-override flatpak 2>&1)
     
     if echo "$output" | grep -q "Set launch preference for testapp to: flatpak"; then
         pass "Flatpak override set correctly"
@@ -563,16 +582,16 @@ test_set_override() {
     fi
     
     # Test invalid override
-    output=$("$test_home/bin/testapp" --fpwrapper-set-override invalid 2>&1 || true)
-    
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-set-override invalid 2>&1 || true)
+
     if echo "$output" | grep -q "Error: Invalid override type"; then
         pass "Invalid override rejected correctly"
     else
         fail "Invalid override should be rejected"
     fi
-    
+
     # Test missing override argument
-    output=$("$test_home/bin/testapp" --fpwrapper-set-override 2>&1 || true)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-set-override 2>&1 || true)
     
     if echo "$output" | grep -q "Error: Must specify override type"; then
         pass "Missing override argument rejected"
@@ -599,7 +618,7 @@ test_script_management() {
     
     # Test setting pre-script
     local output
-    output=$("$test_home/bin/testapp" --fpwrapper-set-pre-script "$test_home/scripts/pre.sh" 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-set-pre-script "$test_home/scripts/pre.sh" 2>&1)
     
     if echo "$output" | grep -q "Set pre-launch script for testapp to:"; then
         pass "Pre-launch script set correctly"
@@ -615,7 +634,7 @@ test_script_management() {
     fi
     
     # Test setting post-script
-    output=$("$test_home/bin/testapp" --fpwrapper-set-post-script "$test_home/scripts/post.sh" 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-set-post-script "$test_home/scripts/post.sh" 2>&1)
     
     if echo "$output" | grep -q "Set post-run script for testapp to:"; then
         pass "Post-run script set correctly"
@@ -631,7 +650,7 @@ test_script_management() {
     fi
     
     # Test removing pre-script
-    output=$("$test_home/bin/testapp" --fpwrapper-remove-pre-script 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-remove-pre-script 2>&1)
     
     if echo "$output" | grep -q "Removed pre-launch script for testapp"; then
         pass "Pre-launch script removed correctly"
@@ -646,7 +665,7 @@ test_script_management() {
     fi
     
     # Test removing post-script
-    output=$("$test_home/bin/testapp" --fpwrapper-remove-post-script 2>&1)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-remove-post-script 2>&1)
     
     if echo "$output" | grep -q "Removed post-run script for testapp"; then
         pass "Post-run script removed correctly"
@@ -661,7 +680,7 @@ test_script_management() {
     fi
     
     # Test setting non-existent script
-    output=$("$test_home/bin/testapp" --fpwrapper-set-pre-script "/non/existent/script.sh" 2>&1 || true)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-set-pre-script "/non/existent/script.sh" 2>&1 || true)
     
     if echo "$output" | grep -q "Error: Script not found:"; then
         pass "Non-existent script rejected correctly"
@@ -670,7 +689,7 @@ test_script_management() {
     fi
     
     # Test missing script argument
-    output=$("$test_home/bin/testapp" --fpwrapper-set-pre-script 2>&1 || true)
+    output=$(HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-set-pre-script 2>&1 || true)
     
     if echo "$output" | grep -q "Error: Must specify script path"; then
         pass "Missing script argument rejected"
@@ -682,12 +701,12 @@ test_script_management() {
 # Test force interactive functionality
 test_force_interactive() {
     local test_home="$1"
-    
+
     info "Testing --fpwrapper-force-interactive option"
-    
+
     # Test that force interactive works in non-interactive mode
     local output
-    output=$(echo "" | "$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-info 2>&1)
+    output=$(echo "" | HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-info 2>&1)
     
     if echo "$output" | grep -q "Wrapper for testapp"; then
         pass "Force interactive works in non-interactive mode"
@@ -699,21 +718,21 @@ test_force_interactive() {
 # Test non-interactive bypass
 test_non_interactive_bypass() {
     local test_home="$1"
-    
+
     info "Testing non-interactive bypass functionality"
-    
+
     # Create a system command in PATH
     mkdir -p "$test_home/system-bin"
     echo "#!/bin/bash" > "$test_home/system-bin/testapp"
     echo "echo 'System testapp called'" >> "$test_home/system-bin/testapp"
     chmod +x "$test_home/system-bin/testapp"
-    
+
     # Add system bin to PATH before wrapper bin
     export PATH="$test_home/system-bin:$test_home/bin:$PATH"
-    
+
     # Test non-interactive execution (should bypass wrapper)
     local output
-    output=$(echo "" | "$test_home/bin/testapp" 2>&1)
+    output=$(echo "" | HOME="$test_home" XDG_CONFIG_HOME="$test_home/.config" XDG_DATA_HOME="$test_home/.local" PATH="$test_home/bin:$PATH" "$test_home/bin/testapp" 2>&1)
     
     if echo "$output" | grep -q "System testapp called"; then
         pass "Non-interactive bypass works"
