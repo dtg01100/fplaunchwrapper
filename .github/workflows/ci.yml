@@ -35,6 +35,15 @@ jobs:
         sudo apt-get install -y flatpak dialog
         sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     
+    - name: Test installation
+      run: |
+        # Ubuntu runs as non-root, so we can install directly
+        CI=1 bash install.sh
+        # Verify installation
+        test -f ~/.local/bin/fplaunch-manage
+        test -f ~/.local/bin/fplaunch-generate
+        test -f ~/.local/bin/fplaunch-setup-systemd
+    
     - name: Run test suite
       run: |
         cd tests
@@ -67,7 +76,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        dnf install -y flatpak dialog bash python3
+        dnf install -y flatpak dialog bash python3 util-linux
         flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     
     - name: Run test suite
@@ -96,7 +105,7 @@ jobs:
     - name: Install dependencies
       run: |
         apt-get update
-        apt-get install -y flatpak dialog bash git python3
+        apt-get install -y flatpak dialog bash git python3 util-linux
         flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     
     - name: Run test suite
@@ -123,7 +132,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pacman -Syu --noconfirm flatpak dialog bash git python
+        pacman -Syu --noconfirm flatpak dialog bash git python util-linux
         flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     
     - name: Run test suite
