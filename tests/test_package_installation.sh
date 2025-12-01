@@ -45,6 +45,9 @@ info() {
 }
 
 # Developer workstation safety check
+# Source shared helpers for CI and safety
+# shellcheck source=./test_helpers.sh disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/test_helpers.sh"
 ensure_developer_safety() {
     # Never run on production systems
     if ! is_ci && [ "${TESTING:-}" != "1" ]; then
@@ -66,6 +69,10 @@ ensure_developer_safety() {
     # Set testing environment
     export TESTING=1
     export CI=1
+}
+
+# Ensure developer safety before proceeding
+ensure_developer_safety
 }
 
 # Create isolated test environment

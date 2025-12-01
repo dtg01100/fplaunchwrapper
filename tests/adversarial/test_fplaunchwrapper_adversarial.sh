@@ -99,8 +99,9 @@ if [ "$(id -u)" = "0" ] && ! is_ci && [ "${TESTING:-}" != "1" ]; then
 fi
 
 # Set testing environment
-export TESTING=1
-export CI=1
+    export TESTING=1
+    # Do not force CI for adversarial tests; helper will set CI correctly if in CI
+    export CI=1
 
 # Create isolated test environment
 setup_adversarial_env() {
