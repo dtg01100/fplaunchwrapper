@@ -101,7 +101,7 @@ echo -e "${YELLOW}⚠️  Proceeding with robustness adversarial testing...${NC}
 echo ""
 
 # Developer workstation safety check - NEVER run as root (skip for TESTING)
-if [ "${SKIP_ROOT_CHECK:-}" != "1" ] && [ "${TESTING:-}" != "1" ] && [ -z "${CI:-}" ] && [ "$(id -u)" = "0" ]; then
+if [ "${SKIP_ROOT_CHECK:-}" != "1" ] && [ "${TESTING:-}" != "1" ] && ! is_ci && [ "$(id -u)" = "0" ]; then
     echo -e "${RED}ERROR: Refusing to run adversarial tests as root${NC}"
     echo -e "${RED}These tests are designed to find robustness issues - running as root is dangerous${NC}"
     exit 1

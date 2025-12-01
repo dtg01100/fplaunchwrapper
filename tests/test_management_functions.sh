@@ -11,7 +11,7 @@
 # - Export/import can be used for data exfiltration or injection
 
 # Developer workstation safety check - never run as root
-if [ "$(id -u)" = "0" ] && [ -z "${CI:-}" ] && [ "${TESTING:-}" != "1" ]; then
+if [ "$(id -u)" = "0" ] && ! is_ci && [ "${TESTING:-}" != "1" ]; then
     echo "ERROR: Refusing to run tests as root for safety"
     echo "This project should never be run with root privileges"
     exit 1
