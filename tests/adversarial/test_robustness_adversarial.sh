@@ -86,13 +86,13 @@ echo -e "${RED}╚════════════════════�
 echo ""
 
 # Interactive confirmation (skip in CI/automated environments)
-if [ -z "${ADVERSARIAL_CONFIRM:-}" ] && [ "${CI:-}" != "1" ] && [ "${TESTING:-}" != "1" ]; then
+if [ -z "${ADVERSARIAL_CONFIRM:-}" ] && [ -z "${CI:-}" ] && [ "${TESTING:-}" != "1" ]; then
     read -p "Do you understand the risks and want to proceed? (type 'I UNDERSTAND THE RISKS'): " confirmation
     if [ "$confirmation" != "I UNDERSTAND THE RISKS" ]; then
         echo -e "${RED}Adversarial test cancelled. Confirmation not provided.${NC}"
         exit 1
     fi
-elif [ -z "${ADVERSARIAL_CONFIRM:-}" ] && ([ "${CI:-}" == "1" ] || [ "${TESTING:-}" == "1" ]); then
+elif [ -z "${ADVERSARIAL_CONFIRM:-}" ] && ( [ -n "${CI:-}" ] || [ "${TESTING:-}" == "1" ] ); then
     echo -e "${YELLOW}Running in automated mode - risks acknowledged${NC}"
 fi
 
@@ -101,7 +101,7 @@ echo -e "${YELLOW}⚠️  Proceeding with robustness adversarial testing...${NC}
 echo ""
 
 # Developer workstation safety check - NEVER run as root (skip for TESTING)
-if [ "${SKIP_ROOT_CHECK:-}" != "1" ] && [ "${TESTING:-}" != "1" ] && [ "${CI:-}" != "1" ] && [ "$(id -u)" = "0" ]; then
+if [ "${SKIP_ROOT_CHECK:-}" != "1" ] && [ "${TESTING:-}" != "1" ] && [ -z "${CI:-}" ] && [ "$(id -u)" = "0" ]; then
     echo -e "${RED}ERROR: Refusing to run adversarial tests as root${NC}"
     echo -e "${RED}These tests are designed to find robustness issues - running as root is dangerous${NC}"
     exit 1

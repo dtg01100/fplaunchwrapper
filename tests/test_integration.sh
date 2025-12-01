@@ -3,7 +3,7 @@
 # Self-contained end-to-end testing designed to break the system
 
 # Developer workstation safety check - never run as root
-if [ "$(id -u)" = "0" ] && [ "${CI:-}" != "1" ]; then
+if [ "$(id -u)" = "0" ] && [ -z "${CI:-}" ] && [ "${TESTING:-}" != "1" ]; then
     echo "ERROR: Refusing to run tests as root for safety"
     echo "This project should never be run with root privileges"
     exit 1

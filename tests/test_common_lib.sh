@@ -17,7 +17,7 @@
 # Developer workstation safety check
 ensure_developer_safety() {
     # Never run on production systems
-    if [ "${CI:-}" != "1" ] && [ "${TESTING:-}" != "1" ]; then
+    if [ -z "${CI:-}" ] && [ "${TESTING:-}" != "1" ]; then
         # Check if we're in a development environment
         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
         if [ ! -f "$SCRIPT_DIR/README.md" ] || [ ! -d "$SCRIPT_DIR/tests" ]; then
@@ -28,7 +28,7 @@ ensure_developer_safety() {
     fi
     
     # Ensure we're not running as root
-    if [ "$(id -u)" = "0" ] && [ "${CI:-}" != "1" ]; then
+    if [ "$(id -u)" = "0" ] && [ -z "${CI:-}" ] && [ "${TESTING:-}" != "1" ]; then
         echo "ERROR: Refusing to run tests as root for safety"
         exit 1
     fi
