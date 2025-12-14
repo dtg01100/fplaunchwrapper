@@ -31,6 +31,7 @@ Each generated wrapper provides these additional options:
 - `--fpwrapper-set-override [system|flatpak]` - Force preference for this wrapper
 - `--fpwrapper-set-pre-script <script>` - Set a pre-launch script
 - `--fpwrapper-set-post-script <script>` - Set a post-run script
+- `--fpwrapper-launch [system|flatpak]` - Launch once with chosen target without saving preference
 - `--fpwrapper-remove-pre-script` - Remove pre-launch script
 - `--fpwrapper-remove-post-script` - Remove post-run script
 - `--fpwrapper-force-interactive` - Force interactive mode (useful in scripts)

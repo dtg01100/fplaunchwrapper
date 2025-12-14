@@ -88,6 +88,9 @@ vlc
 # If both system and Flatpak versions exist, set a preference
 fplaunch-manage set-pref firefox flatpak
 
+# One-time launch choice without saving preference
+firefox --fpwrapper-launch system -- --version
+
 # Remove preference to be prompted again
 fplaunch-manage remove-pref firefox
 ```

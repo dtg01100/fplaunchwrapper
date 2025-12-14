@@ -254,12 +254,47 @@ ID="$id"
 PREF_DIR="\${XDG_CONFIG_HOME:-\$HOME/.config}/flatpak-wrappers"
 PREF_FILE="\$PREF_DIR/\$NAME.pref"
 SCRIPT_BIN_DIR="$BIN_DIR"
+ONE_SHOT_PREF=""
 
 mkdir -p "\$PREF_DIR"
 
 # Check if running in interactive CLI
 is_interactive() {
-    [ -t 0 ] && [ -t 1 ] && [ "\${FPWRAPPER_FORCE:-}" != "desktop" ]
+    [ -t 0 ] && [ -t 1 ] && [ "${FPWRAPPER_FORCE:-}" != "desktop" ]
+}
+
+# Discover system binary (if present) and avoid pointing to our own wrapper
+set_system_info() {
+    SYSTEM_EXISTS=false
+    CMD_PATH=""
+    if command -v "\$NAME" >/dev/null 2>&1; then
+        CMD_PATH=$(command -v "\$NAME")
+        if [ "\$CMD_PATH" != "\$SCRIPT_BIN_DIR/\$NAME" ]; then
+            SYSTEM_EXISTS=true
+        else
+            CMD_PATH=""
+        fi
+    fi
+}
+
+# Run a single launch choice without persisting preferences
+run_single_launch() {
+    local choice="\$1"
+    shift
+
+    load_env_vars
+    run_pre_launch_script "\$@"
+
+    if [ "\$choice" = "system" ]; then
+        if [ "\$SYSTEM_EXISTS" = true ]; then
+            run_and_cleanup "\$NAME" "\$@"
+        else
+            echo "System binary not found; falling back to flatpak for this launch." >&2
+            run_and_cleanup flatpak run "\$ID" "\$@"
+        fi
+    else
+        run_and_cleanup flatpak run "\$ID" "\$@"
+    fi
 }
 
 # Check for force flag for testing
@@ -268,14 +303,39 @@ if [ "\$1" = "--fpwrapper-force-interactive" ]; then
     shift
 fi
 
-# Non-interactive bypass: skip wrapper and continue PATH search
+# One-shot launch selector (non-persistent)
+if [ "\$1" = "--fpwrapper-launch" ]; then
+    if [ -z "\$2" ]; then
+        echo "Usage: \$NAME --fpwrapper-launch [system|flatpak]" >&2
+        exit 1
+    fi
+    case "\$2" in
+        system|flatpak)
+            ONE_SHOT_PREF="\$2"
+            shift 2
+            ;;
+        *)
+            echo "Invalid choice for --fpwrapper-launch: \$2 (use system|flatpak)" >&2
+            exit 1
+            ;;
+    esac
+fi
+
+# Discover system info once for this invocation
+set_system_info
+
+# Non-interactive bypass: skip wrapper and continue PATH search (unless one-shot specified)
 if ! is_interactive; then
-# Find next executable in PATH (skip our wrapper)
-    IFS=: read -ra PATH_DIRS <<< "$PATH"
+    if [ -n "\$ONE_SHOT_PREF" ]; then
+        run_single_launch "\$ONE_SHOT_PREF" "\$@"
+    fi
+
+    # Find next executable in PATH (skip our wrapper)
+    IFS=: read -ra PATH_DIRS <<< "\$PATH"
     for dir in "${PATH_DIRS[@]}"; do
         [ -z "$dir" ] && continue
         if [ -x "$dir/$NAME" ] && [ "$dir/$NAME" != "$SCRIPT_BIN_DIR/$NAME" ]; then
-            exec "$dir/$NAME" "$@"
+            exec "$dir/$NAME" "\$@"
         fi
     done
     
@@ -300,7 +360,8 @@ echo "Available options:"
      echo "  --fpwrapper-sandbox-reset    Reset sandbox to defaults"
      echo "  --fpwrapper-run-unrestricted Run with unrestricted permissions (transient)"
      echo "  --fpwrapper-force-interactive    Force interactive mode for testing"
-     echo "  --fpwrapper-set-override [system|flatpak]  Set launch preference"
+    echo "  --fpwrapper-set-override [system|flatpak]  Set launch preference"
+    echo "  --fpwrapper-launch [system|flatpak]        Launch once without saving preference"
      echo "  --fpwrapper-set-pre-script <script>        Set pre-launch script"
      echo "  --fpwrapper-set-post-script <script>       Set post-run script"
      echo "  --fpwrapper-remove-pre-script               Remove pre-launch script"
@@ -316,6 +377,7 @@ echo "Examples:"
      echo "  \$NAME --fpwrapper-run-unrestricted"
      echo "  \$NAME --fpwrapper-force-interactive"
      echo "  \$NAME --fpwrapper-set-override system"
+    echo "  $NAME --fpwrapper-launch flatpak -- --version"
      echo "  \$NAME --fpwrapper-set-pre-script ~/scripts/my-pre-script.sh"
      echo "  \$NAME --fpwrapper-set-post-script ~/scripts/my-post-script.sh"
      echo "  \$NAME --fpwrapper-remove-pre-script"
@@ -502,6 +564,11 @@ run_and_cleanup() {
     # Exit with same code as the command
     exit \$exit_code
 }
+
+# One-shot launch without persisting preference
+if [ -n "$ONE_SHOT_PREF" ]; then
+    run_single_launch "$ONE_SHOT_PREF" "$@"
+fi
 
 # Interactive execution logic (non-interactive already handled above)
 if [ -f "\$PREF_FILE" ]; then
