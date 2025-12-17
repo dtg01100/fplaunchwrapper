@@ -258,7 +258,7 @@ while read -r id; do
 NAME="$name"
 ID="$id"
 PREF_DIR="\${XDG_CONFIG_HOME:-\$HOME/.config}/flatpak-wrappers"
-PREF_FILE="\$PREF_DIR/\$NAME.pref"
+PREF_FILE="$PREF_DIR/$NAME.pref"
 SCRIPT_BIN_DIR="$BIN_DIR"
 ONE_SHOT_PREF=""
 
@@ -266,7 +266,7 @@ mkdir -p "\$PREF_DIR"
 
 # Check if running in interactive CLI
 is_interactive() {
-    [ -t 0 ] && [ -t 1 ] && [ "${FPWRAPPER_FORCE:-}" != "desktop" ]
+    [ "\${FPWRAPPER_FORCE:-}" = "interactive" ] || ([ -t 0 ] && [ -t 1 ] && [ "\${FPWRAPPER_FORCE:-}" != "desktop" ])
 }
 
 # Discover system binary (if present) and avoid pointing to our own wrapper
@@ -338,10 +338,10 @@ if ! is_interactive; then
 
     # Find next executable in PATH (skip our wrapper)
     IFS=: read -ra PATH_DIRS <<< "\$PATH"
-    for dir in "${PATH_DIRS[@]}"; do
-        [ -z "$dir" ] && continue
-        if [ -x "$dir/$NAME" ] && [ "$dir/$NAME" != "$SCRIPT_BIN_DIR/$NAME" ]; then
-            exec "$dir/$NAME" "\$@"
+    for dir in \${PATH_DIRS[@]}; do
+        [ -z "\$dir" ] && continue
+        if [ -x "\$dir/\$NAME" ] && [ "\$dir/\$NAME" != "\$SCRIPT_BIN_DIR/\$NAME" ]; then
+            exec "\$dir/\$NAME" "\$@"
         fi
     done
     

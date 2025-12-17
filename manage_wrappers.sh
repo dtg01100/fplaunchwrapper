@@ -546,6 +546,9 @@ run_doctor() {
     echo "🔍 Running fplaunchwrapper diagnostics..."
     echo ""
     
+    # Force interactive mode for doctor tests
+    export FPWRAPPER_FORCE="interactive"
+    
     local issues=0
     
     # Check installation
