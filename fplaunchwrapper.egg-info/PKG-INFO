@@ -1,0 +1,294 @@
+Metadata-Version: 2.4
+Name: fplaunchwrapper
+Version: 1.3.0
+Summary: Comprehensive Flatpak wrapper management system
+License: MIT License
+        
+        Copyright (c) 2025 fplaunchwrapper developers
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/dtg01100/fplaunchwrapper
+Project-URL: Repository, https://github.com/dtg01100/fplaunchwrapper
+Project-URL: Issues, https://github.com/dtg01100/fplaunchwrapper/issues
+Project-URL: Documentation, https://github.com/dtg01100/fplaunchwrapper#readme
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Console
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: System :: Systems Administration
+Classifier: Topic :: Utilities
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pathlib>=1.0.1
+Requires-Dist: platformdirs>=3.0.0
+Requires-Dist: watchdog>=3.0.0
+Provides-Extra: robustness
+Requires-Dist: pydantic>=2.0.0; extra == "robustness"
+Requires-Dist: tomli>=2.0.0; extra == "robustness"
+Requires-Dist: tomli-w>=1.0.0; extra == "robustness"
+Requires-Dist: psutil>=5.9.0; extra == "robustness"
+Provides-Extra: advanced
+Requires-Dist: click>=8.1.0; extra == "advanced"
+Requires-Dist: structlog>=23.1.0; extra == "advanced"
+Requires-Dist: validators>=0.22.0; extra == "advanced"
+Requires-Dist: rich>=13.0.0; extra == "advanced"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.10.0; extra == "dev"
+Requires-Dist: bats>=1.0.0; extra == "dev"
+Requires-Dist: shellcheck>=0.8.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Requires-Dist: pylint>=3.0.0; extra == "dev"
+Provides-Extra: security
+Requires-Dist: cryptography>=41.0.0; extra == "security"
+Requires-Dist: bandit>=1.7.0; extra == "security"
+Provides-Extra: integration
+Requires-Dist: dbus-python>=1.3.0; extra == "integration"
+Requires-Dist: xvfbwrapper>=0.2.9; extra == "integration"
+Provides-Extra: all
+Requires-Dist: fplaunchwrapper[advanced,dev,integration,robustness,security]; extra == "all"
+Dynamic: license-file
+
+# Flatpak Launch Wrappers
+
+A utility to create small wrapper scripts for Flatpak applications, allowing you to launch them by their simplified name (e.g., `chrome` instead of `flatpak run com.google.Chrome`). It handles conflicts with system packages, remembers user preferences, and provides management tools.
+
+## Features
+
+- Generates wrappers for user and system Flatpak apps
+- Automatic updates via systemd (user changes trigger immediately, system changes daily)
+- Conflict resolution: Choose between system package or Flatpak app, with preference memory
+- Aliases: Create custom names for wrappers
+- Help and info: `--help` and `--fpwrapper-info` flags on wrappers
+- Backup/restore: Export/import preferences and blocklists
+- Management script: Interactive menu (with dialog GUI fallback) or CLI for configuring wrappers
+- Block/unblock specific apps
+- Customizable wrapper directory
+- Environment variables: Set per-wrapper environment variables
+- Pre-launch scripts: Run custom scripts before launching apps
+- Post-run scripts: Execute cleanup or logging scripts after apps exit
+
+## Wrapper Features
+
+Each generated wrapper provides these additional options:
+
+
+- `--fpwrapper-help` - Show detailed help with all available options
+- `--fpwrapper-info` - Show wrapper and Flatpak app information
+- `--fpwrapper-config-dir` - Show the Flatpak app's configuration directory
+- `--fpwrapper-sandbox-info` - Show Flatpak sandbox details and permissions
+- `--fpwrapper-edit-sandbox` - Interactive sandbox permission editor
+- `--fpwrapper-sandbox-yolo` - Grant all permissions (use with extreme caution)
+- `--fpwrapper-set-override [system|flatpak]` - Force preference for this wrapper
+- `--fpwrapper-set-pre-script <script>` - Set a pre-launch script
+- `--fpwrapper-set-post-script <script>` - Set a post-run script
+- `--fpwrapper-launch [system|flatpak]` - Launch once with chosen target without saving preference
+- `--fpwrapper-remove-pre-script` - Remove pre-launch script
+- `--fpwrapper-remove-post-script` - Remove post-run script
+- `--fpwrapper-force-interactive` - Force interactive mode (useful in scripts)
+
+**Script Arguments:** Pre-launch and post-run scripts receive: wrapper name, Flatpak ID, target application, and any additional arguments.
+
+## Interactive vs Non-Interactive Behavior
+
+Wrappers automatically detect their execution context and behave accordingly:
+
+### Interactive Mode (Terminal)
+When run from an interactive terminal, wrappers provide full functionality:
+- Preference prompts and management
+- Interactive sandbox editing
+- Help and information commands
+- All wrapper features available
+
+### Non-Interactive Mode (.desktop files, scripts, IDEs)
+When run from non-interactive contexts, wrappers automatically bypass themselves:
+- Search PATH for next executable with the same name
+- Execute system command directly if found
+- Fall back to Flatpak if no system command exists
+- No prompts or interactive features
+- Clean, predictable behavior for desktop environments
+
+### Force Interactive Mode
+
+You can force interactive mode in scripts using the environment variable:
+
+```bash
+# Force interactive mode in a script
+FPWRAPPER_FORCE=interactive firefox --fpwrapper-help
+
+# Or use the built-in flag
+firefox --fpwrapper-force-interactive --help
+```
+
+**Use Cases:**
+- **Scripting**: Force wrapper features in automated scripts
+- **Testing**: Ensure wrapper functionality works as expected
+- **Debugging**: Access wrapper help and diagnostics in scripts
+- **Custom Launchers**: Create custom desktop entries that use wrapper features
+
+## Advanced Usage
+
+For detailed information about interactive mode control, scripting, and advanced features, see:
+
+- **[docs/FPWRAPPER_FORCE.md](docs/FPWRAPPER_FORCE.md)** - Complete guide to `FPWRAPPER_FORCE` environment variable
+- **[docs/ADVANCED_USAGE.md](docs/ADVANCED_USAGE.md)** - Advanced scripting and automation examples
+
+## Installation
+
+### From Package (Recommended)
+
+**Debian/Ubuntu:**
+```bash
+# Download the .deb from GitHub Releases
+sudo dpkg -i fplaunchwrapper_*.deb
+sudo apt-get install -f  # Install dependencies if needed
+
+# Generate wrapper scripts for your user
+fplaunch-manage regenerate
+
+# (Optional) Enable automatic updates
+fplaunch-setup-systemd
+```
+
+**Fedora/RHEL:**
+```bash
+# Download the .rpm from GitHub Releases
+sudo dnf install fplaunchwrapper-*.rpm
+
+# Generate wrapper scripts for your user
+fplaunch-manage regenerate
+
+# (Optional) Enable automatic updates
+fplaunch-setup-systemd
+```
+
+**Important**: Package installation installs system files and commands. Each user must run `fplaunch-manage regenerate` to generate wrappers in their home directory and optionally `fplaunch-setup-systemd` to enable automatic updates.
+
+### From Source
+
+1. Clone or download the scripts.
+2. Run `bash install.sh [optional_bin_dir]` to install (default bin dir: `~/.local/bin`). You'll be prompted to enable automatic updates.
+3. Ensure `~/.local/bin` (or your chosen dir) is in your PATH.
+
+**Installation Notes:**
+- The installer will check for Flatpak, systemd, and crontab availability
+- Automatic updates can use systemd (preferred) or fall back to crontab
+- Bash completion is automatically installed to `~/.bashrc.d/` if available, or copied to your bin directory
+- The installer generates initial wrappers for all installed Flatpak apps
+
+## Usage
+
+- Launch apps: `chrome`, `firefox`, etc.
+- Get info: `chrome --fpwrapper-info` or `chrome --fpwrapper-help` for detailed options.
+- Config dir: `cd "$(chrome --fpwrapper-config-dir)"` to access app data.
+- Sandbox info: `chrome --fpwrapper-sandbox-info` to show Flatpak details.
+- Edit sandbox: `chrome --fpwrapper-edit-sandbox` for interactive permission editing.
+- YOLO mode: `chrome --fpwrapper-sandbox-yolo` to grant all permissions (use with caution).
+- Set override: `chrome --fpwrapper-set-override [system|flatpak]` to force preference (prompts if not specified).
+- Env vars: Set transient env vars via `fplaunch-manage set-env` (for permanent, use `flatpak override <app> --env=VAR=value`).
+- Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`, `fplaunch-manage search <keyword>`, `fplaunch-manage info <name>`.
+- Search: `fplaunch-manage search <keyword>` to find wrappers by name, ID, or description.
+- Install: `fplaunch-manage install <app>` to install a Flatpak and create wrapper.
+- Launch: `fplaunch-manage launch <name>` to launch a wrapper.
+  - Examples:
+   - `fplaunch-manage set-alias chrome browser`
+   - `fplaunch-manage export-prefs prefs.tar.gz`
+   - `fplaunch-manage export-config full_backup.tar.gz` to export complete configuration
+   - `fplaunch-manage info chrome` to show detailed app info and manifest
+   - `fplaunch-manage manifest chrome local > manifest.ini` to save local manifest
+   - `fplaunch-manage set-env chrome MOZ_ENABLE_WAYLAND 1` to set environment variables
+   - `fplaunch-manage set-script chrome ~/scripts/chrome-prelaunch.sh` to set pre-launch script
+   - `fplaunch-manage set-post-script chrome ~/scripts/chrome-postrun.sh` to set post-run script
+   - `fplaunch-manage remove-script chrome` to remove pre-launch script
+   - `fplaunch-manage remove-post-script chrome` to remove post-run script
+   - `fplaunch-manage block com.example.App` to block an app
+
+## Commands
+
+- `fplaunch-manage`: Main management utility with commands: list, search, remove, remove-pref, set-pref, set-env, remove-env, list-env, set-pref-all, set-script, set-post-script, remove-script, remove-post-script, set-alias, remove-alias, export-prefs, import-prefs, export-config, import-config, block, unblock, list-blocked, install, launch, regenerate, info, manifest, files, uninstall.
+- `fplaunch-generate`: Generates/updates wrappers.
+- `fplaunch-setup-systemd`: Configures systemd for auto-updates.
+- `fplaunch-cleanup`: Removes all per-user artifacts (run before uninstalling).
+- `install.sh`: Manual installation script (for source installs, accepts optional bin directory).
+- `uninstall.sh`: Manual uninstallation script (for source installs).
+- Bash completion: Automatically configured for all commands.
+
+## Requirements
+
+- **Required:** Bash, Flatpak
+- **Optional for auto-updates:** Systemd (user session) or crontab
+- **Optional for management UI:** dialog package (falls back to CLI if not available)
+- **Optional for bash completion:** Standard bash completion setup
+
+## Script Execution
+
+### Pre-launch Scripts
+Pre-launch scripts run before the Flatpak application starts. They are useful for:
+- Setting up environment variables or temporary files
+- Checking system requirements
+- Starting dependent services
+- Displaying warnings or messages
+
+### Post-run Scripts  
+Post-run scripts execute after the Flatpak application exits. They can:
+- Clean up temporary files created by pre-launch scripts
+- Log application usage or exit codes
+- Restart services that were modified
+- Display completion messages
+
+### Script Arguments
+Both pre-launch and post-run scripts receive these arguments:
+1. `$1` - Wrapper name (e.g., "chrome")
+2. `$2` - Flatpak ID (e.g., "com.google.Chrome")  
+3. `$3` - Target application ("flatpak" or system command name)
+4. `$@` - All original arguments passed to the wrapper
+
+### Error Handling
+- Pre-launch script failures prompt user to continue or abort
+- Post-run scripts execute regardless of application exit status
+- Scripts must be executable files with proper permissions
+
+## License
+
+MIT
+
+## Troubleshooting
+
+**Common Issues:**
+- If wrappers don't launch, ensure your bin directory is in PATH
+- If auto-updates don't work, check that systemd user session is running or crontab is available
+- If bash completion doesn't work, source the completion file manually: `source ~/.bashrc.d/fplaunch_completion.bash`
+
+**Debugging:**
+- Use `fplaunch-manage files` to see all generated files
+- Use `fplaunch-manage info <wrapper>` to debug wrapper configuration
+- Check systemd status with `systemctl --user status flatpak-wrappers.*`
+
+**Configuration Directory:** `~/.config/flatpak-wrappers/`
+**Generated Wrappers:** Default to `~/.local/bin/` (configurable during installation)

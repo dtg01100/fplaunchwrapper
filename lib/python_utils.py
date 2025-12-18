@@ -13,6 +13,16 @@ import shlex
 import unicodedata
 from pathlib import Path
 
+try:
+    from platformdirs import user_config_dir, user_data_dir
+except ImportError:
+    # Fallback implementation
+    def user_config_dir(appname):
+        return os.path.expanduser(f"~/.config/{appname}")
+
+    def user_data_dir(appname):
+        return os.path.expanduser(f"~/.local/share/{appname}")
+
 
 def sanitize_string(input_str):
     """Safely sanitize a string for use in Python code"""

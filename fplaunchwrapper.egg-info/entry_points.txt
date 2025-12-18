@@ -1,0 +1,4 @@
+[console_scripts]
+fplaunch-cli = lib.cli:main
+fplaunch-config = lib.config_manager:main
+fplaunch-monitor = lib.flatpak_monitor:main

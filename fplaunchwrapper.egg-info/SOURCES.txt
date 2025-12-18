@@ -1,0 +1,16 @@
+LICENSE
+README.md
+pyproject.toml
+fplaunchwrapper.egg-info/PKG-INFO
+fplaunchwrapper.egg-info/SOURCES.txt
+fplaunchwrapper.egg-info/dependency_links.txt
+fplaunchwrapper.egg-info/entry_points.txt
+fplaunchwrapper.egg-info/requires.txt
+fplaunchwrapper.egg-info/top_level.txt
+lib/cli.py
+lib/config_manager.py
+lib/flatpak_monitor.py
+lib/generate.py
+lib/launch.py
+lib/manage.py
+lib/python_utils.py
