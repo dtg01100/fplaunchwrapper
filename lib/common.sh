@@ -2,6 +2,13 @@
 
 # Common utility functions for fplaunchwrapper
 
+# Python availability check (cached)
+_has_python3=""
+_check_python3() {
+    [ -z "$_has_python3" ] && _has_python3=$(command -v python3 >/dev/null 2>&1 && echo "yes" || echo "no")
+    [ "$_has_python3" = "yes" ]
+}
+
 # Error handling framework
 error_exit() {
     local message="$1"
@@ -45,19 +52,19 @@ safe_file_operation() {
     case "$operation" in
         "read")
             if [ ! -r "$file" ]; then
-                error_exit "Cannot read file: $file"
+                error_exit "Cannot read file: $file (permission denied or file does not exist)"
             fi
             cat "$file" "$@"
             ;;
         "write")
             if [ ! -w "$(dirname "$file")" ]; then
-                error_exit "Cannot write to file: $file"
+                error_exit "Cannot write to file: $file (directory not writable)"
             fi
             echo "$@" > "$file"
             ;;
         "append")
             if [ ! -w "$(dirname "$file")" ]; then
-                error_exit "Cannot append to file: $file"
+                error_exit "Cannot append to file: $file (directory not writable)"
             fi
             echo "$@" >> "$file"
             ;;
@@ -103,7 +110,18 @@ enable_debug_mode() {
     debug_log "Debug mode enabled"
     debug_log "Environment variables:"
     debug_log "  HOME: ${HOME:-<not set>}"
-    debug_log "  PATH: ${PATH:-<not set>}"
+    # Sanitize PATH for security (show only first and last components)
+    if [ -n "${PATH:-}" ]; then
+        local first_path=$(echo "$PATH" | cut -d: -f1)
+        local last_path=$(echo "$PATH" | cut -d: -f-1)
+        if [ "$first_path" = "$last_path" ]; then
+            debug_log "  PATH: $first_path"
+        else
+            debug_log "  PATH: $first_path:...:$last_path"
+        fi
+    else
+        debug_log "  PATH: <not set>"
+    fi
     debug_log "  XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
     debug_log "  CONFIG_DIR: ${CONFIG_DIR:-<not set>}"
     debug_log "  BIN_DIR: ${BIN_DIR:-<not set>}"
@@ -112,9 +130,8 @@ enable_debug_mode() {
 # Safety check - never run as root
 if [ "$(id -u)" = "0" ]; then
     error_exit "fplaunchwrapper should never be run as root for safety"
-    echo "This tool is designed for user-level wrapper management only"
-    exit 1
 fi
+echo "This tool is designed for user-level wrapper management only"
 
 # Get systemd user unit directory
 get_systemd_unit_dir() {
@@ -192,30 +209,14 @@ canonicalize_path_no_resolve() {
     local path="$1"
     [ -n "$path" ] || return 1
     
-    # Use Python for robust path normalization if available
-    if command -v python3 >/dev/null 2>&1; then
-        python3 -c "
-import os, sys
-
-try:
-    path = '${path//\'/\\\'\'}'
-    
-    # Expand tilde
-    if path.startswith('~'):
-        path = os.path.expanduser(path)
-    
-    # Make absolute if relative
-    if not os.path.isabs(path):
-        path = os.path.abspath(path)
-    
-    # Collapse '.' and '..' without resolving symlinks
-    path = os.path.normpath(path)
-    
-    print(path)
-    sys.exit(0)
-except:
-    sys.exit(1)
-" 2>/dev/null && return 0
+    # Use Python utility for robust path normalization if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        local result
+        result=$(python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" canonicalize_path "$path" 2>/dev/null)
+        if [ -n "$result" ]; then
+            printf '%s' "$result"
+            return 0
+        fi
     fi
     
     # Fallback to original implementation
@@ -250,35 +251,14 @@ validate_home_dir() {
         return 1
     fi
     
-    # Use Python for robust path validation if available
-    if command -v python3 >/dev/null 2>&1; then
-        python3 -c "
-import os, sys
-
-try:
-    dir = '${dir//\'/\\\'\'}'
-    
-    # Expand tilde
-    if dir.startswith('~'):
-        dir = os.path.expanduser(dir)
-    
-    # Get absolute path
-    abs_dir = os.path.abspath(dir)
-    
-    # Resolve symlinks safely
-    if os.path.islink(abs_dir):
-        abs_dir = os.path.realpath(abs_dir)
-    
-    # Check if within HOME
-    home = os.path.expanduser('~')
-    if abs_dir == home or abs_dir.startswith(home + os.sep):
-        print(abs_dir)
-        sys.exit(0)
-    else:
-        sys.exit(1)
-except:
-    sys.exit(1)
-" 2>/dev/null && return 0
+    # Use Python utility for robust path validation if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        local result
+        result=$(python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" validate_home "$dir" 2>/dev/null)
+        if [ -n "$result" ]; then
+            printf '%s' "$result"
+            return 0
+        fi
     fi
     
     # Fallback to original implementation
@@ -323,51 +303,9 @@ is_wrapper_file() {
     [ -r "$file" ] || return 1
     [ ! -L "$file" ] || return 1  # Reject symlinks
     
-    # Use Python for robust content validation if available
-    if command -v python3 >/dev/null 2>&1; then
-        python3 -c "
-import re, sys, os
-
-try:
-    file_path = '${file//\'/\\\'\'}'
-    
-    # Check file size limits
-    size = os.path.getsize(file_path)
-    if size > 100000:  # 100KB limit
-        sys.exit(1)
-    
-    # Read file content with proper encoding
-    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-        content = f.read(8192)  # Read first 8KB
-    
-    # Check for binary content
-    if any(ord(c) < 32 and c not in '\\t\\n\\r' for c in content):
-        sys.exit(1)
-    
-    # Check shebang
-    if not re.match(r'^#!.*(bash|sh)', content, re.MULTILINE):
-        sys.exit(1)
-    
-    # Check for marker
-    if 'Generated by fplaunchwrapper' not in content:
-        sys.exit(1)
-    
-    # Check for NAME and ID
-    name_match = re.search(r'^NAME=[^\n]*', content)
-    id_match = re.search(r'^ID=[^\n]*', content)
-    
-    if not name_match or not id_match:
-        sys.exit(1)
-    
-    # Validate ID format
-    id_value = re.search(r'ID=\"([^\"]*)\"', id_match.group())
-    if not id_value or not re.match(r'^[A-Za-z0-9._-]+$', id_value.group(1)):
-        sys.exit(1)
-    
-    sys.exit(0)
-except:
-    sys.exit(1)
-" 2>/dev/null && return 0
+    # Use Python utility for robust content validation if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" is_wrapper_file "$file" >/dev/null 2>&1 && return 0
     fi
     
     # Fallback to original implementation with additional safeguards
@@ -408,34 +346,9 @@ except:
 get_wrapper_id() {
     local file="$1"
     
-    # Use Python for robust ID extraction if available
-    if command -v python3 >/dev/null 2>&1; then
-        python3 -c "
-import re, sys
-
-try:
-    file_path = '${file//\'/\\\'\'}'
-    
-    # Read file content with proper encoding
-    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-        content = f.read(8192)
-    
-    # Try standard ID format first
-    id_match = re.search(r'^ID=\"([^\"]*)\"', content, re.MULTILINE)
-    if id_match:
-        print(id_match.group(1))
-        sys.exit(0)
-    
-    # Fallback to comment extraction
-    comment_match = re.search(r'Flatpak ID:\s*([^\s\n]+)', content)
-    if comment_match:
-        print(comment_match.group(1))
-        sys.exit(0)
-    
-    sys.exit(1)
-except:
-    sys.exit(1)
-" 2>/dev/null && return 0
+    # Use Python utility for robust ID extraction if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" get_wrapper_id "$file" 2>/dev/null && return 0
     fi
     
     # Fallback to original implementation
@@ -468,9 +381,10 @@ acquire_lock() {
     local lockfile="$lock_dir/$lock_name.lock"
     local pidfile="$lock_dir/$lock_name.pid"
     
-    # Try to acquire lock with timeout
-    local end_time=$((SECONDS + timeout_seconds))
-    while [ $SECONDS -lt $end_time ]; do
+    # Try to acquire lock with timeout using reliable timing
+    local start_time=$(date +%s)
+    local end_time=$((start_time + timeout_seconds))
+    while [ $(date +%s) -lt $end_time ]; do
         # Use mkdir for atomic directory creation as lock
         if mkdir "$lockfile" 2>/dev/null; then
             # Write PID to lock file
@@ -504,7 +418,9 @@ release_lock_internal() {
         local lock_pid
         lock_pid=$(cat "$pidfile" 2>/dev/null || echo 0)
         if [ "$lock_pid" = $$ ]; then
-            rm -rf "$lockfile" "$pidfile" 2>/dev/null || true
+            # Use specific file removal instead of rm -rf
+            rm -f "$lockfile" 2>/dev/null || true
+            rm -f "$pidfile" 2>/dev/null || true
         fi
     fi
 }
@@ -542,33 +458,9 @@ find_executable() {
     
     [ -n "$cmd" ] || return 1
     
-    # Use Python for robust path resolution if available
-    if command -v python3 >/dev/null 2>&1; then
-        python3 -c "
-import os, sys
-
-try:
-    cmd = '${cmd//\'/\\\'\'}'
-    
-    # Check if absolute or relative path
-    if '/' in cmd:
-        if os.path.isfile(cmd) and os.access(cmd, os.X_OK):
-            print(os.path.abspath(cmd))
-            sys.exit(0)
-        sys.exit(1)
-    
-    # Use PATH resolution
-    for path_dir in os.getenv('PATH', '').split(':'):
-        if path_dir:
-            exe_path = os.path.join(path_dir, cmd)
-            if os.path.isfile(exe_path) and os.access(exe_path, os.X_OK):
-                print(os.path.abspath(exe_path))
-                sys.exit(0)
-    
-    sys.exit(1)
-except:
-    sys.exit(1)
-" 2>/dev/null && return 0
+    # Use Python utility for robust path resolution if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" find_executable "$cmd" 2>/dev/null && return 0
     fi
     
     # Fallback to original implementation
@@ -597,6 +489,13 @@ except:
 safe_mktemp() {
     local template="${1:-tmp.XXXXXX}"
     local dir_param="${2:-}"
+    
+    # Use Python utility for secure temp file creation if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" safe_mktemp "$template" "$dir_param" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation
     local tdir
     
     # Get secure temp directory
@@ -604,29 +503,6 @@ safe_mktemp() {
         tdir="$dir_param"
     else
         tdir=$(get_temp_dir 2>/dev/null) || tdir="/tmp"
-    fi
-    
-    # Use Python for secure temp file creation if available
-    if command -v python3 >/dev/null 2>&1; then
-        python3 -c "
-import os, tempfile, sys
-
-try:
-    template = '${template//\'/\\\'\'}'
-    tdir = '${tdir//\'/\\\'\'}'
-    
-    # Create secure temp file
-    fd, path = tempfile.mkstemp(
-        prefix=template.replace('XXXXXX', ''),
-        dir=tdir,
-        suffix='' if 'XXXXXX' not in template else os.path.splitext(template)[1]
-    )
-    os.close(fd)
-    print(path)
-    sys.exit(0)
-except:
-    sys.exit(1)
-" 2>/dev/null && return 0
     fi
     
     # Fallback to mktemp if available
@@ -650,53 +526,9 @@ except:
 sanitize_id_to_name() {
     local id="$1"
     
-    # Use Python for robust name sanitization if available
-    if command -v python3 >/dev/null 2>&1; then
-        python3 -c "
-import re, sys, hashlib
-
-try:
-    id = '${id//\'/\\\'\'}'
-    
-    # Extract last component after dots
-    name = id.split('.')[-1].lower()
-    
-    # Unicode normalization and transliteration
-    try:
-        import unicodedata
-        # Normalize to NFKD and remove diacritics
-        name = unicodedata.normalize('NFKD', name)
-        name = ''.join(c for c in name if not unicodedata.combining(c))
-    except ImportError:
-        pass
-    
-    # Convert to ASCII if possible
-    try:
-        name = name.encode('ascii', 'ignore').decode('ascii')
-    except UnicodeError:
-        pass
-    
-    # Replace non-alphanumeric characters with hyphens
-    name = re.sub(r'[^a-z0-9_\-]', '-', name)
-    
-    # Remove leading/trailing hyphens and multiple hyphens
-    name = re.sub(r'^\-+|\-+$', '', name)
-    name = re.sub(r'\-+', '-', name)
-    
-    # Ensure not empty
-    if not name:
-        # Generate hash-based fallback
-        hash_obj = hashlib.sha256(id.encode('utf-8'))
-        name = f'app-{hash_obj.hexdigest()[:8]}'
-    
-    # Limit length
-    name = name[:100]
-    
-    print(name)
-    sys.exit(0)
-except:
-    sys.exit(1)
-" 2>/dev/null && return 0
+    # Use Python utility for robust name sanitization if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" sanitize_name "$id" 2>/dev/null && return 0
     fi
     
     # Fallback to original implementation
