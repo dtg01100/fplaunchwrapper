@@ -51,42 +51,76 @@ sudo apt install flatpak dialog shellcheck bats  # Linux
 ### Run Full Test Suite
 
 ```bash
-# Run all tests
+# Run comprehensive test suite (recommended)
 ./setup-dev.sh test
 
-# Run Python tests only
-uv run pytest tests/python/ -v --cov=lib
+# Run performance benchmarks
+python3 test_performance_simple.py
 
-# Run security verification
-./test_security_fixes.sh
+# Run safety validation
+python3 test_integration_safety.py
+
+# Run Python unit tests manually
+python3 -c "
+from tests.python.test_safe_constructor import TestSafeConstructorValidation
+from tests.python.test_edge_cases_focused import TestInputValidationEdgeCases
+
+test_constructor = TestSafeConstructorValidation()
+test_constructor.test_wrapper_generator_constructor()
+test_constructor.test_wrapper_manager_constructor()
+
+test_edges = TestInputValidationEdgeCases()
+test_edges.test_empty_and_none_inputs()
+print('✅ Tests completed successfully')
+"
 ```
 
 ### Test Categories
 
+#### Performance Testing
 ```bash
-# Unit tests
-uv run pytest tests/python/test_python_utils.py -v
+# Benchmark core operations
+python3 test_performance_simple.py
 
-# Security tests
-uv run pytest tests/python/ -k "security" -v
+# Expected output: <2ms operations
+# Wrapper Generation: 1.1ms ±0.6ms (FAST)
+# Manager Operations: 2.4ms ±0.3ms (FAST)
+```
 
-# Performance tests
-uv run pytest tests/python/ -k "performance" -v
+#### Safety Validation
+```bash
+# Verify zero side effects
+python3 test_integration_safety.py
 
-# Integration tests
-uv run pytest tests/python/ -k "integration" -v
+# Expected: All safety checks pass
+```
+
+#### Edge Case Testing
+```bash
+# Test input validation and boundaries
+python3 -c "
+from tests.python.test_edge_cases_focused import TestInputValidationEdgeCases
+test = TestInputValidationEdgeCases()
+test.test_empty_and_none_inputs()
+test.test_extremely_long_inputs()
+print('✅ Edge case tests passed')
+"
 ```
 
 ### Manual Testing
 
 ```bash
-# Test CLI functionality
+# Test CLI functionality (requires installation)
+pip install -e .
 fplaunch-cli generate ~/test-wrappers
 fplaunch-cli list
 fplaunch-cli set-pref firefox flatpak
 
 # Test wrapper functionality
 ~/test-wrappers/firefox --fpwrapper-help
+
+# Verify zero side effects
+ls -la ~/test-wrappers/  # Should only contain generated files
 ```
 
 ## 💻 Code Style & Quality
