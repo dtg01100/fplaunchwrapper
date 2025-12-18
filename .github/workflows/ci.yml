@@ -83,8 +83,62 @@ jobs:
         python3 -c "import fplaunch; print('✅ Python package imports successfully')"
         python3 -c "from fplaunch.generate import WrapperGenerator; print('✅ Package functionality works')"
 
-    - name: Test legacy shell installation (Ubuntu)
+  shell-installation-ubuntu:
+    name: Shell Installation (Ubuntu)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Test legacy shell installation
       run: |
-        # Test that legacy installation still works for backwards compatibility
+        # Test traditional shell script installation for backwards compatibility
         CI=1 bash install.sh
-        test -f ~/.local/bin/fplaunch-manage || echo "Legacy scripts still exist for compatibility"
+        # Verify installation succeeded
+        test -f ~/.local/bin/fplaunch-manage && echo "✅ fplaunch-manage installed"
+        test -f ~/.local/bin/fplaunch-generate && echo "✅ fplaunch-generate installed"
+        test -f ~/.local/bin/fplaunch-setup-systemd && echo "✅ fplaunch-setup-systemd installed"
+        # Test basic functionality
+        ~/.local/bin/fplaunch-manage --help >/dev/null && echo "✅ Commands are executable"
+
+  shell-installation-fedora:
+    name: Shell Installation (Fedora)
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        dnf install -y bash git
+
+    - name: Test shell installation on Fedora
+      run: |
+        # Test installation on Fedora environment
+        CI=1 bash install.sh
+        # Verify installation succeeded
+        test -f ~/.local/bin/fplaunch-manage && echo "✅ fplaunch-manage installed"
+        ~/.local/bin/fplaunch-manage --help >/dev/null && echo "✅ Commands work on Fedora"
+
+  shell-installation-debian:
+    name: Shell Installation (Debian)
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        apt-get update && apt-get install -y bash git
+
+    - name: Test shell installation on Debian
+      run: |
+        # Test installation on Debian environment
+        CI=1 bash install.sh
+        # Verify installation succeeded
+        test -f ~/.local/bin/fplaunch-manage && echo "✅ fplaunch-manage installed"
+        ~/.local/bin/fplaunch-manage --help >/dev/null && echo "✅ Commands work on Debian"
