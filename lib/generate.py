@@ -9,7 +9,7 @@ import sys
 import subprocess
 import time
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 
 try:
     from rich.console import Console
@@ -496,7 +496,7 @@ fi
 
         return script
 
-    def generate_all_wrappers(self, installed_apps: List[str]) -> tuple[int, int, int]:
+    def generate_all_wrappers(self, installed_apps: List[str]) -> Tuple[int, int, int]:
         """Generate wrappers for all installed applications"""
         self.log("Generating wrappers...")
 
@@ -596,7 +596,7 @@ fi
             self.log(f"Generation failed: {e}", "error")
             return 1
 
-    def generate_wrappers(self, installed_apps: List[str]) -> tuple[int, int, int]:
+    def generate_wrappers(self, installed_apps: List[str]) -> Tuple[int, int, int]:
         """Generate wrappers for all apps - alias for generate_all_wrappers"""
         return self.generate_all_wrappers(installed_apps)
 
