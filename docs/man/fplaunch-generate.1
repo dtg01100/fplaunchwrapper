@@ -1,23 +1,33 @@
-.TH FPLAUNCH-GENERATE 1 "November 2025" "fplaunchwrapper 1.1" "User Commands"
+.TH FPLAUNCH-GENERATE 1 "December 2024" "fplaunchwrapper 1.3" "User Commands"
 .SH NAME
 fplaunch-generate \- generate wrapper scripts for installed Flatpak applications
 .SH SYNOPSIS
 .B fplaunch-generate
-.RI [ bin_dir ]
+.RI [OPTIONS] [bin_dir]
 .SH DESCRIPTION
 .B fplaunch-generate
-automatically creates wrapper scripts for all installed Flatpak applications.
+automatically creates intelligent wrapper scripts for all installed Flatpak applications.
 These wrappers allow you to launch Flatpak applications using simple commands
-from your shell, as if they were native system commands.
+from your shell, as if they were native system commands, with automatic preference
+resolution between system packages and Flatpak versions.
 .PP
-The script scans both user and system-wide Flatpak installations, generates
+The command scans both user and system-wide Flatpak installations, generates
 appropriate wrapper scripts, and performs cleanup of wrappers for applications
-that have been uninstalled.
+that have been uninstalled. It provides rich progress reporting and error handling.
 .SH OPTIONS
+.TP
+.B -h, --help
+Show help message and exit.
+.TP
+.B -v, --verbose
+Enable verbose output with detailed progress information.
+.TP
+.B --force
+Force regeneration of all wrappers, even if they already exist.
 .TP
 .I bin_dir
 Optional directory path where wrapper scripts should be created. If not specified,
-defaults to \fI~/.local/bin\fR. The chosen directory is saved to the configuration
+defaults to \fI~/bin\fR. The chosen directory is saved to the configuration
 and used for subsequent regenerations.
 .SH BEHAVIOR
 .SS Wrapper Generation

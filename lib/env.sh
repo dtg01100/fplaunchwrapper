@@ -10,8 +10,15 @@ set_env() {
     fi
     read -r -p "Set $var=$value for '$name'? (y/n): " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then
-        echo "export $var=\"$value\"" >> "$env_file"
-        echo "Set $var for $name"
+        if grep -q "^export $var=" "$env_file" 2>/dev/null; then
+            # Update existing variable
+            sed -i "s|^export $var=.*|export $var=\"$value\"|" "$env_file"
+            echo "Updated $var for $name"
+        else
+            # Add new variable
+            echo "export $var=\"$value\"" >> "$env_file"
+            echo "Set $var for $name"
+        fi
     else
         echo "Cancelled."
     fi

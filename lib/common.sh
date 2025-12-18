@@ -2,12 +2,136 @@
 
 # Common utility functions for fplaunchwrapper
 
+# Python availability check (cached)
+_has_python3=""
+_check_python3() {
+    [ -z "$_has_python3" ] && _has_python3=$(command -v python3 >/dev/null 2>&1 && echo "yes" || echo "no")
+    [ "$_has_python3" = "yes" ]
+}
+
+# Error handling framework
+error_exit() {
+    local message="$1"
+    local exit_code="${2:-1}"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    # Log error to stderr with timestamp
+    echo "[$timestamp] ERROR: $message" >&2
+    
+    # Additional logging to file if available
+    if [ -n "${ERROR_LOG:-}" ] && [ -w "$ERROR_LOG" ]; then
+        echo "[$timestamp] ERROR: $message" >> "$ERROR_LOG"
+    fi
+    
+    exit "$exit_code"
+}
+
+# Safe command execution with error handling
+safe_execute() {
+    local description="$1"
+    shift
+    
+    # Log command execution
+    echo "Executing: $description" >&2
+    
+    # Execute with error handling
+    if "$@"; then
+        return 0
+    else
+        local exit_code=$?
+        error_exit "Failed to $description (exit code: $exit_code)" "$exit_code"
+    fi
+}
+
+# Improved file operation with error handling
+safe_file_operation() {
+    local operation="$1"
+    local file="$2"
+    shift 2
+    
+    case "$operation" in
+        "read")
+            if [ ! -r "$file" ]; then
+                error_exit "Cannot read file: $file (permission denied or file does not exist)"
+            fi
+            cat "$file" "$@"
+            ;;
+        "write")
+            if [ ! -w "$(dirname "$file")" ]; then
+                error_exit "Cannot write to file: $file (directory not writable)"
+            fi
+            echo "$@" > "$file"
+            ;;
+        "append")
+            if [ ! -w "$(dirname "$file")" ]; then
+                error_exit "Cannot append to file: $file (directory not writable)"
+            fi
+            echo "$@" >> "$file"
+            ;;
+        *)
+            error_exit "Unknown file operation: $operation"
+            ;;
+    esac
+}
+
+# Structured logging and debugging
+log_message() {
+    local level="$1"
+    local message="$2"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    # Log to stderr with level prefix
+    echo "[$timestamp] [$level]: $message" >&2
+    
+    # Log to file if LOG_FILE is set and writable
+    if [ -n "${LOG_FILE:-}" ] && [ -w "$LOG_FILE" ]; then
+        echo "[$timestamp] [$level]: $message" >> "$LOG_FILE"
+    fi
+}
+
+debug_log() {
+    if [ "${DEBUG:-0}" = "1" ]; then
+        log_message "DEBUG" "$1"
+    fi
+}
+
+info_log() {
+    log_message "INFO" "$1"
+}
+
+warn_log() {
+    log_message "WARN" "$1"
+}
+
+# Debug mode function for detailed logging
+enable_debug_mode() {
+    export DEBUG=1
+    LOG_FILE="${CONFIG_DIR:-$HOME/.config/flatpak-wrappers}/debug.log"
+    debug_log "Debug mode enabled"
+    debug_log "Environment variables:"
+    debug_log "  HOME: ${HOME:-<not set>}"
+    # Sanitize PATH for security (show only first and last components)
+    if [ -n "${PATH:-}" ]; then
+        local first_path=$(echo "$PATH" | cut -d: -f1)
+        local last_path=$(echo "$PATH" | cut -d: -f-1)
+        if [ "$first_path" = "$last_path" ]; then
+            debug_log "  PATH: $first_path"
+        else
+            debug_log "  PATH: $first_path:...:$last_path"
+        fi
+    else
+        debug_log "  PATH: <not set>"
+    fi
+    debug_log "  XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
+    debug_log "  CONFIG_DIR: ${CONFIG_DIR:-<not set>}"
+    debug_log "  BIN_DIR: ${BIN_DIR:-<not set>}"
+}
+
 # Safety check - never run as root
 if [ "$(id -u)" = "0" ]; then
-    echo "ERROR: fplaunchwrapper should never be run as root for safety"
-    echo "This tool is designed for user-level wrapper management only"
-    exit 1
+    error_exit "fplaunchwrapper should never be run as root for safety"
 fi
+echo "This tool is designed for user-level wrapper management only"
 
 # Get systemd user unit directory
 get_systemd_unit_dir() {
@@ -84,6 +208,18 @@ cleanup_systemd_units() {
 canonicalize_path_no_resolve() {
     local path="$1"
     [ -n "$path" ] || return 1
+    
+    # Use Python utility for robust path normalization if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        local result
+        result=$(python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" canonicalize_path "$path" 2>/dev/null)
+        if [ -n "$result" ]; then
+            printf '%s' "$result"
+            return 0
+        fi
+    fi
+    
+    # Fallback to original implementation
     # Expand tilde
     if [[ "$path" == ~* ]]; then
         path="${path/#~/$HOME}"
@@ -114,6 +250,18 @@ validate_home_dir() {
     if [ -z "$dir" ]; then
         return 1
     fi
+    
+    # Use Python utility for robust path validation if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        local result
+        result=$(python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" validate_home "$dir" 2>/dev/null)
+        if [ -n "$result" ]; then
+            printf '%s' "$result"
+            return 0
+        fi
+    fi
+    
+    # Fallback to original implementation
     # Expand relative paths and tildes
     if [[ "$dir" == ~* ]]; then
         dir="${dir/#~/$HOME}"
@@ -149,9 +297,18 @@ validate_home_dir() {
 
 is_wrapper_file() {
     local file="$1"
+    
+    # Basic validation first
     [ -f "$file" ] || return 1
-    # Reject symlinks - ensure wrapper is an actual file
-    [ -L "$file" ] && return 1
+    [ -r "$file" ] || return 1
+    [ ! -L "$file" ] || return 1  # Reject symlinks
+    
+    # Use Python utility for robust content validation if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" is_wrapper_file "$file" >/dev/null 2>&1 && return 0
+    fi
+    
+    # Fallback to original implementation with additional safeguards
     # Read header (first 30 lines) for faster processing
     local header
     header=$(head -n 30 -- "$file" 2>/dev/null || true)
@@ -188,6 +345,13 @@ is_wrapper_file() {
 
 get_wrapper_id() {
     local file="$1"
+    
+    # Use Python utility for robust ID extraction if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" get_wrapper_id "$file" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation
     [ -f "$file" ] || return 1
     local id
     id=$(grep -m1 '^ID=' "$file" 2>/dev/null | cut -d'"' -f2 || true)
@@ -206,32 +370,59 @@ get_wrapper_id() {
 
 acquire_lock() {
     ensure_config_dir || return 1
-    local lockfile="$CONFIG_DIR/.fplaunch-lock"
-    if command -v flock >/dev/null 2>&1; then
-        exec 9>"$lockfile" || return 1
-        flock -x 9 || return 1
-        LOCK_FD=9
-    else
-        local lockdir="$CONFIG_DIR/.fplaunch-lockdir"
-        while ! mkdir "$lockdir" 2>/dev/null; do
-            sleep 0.05
-        done
-        LOCK_DIR="$lockdir"
-    fi
-    return 0
+    
+    local lock_name="${1:-fplaunch}"
+    local timeout_seconds="${2:-30}"
+    local lock_dir="$CONFIG_DIR/locks"
+    
+    # Create lock directory
+    mkdir -p "$lock_dir" || return 1
+    
+    local lockfile="$lock_dir/$lock_name.lock"
+    local pidfile="$lock_dir/$lock_name.pid"
+    
+    # Try to acquire lock with timeout using reliable timing
+    local start_time=$(date +%s)
+    local end_time=$((start_time + timeout_seconds))
+    while [ $(date +%s) -lt $end_time ]; do
+        # Use mkdir for atomic directory creation as lock
+        if mkdir "$lockfile" 2>/dev/null; then
+            # Write PID to lock file
+            echo $$ > "$pidfile"
+            # Set cleanup trap
+            trap 'release_lock_internal "$lock_dir" "$lock_name"' EXIT
+            return 0
+        fi
+        sleep 0.1
+    done
+    
+    echo "Timeout acquiring lock: $lock_name" >&2
+    return 1
 }
 
 release_lock() {
-    if [ -n "${LOCK_FD:-}" ]; then
-        flock -u "$LOCK_FD" 2>/dev/null || true
-        eval "exec ${LOCK_FD}>&-" 2>/dev/null || true
-        unset LOCK_FD
+    local lock_name="${1:-fplaunch}"
+    local lock_dir="$CONFIG_DIR/locks"
+    release_lock_internal "$lock_dir" "$lock_name"
+}
+
+release_lock_internal() {
+    local lock_dir="$1"
+    local lock_name="$2"
+    
+    local lockfile="$lock_dir/$lock_name.lock"
+    local pidfile="$lock_dir/$lock_name.pid"
+    
+    # Verify this process owns the lock
+    if [ -f "$pidfile" ]; then
+        local lock_pid
+        lock_pid=$(cat "$pidfile" 2>/dev/null || echo 0)
+        if [ "$lock_pid" = $$ ]; then
+            # Use specific file removal instead of rm -rf
+            rm -f "$lockfile" 2>/dev/null || true
+            rm -f "$pidfile" 2>/dev/null || true
+        fi
     fi
-    if [ -n "${LOCK_DIR:-}" ]; then
-        rmdir "$LOCK_DIR" 2>/dev/null || true
-        unset LOCK_DIR
-    fi
-    return 0
 }
 
 get_temp_dir() {
@@ -264,7 +455,15 @@ get_temp_dir() {
 
 find_executable() {
     local cmd="$1"
+    
     [ -n "$cmd" ] || return 1
+    
+    # Use Python utility for robust path resolution if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" find_executable "$cmd" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation
     # Absolute or relative path
     if [[ "$cmd" == */* ]]; then
         [ -x "$cmd" ] && printf '%s' "$cmd" && return 0
@@ -290,27 +489,49 @@ find_executable() {
 safe_mktemp() {
     local template="${1:-tmp.XXXXXX}"
     local dir_param="${2:-}"
+    
+    # Use Python utility for secure temp file creation if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" safe_mktemp "$template" "$dir_param" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation
     local tdir
+    
+    # Get secure temp directory
     if [ -n "$dir_param" ] && [ -d "$dir_param" ]; then
         tdir="$dir_param"
     else
         tdir=$(get_temp_dir 2>/dev/null) || tdir="/tmp"
     fi
+    
+    # Fallback to mktemp if available
     if command -v mktemp >/dev/null 2>&1; then
-        if mktemp -p "$tdir" "$template" >/dev/null 2>&1; then
+        if mktemp -p "$tdir" "$template" 2>/dev/null; then
             mktemp -p "$tdir" "$template"
             return 0
         fi
-        if mktemp "$tdir/$template" >/dev/null 2>&1; then
+        if mktemp "$tdir/$template" 2>/dev/null; then
             mktemp "$tdir/$template"
             return 0
         fi
     fi
-    printf '%s' "$tdir/${template//X/0}.$RANDOM"
+    
+    # Last resort: use random number with current timestamp
+    local timestamp=$(date +%s%N)
+    local random_val=$((RANDOM % 100000))
+    echo "$tdir/${template//X/0}.${timestamp}.${random_val}"
 }
 
 sanitize_id_to_name() {
     local id="$1"
+    
+    # Use Python utility for robust name sanitization if available
+    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
+        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" sanitize_name "$id" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation
     local name
     name=$(printf '%s' "$id" | awk -F. '{print tolower($NF)}')
     # Try Unicode normalization and transliteration

@@ -9,13 +9,74 @@ permissions:
   contents: write
 
 jobs:
+  pre-release-tests:
+    name: Pre-Release Testing
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+
+    - name: Install UV package manager
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Install dependencies
+      run: |
+        uv pip install --system -e .
+        uv pip install --system pytest pytest-mock
+
+    - name: Run comprehensive test suite
+      run: |
+        echo "🧪 Running comprehensive pre-release tests..."
+
+        # Run safety validation
+        python3 test_integration_safety.py
+
+        # Run performance tests
+        python3 test_performance_simple.py
+
+        # Run Python unit tests
+        python3 -c "
+        import sys
+        sys.path.insert(0, '.')
+        from tests.python.test_safe_constructor import TestSafeConstructorValidation
+        test_instance = TestSafeConstructorValidation()
+        test_instance.test_wrapper_generator_constructor()
+        test_instance.test_wrapper_manager_constructor()
+        test_instance.test_wrapper_cleanup_constructor()
+        test_instance.test_app_launcher_constructor()
+        test_instance.test_systemd_setup_constructor()
+        test_instance.test_complete_isolation_validation()
+        print('✅ All Python tests passed!')
+        "
+
+        # Run edge case tests
+        python3 -c "
+        import sys
+        sys.path.insert(0, '.')
+        from tests.python.test_edge_cases_focused import TestInputValidationEdgeCases
+        test_instance = TestInputValidationEdgeCases()
+        test_instance.test_empty_and_none_inputs()
+        test_instance.test_extremely_long_inputs()
+        print('✅ Edge case tests passed!')
+        "
+
+        echo "🎉 All pre-release tests passed!"
+
   build-packages:
     name: Build Distribution Packages
     runs-on: ubuntu-latest
-    
+    needs: pre-release-tests
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set version from tag
       id: version
       run: |
