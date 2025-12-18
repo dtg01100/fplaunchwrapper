@@ -1,0 +1,208 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fplaunchwrapper"
+version = "1.3.0"
+description = "Comprehensive Flatpak wrapper management system"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+dependencies = [
+    # Phase 1: Critical improvements (High priority)
+    "pathlib>=1.0.1",           # Already in Python stdlib since 3.4
+    "platformdirs>=3.0.0",      # Cross-platform directory handling
+    "watchdog>=3.0.0",          # File system monitoring
+]
+
+[project.optional-dependencies]
+# Phase 2: Robustness enhancements (Medium priority)
+robustness = [
+    "pydantic>=2.0.0",          # Data validation and settings management
+    "tomli>=2.0.0",             # TOML configuration parsing
+    "tomli-w>=1.0.0",           # TOML configuration writing
+    "psutil>=5.9.0",            # Process and system utilities
+]
+
+# Phase 3: Advanced features (Low priority)
+advanced = [
+    "click>=8.1.0",             # Modern CLI framework
+    "structlog>=23.1.0",        # Structured logging
+    "validators>=0.22.0",       # Input validation library
+    "rich>=13.0.0",             # Enhanced terminal output
+]
+
+# Development and testing (Optional)
+dev = [
+    "pytest>=7.0.0",            # Unit testing framework
+    "pytest-cov>=4.0.0",        # Coverage reporting
+    "pytest-mock>=3.10.0",      # Mocking utilities
+    "bats>=1.0.0",              # Bash testing framework
+    "shellcheck>=0.8.0",        # Shell script linting
+    "black>=23.0.0",            # Python code formatting
+    "flake8>=6.0.0",            # Python linting
+    "pylint>=3.0.0",            # Python static analysis
+]
+
+# Security (Optional)
+security = [
+    "cryptography>=41.0.0",     # Cryptographic functions
+    "bandit>=1.7.0",            # Python security scanning
+]
+
+# Integration (Optional)
+integration = [
+    "dbus-python>=1.3.0",       # D-Bus integration for Flatpak
+    "xvfbwrapper>=0.2.9",       # GUI testing support
+]
+
+# All dependencies for full installation
+all = [
+    # Include all optional dependencies
+    "fplaunchwrapper[robustness,advanced,dev,security,integration]",
+]
+
+[project.urls]
+Homepage = "https://github.com/dtg01100/fplaunchwrapper"
+Repository = "https://github.com/dtg01100/fplaunchwrapper"
+Issues = "https://github.com/dtg01100/fplaunchwrapper/issues"
+Documentation = "https://github.com/dtg01100/fplaunchwrapper#readme"
+
+[project.scripts]
+fplaunch-cli = "lib.cli:main"
+fplaunch-config = "lib.config_manager:main"
+fplaunch-monitor = "lib.flatpak_monitor:main"
+
+[tool.setuptools]
+packages = ["lib"]
+package-dir = {"lib" = "lib"}
+
+[tool.setuptools.package-data]
+lib = ["*.py"]
+
+# Development tool configurations
+[tool.black]
+line-length = 100
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--tb=short",
+    "--cov=lib",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--strict-markers"
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "security: marks tests as security-focused"
+]
+
+[tool.coverage.run]
+source = ["lib"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/conftest.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+    ".venv",
+    ".tox",
+]
+
+[tool.pylint.main]
+disable = [
+    "missing-module-docstring",
+    "missing-function-docstring",
+    "missing-class-docstring",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-statements",
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "watchdog.*",
+    "pydantic.*",
+    "tomli.*",
+    "psutil.*",
+    "click.*",
+    "rich.*",
+    "structlog.*",
+    "validators.*",
+    "dbus.*",
+    "xvfbwrapper.*",
+]
+ignore_missing_imports = true
