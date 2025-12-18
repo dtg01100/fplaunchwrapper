@@ -54,9 +54,17 @@ class WrapperManager:
 
         # Get bin directory from config
         bin_dir_file = self.config_dir / "bin_dir"
-        if bin_dir_file.exists():
-            self.bin_dir = Path(bin_dir_file.read_text().strip())
-        else:
+        try:
+            if bin_dir_file.exists():
+                bin_dir_path = bin_dir_file.read_text().strip()
+                if bin_dir_path:
+                    self.bin_dir = Path(bin_dir_path)
+                else:
+                    self.bin_dir = Path.home() / "bin"
+            else:
+                self.bin_dir = Path.home() / "bin"
+        except (OSError, IOError, UnicodeDecodeError):
+            # If we can't read the config file for any reason, fall back to default
             self.bin_dir = Path.home() / "bin"
 
         # Ensure directories exist (unless in emit mode)
