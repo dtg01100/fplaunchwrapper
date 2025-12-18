@@ -11,3 +11,5 @@ PACKAGING_TEST_RESULTS.md
 
 # Temporary files
 /tmp/
+*.egg-info/
+**/__pycache__/
