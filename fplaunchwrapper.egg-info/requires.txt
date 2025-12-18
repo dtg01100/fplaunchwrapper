@@ -15,7 +15,6 @@ fplaunchwrapper[advanced,dev,integration,robustness,security]
 pytest>=7.0.0
 pytest-cov>=4.0.0
 pytest-mock>=3.10.0
-bats>=1.0.0
 shellcheck>=0.8.0
 black>=23.0.0
 flake8>=6.0.0

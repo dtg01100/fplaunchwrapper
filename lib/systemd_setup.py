@@ -24,12 +24,18 @@ class SystemdSetup:
     """Set up systemd units for automatic wrapper management"""
 
     def __init__(
-        self, bin_dir: Optional[str] = None, wrapper_script: Optional[str] = None
+        self,
+        bin_dir: Optional[str] = None,
+        wrapper_script: Optional[str] = None,
+        emit_mode: bool = False,
+        emit_verbose: bool = False,
     ):
         self.bin_dir = Path(bin_dir or (Path.home() / "bin"))
         self.wrapper_script = wrapper_script or self._find_wrapper_script()
         self.systemd_unit_dir = self._get_systemd_unit_dir()
         self.flatpak_bin_dir = self._detect_flatpak_bin_dir()
+        self.emit_mode = emit_mode
+        self.emit_verbose = emit_verbose
 
     def _find_wrapper_script(self) -> str:
         """Find the wrapper generation script"""
@@ -181,52 +187,129 @@ WantedBy=timers.target
     def install_systemd_units(self) -> bool:
         """Install and enable systemd units"""
         try:
-            # Create unit directory
-            self.systemd_unit_dir.mkdir(parents=True, exist_ok=True)
+            if self.emit_mode:
+                # In emit mode, just show what would be done
+                self.log("EMIT: Would create systemd unit directory")
 
-            # Write unit files
-            service_unit = self.systemd_unit_dir / "flatpak-wrappers.service"
-            path_unit = self.systemd_unit_dir / "flatpak-wrappers.path"
-            timer_unit = self.systemd_unit_dir / "flatpak-wrappers.timer"
+                service_unit_path = self.systemd_unit_dir / "flatpak-wrappers.service"
+                path_unit_path = self.systemd_unit_dir / "flatpak-wrappers.path"
+                timer_unit_path = self.systemd_unit_dir / "flatpak-wrappers.timer"
 
-            service_unit.write_text(self.create_service_unit())
-            path_unit.write_text(self.create_path_unit())
-            timer_unit.write_text(self.create_timer_unit())
+                self.log(f"EMIT: Would write service unit to {service_unit_path}")
+                self.log(f"EMIT: Would write path unit to {path_unit_path}")
+                self.log(f"EMIT: Would write timer unit to {timer_unit_path}")
 
-            self.log("Created systemd unit files")
+                # Show file contents if verbose emit mode
+                if self.emit_verbose:
+                    service_content = self.create_service_unit()
+                    path_content = self.create_path_unit()
+                    timer_content = self.create_timer_unit()
 
-            # Reload daemon
-            subprocess.run(
-                ["systemctl", "--user", "daemon-reload"], capture_output=True
-            )
+                    if console:
+                        from rich.panel import Panel
 
-            # Enable and start path unit
-            subprocess.run(
-                ["systemctl", "--user", "enable", "flatpak-wrappers.path"],
-                capture_output=True,
-            )
-            subprocess.run(
-                ["systemctl", "--user", "start", "flatpak-wrappers.path"],
-                capture_output=True,
-            )
+                        console.print(
+                            Panel.fit(
+                                service_content,
+                                title=f"📄 flatpak-wrappers.service",
+                                border_style="blue",
+                            )
+                        )
+                        console.print(
+                            Panel.fit(
+                                path_content,
+                                title=f"📄 flatpak-wrappers.path",
+                                border_style="green",
+                            )
+                        )
+                        console.print(
+                            Panel.fit(
+                                timer_content,
+                                title=f"📄 flatpak-wrappers.timer",
+                                border_style="yellow",
+                            )
+                        )
+                    else:
+                        self.log("=" * 50)
+                        self.log("Service unit content:")
+                        self.log("-" * 30)
+                        for line in service_content.split("\n"):
+                            self.log(line)
+                        self.log("=" * 50)
+                        self.log("Path unit content:")
+                        self.log("-" * 30)
+                        for line in path_content.split("\n"):
+                            self.log(line)
+                        self.log("=" * 50)
+                        self.log("Timer unit content:")
+                        self.log("-" * 30)
+                        for line in timer_content.split("\n"):
+                            self.log(line)
+                        self.log("=" * 50)
 
-            # Enable and start timer unit
-            subprocess.run(
-                ["systemctl", "--user", "enable", "flatpak-wrappers.timer"],
-                capture_output=True,
-            )
-            subprocess.run(
-                ["systemctl", "--user", "start", "flatpak-wrappers.timer"],
-                capture_output=True,
-            )
+                self.log("EMIT: Would run: systemctl --user daemon-reload")
+                self.log(
+                    "EMIT: Would run: systemctl --user enable flatpak-wrappers.path"
+                )
+                self.log(
+                    "EMIT: Would run: systemctl --user start flatpak-wrappers.path"
+                )
+                self.log(
+                    "EMIT: Would run: systemctl --user enable flatpak-wrappers.timer"
+                )
+                self.log(
+                    "EMIT: Would run: systemctl --user start flatpak-wrappers.timer"
+                )
+                return True
+            else:
+                # Create unit directory
+                self.systemd_unit_dir.mkdir(parents=True, exist_ok=True)
 
-            self.log("Systemd units installed and started", "success")
-            self.log(
-                "Wrappers will update automatically on user Flatpak changes and daily"
-            )
-            self.log("(System Flatpak changes require manual run or wait for timer)")
+                # Write unit files
+                service_unit = self.systemd_unit_dir / "flatpak-wrappers.service"
+                path_unit = self.systemd_unit_dir / "flatpak-wrappers.path"
+                timer_unit = self.systemd_unit_dir / "flatpak-wrappers.timer"
 
-            return True
+                service_unit.write_text(self.create_service_unit())
+                path_unit.write_text(self.create_path_unit())
+                timer_unit.write_text(self.create_timer_unit())
+
+                self.log("Created systemd unit files")
+
+                # Reload daemon
+                subprocess.run(
+                    ["systemctl", "--user", "daemon-reload"], capture_output=True
+                )
+
+                # Enable and start path unit
+                subprocess.run(
+                    ["systemctl", "--user", "enable", "flatpak-wrappers.path"],
+                    capture_output=True,
+                )
+                subprocess.run(
+                    ["systemctl", "--user", "start", "flatpak-wrappers.path"],
+                    capture_output=True,
+                )
+
+                # Enable and start timer unit
+                subprocess.run(
+                    ["systemctl", "--user", "enable", "flatpak-wrappers.timer"],
+                    capture_output=True,
+                )
+                subprocess.run(
+                    ["systemctl", "--user", "start", "flatpak-wrappers.timer"],
+                    capture_output=True,
+                )
+
+                self.log("Systemd units installed and started", "success")
+                self.log(
+                    "Wrappers will update automatically on user Flatpak changes and daily"
+                )
+                self.log(
+                    "(System Flatpak changes require manual run or wait for timer)"
+                )
+
+                return True
 
         except Exception as e:
             self.log(f"Failed to install systemd units: {e}", "error")

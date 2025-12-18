@@ -21,7 +21,7 @@ except ImportError:
 
 # Import our utilities
 try:
-    from python_utils import (
+    from .python_utils import (
         find_executable,
         sanitize_id_to_name,
         validate_home_dir,
@@ -43,18 +43,27 @@ console = Console() if RICH_AVAILABLE else None
 class WrapperGenerator:
     """Generates Flatpak application wrappers"""
 
-    def __init__(self, bin_dir: str, verbose: bool = False):
+    def __init__(
+        self,
+        bin_dir: str,
+        verbose: bool = False,
+        emit_mode: bool = False,
+        emit_verbose: bool = False,
+    ):
         self.bin_dir = Path(bin_dir).expanduser().resolve()
         self.verbose = verbose
-        self.config_dir = Path.home() / ".config" / "fplaunchwrapper"
+        self.emit_mode = emit_mode
+        self.emit_verbose = emit_verbose
         self.lock_name = "generate"
+        self.config_dir = Path.home() / ".config" / "fplaunchwrapper"
 
-        # Ensure directories exist
-        self.bin_dir.mkdir(parents=True, exist_ok=True)
-        self.config_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure directories exist (unless in emit mode)
+        if not emit_mode:
+            self.bin_dir.mkdir(parents=True, exist_ok=True)
+            self.config_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save bin_dir to config
-        (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
+            # Save bin_dir to config
+            (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
 
     def log(self, message: str, level: str = "info"):
         """Log a message"""
@@ -187,6 +196,68 @@ class WrapperGenerator:
         if not wrapper_name:
             self.log(f"Skipping invalid app ID: {app_id}", "warning")
             return False
+
+        wrapper_path = self.bin_dir / wrapper_name
+
+        # Check for existing wrapper
+        wrapper_existed = wrapper_path.exists()
+        if wrapper_existed:
+            existing_id = get_wrapper_id(str(wrapper_path)) if UTILS_AVAILABLE else None
+            if existing_id and existing_id != app_id:
+                self.log(
+                    f"Name collision for '{wrapper_name}': {existing_id} vs {app_id}",
+                    "warning",
+                )
+                return False
+
+        # Create the wrapper script
+        wrapper_content = self.create_wrapper_script(wrapper_name, app_id)
+
+        if self.emit_mode:
+            # In emit mode, just show what would be done
+            action = "Update" if wrapper_existed else "Create"
+            self.log(f"EMIT: Would {action.lower()} wrapper: {wrapper_name}")
+            self.log(
+                f"EMIT: Would write {len(wrapper_content)} bytes to {wrapper_path}"
+            )
+            self.log(f"EMIT: Would set permissions to 755 on {wrapper_path}")
+
+            # Show file content if verbose emit mode
+            if self.emit_verbose:
+                self.log(f"EMIT: File content for {wrapper_path}:")
+                # Use Rich panel for better formatting if available
+                if console:
+                    from rich.panel import Panel
+
+                    console.print(
+                        Panel.fit(
+                            wrapper_content,
+                            title=f"📄 {wrapper_name} wrapper script",
+                            border_style="blue",
+                        )
+                    )
+                else:
+                    self.log("-" * 50)
+                    for i, line in enumerate(wrapper_content.split("\n"), 1):
+                        self.log(f"{i:2d}: {line}")
+                    self.log("-" * 50)
+
+            return True
+        else:
+            try:
+                wrapper_path.write_text(wrapper_content)
+                wrapper_path.chmod(0o755)
+
+                if wrapper_existed:
+                    self.log(f"Updated wrapper: {wrapper_name}")
+                else:
+                    self.log(f"Created wrapper: {wrapper_name}")
+
+                return True
+
+            except Exception as e:
+                self.log(f"Failed to create wrapper {wrapper_name}: {e}", "error")
+                return False
 
         wrapper_path = self.bin_dir / wrapper_name
 
@@ -472,8 +543,8 @@ fi
     def run(self) -> int:
         """Main generation process"""
         try:
-            # Acquire lock
-            if not acquire_lock(self.lock_name, 30):
+            # Acquire lock (skip in emit mode)
+            if not self.emit_mode and not acquire_lock(self.lock_name, 30):
                 self.log("Failed to acquire generation lock", "error")
                 return 1
 
@@ -518,7 +589,8 @@ fi
                 return 0
 
             finally:
-                release_lock(self.lock_name)
+                if not self.emit_mode:
+                    release_lock(self.lock_name)
 
         except Exception as e:
             self.log(f"Generation failed: {e}", "error")
@@ -541,6 +613,7 @@ Examples:
   python -m generate /home/user/bin        # Generate in specific directory
   python -m generate --verbose ~/bin       # Verbose output
   python -m generate $HOME/.local/bin      # Use local bin directory
+  python -m generate --emit ~/bin          # Show what would be done
         """,
     )
 
@@ -559,19 +632,26 @@ Examples:
         "--force", action="store_true", help="Force regeneration of all wrappers"
     )
 
+    parser.add_argument(
+        "--emit",
+        action="store_true",
+        help="Emit commands instead of executing (dry run)",
+    )
+
     args = parser.parse_args()
 
-    # Validate bin directory
-    bin_dir = os.path.expanduser(args.bin_dir)
-    if not validate_home_dir(bin_dir) if UTILS_AVAILABLE else True:
-        print(
-            f"Error: BIN_DIR must be under your home directory: {bin_dir}",
-            file=sys.stderr,
-        )
-        return 1
+    # Validate bin directory (skip in emit mode)
+    if not args.emit:
+        bin_dir = os.path.expanduser(args.bin_dir)
+        if not validate_home_dir(bin_dir) if UTILS_AVAILABLE else True:
+            print(
+                f"Error: BIN_DIR must be under your HOME directory: {bin_dir}",
+                file=sys.stderr,
+            )
+            return 1
 
     # Create generator and run
-    generator = WrapperGenerator(bin_dir, args.verbose)
+    generator = WrapperGenerator(args.bin_dir, args.verbose, args.emit)
     return generator.run()
 
 

@@ -108,6 +108,40 @@ fplaunch-cli set-pref chrome system
 fplaunch-cli remove vlc
 ```
 
+### 🧪 Safe Testing with Emit Mode
+
+**Preview changes before making them:**
+
+```bash
+# See what wrappers would be generated
+fplaunch-cli generate --emit ~/bin
+
+# Preview with full file contents
+fplaunch-cli generate --emit --emit-verbose ~/bin
+
+# Preview preference changes
+fplaunch-cli set-pref firefox flatpak --emit
+
+# Preview with preference file content
+fplaunch-cli set-pref firefox flatpak --emit --emit-verbose
+
+# Test systemd setup safely
+fplaunch-cli setup-systemd --emit
+
+# Test with complete systemd unit files
+fplaunch-cli setup-systemd --emit --emit-verbose
+
+# Use global emit flag for any command
+fplaunch-cli --emit set-pref chrome system
+fplaunch-cli --emit-verbose set-pref chrome system
+```
+
+**Benefits:**
+- ✅ **Risk-free testing** - No system changes
+- ✅ **Detailed preview** - See exact operations and file contents
+- ✅ **Script validation** - Test automation safely
+- ✅ **Content inspection** - Verify generated files before creation
+
 ### Get Wrapper Information
 
 ```bash

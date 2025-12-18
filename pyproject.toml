@@ -52,7 +52,7 @@ dev = [
     "pytest>=7.0.0",            # Unit testing framework
     "pytest-cov>=4.0.0",        # Coverage reporting
     "pytest-mock>=3.10.0",      # Mocking utilities
-    "bats>=1.0.0",              # Bash testing framework
+    # "bats>=1.0.0",            # Bash testing framework - excluded due to build issues
     "shellcheck>=0.8.0",        # Shell script linting
     "black>=23.0.0",            # Python code formatting
     "flake8>=6.0.0",            # Python linting
@@ -89,6 +89,8 @@ fplaunch-cli = "fplaunch.cli:main"
 fplaunch-generate = "fplaunch.generate:main"
 fplaunch-manage = "fplaunch.manage:main"
 fplaunch-launch = "fplaunch.launch:main"
+fplaunch-cleanup = "fplaunch.cleanup:main"
+fplaunch-setup-systemd = "fplaunch.systemd_setup:main"
 fplaunch-config = "fplaunch.config_manager:main"
 fplaunch-monitor = "fplaunch.flatpak_monitor:main"
 

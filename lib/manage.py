@@ -20,7 +20,7 @@ except ImportError:
 
 # Import our utilities
 try:
-    from python_utils import (
+    from .python_utils import (
         find_executable,
         sanitize_id_to_name,
         is_wrapper_file,
@@ -38,8 +38,16 @@ console = Console() if RICH_AVAILABLE else None
 class WrapperManager:
     """Manages Flatpak application wrappers"""
 
-    def __init__(self, config_dir: Optional[str] = None, verbose: bool = False):
+    def __init__(
+        self,
+        config_dir: Optional[str] = None,
+        verbose: bool = False,
+        emit_mode: bool = False,
+        emit_verbose: bool = False,
+    ):
         self.verbose = verbose
+        self.emit_mode = emit_mode
+        self.emit_verbose = emit_verbose
         self.config_dir = Path(
             config_dir or (Path.home() / ".config" / "fplaunchwrapper")
         )
@@ -51,9 +59,10 @@ class WrapperManager:
         else:
             self.bin_dir = Path.home() / "bin"
 
-        # Ensure directories exist
-        self.bin_dir.mkdir(parents=True, exist_ok=True)
-        self.config_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure directories exist (unless in emit mode)
+        if not emit_mode:
+            self.bin_dir.mkdir(parents=True, exist_ok=True)
+            self.config_dir.mkdir(parents=True, exist_ok=True)
 
     def log(self, message: str, level: str = "info"):
         """Log a message"""
@@ -142,8 +151,97 @@ class WrapperManager:
         """Remove a specific wrapper"""
         wrapper_path = self.bin_dir / wrapper_name
 
-        if not wrapper_path.exists():
+        if not wrapper_path.exists() and not self.emit_mode:
             self.log(f"Wrapper '{wrapper_name}' not found", "error")
+            return False
+
+        # Confirm removal unless forced or in emit mode
+        if not force and not self.emit_mode:
+            if console:
+                from rich.prompt import Confirm
+
+                if not Confirm.ask(
+                    f"Are you sure you want to remove wrapper '{wrapper_name}'?"
+                ):
+                    console.print("[yellow]Removal cancelled[/yellow]")
+                    return False
+            else:
+                response = input(
+                    f"Are you sure you want to remove wrapper '{wrapper_name}'? (y/n): "
+                )
+                if response.lower() not in ["y", "yes"]:
+                    print("Removal cancelled.")
+                    return False
+
+        # In emit mode, just show what would be done
+        if self.emit_mode:
+            self.log(f"EMIT: Would remove wrapper: {wrapper_name}")
+
+            pref_file = self.config_dir / f"{wrapper_name}.pref"
+            if pref_file.exists():
+                self.log(f"EMIT: Would remove preference file: {pref_file}")
+
+            aliases_file = self.config_dir / "aliases"
+            if aliases_file.exists():
+                self.log(f"EMIT: Would update aliases file: {aliases_file}")
+
+            if self.bin_dir.exists():
+                for item in self.bin_dir.iterdir():
+                    if item.is_symlink() and item.readlink() == wrapper_path:
+                        self.log(f"EMIT: Would remove symlink: {item.name}")
+
+            return True
+
+        try:
+            # Remove wrapper file
+            wrapper_path.unlink()
+            self.log(f"Removed wrapper: {wrapper_name}", "success")
+
+            # Remove preference file
+            pref_file = self.config_dir / f"{wrapper_name}.pref"
+            if pref_file.exists():
+                pref_file.unlink()
+                self.log(f"Removed preference file for: {wrapper_name}")
+
+            # Remove aliases
+            aliases_file = self.config_dir / "aliases"
+            if aliases_file.exists():
+                try:
+                    content = aliases_file.read_text()
+                    lines = content.split("\n")
+                    new_lines = []
+
+                    for line in lines:
+                        if line.strip() and not line.startswith(f"{wrapper_name} "):
+                            new_lines.append(line)
+
+                    if new_lines:
+                        aliases_file.write_text("\n".join(new_lines))
+                    else:
+                        aliases_file.unlink()
+
+                    self.log(f"Removed aliases for: {wrapper_name}")
+
+                except Exception as e:
+                    self.log(f"Warning: Could not remove aliases: {e}", "warning")
+
+            # Remove symlinks pointing to this wrapper
+            if self.bin_dir.exists():
+                for item in self.bin_dir.iterdir():
+                    if item.is_symlink() and item.readlink() == wrapper_path:
+                        try:
+                            item.unlink()
+                            self.log(f"Removed symlink: {item.name}")
+                        except Exception as e:
+                            self.log(
+                                f"Warning: Could not remove symlink {item.name}: {e}",
+                                "warning",
+                            )
+
+            return True
+
+        except Exception as e:
+            self.log(f"Failed to remove wrapper '{wrapper_name}': {e}", "error")
             return False
 
         # Confirm removal unless forced
@@ -223,6 +321,41 @@ class WrapperManager:
                 f"Invalid preference: {preference}. Use 'system' or 'flatpak'", "error"
             )
             return False
+
+        pref_file = self.config_dir / f"{wrapper_name}.pref"
+
+        if self.emit_mode:
+            self.log(f"EMIT: Would write '{preference}' to {pref_file}")
+
+            # Show file content if verbose emit mode
+            if self.emit_verbose:
+                self.log(f"EMIT: File content for {pref_file}:")
+                if console:
+                    from rich.panel import Panel
+
+                    console.print(
+                        Panel.fit(
+                            preference,
+                            title=f"📄 {wrapper_name}.pref preference file",
+                            border_style="green",
+                        )
+                    )
+                else:
+                    self.log("-" * 30)
+                    self.log(f"Content: {preference}")
+                    self.log("-" * 30)
+
+            return True
+        else:
+            try:
+                pref_file.write_text(preference)
+                self.log(
+                    f"Set preference for '{wrapper_name}' to '{preference}'", "success"
+                )
+                return True
+            except Exception as e:
+                self.log(f"Failed to set preference for '{wrapper_name}': {e}", "error")
+                return False
 
         pref_file = self.config_dir / f"{wrapper_name}.pref"
 
@@ -406,9 +539,15 @@ def main():
         help="Force operations without confirmation",
     )
 
+    parser.add_argument(
+        "--emit",
+        action="store_true",
+        help="Emit commands instead of executing (dry run)",
+    )
+
     args = parser.parse_args()
 
-    manager = WrapperManager(args.config_dir, args.verbose)
+    manager = WrapperManager(args.config_dir, args.verbose, args.emit)
 
     try:
         if args.command == "list":

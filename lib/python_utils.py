@@ -127,8 +127,8 @@ def is_wrapper_file(file_path):
             return False
 
         # Check for NAME and ID
-        name_match = re.search(r"^NAME=[^\n]*", content)
-        id_match = re.search(r"^ID=[^\n]*", content)
+        name_match = re.search(r"^NAME=[^\n]*", content, re.MULTILINE)
+        id_match = re.search(r"^ID=[^\n]*", content, re.MULTILINE)
 
         if not name_match or not id_match:
             return False
@@ -263,6 +263,96 @@ def safe_mktemp(template="tmp.XXXXXX", dir_param=None):
     except Exception as e:
         print(f"Temp file creation failed: {e}", file=sys.stderr)
         return None
+
+
+def acquire_lock(lock_name="fplaunch", timeout_seconds=30):
+    """Acquire a file-based lock with timeout"""
+    try:
+        # Get config directory
+        from pathlib import Path
+
+        config_dir = Path.home() / ".config" / "fplaunchwrapper"
+        config_dir.mkdir(parents=True, exist_ok=True)
+
+        lock_dir = config_dir / "locks"
+        lock_dir.mkdir(parents=True, exist_ok=True)
+
+        lockfile = lock_dir / f"{lock_name}.lock"
+        pidfile = lock_dir / f"{lock_name}.pid"
+
+        # Try to acquire lock with timeout
+        import time
+
+        start_time = time.time()
+        end_time = start_time + timeout_seconds
+
+        while time.time() < end_time:
+            try:
+                # Use mkdir for atomic directory creation as lock
+                lockfile.mkdir(parents=True, exist_ok=False)
+                # Write PID to lock file
+                pidfile.write_text(str(os.getpid()))
+                return True
+            except FileExistsError:
+                # Lock is held by another process
+                time.sleep(0.1)
+                continue
+
+        return False  # Timeout
+
+    except Exception as e:
+        print(f"Lock acquisition failed: {e}", file=sys.stderr)
+        return False
+
+
+def release_lock(lock_name="fplaunch"):
+    """Release a file-based lock"""
+    try:
+        from pathlib import Path
+
+        config_dir = Path.home() / ".config" / "fplaunchwrapper"
+        lock_dir = config_dir / "locks"
+        lockfile = lock_dir / f"{lock_name}.lock"
+        pidfile = lock_dir / f"{lock_name}.pid"
+
+        # Verify this process owns the lock
+        if pidfile.exists():
+            stored_pid = pidfile.read_text().strip()
+            if stored_pid == str(os.getpid()):
+                # Remove lock files
+                import shutil
+
+                try:
+                    shutil.rmtree(lockfile)
+                except FileNotFoundError:
+                    pass
+                try:
+                    pidfile.unlink()
+                except FileNotFoundError:
+                    pass
+                return True
+
+        return False
+
+    except Exception as e:
+        print(f"Lock release failed: {e}", file=sys.stderr)
+        return False
+
+
+def get_temp_dir():
+    """Get the best available temporary directory"""
+    for temp_dir in [
+        os.getenv("TMPDIR"),
+        os.getenv("TMP"),
+        os.getenv("TEMP"),
+        os.path.join(os.path.expanduser("~"), ".cache"),
+        "/var/tmp",
+        "/tmp",
+    ]:
+        if temp_dir and os.path.isdir(temp_dir) and os.access(temp_dir, os.W_OK):
+            return temp_dir
+
+    return "/tmp"
 
 
 if __name__ == "__main__":

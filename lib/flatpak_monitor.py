@@ -254,8 +254,8 @@ def start_flatpak_monitoring(callback=None, daemon=False):
         return monitor
 
 
-# CLI interface
-if __name__ == "__main__":
+def main():
+    """Command-line interface for flatpak monitoring"""
     import argparse
 
     parser = argparse.ArgumentParser(description="Flatpak file system monitor")
@@ -281,3 +281,8 @@ if __name__ == "__main__":
 
     if not args.daemon:
         print("Monitoring stopped")
+
+
+# CLI interface
+if __name__ == "__main__":
+    main()

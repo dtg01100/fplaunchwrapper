@@ -262,6 +262,51 @@ def create_config_manager():
     return EnhancedConfigManager()
 
 
+def main():
+    """Command-line interface for configuration management"""
+    if len(sys.argv) > 1:
+        cmd = sys.argv[1]
+
+        if cmd == "init":
+            # Initialize configuration
+            config = create_config_manager()
+            config.save_config()
+            print("Configuration initialized")
+
+        elif cmd == "show":
+            # Show current configuration
+            config = create_config_manager()
+            print(f"Config dir: {config.config_dir}")
+            print(f"Data dir: {config.data_dir}")
+            print(f"Bin dir: {config.config.bin_dir}")
+            print(f"Blocklist: {config.config.blocklist}")
+            print(f"Debug mode: {config.config.debug_mode}")
+
+        elif cmd == "block":
+            if len(sys.argv) < 3:
+                print("Usage: python config_manager.py block <app_id>")
+                sys.exit(1)
+            config = create_config_manager()
+            config.add_to_blocklist(sys.argv[2])
+            print(f"Blocked {sys.argv[2]}")
+
+        elif cmd == "unblock":
+            if len(sys.argv) < 3:
+                print("Usage: python config_manager.py unblock <app_id>")
+                sys.exit(1)
+            config = create_config_manager()
+            config.remove_from_blocklist(sys.argv[2])
+            print(f"Unblocked {sys.argv[2]}")
+
+        else:
+            print("Unknown command. Available: init, show, block, unblock")
+            sys.exit(1)
+    else:
+        print("Configuration manager CLI")
+        print("Usage: python config_manager.py <command>")
+        print("Commands: init, show, block <app_id>, unblock <app_id>")
+
+
 # CLI interface for testing
 if __name__ == "__main__":
     if len(sys.argv) > 1:
