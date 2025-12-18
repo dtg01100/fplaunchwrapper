@@ -12,6 +12,10 @@ set_alias() {
         echo "Alias $alias already exists"
         return 1
     fi
+    if grep -q " $alias$" "$CONFIG_DIR/aliases" 2>/dev/null; then
+        echo "Alias $alias already exists in config"
+        return 1
+    fi
     read -r -p "Create alias '$alias' for '$name'? (y/n): " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then
         ln -s "$script_path" "$alias_path"

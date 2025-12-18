@@ -10,6 +10,20 @@ set_script() {
         echo "Script $path not found"
         return 1
     fi
+    if [ ! -r "$path" ]; then
+        echo "Script $path is not readable"
+        return 1
+    fi
+    if [ ! -s "$path" ]; then
+        echo "Script $path is empty"
+        return 1
+    fi
+    # Basic size check (100KB limit)
+    local size=$(stat -f%z "$path" 2>/dev/null || stat -c%s "$path" 2>/dev/null || echo 0)
+    if [ "$size" -gt 100000 ]; then
+        echo "Script $path is too large (>100KB)"
+        return 1
+    fi
     local script_dir="$CONFIG_DIR/scripts/$name"
     mkdir -p "$script_dir"
     cp "$path" "$script_dir/pre-launch.sh"
@@ -26,6 +40,20 @@ set_post_script() {
     fi
     if [ ! -f "$path" ]; then
         echo "Script $path not found"
+        return 1
+    fi
+    if [ ! -r "$path" ]; then
+        echo "Script $path is not readable"
+        return 1
+    fi
+    if [ ! -s "$path" ]; then
+        echo "Script $path is empty"
+        return 1
+    fi
+    # Basic size check (100KB limit)
+    local size=$(stat -f%z "$path" 2>/dev/null || stat -c%s "$path" 2>/dev/null || echo 0)
+    if [ "$size" -gt 100000 ]; then
+        echo "Script $path is too large (>100KB)"
         return 1
     fi
     local script_dir="$CONFIG_DIR/scripts/$name"

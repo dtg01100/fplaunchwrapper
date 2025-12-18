@@ -602,22 +602,21 @@ if [ "\$PREF" = "system" ]; then
     else
         # System command gone, fall back to flatpak
         # Atomic preference update to prevent race conditions
-        temp_pref_file
-        temp_pref_file=$(safe_mktemp "tmp.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /tmp)")
-        echo "flatpak" > "$temp_pref_file"
-        mv "$temp_pref_file" "$PREF_FILE"
+        temp_pref_file=\$(safe_mktemp "tmp.XXXXXX" "\$(get_temp_dir 2>/dev/null || echo /tmp)")
+        echo "flatpak" > "\$temp_pref_file"
+        mv "\$temp_pref_file" "\$PREF_FILE"
         
         load_env_vars
-        run_pre_launch_script "$@"
-        run_and_cleanup flatpak run "$ID" "$@"
+        run_pre_launch_script "\$@"
+        run_and_cleanup flatpak run "\$ID" "\$@"
     fi
 elif [ "\$PREF" = "flatpak" ]; then
     load_env_vars
     run_pre_launch_script "\$@"
     run_and_cleanup flatpak run "\$ID" "\$@"
 else
-    # No pref set - interactive prompt (we know we're interactive here)
-    if [ "\$SYSTEM_EXISTS" = true ]; then
+    # No pref set - only show interactive prompt in interactive CLI
+    if is_interactive && [ "\$SYSTEM_EXISTS" = true ]; then
         # Interactive CLI with system package available
         default_choice="system"
         choice_reason="system package available"
@@ -639,15 +638,14 @@ else
         fi
         
         # Atomic preference update
-        temp_pref_file
-temp_pref_file=$(safe_mktemp "tmp.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /tmp)")
-        if [ -z "$temp_pref_file" ]; then
+        temp_pref_file=\$(safe_mktemp "tmp.XXXXXX" "\$(get_temp_dir 2>/dev/null || echo /tmp)")
+        if [ -z "\$temp_pref_file" ]; then
             echo "Error: Failed to create temp file for preference update" >&2
             echo "Please check file permissions and disk space." >&2
             exit 1
         fi
-        echo "$PREF" > "$temp_pref_file"
-        mv "$temp_pref_file" "$PREF_FILE"
+        echo "\$PREF" > "\$temp_pref_file"
+        mv "\$temp_pref_file" "\$PREF_FILE"
         
         load_env_vars
         run_pre_launch_script "\$@"
@@ -658,121 +656,22 @@ temp_pref_file=$(safe_mktemp "tmp.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /t
             run_and_cleanup flatpak run "\$ID" "\$@"
         fi
     else
-        # Only flatpak available
-        PREF="flatpak"
-        echo "\$PREF" > "\$PREF_FILE"
-        load_env_vars
-        run_pre_launch_script "\$@"
-        run_and_cleanup flatpak run "\$ID" "\$@"
-    fi
-fi
-
-# Check for system command at launch time
-SYSTEM_EXISTS=false
-CMD_PATH=""
-
-# Use command -v for secure path resolution
-if command -v "\$NAME" >/dev/null 2>&1; then
-    CMD_PATH=\$(command -v "\$NAME")
-    # Verify it's not our own wrapper
-    [ "\$CMD_PATH" != "\$SCRIPT_BIN_DIR/\$NAME" ] && SYSTEM_EXISTS=true
-fi
-
-if [ "\$PREF" = "system" ]; then
-    if [ "\$SYSTEM_EXISTS" = true ]; then
-        load_env_vars
-        run_pre_launch_script "\$@"
-        run_and_cleanup "\$NAME" "\$@"
-    else
-        # System command gone, fall back to flatpak
-        # Atomic preference update to prevent race conditions
-        temp_pref_file
-        temp_pref_file=$(safe_mktemp "tmp.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /tmp)")
-        echo "flatpak" > "$temp_pref_file"
-        mv "$temp_pref_file" "$PREF_FILE"
-        
-        load_env_vars
-        run_pre_launch_script "$@"
-        run_and_cleanup flatpak run "$ID" "$@"
-    fi
-elif [ "\$PREF" = "flatpak" ]; then
-    load_env_vars
-    run_pre_launch_script "\$@"
-    run_and_cleanup flatpak run "\$ID" "\$@"
-else
-    # No pref set - only show interactive prompt in interactive CLI
-    if is_interactive && [ "$SYSTEM_EXISTS" = true ]; then
-        # Interactive CLI with system package available
-        default_choice="system"
-        choice_reason="system package available"
-        
-        echo "Multiple options for '$NAME':"
-        echo "1. System package ($CMD_PATH)"
-        echo "2. Flatpak app ($ID)"
-        echo ""
-        read -r -p "Choose (1/2, default 1 - $choice_reason): " choice
-        choice=${choice:-1}
-        
-        if [ "$choice" = "1" ]; then
+        # Non-interactive or only flatpak available
+        if [ "\$SYSTEM_EXISTS" = true ]; then
+            # Non-interactive with system package - prefer system
             PREF="system"
-        elif [ "$choice" = "2" ]; then
-            PREF="flatpak"
-        else
-            echo "Invalid choice '$choice', using default: $default_choice"
-            PREF="$default_choice"
-        fi
-        
-        # Atomic preference update
-        temp_pref_file
-        temp_pref_file=$(safe_mktemp "tmp.XXXXXX" "$(get_temp_dir 2>/dev/null || echo /tmp)")
-        if [ -z "$temp_pref_file" ]; then
-            echo "Error: Failed to create temp file for preference update" >&2
-            echo "Please check file permissions and disk space." >&2
-            exit 1
-        fi
-        echo "$PREF" > "$temp_pref_file"
-        mv "$temp_pref_file" "$PREF_FILE"
-        
-        load_env_vars
-        run_pre_launch_script "$@"
-            
-if [ "$PREF" = "system" ]; then
-        run_and_cleanup "$NAME" "$@"
-    else
-        run_and_cleanup flatpak run "$ID" "$@"
-    fi
-else
-    # Non-interactive or only flatpak available
-    if [ "$SYSTEM_EXISTS" = true ]; then
-        # Non-interactive with system package - prefer system
-        PREF="system"
-        echo "$PREF" > "$PREF_FILE"
-        load_env_vars
-        run_pre_launch_script "$@"
-        run_and_cleanup "$NAME" "$@"
-    else
-        # Only flatpak available
-        PREF="flatpak"
-        echo "$PREF" > "$PREF_FILE"
-        load_env_vars
-        run_pre_launch_script "$@"
-        run_and_cleanup flatpak run "$ID" "$@"
-    fi
-fi
+            echo "\$PREF" > "\$PREF_FILE"
+            load_env_vars
+            run_pre_launch_script "\$@"
+            run_and_cleanup "\$NAME" "\$@"
         else
             # Only flatpak available
             PREF="flatpak"
-            echo "$PREF" > "$PREF_FILE"
+            echo "\$PREF" > "\$PREF_FILE"
             load_env_vars
-            run_pre_launch_script "$@"
-            run_and_cleanup flatpak run "$ID" "$@"
+            run_pre_launch_script "\$@"
+            run_and_cleanup flatpak run "\$ID" "\$@"
         fi
-    else
-        PREF="flatpak"
-        echo "\$PREF" > "\$PREF_FILE"
-        load_env_vars
-        run_pre_launch_script "\$@"
-        run_and_cleanup flatpak run "\$ID" "\$@"
     fi
 fi
 EOF

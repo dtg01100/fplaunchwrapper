@@ -2,9 +2,116 @@
 
 # Common utility functions for fplaunchwrapper
 
+# Error handling framework
+error_exit() {
+    local message="$1"
+    local exit_code="${2:-1}"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    # Log error to stderr with timestamp
+    echo "[$timestamp] ERROR: $message" >&2
+    
+    # Additional logging to file if available
+    if [ -n "${ERROR_LOG:-}" ] && [ -w "$ERROR_LOG" ]; then
+        echo "[$timestamp] ERROR: $message" >> "$ERROR_LOG"
+    fi
+    
+    exit "$exit_code"
+}
+
+# Safe command execution with error handling
+safe_execute() {
+    local description="$1"
+    shift
+    
+    # Log command execution
+    echo "Executing: $description" >&2
+    
+    # Execute with error handling
+    if "$@"; then
+        return 0
+    else
+        local exit_code=$?
+        error_exit "Failed to $description (exit code: $exit_code)" "$exit_code"
+    fi
+}
+
+# Improved file operation with error handling
+safe_file_operation() {
+    local operation="$1"
+    local file="$2"
+    shift 2
+    
+    case "$operation" in
+        "read")
+            if [ ! -r "$file" ]; then
+                error_exit "Cannot read file: $file"
+            fi
+            cat "$file" "$@"
+            ;;
+        "write")
+            if [ ! -w "$(dirname "$file")" ]; then
+                error_exit "Cannot write to file: $file"
+            fi
+            echo "$@" > "$file"
+            ;;
+        "append")
+            if [ ! -w "$(dirname "$file")" ]; then
+                error_exit "Cannot append to file: $file"
+            fi
+            echo "$@" >> "$file"
+            ;;
+        *)
+            error_exit "Unknown file operation: $operation"
+            ;;
+    esac
+}
+
+# Structured logging and debugging
+log_message() {
+    local level="$1"
+    local message="$2"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    # Log to stderr with level prefix
+    echo "[$timestamp] [$level]: $message" >&2
+    
+    # Log to file if LOG_FILE is set and writable
+    if [ -n "${LOG_FILE:-}" ] && [ -w "$LOG_FILE" ]; then
+        echo "[$timestamp] [$level]: $message" >> "$LOG_FILE"
+    fi
+}
+
+debug_log() {
+    if [ "${DEBUG:-0}" = "1" ]; then
+        log_message "DEBUG" "$1"
+    fi
+}
+
+info_log() {
+    log_message "INFO" "$1"
+}
+
+warn_log() {
+    log_message "WARN" "$1"
+}
+
+# Debug mode function for detailed logging
+enable_debug_mode() {
+    export DEBUG=1
+    LOG_FILE="${CONFIG_DIR:-$HOME/.config/flatpak-wrappers}/debug.log"
+    debug_log "Debug mode enabled"
+    debug_log "Environment variables:"
+    debug_log "  HOME: ${HOME:-<not set>}"
+    debug_log "  PATH: ${PATH:-<not set>}"
+    debug_log "  XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
+    debug_log "  CONFIG_DIR: ${CONFIG_DIR:-<not set>}"
+    debug_log "  BIN_DIR: ${BIN_DIR:-<not set>}"
+}
+
 # Safety check - never run as root
 if [ "$(id -u)" = "0" ]; then
-    echo "ERROR: fplaunchwrapper should never be run as root for safety"
+    error_exit "fplaunchwrapper should never be run as root for safety"
     echo "This tool is designed for user-level wrapper management only"
     exit 1
 fi
@@ -84,6 +191,34 @@ cleanup_systemd_units() {
 canonicalize_path_no_resolve() {
     local path="$1"
     [ -n "$path" ] || return 1
+    
+    # Use Python for robust path normalization if available
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import os, sys
+
+try:
+    path = '${path//\'/\\\'\'}'
+    
+    # Expand tilde
+    if path.startswith('~'):
+        path = os.path.expanduser(path)
+    
+    # Make absolute if relative
+    if not os.path.isabs(path):
+        path = os.path.abspath(path)
+    
+    # Collapse '.' and '..' without resolving symlinks
+    path = os.path.normpath(path)
+    
+    print(path)
+    sys.exit(0)
+except:
+    sys.exit(1)
+" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation
     # Expand tilde
     if [[ "$path" == ~* ]]; then
         path="${path/#~/$HOME}"
@@ -114,6 +249,39 @@ validate_home_dir() {
     if [ -z "$dir" ]; then
         return 1
     fi
+    
+    # Use Python for robust path validation if available
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import os, sys
+
+try:
+    dir = '${dir//\'/\\\'\'}'
+    
+    # Expand tilde
+    if dir.startswith('~'):
+        dir = os.path.expanduser(dir)
+    
+    # Get absolute path
+    abs_dir = os.path.abspath(dir)
+    
+    # Resolve symlinks safely
+    if os.path.islink(abs_dir):
+        abs_dir = os.path.realpath(abs_dir)
+    
+    # Check if within HOME
+    home = os.path.expanduser('~')
+    if abs_dir == home or abs_dir.startswith(home + os.sep):
+        print(abs_dir)
+        sys.exit(0)
+    else:
+        sys.exit(1)
+except:
+    sys.exit(1)
+" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation
     # Expand relative paths and tildes
     if [[ "$dir" == ~* ]]; then
         dir="${dir/#~/$HOME}"
@@ -149,9 +317,60 @@ validate_home_dir() {
 
 is_wrapper_file() {
     local file="$1"
+    
+    # Basic validation first
     [ -f "$file" ] || return 1
-    # Reject symlinks - ensure wrapper is an actual file
-    [ -L "$file" ] && return 1
+    [ -r "$file" ] || return 1
+    [ ! -L "$file" ] || return 1  # Reject symlinks
+    
+    # Use Python for robust content validation if available
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import re, sys, os
+
+try:
+    file_path = '${file//\'/\\\'\'}'
+    
+    # Check file size limits
+    size = os.path.getsize(file_path)
+    if size > 100000:  # 100KB limit
+        sys.exit(1)
+    
+    # Read file content with proper encoding
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        content = f.read(8192)  # Read first 8KB
+    
+    # Check for binary content
+    if any(ord(c) < 32 and c not in '\\t\\n\\r' for c in content):
+        sys.exit(1)
+    
+    # Check shebang
+    if not re.match(r'^#!.*(bash|sh)', content, re.MULTILINE):
+        sys.exit(1)
+    
+    # Check for marker
+    if 'Generated by fplaunchwrapper' not in content:
+        sys.exit(1)
+    
+    # Check for NAME and ID
+    name_match = re.search(r'^NAME=[^\n]*', content)
+    id_match = re.search(r'^ID=[^\n]*', content)
+    
+    if not name_match or not id_match:
+        sys.exit(1)
+    
+    # Validate ID format
+    id_value = re.search(r'ID=\"([^\"]*)\"', id_match.group())
+    if not id_value or not re.match(r'^[A-Za-z0-9._-]+$', id_value.group(1)):
+        sys.exit(1)
+    
+    sys.exit(0)
+except:
+    sys.exit(1)
+" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation with additional safeguards
     # Read header (first 30 lines) for faster processing
     local header
     header=$(head -n 30 -- "$file" 2>/dev/null || true)
@@ -188,6 +407,38 @@ is_wrapper_file() {
 
 get_wrapper_id() {
     local file="$1"
+    
+    # Use Python for robust ID extraction if available
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import re, sys
+
+try:
+    file_path = '${file//\'/\\\'\'}'
+    
+    # Read file content with proper encoding
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        content = f.read(8192)
+    
+    # Try standard ID format first
+    id_match = re.search(r'^ID=\"([^\"]*)\"', content, re.MULTILINE)
+    if id_match:
+        print(id_match.group(1))
+        sys.exit(0)
+    
+    # Fallback to comment extraction
+    comment_match = re.search(r'Flatpak ID:\s*([^\s\n]+)', content)
+    if comment_match:
+        print(comment_match.group(1))
+        sys.exit(0)
+    
+    sys.exit(1)
+except:
+    sys.exit(1)
+" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation
     [ -f "$file" ] || return 1
     local id
     id=$(grep -m1 '^ID=' "$file" 2>/dev/null | cut -d'"' -f2 || true)
@@ -206,32 +457,56 @@ get_wrapper_id() {
 
 acquire_lock() {
     ensure_config_dir || return 1
-    local lockfile="$CONFIG_DIR/.fplaunch-lock"
-    if command -v flock >/dev/null 2>&1; then
-        exec 9>"$lockfile" || return 1
-        flock -x 9 || return 1
-        LOCK_FD=9
-    else
-        local lockdir="$CONFIG_DIR/.fplaunch-lockdir"
-        while ! mkdir "$lockdir" 2>/dev/null; do
-            sleep 0.05
-        done
-        LOCK_DIR="$lockdir"
-    fi
-    return 0
+    
+    local lock_name="${1:-fplaunch}"
+    local timeout_seconds="${2:-30}"
+    local lock_dir="$CONFIG_DIR/locks"
+    
+    # Create lock directory
+    mkdir -p "$lock_dir" || return 1
+    
+    local lockfile="$lock_dir/$lock_name.lock"
+    local pidfile="$lock_dir/$lock_name.pid"
+    
+    # Try to acquire lock with timeout
+    local end_time=$((SECONDS + timeout_seconds))
+    while [ $SECONDS -lt $end_time ]; do
+        # Use mkdir for atomic directory creation as lock
+        if mkdir "$lockfile" 2>/dev/null; then
+            # Write PID to lock file
+            echo $$ > "$pidfile"
+            # Set cleanup trap
+            trap 'release_lock_internal "$lock_dir" "$lock_name"' EXIT
+            return 0
+        fi
+        sleep 0.1
+    done
+    
+    echo "Timeout acquiring lock: $lock_name" >&2
+    return 1
 }
 
 release_lock() {
-    if [ -n "${LOCK_FD:-}" ]; then
-        flock -u "$LOCK_FD" 2>/dev/null || true
-        eval "exec ${LOCK_FD}>&-" 2>/dev/null || true
-        unset LOCK_FD
+    local lock_name="${1:-fplaunch}"
+    local lock_dir="$CONFIG_DIR/locks"
+    release_lock_internal "$lock_dir" "$lock_name"
+}
+
+release_lock_internal() {
+    local lock_dir="$1"
+    local lock_name="$2"
+    
+    local lockfile="$lock_dir/$lock_name.lock"
+    local pidfile="$lock_dir/$lock_name.pid"
+    
+    # Verify this process owns the lock
+    if [ -f "$pidfile" ]; then
+        local lock_pid
+        lock_pid=$(cat "$pidfile" 2>/dev/null || echo 0)
+        if [ "$lock_pid" = $$ ]; then
+            rm -rf "$lockfile" "$pidfile" 2>/dev/null || true
+        fi
     fi
-    if [ -n "${LOCK_DIR:-}" ]; then
-        rmdir "$LOCK_DIR" 2>/dev/null || true
-        unset LOCK_DIR
-    fi
-    return 0
 }
 
 get_temp_dir() {
@@ -264,7 +539,39 @@ get_temp_dir() {
 
 find_executable() {
     local cmd="$1"
+    
     [ -n "$cmd" ] || return 1
+    
+    # Use Python for robust path resolution if available
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import os, sys
+
+try:
+    cmd = '${cmd//\'/\\\'\'}'
+    
+    # Check if absolute or relative path
+    if '/' in cmd:
+        if os.path.isfile(cmd) and os.access(cmd, os.X_OK):
+            print(os.path.abspath(cmd))
+            sys.exit(0)
+        sys.exit(1)
+    
+    # Use PATH resolution
+    for path_dir in os.getenv('PATH', '').split(':'):
+        if path_dir:
+            exe_path = os.path.join(path_dir, cmd)
+            if os.path.isfile(exe_path) and os.access(exe_path, os.X_OK):
+                print(os.path.abspath(exe_path))
+                sys.exit(0)
+    
+    sys.exit(1)
+except:
+    sys.exit(1)
+" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation
     # Absolute or relative path
     if [[ "$cmd" == */* ]]; then
         [ -x "$cmd" ] && printf '%s' "$cmd" && return 0
@@ -291,26 +598,108 @@ safe_mktemp() {
     local template="${1:-tmp.XXXXXX}"
     local dir_param="${2:-}"
     local tdir
+    
+    # Get secure temp directory
     if [ -n "$dir_param" ] && [ -d "$dir_param" ]; then
         tdir="$dir_param"
     else
         tdir=$(get_temp_dir 2>/dev/null) || tdir="/tmp"
     fi
+    
+    # Use Python for secure temp file creation if available
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import os, tempfile, sys
+
+try:
+    template = '${template//\'/\\\'\'}'
+    tdir = '${tdir//\'/\\\'\'}'
+    
+    # Create secure temp file
+    fd, path = tempfile.mkstemp(
+        prefix=template.replace('XXXXXX', ''),
+        dir=tdir,
+        suffix='' if 'XXXXXX' not in template else os.path.splitext(template)[1]
+    )
+    os.close(fd)
+    print(path)
+    sys.exit(0)
+except:
+    sys.exit(1)
+" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to mktemp if available
     if command -v mktemp >/dev/null 2>&1; then
-        if mktemp -p "$tdir" "$template" >/dev/null 2>&1; then
+        if mktemp -p "$tdir" "$template" 2>/dev/null; then
             mktemp -p "$tdir" "$template"
             return 0
         fi
-        if mktemp "$tdir/$template" >/dev/null 2>&1; then
+        if mktemp "$tdir/$template" 2>/dev/null; then
             mktemp "$tdir/$template"
             return 0
         fi
     fi
-    printf '%s' "$tdir/${template//X/0}.$RANDOM"
+    
+    # Last resort: use random number with current timestamp
+    local timestamp=$(date +%s%N)
+    local random_val=$((RANDOM % 100000))
+    echo "$tdir/${template//X/0}.${timestamp}.${random_val}"
 }
 
 sanitize_id_to_name() {
     local id="$1"
+    
+    # Use Python for robust name sanitization if available
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import re, sys, hashlib
+
+try:
+    id = '${id//\'/\\\'\'}'
+    
+    # Extract last component after dots
+    name = id.split('.')[-1].lower()
+    
+    # Unicode normalization and transliteration
+    try:
+        import unicodedata
+        # Normalize to NFKD and remove diacritics
+        name = unicodedata.normalize('NFKD', name)
+        name = ''.join(c for c in name if not unicodedata.combining(c))
+    except ImportError:
+        pass
+    
+    # Convert to ASCII if possible
+    try:
+        name = name.encode('ascii', 'ignore').decode('ascii')
+    except UnicodeError:
+        pass
+    
+    # Replace non-alphanumeric characters with hyphens
+    name = re.sub(r'[^a-z0-9_\-]', '-', name)
+    
+    # Remove leading/trailing hyphens and multiple hyphens
+    name = re.sub(r'^\-+|\-+$', '', name)
+    name = re.sub(r'\-+', '-', name)
+    
+    # Ensure not empty
+    if not name:
+        # Generate hash-based fallback
+        hash_obj = hashlib.sha256(id.encode('utf-8'))
+        name = f'app-{hash_obj.hexdigest()[:8]}'
+    
+    # Limit length
+    name = name[:100]
+    
+    print(name)
+    sys.exit(0)
+except:
+    sys.exit(1)
+" 2>/dev/null && return 0
+    fi
+    
+    # Fallback to original implementation
     local name
     name=$(printf '%s' "$id" | awk -F. '{print tolower($NF)}')
     # Try Unicode normalization and transliteration
