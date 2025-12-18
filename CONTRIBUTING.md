@@ -1,6 +1,6 @@
-# 🤝 Contributing to fplaunchwrapper
+# Contributing to fplaunchwrapper
 
-Thank you for your interest in contributing to fplaunchwrapper! This modern Python-based utility welcomes contributions from developers of all skill levels.
+This Python utility welcomes contributions from developers.
 
 ## 🌟 Ways to Contribute
 

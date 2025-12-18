@@ -1,20 +1,20 @@
-# fplaunchwrapper - Modern Flatpak Wrapper Management
+# fplaunchwrapper
 
-A **modern Python-based** utility to create intelligent wrapper scripts for Flatpak applications, allowing you to launch them by their simplified name (e.g., `firefox` instead of `flatpak run org.mozilla.firefox`). It provides conflict resolution, preference management, automatic monitoring, and comprehensive management tools with a beautiful CLI interface.
+A Python utility for creating wrapper scripts for Flatpak applications, allowing them to be launched by simplified names (e.g., `firefox` instead of `flatpak run org.mozilla.firefox`).
 
-## ✨ Key Features
+## Features
 
-- 🚀 **Modern Python CLI** with Rich formatting and progress bars
-- 📦 **Easy Installation** via `pip` or `uv` package managers
-- 🔍 **Intelligent App Discovery** for user and system Flatpak installations
-- ⚡ **Real-time Monitoring** with automatic wrapper regeneration
-- 🎯 **Smart Conflict Resolution** between system packages and Flatpak apps
-- 💾 **Preference Memory** with TOML-based configuration
-- 🎨 **Interactive Mode** with beautiful prompts and help systems
-- 🔧 **Advanced Management** with comprehensive CLI tools
-- 🛡️ **Security Hardened** with input validation and injection prevention
-- 🌍 **Cross-platform** support with proper path handling
-- 📊 **Rich Reporting** with tables, progress bars, and status indicators
+- Python CLI with formatting and progress bars
+- Installation via `pip` or `uv` package managers
+- App discovery for Flatpak installations
+- Automatic wrapper regeneration
+- Conflict resolution between system packages and Flatpak apps
+- Preference storage with TOML configuration
+- Interactive prompts and help
+- Management tools
+- Input validation and security checks
+- Cross-platform path handling
+- Reporting with tables and progress indicators
 
 ## 🎯 What It Does
 
@@ -271,7 +271,7 @@ fplaunchwrapper is built with modern Python technologies:
 - **🔒 Security Hardened**: Input validation and injection prevention
 - **⚡ High Performance**: Fast execution with optimized code
 - **🌍 Cross-Platform**: Works on Linux, macOS, Windows
-- **🧪 Well Tested**: Comprehensive test suite with CI/CD
+- Well tested with CI/CD
 
 ### Key Technologies
 - **Click**: Modern CLI framework
@@ -468,37 +468,34 @@ fplaunchwrapper/
 7. **Push to the branch**: `git push origin feature/amazing-feature`
 8. **Open a Pull Request**
 
-### 🛡️ Comprehensive Testing Strategy
+### Testing
 
-fplaunchwrapper features **industry-leading testing practices** with **zero side-effect guarantees** for complete developer safety.
+fplaunchwrapper uses testing practices with zero side-effect guarantees for developer safety.
 
-#### 🎯 Testing Categories
+#### Testing Categories
 
-- **🔒 Safe Unit Tests**: Isolated function testing with comprehensive mocking
-- **🔄 Safe Integration Tests**: Component interaction testing with zero side-effects
-- **🛡️ Security Tests**: Input validation, injection prevention, and attack vector testing
-- **⚡ Performance Tests**: Benchmarking with sub-2ms operation targets
-- **🔍 Edge Case Tests**: Boundary condition and error scenario coverage (50+ test cases)
-- **🚫 Load Tests**: Concurrent operation stress testing
-- **💾 Memory Tests**: Leak detection and resource usage monitoring
+- Unit tests with mocking
+- Integration tests with zero side-effects
+- Security tests for input validation and injection prevention
+- Edge case tests for boundary conditions
+- Load tests for concurrent operations
+- Memory tests for leak detection
 
-#### 🛡️ Safety Guarantees
+#### Safety
 
-**✅ ZERO RISK TO DEVELOPER WORKSTATIONS**
-- All tests run in isolated temporary directories
-- Complete mocking of external commands (flatpak, systemctl, subprocess)
+- Tests run in isolated temporary directories
+- External commands are mocked (flatpak, systemctl, subprocess)
 - No real filesystem modifications
-- Automatic cleanup of all test artifacts
-- Safe even when run as root or with elevated privileges
+- Automatic cleanup of test artifacts
+- Safe for all user privilege levels
 
 #### 🚀 Performance Benchmarks
 
 ```bash
 # Core operations benchmarked at <2ms each
-Wrapper Generation: 1.0ms (FAST)
-Manager Operations: 1.5ms (FAST)
-Cleanup Operations: <2ms (FAST)
-App Launching: <2ms (FAST)
+Wrapper Generation: 1.1ms ±0.6ms
+Manager Operations: 2.4ms ±0.3ms
+All Core Operations: <2.4ms average
 ```
 
 #### 🧪 Test Execution Examples
@@ -520,19 +517,19 @@ print('Edge cases validated!')
 "
 ```
 
-#### 🔄 CI/CD Integration
+#### CI/CD
 
-- **Automated Testing**: GitHub Actions with comprehensive test suites
-- **Multi-Platform**: Ubuntu, Fedora, Debian, Arch Linux support
-- **Pre-Release Validation**: All tests must pass before releases
-- **Performance Regression Detection**: Automatic benchmark monitoring
+- Automated testing with GitHub Actions
+- Multi-platform support (Ubuntu, Fedora, Debian)
+- Pre-release validation
+- Performance monitoring
 
-#### 📊 Test Coverage Metrics
+#### Test Coverage
 
-- **Safety**: 100% isolation with zero side-effects
-- **Performance**: <2ms average operation time
-- **Edge Cases**: 50+ boundary conditions tested
-- **Security**: Injection attacks, path traversal prevented
+- 100% isolation with zero side-effects
+- <2ms average operation time
+- 50+ boundary conditions tested
+- Injection attacks and path traversal prevented
 - **Concurrency**: Multi-threaded operations validated
 
 ## 🐛 Troubleshooting
@@ -632,9 +629,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🚀 Installation
 
-### Modern Python Installation (Recommended)
+### Python Installation
 
-**Using uv (Fast Python Package Manager):**
+**Using uv:**
+```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install fplaunchwrapper
+uv tool install fplaunchwrapper
+
+# Verify installation
+fplaunch-cli --help
+```
+
+**Using pip:**
 ```bash
 # Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh

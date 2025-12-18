@@ -1,12 +1,12 @@
-# 🚀 Quick Start Guide
+# Quick Start Guide
 
-Get started with fplaunchwrapper in under 2 minutes!
+Get started with fplaunchwrapper in under 2 minutes.
 
 ## Installation
 
-### Modern Python Installation (Recommended)
+### Python Installation
 
-**Using uv (Fast & Reliable):**
+**Using uv:**
 ```bash
 # Install uv package manager
 curl -LsSf https://astral.sh/uv/install.sh | sh
