@@ -85,16 +85,16 @@ Documentation = "https://github.com/dtg01100/fplaunchwrapper#readme"
 
 [project.scripts]
 fplaunch = "fplaunch:main"
-fplaunch-cli = "lib.cli:main"
-fplaunch-generate = "lib.generate:main"
-fplaunch-manage = "lib.manage:main"
-fplaunch-launch = "lib.launch:main"
-fplaunch-config = "lib.config_manager:main"
-fplaunch-monitor = "lib.flatpak_monitor:main"
+fplaunch-cli = "fplaunch.cli:main"
+fplaunch-generate = "fplaunch.generate:main"
+fplaunch-manage = "fplaunch.manage:main"
+fplaunch-launch = "fplaunch.launch:main"
+fplaunch-config = "fplaunch.config_manager:main"
+fplaunch-monitor = "fplaunch.flatpak_monitor:main"
 
 [tool.setuptools]
-packages = ["lib"]
-package-dir = {"lib" = "lib"}
+packages = ["fplaunch"]
+package-dir = {"fplaunch" = "lib"}
 
 [tool.setuptools.package-data]
 lib = ["*.py"]

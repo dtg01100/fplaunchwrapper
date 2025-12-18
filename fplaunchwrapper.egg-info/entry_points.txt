@@ -1,4 +1,8 @@
 [console_scripts]
-fplaunch-cli = lib.cli:main
-fplaunch-config = lib.config_manager:main
-fplaunch-monitor = lib.flatpak_monitor:main
+fplaunch = fplaunch:main
+fplaunch-cli = fplaunch.cli:main
+fplaunch-config = fplaunch.config_manager:main
+fplaunch-generate = fplaunch.generate:main
+fplaunch-launch = fplaunch.launch:main
+fplaunch-manage = fplaunch.manage:main
+fplaunch-monitor = fplaunch.flatpak_monitor:main

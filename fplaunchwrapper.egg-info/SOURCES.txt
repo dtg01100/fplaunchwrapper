@@ -10,6 +10,7 @@ fplaunchwrapper.egg-info/top_level.txt
 lib/cli.py
 lib/config_manager.py
 lib/flatpak_monitor.py
+lib/fplaunch.py
 lib/generate.py
 lib/launch.py
 lib/manage.py
