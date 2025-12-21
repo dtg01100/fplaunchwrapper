@@ -1,15 +1,78 @@
 # Build artifacts
 build/
+dist/
 *.deb
 *.rpm
 *.tar.gz
+*.tar.bz2
+*.zip
 *.changes
 *.buildinfo
+*.noarch.rpm
 
-# Test results
+# Python packaging
+*.egg-info/
+*.egg
+*.whl
+MANIFEST
+dist/
+
+# Python runtime
+__pycache__/
+# Ignored: *.pyc
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.hypothesis/
 PACKAGING_TEST_RESULTS.md
 
 # Temporary files
 /tmp/
-*.egg-info/
-**/__pycache__/
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Development artifacts
+.devcontainer/local/
+*.patch.orig
+system_detection_fix.patch
+
+# Keep these test files
+!run_tests.py
+!test_*.py
+!advanced_edge_cases_test.py
+!break_test.py
+!weird_setup_test.py
+!ultra_edge_cases_test.py

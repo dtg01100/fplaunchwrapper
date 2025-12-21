@@ -1,0 +1,1 @@
+/var/home/dlafreniere/projects/fplaunchwrapper/.venv/bin/python: No module named pytest

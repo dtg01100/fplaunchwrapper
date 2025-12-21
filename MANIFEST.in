@@ -1,0 +1,31 @@
+# Include documentation and configuration files
+include LICENSE
+include README.md
+include QUICKSTART.md
+include CONTRIBUTING.md
+include pyproject.toml
+include Makefile
+
+# Include shell scripts and completion
+include fplaunch-*
+include fplaunch_completion.bash
+
+# Include all documentation
+recursive-include docs *
+recursive-include examples *
+
+# Include packaging files
+recursive-include packaging *
+
+# Include tests
+recursive-include tests *
+
+# Exclude compiled Python files
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.egg-info
+global-exclude .git
+global-exclude .github
+global-exclude .venv
+global-exclude build
+global-exclude dist
