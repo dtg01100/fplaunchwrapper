@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""
-Pytest tests for focused fplaunchwrapper functionality
-"""
+"""Pytest tests for focused fplaunchwrapper functionality."""
 
-import sys
-import pytest
-import tempfile
 import shutil
+import sys
+import tempfile
 from pathlib import Path
+
+import pytest
 
 # Add lib to path
 # Mock python_utils
@@ -35,11 +34,11 @@ except ImportError:
 
 @pytest.mark.skipif(not MODULES_AVAILABLE, reason="Required modules not available")
 class TestFocusedFunctionality:
-    """Focused functionality tests"""
+    """Focused functionality tests."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp())
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -51,12 +50,12 @@ class TestFocusedFunctionality:
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def test_module_imports(self):
-        """Test that modules can be imported"""
+    def test_module_imports(self) -> None:
+        """Test that modules can be imported."""
         assert MODULES_AVAILABLE
 
-    def test_wrapper_generator_creation(self, temp_env):
-        """Test WrapperGenerator creation"""
+    def test_wrapper_generator_creation(self, temp_env) -> None:
+        """Test WrapperGenerator creation."""
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
             verbose=True,
@@ -65,8 +64,8 @@ class TestFocusedFunctionality:
         )
         assert generator is not None
 
-    def test_wrapper_manager_creation(self, temp_env):
-        """Test WrapperManager creation"""
+    def test_wrapper_manager_creation(self, temp_env) -> None:
+        """Test WrapperManager creation."""
         manager = WrapperManager(
             config_dir=str(temp_env["config_dir"]),
             verbose=True,
@@ -75,10 +74,10 @@ class TestFocusedFunctionality:
         )
         assert manager is not None
 
-    def test_systemd_setup_creation(self, temp_env):
-        """Test SystemdSetup creation"""
+    def test_systemd_setup_creation(self, temp_env) -> None:
+        """Test SystemdSetup creation."""
         setup = SystemdSetup(
-            bin_dir=str(temp_env["bin_dir"]), emit_mode=True, emit_verbose=True
+            bin_dir=str(temp_env["bin_dir"]), emit_mode=True, emit_verbose=True,
         )
         assert setup is not None
 

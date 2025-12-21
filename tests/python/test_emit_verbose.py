@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""
-Pytest tests for emit verbose functionality
-"""
+"""Pytest tests for emit verbose functionality."""
 
-import sys
-import pytest
 import subprocess
+import sys
 from pathlib import Path
+
+import pytest
+
 
 # Add lib to path
 class TestEmitVerbose:
-    """Test emit verbose content inspection"""
+    """Test emit verbose content inspection."""
 
     def run_emit_verbose_test(self, python_code, description):
-        """Run Python code and check for success markers"""
+        """Run Python code and check for success markers."""
         try:
             result = subprocess.run(
                 [sys.executable, "-c", python_code],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 cwd=Path(__file__).parent.parent,
                 timeout=30,
@@ -27,10 +27,10 @@ class TestEmitVerbose:
         except Exception:
             return False
 
-    def test_generate_emit_verbose(self):
-        """Test generate emit verbose shows wrapper content"""
+    def test_generate_emit_verbose(self) -> None:
+        """Test generate emit verbose shows wrapper content."""
         code = """
-from lib.generate from fplaunch import WrapperGenerator
+from fplaunch.generate import WrapperGenerator
 import io
 from contextlib import redirect_stdout
 g = WrapperGenerator('/tmp/test', True, True, True)
@@ -43,10 +43,10 @@ print('SUCCESS' if 'File content for' in content and '#!/usr/bin/env bash' in co
         success = self.run_emit_verbose_test(code, "generate emit verbose")
         assert success
 
-    def test_manage_emit_verbose(self):
-        """Test manage emit verbose shows preference content"""
+    def test_manage_emit_verbose(self) -> None:
+        """Test manage emit verbose shows preference content."""
         code = """
-from lib.manage from fplaunch import WrapperManager
+from fplaunch.manage import WrapperManager
 import io
 from contextlib import redirect_stdout
 m = WrapperManager('/tmp/config', True, True, True)
@@ -59,10 +59,10 @@ print('SUCCESS' if 'File content for' in content and 'flatpak' in content else '
         success = self.run_emit_verbose_test(code, "manage emit verbose")
         assert success
 
-    def test_systemd_emit_verbose(self):
-        """Test systemd emit verbose shows unit content"""
+    def test_systemd_emit_verbose(self) -> None:
+        """Test systemd emit verbose shows unit content."""
         code = """
-from lib.systemd_setup from fplaunch import SystemdSetup
+from fplaunch.systemd_setup import SystemdSetup
 import io
 from contextlib import redirect_stdout
 s = SystemdSetup(emit_mode=True, emit_verbose=True)

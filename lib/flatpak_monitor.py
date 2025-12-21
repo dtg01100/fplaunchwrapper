@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
+"""File system monitoring for fplaunchwrapper
+Automatically detects new Flatpak installations and updates wrappers.
 """
-File system monitoring for fplaunchwrapper
-Automatically detects new Flatpak installations and updates wrappers
-"""
+from __future__ import annotations
 
+import contextlib
 import os
-import sys
-import time
 import signal
 import subprocess
-from pathlib import Path
+import sys
+import time
 
 try:
-    from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
+    from watchdog.observers import Observer
 
     WATCHDOG_AVAILABLE = True
 except ImportError:
@@ -21,35 +21,35 @@ except ImportError:
 
 
 class FlatpakEventHandler(FileSystemEventHandler):
-    """Handler for Flatpak installation/removal events"""
+    """Handler for Flatpak installation/removal events."""
 
-    def __init__(self, callback=None):
+    def __init__(self, callback=None) -> None:
         self.callback = callback
         self.last_event_time = 0
         self.cooldown_seconds = 2  # Prevent rapid-fire events
 
-    def on_created(self, event):
-        """Called when a new file/directory is created"""
+    def on_created(self, event) -> None:
+        """Called when a new file/directory is created."""
         if self._should_process_event(event.src_path):
             self._trigger_callback("created", event.src_path)
 
-    def on_deleted(self, event):
-        """Called when a file/directory is deleted"""
+    def on_deleted(self, event) -> None:
+        """Called when a file/directory is deleted."""
         if self._should_process_event(event.src_path):
             self._trigger_callback("deleted", event.src_path)
 
-    def on_modified(self, event):
-        """Called when a file/directory is modified"""
+    def on_modified(self, event) -> None:
+        """Called when a file/directory is modified."""
         if self._should_process_event(event.src_path):
             self._trigger_callback("modified", event.src_path)
 
-    def on_moved(self, event):
-        """Called when a file/directory is moved"""
+    def on_moved(self, event) -> None:
+        """Called when a file/directory is moved."""
         if self._should_process_event(event.src_path):
             self._trigger_callback("moved", event.src_path)
 
-    def _should_process_event(self, path):
-        """Determine if we should process this event"""
+    def _should_process_event(self, path) -> bool:
+        """Determine if we should process this event."""
         # Only process events related to Flatpak installations
         path_str = str(path)
 
@@ -71,19 +71,17 @@ class FlatpakEventHandler(FileSystemEventHandler):
 
         return False
 
-    def _trigger_callback(self, event_type, path):
-        """Trigger the callback function"""
+    def _trigger_callback(self, event_type, path) -> None:
+        """Trigger the callback function."""
         if self.callback:
-            try:
+            with contextlib.suppress(Exception):
                 self.callback(event_type, path)
-            except Exception as e:
-                print(f"Error in callback: {e}", file=sys.stderr)
 
 
 class FlatpakMonitor:
-    """Monitor for Flatpak installation changes"""
+    """Monitor for Flatpak installation changes."""
 
-    def __init__(self, callback=None):
+    def __init__(self, callback=None) -> None:
         self.callback = callback
         self.observer = None
         self.running = False
@@ -92,7 +90,7 @@ class FlatpakMonitor:
         self.watch_paths = self._get_watch_paths()
 
     def _get_watch_paths(self):
-        """Get paths that should be monitored for Flatpak changes"""
+        """Get paths that should be monitored for Flatpak changes."""
         paths = []
 
         # System Flatpak installations
@@ -111,13 +109,9 @@ class FlatpakMonitor:
 
         return paths
 
-    def start_monitoring(self):
-        """Start monitoring for Flatpak changes"""
+    def start_monitoring(self) -> bool | None:
+        """Start monitoring for Flatpak changes."""
         if not WATCHDOG_AVAILABLE:
-            print(
-                "Warning: watchdog not available, file monitoring disabled",
-                file=sys.stderr,
-            )
             return False
 
         try:
@@ -130,7 +124,6 @@ class FlatpakMonitor:
             for path in self.watch_paths:
                 if os.path.exists(path):
                     self.observer.schedule(event_handler, path, recursive=True)
-                    print(f"Monitoring: {path}")
 
             self.observer.start()
             self.running = True
@@ -139,42 +132,34 @@ class FlatpakMonitor:
             signal.signal(signal.SIGINT, self._signal_handler)
             signal.signal(signal.SIGTERM, self._signal_handler)
 
-            print("Flatpak monitoring started")
             return True
 
-        except Exception as e:
-            print(f"Failed to start monitoring: {e}", file=sys.stderr)
+        except Exception:
             return False
 
-    def stop_monitoring(self):
-        """Stop monitoring"""
+    def stop_monitoring(self) -> None:
+        """Stop monitoring."""
         if self.observer and self.running:
             self.observer.stop()
             self.observer.join()
             self.running = False
-            print("Flatpak monitoring stopped")
 
-    def _on_flatpak_change(self, event_type, path):
-        """Handle Flatpak-related file system changes"""
-        print(f"Flatpak change detected: {event_type} - {path}")
-
+    def _on_flatpak_change(self, event_type, path) -> None:
+        """Handle Flatpak-related file system changes."""
         # Debounce rapid events
         time.sleep(1)
 
         # Check if we need to regenerate wrappers
         if self._should_regenerate_wrappers(path):
-            print("Regenerating wrappers due to Flatpak changes...")
             self._regenerate_wrappers()
 
         # Call user callback if provided
         if self.callback:
-            try:
+            with contextlib.suppress(Exception):
                 self.callback(event_type, path)
-            except Exception as e:
-                print(f"Error in user callback: {e}", file=sys.stderr)
 
-    def _should_regenerate_wrappers(self, path):
-        """Determine if wrappers should be regenerated based on the path"""
+    def _should_regenerate_wrappers(self, path) -> bool:
+        """Determine if wrappers should be regenerated based on the path."""
         path_str = str(path).lower()
 
         # Regenerate on app installation/removal
@@ -182,13 +167,10 @@ class FlatpakMonitor:
             return True
 
         # Regenerate on metadata changes
-        if "metadata" in path_str or "manifest" in path_str:
-            return True
+        return bool("metadata" in path_str or "manifest" in path_str)
 
-        return False
-
-    def _regenerate_wrappers(self):
-        """Regenerate Flatpak wrappers"""
+    def _regenerate_wrappers(self) -> bool | None:
+        """Regenerate Flatpak wrappers."""
         try:
             # Find the fplaunch-generate script
             script_paths = [
@@ -200,32 +182,21 @@ class FlatpakMonitor:
             for script_path in script_paths:
                 if os.path.exists(script_path) and os.access(script_path, os.X_OK):
                     result = subprocess.run(
-                        [script_path], capture_output=True, text=True
+                        [script_path], check=False, capture_output=True, text=True,
                     )
-                    if result.returncode == 0:
-                        print("Wrappers regenerated successfully")
-                        return True
-                    else:
-                        print(
-                            f"Wrapper regeneration failed: {result.stderr}",
-                            file=sys.stderr,
-                        )
-                        return False
+                    return result.returncode == 0
 
-            print("fplaunch-generate script not found", file=sys.stderr)
             return False
 
-        except Exception as e:
-            print(f"Error regenerating wrappers: {e}", file=sys.stderr)
+        except Exception:
             return False
 
-    def _signal_handler(self, signum, frame):
-        """Handle shutdown signals"""
-        print(f"Received signal {signum}, stopping monitoring...")
+    def _signal_handler(self, signum, frame) -> None:
+        """Handle shutdown signals."""
         self.stop_monitoring()
 
-    def wait(self):
-        """Wait for monitoring to complete"""
+    def wait(self) -> None:
+        """Wait for monitoring to complete."""
         if self.observer:
             try:
                 while self.running:
@@ -237,7 +208,7 @@ class FlatpakMonitor:
 
 
 def start_flatpak_monitoring(callback=None, daemon=False):
-    """Start Flatpak monitoring (convenience function)"""
+    """Start Flatpak monitoring (convenience function)."""
     monitor = FlatpakMonitor(callback=callback)
 
     if daemon:
@@ -247,21 +218,20 @@ def start_flatpak_monitoring(callback=None, daemon=False):
         thread = threading.Thread(target=monitor.start_monitoring, daemon=True)
         thread.start()
         return monitor
-    else:
-        # Run in foreground
-        if monitor.start_monitoring():
-            monitor.wait()
-        return monitor
+    # Run in foreground
+    if monitor.start_monitoring():
+        monitor.wait()
+    return monitor
 
 
-def main():
-    """Command-line interface for flatpak monitoring"""
+def main() -> None:
+    """Command-line interface for flatpak monitoring."""
     import argparse
 
     parser = argparse.ArgumentParser(description="Flatpak file system monitor")
     parser.add_argument("--daemon", action="store_true", help="Run in daemon mode")
     parser.add_argument(
-        "--callback", type=str, help="Python module:function to call on events"
+        "--callback", type=str, help="Python module:function to call on events",
     )
 
     args = parser.parse_args()
@@ -273,14 +243,13 @@ def main():
             module_name, func_name = args.callback.split(":")
             module = __import__(module_name)
             callback = getattr(module, func_name)
-        except Exception as e:
-            print(f"Error loading callback: {e}", file=sys.stderr)
+        except Exception:
             sys.exit(1)
 
-    monitor = start_flatpak_monitoring(callback=callback, daemon=args.daemon)
+    start_flatpak_monitoring(callback=callback, daemon=args.daemon)
 
     if not args.daemon:
-        print("Monitoring stopped")
+        pass
 
 
 # CLI interface

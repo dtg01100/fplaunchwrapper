@@ -1,27 +1,25 @@
 #!/usr/bin/env python3
-"""
-Comprehensive test suite for fplaunchwrapper using pytest
-Tests all core functionality with proper mocking and fixtures
+"""Comprehensive test suite for fplaunchwrapper using pytest
+Tests all core functionality with proper mocking and fixtures.
 """
 
 import os
-import sys
-import tempfile
 import subprocess
+import tempfile
+from unittest.mock import patch
+
 import pytest
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
 
 try:
     from fplaunch.python_utils import (
-        sanitize_string,
         canonicalize_path_no_resolve,
-        validate_home_dir,
-        is_wrapper_file,
-        get_wrapper_id,
-        sanitize_id_to_name,
         find_executable,
+        get_wrapper_id,
+        is_wrapper_file,
         safe_mktemp,
+        sanitize_id_to_name,
+        sanitize_string,
+        validate_home_dir,
     )
 except ImportError:
     # Fallback for when modules aren't available
@@ -31,18 +29,18 @@ except ImportError:
 
 
 class TestPythonUtils:
-    """Test python utility functions"""
+    """Test python utility functions."""
 
-    def test_sanitize_string_basic(self):
-        """Test basic string sanitization"""
+    def test_sanitize_string_basic(self) -> None:
+        """Test basic string sanitization."""
         if not sanitize_string:
             pytest.skip("python_utils not available")
 
         result = sanitize_string("test")
         assert result == "test"
 
-    def test_sanitize_string_injection(self):
-        """Test string sanitization against injection attacks"""
+    def test_sanitize_string_injection(self) -> None:
+        """Test string sanitization against injection attacks."""
         if not sanitize_string:
             pytest.skip("python_utils not available")
 
@@ -53,8 +51,8 @@ class TestPythonUtils:
         assert '"' not in result.replace('\\"', "")  # No unescaped quotes
         assert ";" not in result.replace("\\;", "")  # No unescaped semicolons
 
-    def test_canonicalize_path_basic(self):
-        """Test basic path canonicalization"""
+    def test_canonicalize_path_basic(self) -> None:
+        """Test basic path canonicalization."""
         if not canonicalize_path_no_resolve:
             pytest.skip("python_utils not available")
 
@@ -63,8 +61,8 @@ class TestPythonUtils:
             result = canonicalize_path_no_resolve(test_path)
             assert result == test_path
 
-    def test_canonicalize_path_relative(self):
-        """Test relative path canonicalization"""
+    def test_canonicalize_path_relative(self) -> None:
+        """Test relative path canonicalization."""
         if not canonicalize_path_no_resolve:
             pytest.skip("python_utils not available")
 
@@ -79,8 +77,8 @@ class TestPythonUtils:
             finally:
                 os.chdir(original_cwd)
 
-    def test_validate_home_dir_valid(self):
-        """Test home directory validation with valid path"""
+    def test_validate_home_dir_valid(self) -> None:
+        """Test home directory validation with valid path."""
         if not validate_home_dir:
             pytest.skip("python_utils not available")
 
@@ -89,8 +87,8 @@ class TestPythonUtils:
         result = validate_home_dir(home_subdir)
         assert result == home_subdir
 
-    def test_validate_home_dir_invalid(self):
-        """Test home directory validation with invalid path"""
+    def test_validate_home_dir_invalid(self) -> None:
+        """Test home directory validation with invalid path."""
         if not validate_home_dir:
             pytest.skip("python_utils not available")
 
@@ -98,8 +96,8 @@ class TestPythonUtils:
         result = validate_home_dir("/usr/bin")
         assert result is None
 
-    def test_is_wrapper_file_valid(self):
-        """Test wrapper file validation with valid wrapper"""
+    def test_is_wrapper_file_valid(self) -> None:
+        """Test wrapper file validation with valid wrapper."""
         if not is_wrapper_file:
             pytest.skip("python_utils not available")
 
@@ -117,8 +115,8 @@ class TestPythonUtils:
         finally:
             os.unlink(temp_path)
 
-    def test_is_wrapper_file_invalid(self):
-        """Test wrapper file validation with invalid file"""
+    def test_is_wrapper_file_invalid(self) -> None:
+        """Test wrapper file validation with invalid file."""
         if not is_wrapper_file:
             pytest.skip("python_utils not available")
 
@@ -137,8 +135,8 @@ class TestPythonUtils:
         finally:
             os.unlink(temp_path)
 
-    def test_get_wrapper_id(self):
-        """Test wrapper ID extraction"""
+    def test_get_wrapper_id(self) -> None:
+        """Test wrapper ID extraction."""
         if not get_wrapper_id:
             pytest.skip("python_utils not available")
 
@@ -157,7 +155,7 @@ class TestPythonUtils:
             os.unlink(temp_path)
 
     @pytest.mark.parametrize(
-        "input_id,expected",
+        ("input_id", "expected"),
         [
             ("org.mozilla.firefox", "firefox"),
             ("com.example.Test-App_1.2.3", "3"),  # Last component after dots
@@ -165,16 +163,16 @@ class TestPythonUtils:
             ("com.valvesoftware.Steam", "steam"),
         ],
     )
-    def test_sanitize_id_to_name(self, input_id, expected):
-        """Test ID to name sanitization"""
+    def test_sanitize_id_to_name(self, input_id, expected) -> None:
+        """Test ID to name sanitization."""
         if not sanitize_id_to_name:
             pytest.skip("python_utils not available")
 
         result = sanitize_id_to_name(input_id)
         assert result == expected
 
-    def test_find_executable_bash(self):
-        """Test finding bash executable"""
+    def test_find_executable_bash(self) -> None:
+        """Test finding bash executable."""
         if not find_executable:
             pytest.skip("python_utils not available")
 
@@ -182,16 +180,16 @@ class TestPythonUtils:
         assert result is not None
         assert "bash" in result
 
-    def test_find_executable_nonexistent(self):
-        """Test finding non-existent executable"""
+    def test_find_executable_nonexistent(self) -> None:
+        """Test finding non-existent executable."""
         if not find_executable:
             pytest.skip("python_utils not available")
 
         result = find_executable("nonexistent_command_xyz")
         assert result is None
 
-    def test_safe_mktemp_basic(self):
-        """Test secure temporary file creation"""
+    def test_safe_mktemp_basic(self) -> None:
+        """Test secure temporary file creation."""
         if not safe_mktemp:
             pytest.skip("python_utils not available")
 
@@ -203,8 +201,8 @@ class TestPythonUtils:
         # Clean up
         os.unlink(result)
 
-    def test_safe_mktemp_custom_template(self):
-        """Test temp file creation with custom template"""
+    def test_safe_mktemp_custom_template(self) -> None:
+        """Test temp file creation with custom template."""
         if not safe_mktemp:
             pytest.skip("python_utils not available")
 
@@ -218,24 +216,24 @@ class TestPythonUtils:
 
 
 class TestBashIntegration:
-    """Test integration with bash scripts"""
+    """Test integration with bash scripts."""
 
     @pytest.fixture
     def temp_bin_dir(self, tmp_path):
-        """Create temporary bin directory"""
+        """Create temporary bin directory."""
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         return bin_dir
 
     @pytest.fixture
     def temp_config_dir(self, tmp_path):
-        """Create temporary config directory"""
+        """Create temporary config directory."""
         config_dir = tmp_path / "config"
         config_dir.mkdir()
         return config_dir
 
-    def test_bash_script_execution(self, temp_bin_dir):
-        """Test basic bash script execution"""
+    def test_bash_script_execution(self, temp_bin_dir) -> None:
+        """Test basic bash script execution."""
         script_path = temp_bin_dir / "test_script.sh"
         script_path.write_text("""#!/bin/bash
 echo "Hello from bash script"
@@ -243,14 +241,13 @@ exit 0
 """)
         script_path.chmod(0o755)
 
-        result = subprocess.run([str(script_path)], capture_output=True, text=True)
+        result = subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
         assert result.returncode == 0
         assert "Hello from bash script" in result.stdout
 
-    def test_wrapper_script_generation(self, temp_bin_dir, temp_config_dir):
-        """Test wrapper script generation logic"""
+    def test_wrapper_script_generation(self, temp_bin_dir, temp_config_dir) -> None:
+        """Test wrapper script generation logic."""
         # Mock flatpak list output
-        mock_flatpak_output = "org.mozilla.firefox\norg.gimp.GIMP"
 
         # This would test the actual generation script
         # For now, just verify the directories exist
@@ -258,8 +255,8 @@ exit 0
         assert temp_config_dir.exists()
 
     @patch("subprocess.run")
-    def test_flatpak_command_mocking(self, mock_run, temp_bin_dir):
-        """Test flatpak command execution with mocking"""
+    def test_flatpak_command_mocking(self, mock_run, temp_bin_dir) -> None:
+        """Test flatpak command execution with mocking."""
         mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = "org.mozilla.firefox"
 
@@ -271,10 +268,10 @@ exit 0
 
 
 class TestSecurity:
-    """Security-focused tests"""
+    """Security-focused tests."""
 
-    def test_path_traversal_prevention(self):
-        """Test prevention of path traversal attacks"""
+    def test_path_traversal_prevention(self) -> None:
+        """Test prevention of path traversal attacks."""
         if not validate_home_dir:
             pytest.skip("python_utils not available")
 
@@ -289,8 +286,8 @@ class TestSecurity:
             # Should return None for paths outside HOME
             assert result is None
 
-    def test_command_injection_prevention(self):
-        """Test prevention of command injection"""
+    def test_command_injection_prevention(self) -> None:
+        """Test prevention of command injection."""
         if not sanitize_string:
             pytest.skip("python_utils not available")
 
@@ -312,8 +309,8 @@ class TestSecurity:
             assert "(" not in result.replace("\\(", "")  # No unescaped parentheses
             assert ")" not in result.replace("\\)", "")  # No unescaped parentheses
 
-    def test_file_validation_security(self):
-        """Test file validation prevents malicious files"""
+    def test_file_validation_security(self) -> None:
+        """Test file validation prevents malicious files."""
         if not is_wrapper_file:
             pytest.skip("python_utils not available")
 
@@ -328,8 +325,8 @@ class TestSecurity:
         finally:
             os.unlink(binary_path)
 
-    def test_symlink_attack_prevention(self):
-        """Test prevention of symlink attacks"""
+    def test_symlink_attack_prevention(self) -> None:
+        """Test prevention of symlink attacks."""
         if not is_wrapper_file:
             pytest.skip("python_utils not available")
 
@@ -348,10 +345,10 @@ class TestSecurity:
 
 
 class TestPerformance:
-    """Performance-focused tests"""
+    """Performance-focused tests."""
 
-    def test_sanitization_performance(self):
-        """Test sanitization performance with large inputs"""
+    def test_sanitization_performance(self) -> None:
+        """Test sanitization performance with large inputs."""
         if not sanitize_string:
             pytest.skip("python_utils not available")
 
@@ -366,8 +363,8 @@ class TestPerformance:
         assert end_time - start_time < 1.0
         assert len(result) > 0
 
-    def test_path_operations_performance(self):
-        """Test path operations performance"""
+    def test_path_operations_performance(self) -> None:
+        """Test path operations performance."""
         if not canonicalize_path_no_resolve:
             pytest.skip("python_utils not available")
 
@@ -391,10 +388,10 @@ class TestPerformance:
 
 
 class TestConfiguration:
-    """Test configuration management"""
+    """Test configuration management."""
 
-    def test_config_manager_creation(self):
-        """Test configuration manager creation"""
+    def test_config_manager_creation(self) -> None:
+        """Test configuration manager creation."""
         try:
             from fplaunch.config_manager import create_config_manager
         except ImportError:
@@ -405,8 +402,8 @@ class TestConfiguration:
         assert hasattr(config, "config")
         assert hasattr(config.config, "bin_dir")
 
-    def test_config_file_operations(self):
-        """Test configuration file read/write"""
+    def test_config_file_operations(self) -> None:
+        """Test configuration file read/write."""
         try:
             from fplaunch.config_manager import create_config_manager
         except ImportError:

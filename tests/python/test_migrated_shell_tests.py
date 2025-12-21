@@ -1,38 +1,34 @@
 #!/usr/bin/env python3
+"""Convert shell tests to pytest - Phase 1
+Replace old bash implementation tests with pytest equivalents.
 """
-Convert shell tests to pytest - Phase 1
-Replace old bash implementation tests with pytest equivalents
-"""
+
+import os
+import tempfile
+from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
-import tempfile
-import subprocess
-import os
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-
-import sys
-from pathlib import Path
 
 # Add lib to path
 # Import modules to test
 try:
+    from fplaunch.cleanup import WrapperCleanup
     from fplaunch.generate import WrapperGenerator
+    from fplaunch.launch import AppLauncher
     from fplaunch.manage import WrapperManager
     from fplaunch.systemd_setup import SystemdSetup
-    from fplaunch. import AppLauncher
-    from fplaunch. import WrapperCleanup
 except ImportError:
     # Will be tested in individual test functions
     pass
 
 
 class TestWrapperGeneration:
-    """Replace test_wrapper_generation.sh with pytest"""
+    """Replace test_wrapper_generation.sh with pytest."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp())
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -47,9 +43,9 @@ class TestWrapperGeneration:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     @patch("subprocess.run")
-    def test_basic_wrapper_generation(self, mock_subprocess, temp_env):
-        """Test basic wrapper generation - replaces test_wrapper_generation.sh Test 1"""
-        if not "WrapperGenerator" in globals():
+    def test_basic_wrapper_generation(self, mock_subprocess, temp_env) -> None:
+        """Test basic wrapper generation - replaces test_wrapper_generation.sh Test 1."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         # Mock flatpak command
@@ -59,12 +55,12 @@ class TestWrapperGeneration:
         mock_subprocess.return_value = mock_result
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=False
+            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=False,
         )
 
         # Mock the get_installed_flatpaks method
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
 
@@ -81,9 +77,9 @@ class TestWrapperGeneration:
             assert "#!/usr/bin/env bash" in content
 
     @patch("subprocess.run")
-    def test_name_collision_detection(self, mock_subprocess, temp_env):
-        """Test name collision detection - replaces test_wrapper_generation.sh Test 2"""
-        if not "WrapperGenerator" in globals():
+    def test_name_collision_detection(self, mock_subprocess, temp_env) -> None:
+        """Test name collision detection - replaces test_wrapper_generation.sh Test 2."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         # Create existing wrapper
@@ -98,12 +94,12 @@ class TestWrapperGeneration:
         mock_subprocess.return_value = mock_result
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=False
+            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=False,
         )
 
         # This should skip due to collision
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["com.visualstudio.code"]
+            generator, "get_installed_flatpaks", return_value=["com.visualstudio.code"],
         ):
             result = generator.generate_wrapper("com.visualstudio.code")
 
@@ -111,9 +107,9 @@ class TestWrapperGeneration:
             assert result is False
 
     @patch("subprocess.run")
-    def test_blocklist_functionality(self, mock_subprocess, temp_env):
-        """Test blocklist functionality - replaces test_wrapper_generation.sh Test 3"""
-        if not "WrapperGenerator" in globals():
+    def test_blocklist_functionality(self, mock_subprocess, temp_env) -> None:
+        """Test blocklist functionality - replaces test_wrapper_generation.sh Test 3."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         # Create blocklist file
@@ -135,14 +131,14 @@ class TestWrapperGeneration:
 
         # Firefox should be blocked
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is False  # Should be blocked
 
         # Chrome should work
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["com.google.chrome"]
+            generator, "get_installed_flatpaks", return_value=["com.google.chrome"],
         ):
             result = generator.generate_wrapper("com.google.chrome")
             assert result is True
@@ -151,13 +147,13 @@ class TestWrapperGeneration:
             chrome_wrapper = temp_env["bin_dir"] / "chrome"
             assert chrome_wrapper.exists()
 
-    def test_invalid_name_handling(self, temp_env):
-        """Test invalid name handling - replaces test_wrapper_generation.sh Test 5"""
-        if not "WrapperGenerator" in globals():
+    def test_invalid_name_handling(self, temp_env) -> None:
+        """Test invalid name handling - replaces test_wrapper_generation.sh Test 5."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=False
+            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=False,
         )
 
         # Test invalid names
@@ -173,9 +169,9 @@ class TestWrapperGeneration:
             assert isinstance(result, bool)
 
     @patch("subprocess.run")
-    def test_environment_variable_loading(self, mock_subprocess, temp_env):
-        """Test environment variable loading - replaces test_wrapper_generation.sh Test 5"""
-        if not "WrapperGenerator" in globals():
+    def test_environment_variable_loading(self, mock_subprocess, temp_env) -> None:
+        """Test environment variable loading - replaces test_wrapper_generation.sh Test 5."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         # Create env file
@@ -195,7 +191,7 @@ class TestWrapperGeneration:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
 
@@ -206,9 +202,9 @@ class TestWrapperGeneration:
             assert "load_env_vars" in wrapper_content or "source" in wrapper_content
 
     @patch("subprocess.run")
-    def test_pre_launch_script_execution(self, mock_subprocess, temp_env):
-        """Test pre-launch script execution - replaces test_wrapper_generation.sh Test 6"""
-        if not "WrapperGenerator" in globals():
+    def test_pre_launch_script_execution(self, mock_subprocess, temp_env) -> None:
+        """Test pre-launch script execution - replaces test_wrapper_generation.sh Test 6."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         # Create pre-launch script
@@ -231,7 +227,7 @@ class TestWrapperGeneration:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
 
@@ -242,9 +238,9 @@ class TestWrapperGeneration:
             assert "run_pre_launch_script" in wrapper_content
 
     @patch("subprocess.run")
-    def test_preference_handling(self, mock_subprocess, temp_env):
-        """Test preference handling - replaces test_wrapper_generation.sh Test 7"""
-        if not "WrapperGenerator" in globals():
+    def test_preference_handling(self, mock_subprocess, temp_env) -> None:
+        """Test preference handling - replaces test_wrapper_generation.sh Test 7."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         # Create preference file
@@ -264,7 +260,7 @@ class TestWrapperGeneration:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
 
@@ -274,9 +270,9 @@ class TestWrapperGeneration:
             wrapper_content = (temp_env["bin_dir"] / "firefox").read_text()
             assert "PREF_FILE" in wrapper_content
 
-    def test_wrapper_cleanup_obsolete(self, temp_env):
-        """Test wrapper cleanup for uninstalled apps - replaces test_wrapper_generation.sh Test 8"""
-        if not "WrapperGenerator" in globals():
+    def test_wrapper_cleanup_obsolete(self, temp_env) -> None:
+        """Test wrapper cleanup for uninstalled apps - replaces test_wrapper_generation.sh Test 8."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         # Create obsolete wrapper
@@ -301,11 +297,11 @@ class TestWrapperGeneration:
 
 
 class TestManagementFunctions:
-    """Replace test_management_functions.sh with pytest"""
+    """Replace test_management_functions.sh with pytest."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp())
         config_dir = temp_dir / "config"
         bin_dir = temp_dir / "bin"
@@ -319,13 +315,13 @@ class TestManagementFunctions:
 
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def test_preference_setting(self, temp_env):
-        """Test preference setting - replaces test_management_functions.sh Test 1"""
-        if not "WrapperManager" in globals():
+    def test_preference_setting(self, temp_env) -> None:
+        """Test preference setting - replaces test_management_functions.sh Test 1."""
+        if "WrapperManager" not in globals():
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Test valid preference
@@ -341,13 +337,13 @@ class TestManagementFunctions:
         result = manager.set_preference("chrome", "invalid")
         assert result is False
 
-    def test_alias_management(self, temp_env):
-        """Test alias management - replaces test_management_functions.sh Test 2"""
-        if not "WrapperManager" in globals():
+    def test_alias_management(self, temp_env) -> None:
+        """Test alias management - replaces test_management_functions.sh Test 2."""
+        if "WrapperManager" not in globals():
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Create a wrapper first
@@ -369,13 +365,13 @@ class TestManagementFunctions:
         result = manager.create_alias("browser", "chrome")
         assert result is False  # Should fail
 
-    def test_environment_variable_management(self, temp_env):
-        """Test environment variable management - replaces test_management_functions.sh Test 3"""
-        if not "WrapperManager" in globals():
+    def test_environment_variable_management(self, temp_env) -> None:
+        """Test environment variable management - replaces test_management_functions.sh Test 3."""
+        if "WrapperManager" not in globals():
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Set environment variable
@@ -388,13 +384,13 @@ class TestManagementFunctions:
         content = env_file.read_text()
         assert "TEST_VAR=test_value" in content
 
-    def test_blocklist_management(self, temp_env):
-        """Test blocklist management - replaces test_management_functions.sh Test 4"""
-        if not "WrapperManager" in globals():
+    def test_blocklist_management(self, temp_env) -> None:
+        """Test blocklist management - replaces test_management_functions.sh Test 4."""
+        if "WrapperManager" not in globals():
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Block an app
@@ -415,13 +411,13 @@ class TestManagementFunctions:
         content = blocklist_file.read_text()
         assert "org.mozilla.firefox" not in content
 
-    def test_export_import_preferences(self, temp_env):
-        """Test export/from fplaunch import preferences - replaces test_management_functions.sh Test 6"""
-        if not "WrapperManager" in globals():
+    def test_export_import_preferences(self, temp_env) -> None:
+        """Test export/from fplaunch import preferences - replaces test_management_functions.sh Test 6."""
+        if "WrapperManager" not in globals():
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Create some preferences
@@ -446,13 +442,13 @@ class TestManagementFunctions:
         assert (temp_env["config_dir"] / "firefox.pref").exists()
         assert (temp_env["config_dir"] / "chrome.pref").exists()
 
-    def test_script_management(self, temp_env):
-        """Test script management - replaces test_management_functions.sh Test 7"""
-        if not "WrapperManager" in globals():
+    def test_script_management(self, temp_env) -> None:
+        """Test script management - replaces test_management_functions.sh Test 7."""
+        if "WrapperManager" not in globals():
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Create pre-launch script
@@ -467,9 +463,9 @@ class TestManagementFunctions:
         assert pre_script.read_text() == script_content
         assert os.access(pre_script, os.X_OK)
 
-    def test_wrapper_removal(self, temp_env):
-        """Test wrapper removal - replaces test_management_functions.sh Test 8"""
-        if not "WrapperManager" in globals():
+    def test_wrapper_removal(self, temp_env) -> None:
+        """Test wrapper removal - replaces test_management_functions.sh Test 8."""
+        if "WrapperManager" not in globals():
             pytest.skip("WrapperManager not available")
 
         # Create test files
@@ -495,9 +491,9 @@ class TestManagementFunctions:
         assert not wrapper_file.exists()
         assert not pref_file.exists()
 
-    def test_list_wrappers(self, temp_env):
-        """Test list wrappers - replaces test_management_functions.sh Test 9"""
-        if not "WrapperManager" in globals():
+    def test_list_wrappers(self, temp_env) -> None:
+        """Test list wrappers - replaces test_management_functions.sh Test 9."""
+        if "WrapperManager" not in globals():
             pytest.skip("WrapperManager not available")
 
         # Create test wrapper

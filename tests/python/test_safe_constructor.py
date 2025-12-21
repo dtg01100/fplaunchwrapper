@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
-"""
-Minimal Safe Integration Test - Constructor and Basic Functionality Only
+"""Minimal Safe Integration Test - Constructor and Basic Functionality Only.
 
 Tests that classes can be instantiated and basic methods called without side effects.
 """
 
-import sys
+from unittest.mock import Mock, patch
+
 import pytest
-import tempfile
-from pathlib import Path
-from unittest.mock import patch, Mock
 
 # Import modules safely
 try:
-    from fplaunch.generate import WrapperGenerator
-    from fplaunch.manage import WrapperManager
     from fplaunch.cleanup import WrapperCleanup
+    from fplaunch.generate import WrapperGenerator
     from fplaunch.launch import AppLauncher
+    from fplaunch.manage import WrapperManager
     from fplaunch.systemd_setup import SystemdSetup
 
     MODULES_AVAILABLE = True
@@ -26,20 +23,18 @@ except ImportError:
 
 @pytest.mark.skipif(not MODULES_AVAILABLE, reason="Required modules not available")
 class TestSafeConstructorValidation:
-    """
-    Test that all classes can be constructed safely with proper parameters
-    """
+    """Test that all classes can be constructed safely with proper parameters."""
 
-    def test_wrapper_generator_constructor(self):
-        """Test WrapperGenerator can be created safely"""
+    def test_wrapper_generator_constructor(self) -> None:
+        """Test WrapperGenerator can be created safely."""
         with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
+            "os.path.exists", return_value=True,
         ):
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
 
             # Test correct constructor parameters
             generator = WrapperGenerator(
-                bin_dir="/tmp/test_bin", verbose=False, emit_mode=True
+                bin_dir="/tmp/test_bin", verbose=False, emit_mode=True,
             )
 
             assert generator is not None
@@ -49,8 +44,8 @@ class TestSafeConstructorValidation:
             result = generator.generate_wrapper("org.test.app")
             assert result is not None
 
-    def test_wrapper_manager_constructor(self):
-        """Test WrapperManager can be created safely"""
+    def test_wrapper_manager_constructor(self) -> None:
+        """Test WrapperManager can be created safely."""
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
 
@@ -69,8 +64,8 @@ class TestSafeConstructorValidation:
             result = manager.set_preference("test_app", "flatpak")
             assert result is not None
 
-    def test_wrapper_cleanup_constructor(self):
-        """Test WrapperCleanup can be created safely"""
+    def test_wrapper_cleanup_constructor(self) -> None:
+        """Test WrapperCleanup can be created safely."""
         with patch("os.path.exists", return_value=True), patch("shutil.rmtree"):
             # Test correct constructor parameters
             cleaner = WrapperCleanup(
@@ -87,10 +82,10 @@ class TestSafeConstructorValidation:
             result = cleaner.perform_cleanup()
             assert result is not None
 
-    def test_app_launcher_constructor(self):
-        """Test AppLauncher can be created safely"""
+    def test_app_launcher_constructor(self) -> None:
+        """Test AppLauncher can be created safely."""
         with patch("subprocess.run") as mock_run, patch(
-            "subprocess.Popen"
+            "subprocess.Popen",
         ) as mock_popen:
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
             mock_popen.return_value = Mock()
@@ -105,8 +100,8 @@ class TestSafeConstructorValidation:
             result = launcher.launch_app("org.test.app")
             assert result is not None
 
-    def test_systemd_setup_constructor(self):
-        """Test SystemdSetup can be created safely"""
+    def test_systemd_setup_constructor(self) -> None:
+        """Test SystemdSetup can be created safely."""
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
 
@@ -125,8 +120,8 @@ class TestSafeConstructorValidation:
             result = systemd.install_systemd_units()
             assert result is not None
 
-    def test_complete_isolation_validation(self):
-        """Test that no real system operations occur"""
+    def test_complete_isolation_validation(self) -> None:
+        """Test that no real system operations occur."""
         import os
 
         # Track current working directory
@@ -138,19 +133,19 @@ class TestSafeConstructorValidation:
 
         try:
             with patch("subprocess.run") as mock_run, patch(
-                "subprocess.Popen"
+                "subprocess.Popen",
             ) as mock_popen, patch("os.path.exists", return_value=True), patch(
-                "os.makedirs"
+                "os.makedirs",
             ), patch("shutil.rmtree"), patch("os.remove"):
                 mock_run.return_value = Mock(returncode=0, stdout="safe", stderr="")
                 mock_popen.return_value = Mock()
 
                 # Create all component instances
                 generator = WrapperGenerator(
-                    "/tmp/safe_bin", verbose=False, emit_mode=True
+                    "/tmp/safe_bin", verbose=False, emit_mode=True,
                 )
                 manager = WrapperManager(
-                    config_dir="/tmp/safe_config", verbose=False, emit_mode=True
+                    config_dir="/tmp/safe_config", verbose=False, emit_mode=True,
                 )
                 cleaner = WrapperCleanup(bin_dir="/tmp/safe_bin", dry_run=True)
                 launcher = AppLauncher(config_dir="/tmp/safe_config")
@@ -179,7 +174,6 @@ class TestSafeConstructorValidation:
                     "HOME should not change"
                 )
 
-                print("✅ Complete isolation validated - no system changes detected")
 
         finally:
             # Restore if anything went wrong (defensive)

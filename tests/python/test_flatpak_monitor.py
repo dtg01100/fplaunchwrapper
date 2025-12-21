@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""
-Unit tests for flatpak_monitor.py
-Tests Flatpak monitoring functionality with proper mocking
+"""Unit tests for flatpak_monitor.py
+Tests Flatpak monitoring functionality with proper mocking.
 """
 
-import sys
-import pytest
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch
+
+import pytest
 
 # Add lib to path
 # Import the module to test
@@ -22,23 +21,23 @@ except ImportError:
 
 
 class TestFlatpakMonitor:
-    """Test Flatpak monitoring functionality"""
+    """Test Flatpak monitoring functionality."""
 
-    def setup_method(self):
-        """Set up test environment"""
+    def setup_method(self) -> None:
+        """Set up test environment."""
         self.temp_dir = Path(tempfile.mkdtemp())
         self.flatpak_dir = self.temp_dir / ".local" / "share" / "flatpak"
         self.exports_dir = self.flatpak_dir / "exports" / "bin"
         self.system_exports = Path("/var/lib/flatpak/exports/bin")
 
-    def teardown_method(self):
-        """Clean up test environment"""
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
         import shutil
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_flatpak_monitor_creation(self):
-        """Test Flatpak monitor creation"""
+    def test_flatpak_monitor_creation(self) -> None:
+        """Test Flatpak monitor creation."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -50,8 +49,8 @@ class TestFlatpakMonitor:
         assert hasattr(monitor, "observer")
 
     @patch("watchdog.observers.Observer")
-    def test_monitor_start_stop(self, mock_observer_class):
-        """Test monitor start and stop functionality"""
+    def test_monitor_start_stop(self, mock_observer_class) -> None:
+        """Test monitor start and stop functionality."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -76,8 +75,8 @@ class TestFlatpakMonitor:
 
     @patch("watchdog.observers.Observer")
     @patch("pathlib.Path.exists")
-    def test_monitor_directory_detection(self, mock_exists, mock_observer_class):
-        """Test detection of Flatpak directories to monitor"""
+    def test_monitor_directory_detection(self, mock_exists, mock_observer_class) -> None:
+        """Test detection of Flatpak directories to monitor."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -99,8 +98,8 @@ class TestFlatpakMonitor:
         monitor.stop()
 
     @patch("watchdog.events.FileSystemEvent")
-    def test_event_handler_file_created(self, mock_event_class):
-        """Test handling of file creation events"""
+    def test_event_handler_file_created(self, mock_event_class) -> None:
+        """Test handling of file creation events."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -120,8 +119,8 @@ class TestFlatpakMonitor:
         callback.assert_called_once()
 
     @patch("watchdog.events.FileSystemEvent")
-    def test_event_handler_file_deleted(self, mock_event_class):
-        """Test handling of file deletion events"""
+    def test_event_handler_file_deleted(self, mock_event_class) -> None:
+        """Test handling of file deletion events."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -141,8 +140,8 @@ class TestFlatpakMonitor:
         callback.assert_called_once()
 
     @patch("watchdog.events.FileSystemEvent")
-    def test_event_handler_directory_changes_ignored(self, mock_event_class):
-        """Test that directory changes are ignored"""
+    def test_event_handler_directory_changes_ignored(self, mock_event_class) -> None:
+        """Test that directory changes are ignored."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -161,8 +160,8 @@ class TestFlatpakMonitor:
         # Should not call callback for directory events
         callback.assert_not_called()
 
-    def test_event_handler_non_flatpak_files_ignored(self):
-        """Test that non-Flatpak files are ignored"""
+    def test_event_handler_non_flatpak_files_ignored(self) -> None:
+        """Test that non-Flatpak files are ignored."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -182,8 +181,8 @@ class TestFlatpakMonitor:
 
     @patch("time.sleep")
     @patch("watchdog.observers.Observer")
-    def test_monitor_daemon_mode(self, mock_observer_class, mock_sleep):
-        """Test monitor in daemon mode"""
+    def test_monitor_daemon_mode(self, mock_observer_class, mock_sleep) -> None:
+        """Test monitor in daemon mode."""
         if not start_flatpak_monitoring:
             pytest.skip("start_flatpak_monitoring function not available")
 
@@ -204,8 +203,8 @@ class TestFlatpakMonitor:
         mock_observer.start.assert_called_once()
 
     @patch("watchdog.observers.Observer")
-    def test_monitor_error_handling(self, mock_observer_class):
-        """Test error handling in monitor"""
+    def test_monitor_error_handling(self, mock_observer_class) -> None:
+        """Test error handling in monitor."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -224,11 +223,12 @@ class TestFlatpakMonitor:
             assert True
         except Exception:
             # If exception propagates, test fails
-            assert False, "Monitor should handle errors gracefully"
+            msg = "Monitor should handle errors gracefully"
+            raise AssertionError(msg)
 
     @patch("watchdog.observers.Observer")
-    def test_monitor_reconnection_logic(self, mock_observer_class):
-        """Test monitor reconnection after disconnection"""
+    def test_monitor_reconnection_logic(self, mock_observer_class) -> None:
+        """Test monitor reconnection after disconnection."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -247,8 +247,8 @@ class TestFlatpakMonitor:
         monitor.start()
         assert mock_observer.start.call_count == 2
 
-    def test_monitor_callback_validation(self):
-        """Test that monitor validates callback parameter"""
+    def test_monitor_callback_validation(self) -> None:
+        """Test that monitor validates callback parameter."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -263,8 +263,8 @@ class TestFlatpakMonitor:
 
     @patch("os.path.exists")
     @patch("watchdog.observers.Observer")
-    def test_monitor_path_validation(self, mock_observer_class, mock_exists):
-        """Test monitor path validation"""
+    def test_monitor_path_validation(self, mock_observer_class, mock_exists) -> None:
+        """Test monitor path validation."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -286,8 +286,8 @@ class TestFlatpakMonitor:
         monitor.stop()
 
     @patch("watchdog.observers.Observer")
-    def test_monitor_cleanup_on_stop(self, mock_observer_class):
-        """Test proper cleanup when monitor stops"""
+    def test_monitor_cleanup_on_stop(self, mock_observer_class) -> None:
+        """Test proper cleanup when monitor stops."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -306,8 +306,8 @@ class TestFlatpakMonitor:
 
     @patch("watchdog.observers.Observer")
     @patch("time.sleep")
-    def test_monitor_event_debouncing(self, mock_sleep, mock_observer_class):
-        """Test that monitor debounces rapid events"""
+    def test_monitor_event_debouncing(self, mock_sleep, mock_observer_class) -> None:
+        """Test that monitor debounces rapid events."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -321,14 +321,14 @@ class TestFlatpakMonitor:
         from watchdog.events import FileCreatedEvent
 
         event = FileCreatedEvent(str(self.exports_dir / "app"))
-        for i in range(5):
+        for _i in range(5):
             monitor._on_change(event)
 
         # Should call callback multiple times (no debouncing implemented yet)
         assert callback.call_count == 5
 
-    def test_monitor_thread_safety(self):
-        """Test thread safety of monitor operations"""
+    def test_monitor_thread_safety(self) -> None:
+        """Test thread safety of monitor operations."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -340,7 +340,7 @@ class TestFlatpakMonitor:
         results = []
         errors = []
 
-        def worker():
+        def worker() -> None:
             try:
                 monitor.start()
                 time.sleep(0.1)  # Brief operation
@@ -351,7 +351,7 @@ class TestFlatpakMonitor:
 
         # Run multiple threads
         threads = []
-        for i in range(3):
+        for _i in range(3):
             t = threading.Thread(target=worker)
             threads.append(t)
             t.start()
@@ -365,14 +365,14 @@ class TestFlatpakMonitor:
 
 
 class TestFlatpakMonitorIntegration:
-    """Test Flatpak monitor integration scenarios"""
+    """Test Flatpak monitor integration scenarios."""
 
     @patch("subprocess.run")
     @patch("watchdog.observers.Observer")
     def test_monitor_with_generate_integration(
-        self, mock_observer_class, mock_subprocess
-    ):
-        """Test monitor integration with wrapper generation"""
+        self, mock_observer_class, mock_subprocess,
+    ) -> None:
+        """Test monitor integration with wrapper generation."""
         if not start_flatpak_monitoring:
             pytest.skip("start_flatpak_monitoring function not available")
 
@@ -386,7 +386,7 @@ class TestFlatpakMonitorIntegration:
         mock_observer = Mock()
         mock_observer_class.return_value = mock_observer
 
-        def test_callback():
+        def test_callback() -> None:
             # Callback that would regenerate wrappers
             pass
 
@@ -398,8 +398,8 @@ class TestFlatpakMonitorIntegration:
             # May fail due to missing watchdog in test environment
             pytest.skip(f"Monitor integration test skipped: {e}")
 
-    def test_monitor_configuration_validation(self):
-        """Test monitor configuration validation"""
+    def test_monitor_configuration_validation(self) -> None:
+        """Test monitor configuration validation."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -415,8 +415,8 @@ class TestFlatpakMonitorIntegration:
             assert monitor is not None
 
     @patch("os.path.exists")
-    def test_monitor_directory_discovery(self, mock_exists):
-        """Test automatic discovery of Flatpak directories"""
+    def test_monitor_directory_discovery(self, mock_exists) -> None:
+        """Test automatic discovery of Flatpak directories."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
@@ -424,13 +424,13 @@ class TestFlatpakMonitorIntegration:
         mock_exists.side_effect = lambda path: "flatpak" in str(path)
 
         callback = Mock()
-        monitor = FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
+        FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
 
         # Should discover available Flatpak directories
         # (This is internal implementation detail)
 
-    def test_monitor_performance_under_load(self):
-        """Test monitor performance with many events"""
+    def test_monitor_performance_under_load(self) -> None:
+        """Test monitor performance with many events."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 

@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
+"""Wrapper management functionality for fplaunchwrapper
+Replaces fplaunch-manage bash script with Python implementation.
 """
-Wrapper management functionality for fplaunchwrapper
-Replaces fplaunch-manage bash script with Python implementation
-"""
+from __future__ import annotations
 
 import os
 import sys
-import shutil
 from pathlib import Path
-from typing import List, Optional, Dict
 
 try:
     from rich.console import Console
@@ -22,9 +20,9 @@ except ImportError:
 try:
     from .python_utils import (
         find_executable,
-        sanitize_id_to_name,
-        is_wrapper_file,
         get_wrapper_id,
+        is_wrapper_file,
+        sanitize_id_to_name,
         validate_home_dir,
     )
 
@@ -36,20 +34,20 @@ console = Console() if RICH_AVAILABLE else None
 
 
 class WrapperManager:
-    """Manages Flatpak application wrappers"""
+    """Manages Flatpak application wrappers."""
 
     def __init__(
         self,
-        config_dir: Optional[str] = None,
+        config_dir: str | None = None,
         verbose: bool = False,
         emit_mode: bool = False,
         emit_verbose: bool = False,
-    ):
+    ) -> None:
         self.verbose = verbose
         self.emit_mode = emit_mode
         self.emit_verbose = emit_verbose
         self.config_dir = Path(
-            config_dir or (Path.home() / ".config" / "fplaunchwrapper")
+            config_dir or (Path.home() / ".config" / "fplaunchwrapper"),
         )
 
         # Get bin directory from config
@@ -63,7 +61,7 @@ class WrapperManager:
                     self.bin_dir = Path.home() / "bin"
             else:
                 self.bin_dir = Path.home() / "bin"
-        except (OSError, IOError, UnicodeDecodeError):
+        except (OSError, UnicodeDecodeError):
             # If we can't read the config file for any reason, fall back to default
             self.bin_dir = Path.home() / "bin"
 
@@ -72,8 +70,8 @@ class WrapperManager:
             self.bin_dir.mkdir(parents=True, exist_ok=True)
             self.config_dir.mkdir(parents=True, exist_ok=True)
 
-    def log(self, message: str, level: str = "info"):
-        """Log a message"""
+    def log(self, message: str, level: str = "info") -> None:
+        """Log a message."""
         if self.verbose or level in ["error", "warning"]:
             if console:
                 if level == "error":
@@ -85,10 +83,10 @@ class WrapperManager:
                 else:
                     console.print(message)
             else:
-                print(f"[{level.upper()}] {message}")
+                pass
 
-    def list_wrappers(self) -> List[Dict[str, str]]:
-        """List all installed wrappers"""
+    def list_wrappers(self) -> list[dict[str, str]]:
+        """List all installed wrappers."""
         wrappers = []
 
         if not self.bin_dir.exists():
@@ -103,7 +101,7 @@ class WrapperManager:
                             "name": item.name,
                             "path": str(item),
                             "id": wrapper_id or "unknown",
-                        }
+                        },
                     )
                 else:
                     # Fallback: check if it looks like a wrapper
@@ -117,26 +115,29 @@ class WrapperManager:
                                     wrapper_id = line[4:-1]
                                     break
                             wrappers.append(
-                                {"name": item.name, "path": str(item), "id": wrapper_id}
+                                {
+                                    "name": item.name,
+                                    "path": str(item),
+                                    "id": wrapper_id,
+                                },
                             )
                     except:
                         pass
 
         return wrappers
 
-    def display_wrappers(self):
-        """Display wrappers in a nice format"""
+    def display_wrappers(self) -> None:
+        """Display wrappers in a nice format."""
         wrappers = self.list_wrappers()
 
         if not wrappers:
             if console:
                 console.print("[yellow]No wrappers found[/yellow]")
                 console.print(
-                    f"Run 'fplaunch generate {self.bin_dir}' to create wrappers"
+                    f"Run 'fplaunch generate {self.bin_dir}' to create wrappers",
                 )
             else:
-                print("No wrappers found")
-                print(f"Run 'fplaunch generate {self.bin_dir}' to create wrappers")
+                pass
             return
 
         if console:
@@ -151,12 +152,11 @@ class WrapperManager:
             console.print(table)
             console.print(f"\n[green]{len(wrappers)}[/green] wrappers found")
         else:
-            print("Current wrappers:")
             for wrapper in wrappers:
-                print(f"  {wrapper['name']} -> {wrapper['id']}")
+                pass
 
     def remove_wrapper(self, wrapper_name: str, force: bool = False) -> bool:
-        """Remove a specific wrapper"""
+        """Remove a specific wrapper."""
         wrapper_path = self.bin_dir / wrapper_name
 
         if not wrapper_path.exists() and not self.emit_mode:
@@ -169,16 +169,15 @@ class WrapperManager:
                 from rich.prompt import Confirm
 
                 if not Confirm.ask(
-                    f"Are you sure you want to remove wrapper '{wrapper_name}'?"
+                    f"Are you sure you want to remove wrapper '{wrapper_name}'?",
                 ):
                     console.print("[yellow]Removal cancelled[/yellow]")
                     return False
             else:
                 response = input(
-                    f"Are you sure you want to remove wrapper '{wrapper_name}'? (y/n): "
+                    f"Are you sure you want to remove wrapper '{wrapper_name}'? (y/n): ",
                 )
                 if response.lower() not in ["y", "yes"]:
-                    print("Removal cancelled.")
                     return False
 
         # In emit mode, just show what would be done
@@ -258,16 +257,15 @@ class WrapperManager:
                 from rich.prompt import Confirm
 
                 if not Confirm.ask(
-                    f"Are you sure you want to remove wrapper '{wrapper_name}'?"
+                    f"Are you sure you want to remove wrapper '{wrapper_name}'?",
                 ):
                     console.print("[yellow]Removal cancelled[/yellow]")
                     return False
             else:
                 response = input(
-                    f"Are you sure you want to remove wrapper '{wrapper_name}'? (y/n): "
+                    f"Are you sure you want to remove wrapper '{wrapper_name}'? (y/n): ",
                 )
                 if response.lower() not in ["y", "yes"]:
-                    print("Removal cancelled.")
                     return False
 
         try:
@@ -323,10 +321,11 @@ class WrapperManager:
             return False
 
     def set_preference(self, wrapper_name: str, preference: str) -> bool:
-        """Set launch preference for a wrapper"""
+        """Set launch preference for a wrapper."""
         if preference not in ["system", "flatpak"]:
             self.log(
-                f"Invalid preference: {preference}. Use 'system' or 'flatpak'", "error"
+                f"Invalid preference: {preference}. Use 'system' or 'flatpak'",
+                "error",
             )
             return False
 
@@ -346,7 +345,7 @@ class WrapperManager:
                             preference,
                             title=f"📄 {wrapper_name}.pref preference file",
                             border_style="green",
-                        )
+                        ),
                     )
                 else:
                     self.log("-" * 30)
@@ -354,31 +353,32 @@ class WrapperManager:
                     self.log("-" * 30)
 
             return True
-        else:
-            try:
-                pref_file.write_text(preference)
-                self.log(
-                    f"Set preference for '{wrapper_name}' to '{preference}'", "success"
-                )
-                return True
-            except Exception as e:
-                self.log(f"Failed to set preference for '{wrapper_name}': {e}", "error")
-                return False
-
-        pref_file = self.config_dir / f"{wrapper_name}.pref"
-
         try:
             pref_file.write_text(preference)
             self.log(
-                f"Set preference for '{wrapper_name}' to '{preference}'", "success"
+                f"Set preference for '{wrapper_name}' to '{preference}'",
+                "success",
             )
             return True
         except Exception as e:
             self.log(f"Failed to set preference for '{wrapper_name}': {e}", "error")
             return False
 
-    def get_preference(self, wrapper_name: str) -> Optional[str]:
-        """Get launch preference for a wrapper"""
+        pref_file = self.config_dir / f"{wrapper_name}.pref"
+
+        try:
+            pref_file.write_text(preference)
+            self.log(
+                f"Set preference for '{wrapper_name}' to '{preference}'",
+                "success",
+            )
+            return True
+        except Exception as e:
+            self.log(f"Failed to set preference for '{wrapper_name}': {e}", "error")
+            return False
+
+    def get_preference(self, wrapper_name: str) -> str | None:
+        """Get launch preference for a wrapper."""
         pref_file = self.config_dir / f"{wrapper_name}.pref"
 
         if pref_file.exists():
@@ -390,10 +390,11 @@ class WrapperManager:
         return None
 
     def set_preference_all(self, preference: str) -> int:
-        """Set preference for all wrappers"""
+        """Set preference for all wrappers."""
         if preference not in ["system", "flatpak"]:
             self.log(
-                f"Invalid preference: {preference}. Use 'system' or 'flatpak'", "error"
+                f"Invalid preference: {preference}. Use 'system' or 'flatpak'",
+                "error",
             )
             return 0
 
@@ -412,8 +413,8 @@ class WrapperManager:
 
         return updated_count
 
-    def show_info(self, wrapper_name: str):
-        """Show detailed information about a wrapper"""
+    def show_info(self, wrapper_name: str) -> bool:
+        """Show detailed information about a wrapper."""
         wrapper_path = self.bin_dir / wrapper_name
 
         if not wrapper_path.exists():
@@ -439,33 +440,34 @@ class WrapperManager:
             ]
 
             # Check if Flatpak app exists
-            if wrapper_id and find_executable("flatpak"):
+            flatpak_path = find_executable("flatpak")
+            if wrapper_id and flatpak_path:
                 import subprocess
 
                 result = subprocess.run(
-                    ["flatpak", "info", wrapper_id], capture_output=True, text=True
+                    [flatpak_path, "info", wrapper_id],
+                    check=False,
+                    capture_output=True,
+                    text=True,
                 )
                 if result.returncode == 0:
-                    info_lines.append(f"[bold]Flatpak Status:[/bold] Installed")
+                    info_lines.append("[bold]Flatpak Status:[/bold] Installed")
                 else:
-                    info_lines.append(f"[bold]Flatpak Status:[/bold] Not installed")
+                    info_lines.append("[bold]Flatpak Status:[/bold] Not installed")
 
             console.print(
                 Panel.fit(
-                    "\n".join(info_lines), title=f"Wrapper Information: {wrapper_name}"
-                )
+                    "\n".join(info_lines),
+                    title=f"Wrapper Information: {wrapper_name}",
+                ),
             )
         else:
-            print(f"Wrapper: {wrapper_name}")
-            print(f"Path: {wrapper_path}")
-            print(f"Flatpak ID: {wrapper_id or 'Unknown'}")
-            print(f"Preference: {preference or 'Not set'}")
-            print(f"Executable: {'Yes' if os.access(wrapper_path, os.X_OK) else 'No'}")
+            pass
 
         return True
 
-    def discover_features(self):
-        """Discover and show available features"""
+    def discover_features(self) -> None:
+        """Discover and show available features."""
         features = [
             (
                 "Wrapper Generation",
@@ -503,12 +505,11 @@ class WrapperManager:
                 console.print(f"  [green]$[/green] {example}")
 
         else:
-            print("fplaunchwrapper Features:")
             for feature, description in features:
-                print(f"  {feature}: {description}")
+                pass
 
     def cleanup_obsolete(self) -> int:
-        """Clean up wrappers for uninstalled applications"""
+        """Clean up wrappers for uninstalled applications."""
         self.log("Cleaning up obsolete wrappers...")
 
         # This would need to check installed Flatpak apps
@@ -517,8 +518,8 @@ class WrapperManager:
         return 0
 
 
-def main():
-    """Command-line interface for wrapper management"""
+def main() -> int | None:
+    """Command-line interface for wrapper management."""
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -537,7 +538,10 @@ def main():
     parser.add_argument("--config-dir", "-c", help="Configuration directory")
 
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output"
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output",
     )
 
     parser.add_argument(
@@ -570,7 +574,7 @@ def main():
         elif args.command == "set-pref":
             if len(args.args) != 2:
                 parser.error(
-                    "set-pref requires wrapper name and preference (system|flatpak)"
+                    "set-pref requires wrapper name and preference (system|flatpak)",
                 )
             success = manager.set_preference(args.args[0], args.args[1])
             return 0 if success else 1
@@ -594,7 +598,7 @@ def main():
         if console:
             console.print(f"[red]Error:[/red] {e}")
         else:
-            print(f"Error: {e}", file=sys.stderr)
+            pass
         return 1
 
 

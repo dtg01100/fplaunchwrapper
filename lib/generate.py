@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
+"""Wrapper generation functionality for fplaunchwrapper
+Replaces fplaunch-generate bash script with Python implementation.
 """
-Wrapper generation functionality for fplaunchwrapper
-Replaces fplaunch-generate bash script with Python implementation
-"""
+from __future__ import annotations
 
 import os
-import sys
 import subprocess
-import time
+import sys
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Tuple
 
 try:
     from rich.console import Console
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -22,15 +20,15 @@ except ImportError:
 # Import our utilities
 try:
     from .python_utils import (
+        acquire_lock,
         find_executable,
+        get_temp_dir,
+        get_wrapper_id,
+        is_wrapper_file,
+        release_lock,
+        safe_mktemp,
         sanitize_id_to_name,
         validate_home_dir,
-        acquire_lock,
-        release_lock,
-        get_temp_dir,
-        safe_mktemp,
-        is_wrapper_file,
-        get_wrapper_id,
     )
 
     UTILS_AVAILABLE = True
@@ -41,7 +39,7 @@ console = Console() if RICH_AVAILABLE else None
 
 
 class WrapperGenerator:
-    """Generates Flatpak application wrappers"""
+    """Generates Flatpak application wrappers."""
 
     def __init__(
         self,
@@ -49,7 +47,7 @@ class WrapperGenerator:
         verbose: bool = False,
         emit_mode: bool = False,
         emit_verbose: bool = False,
-    ):
+    ) -> None:
         self.bin_dir = Path(bin_dir).expanduser().resolve()
         self.verbose = verbose
         self.emit_mode = emit_mode
@@ -65,8 +63,8 @@ class WrapperGenerator:
             # Save bin_dir to config
             (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
 
-    def log(self, message: str, level: str = "info"):
-        """Log a message"""
+    def log(self, message: str, level: str = "info") -> None:
+        """Log a message."""
         if self.verbose or level in ["error", "warning"]:
             if console:
                 if level == "error":
@@ -78,29 +76,30 @@ class WrapperGenerator:
                 else:
                     console.print(message)
             else:
-                print(f"[{level.upper()}] {message}")
+                pass
 
     def run_command(
-        self, cmd: List[str], description: str = ""
+        self, cmd: list[str], description: str = "",
     ) -> subprocess.CompletedProcess:
-        """Run a command with optional progress display"""
+        """Run a command with optional progress display."""
         if description and console and not self.verbose:
-            with console.status(f"[bold green]{description}...") as status:
-                result = subprocess.run(cmd, capture_output=True, text=True)
+            with console.status(f"[bold green]{description}..."):
+                result = subprocess.run(cmd, check=False, capture_output=True, text=True)
         else:
             if self.verbose:
                 self.log(f"Running: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True)
 
         return result
 
-    def get_installed_flatpaks(self) -> List[str]:
-        """Get list of installed Flatpak applications"""
+    def get_installed_flatpaks(self) -> list[str]:
+        """Get list of installed Flatpak applications."""
         self.log("Checking for Flatpak installation...")
 
         flatpak_path = find_executable("flatpak") if UTILS_AVAILABLE else None
         if not flatpak_path:
-            raise RuntimeError("Flatpak not found. Please install Flatpak first.")
+            msg = "Flatpak not found. Please install Flatpak first."
+            raise RuntimeError(msg)
 
         self.log(f"Found Flatpak at: {flatpak_path}")
 
@@ -111,7 +110,8 @@ class WrapperGenerator:
         )
 
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to get Flatpak applications: {result.stderr}")
+            msg = f"Failed to get Flatpak applications: {result.stderr}"
+            raise RuntimeError(msg)
 
         # Parse output and remove duplicates
         apps = []
@@ -134,8 +134,8 @@ class WrapperGenerator:
 
         return sorted(set(apps))
 
-    def cleanup_obsolete_wrappers(self, installed_apps: List[str]) -> int:
-        """Remove wrappers for uninstalled applications"""
+    def cleanup_obsolete_wrappers(self, installed_apps: list[str]) -> int:
+        """Remove wrappers for uninstalled applications."""
         self.log("Cleaning up obsolete wrappers...")
 
         removed_count = 0
@@ -187,9 +187,10 @@ class WrapperGenerator:
         return removed_count
 
     def generate_wrapper(self, app_id: str) -> bool:
-        """Generate a wrapper script for a single application"""
+        """Generate a wrapper script for a single application."""
         if not UTILS_AVAILABLE:
-            raise RuntimeError("Python utilities not available")
+            msg = "Python utilities not available"
+            raise RuntimeError(msg)
 
         # Sanitize app ID to create wrapper name
         wrapper_name = sanitize_id_to_name(app_id)
@@ -218,7 +219,7 @@ class WrapperGenerator:
             action = "Update" if wrapper_existed else "Create"
             self.log(f"EMIT: Would {action.lower()} wrapper: {wrapper_name}")
             self.log(
-                f"EMIT: Would write {len(wrapper_content)} bytes to {wrapper_path}"
+                f"EMIT: Would write {len(wrapper_content)} bytes to {wrapper_path}",
             )
             self.log(f"EMIT: Would set permissions to 755 on {wrapper_path}")
 
@@ -234,7 +235,7 @@ class WrapperGenerator:
                             wrapper_content,
                             title=f"📄 {wrapper_name} wrapper script",
                             border_style="blue",
-                        )
+                        ),
                     )
                 else:
                     self.log("-" * 50)
@@ -243,21 +244,20 @@ class WrapperGenerator:
                     self.log("-" * 50)
 
             return True
-        else:
-            try:
-                wrapper_path.write_text(wrapper_content)
-                wrapper_path.chmod(0o755)
+        try:
+            wrapper_path.write_text(wrapper_content)
+            wrapper_path.chmod(0o755)
 
-                if wrapper_existed:
-                    self.log(f"Updated wrapper: {wrapper_name}")
-                else:
-                    self.log(f"Created wrapper: {wrapper_name}")
+            if wrapper_existed:
+                self.log(f"Updated wrapper: {wrapper_name}")
+            else:
+                self.log(f"Created wrapper: {wrapper_name}")
 
-                return True
+            return True
 
-            except Exception as e:
-                self.log(f"Failed to create wrapper {wrapper_name}: {e}", "error")
-                return False
+        except Exception as e:
+            self.log(f"Failed to create wrapper {wrapper_name}: {e}", "error")
+            return False
 
         wrapper_path = self.bin_dir / wrapper_name
 
@@ -291,8 +291,8 @@ class WrapperGenerator:
             return False
 
     def create_wrapper_script(self, wrapper_name: str, app_id: str) -> str:
-        """Create the content of a wrapper script"""
-        script = f'''#!/usr/bin/env bash
+        """Create the content of a wrapper script."""
+        return f"""#!/usr/bin/env bash
 # Generated by fplaunchwrapper
 
 NAME="{wrapper_name}"
@@ -492,12 +492,11 @@ else
         fi
     fi
 fi
-'''
+"""
 
-        return script
 
-    def generate_all_wrappers(self, installed_apps: List[str]) -> Tuple[int, int, int]:
-        """Generate wrappers for all installed applications"""
+    def generate_all_wrappers(self, installed_apps: list[str]) -> tuple[int, int, int]:
+        """Generate wrappers for all installed applications."""
         self.log("Generating wrappers...")
 
         created_count = 0
@@ -514,7 +513,7 @@ fi
                 console=console,
             ) as progress:
                 task = progress.add_task(
-                    "Generating wrappers...", total=len(installed_apps)
+                    "Generating wrappers...", total=len(installed_apps),
                 )
 
                 for app_id in installed_apps:
@@ -525,7 +524,7 @@ fi
                             if UTILS_AVAILABLE
                             else app_id.split(".")[-1]
                         )
-                        wrapper_path = self.bin_dir / wrapper_name
+                        self.bin_dir / wrapper_name
                         # For now, assume it's a create (we'd need to track this)
                         created_count += 1
                     else:
@@ -541,7 +540,7 @@ fi
         return created_count, updated_count, skipped_count
 
     def run(self) -> int:
-        """Main generation process"""
+        """Main generation process."""
         try:
             # Acquire lock (skip in emit mode)
             if not self.emit_mode and not acquire_lock(self.lock_name, 30):
@@ -566,7 +565,7 @@ fi
 
                 # Generate new wrappers
                 created_count, updated_count, skipped_count = self.generate_wrappers(
-                    installed_apps
+                    installed_apps,
                 )
 
                 # Summary
@@ -582,9 +581,9 @@ fi
                 self.log("🎉 Flatpak wrapper generation complete!")
                 self.log("")
                 self.log("💡 Next steps:")
-                self.log(f"   fplaunch list              # See your wrappers")
-                self.log(f"   fplaunch monitor           # Monitor for changes")
-                self.log(f"   firefox --fpwrapper-help   # See wrapper options")
+                self.log("   fplaunch list              # See your wrappers")
+                self.log("   fplaunch monitor           # Monitor for changes")
+                self.log("   firefox --fpwrapper-help   # See wrapper options")
 
                 return 0
 
@@ -596,13 +595,13 @@ fi
             self.log(f"Generation failed: {e}", "error")
             return 1
 
-    def generate_wrappers(self, installed_apps: List[str]) -> Tuple[int, int, int]:
-        """Generate wrappers for all apps - alias for generate_all_wrappers"""
+    def generate_wrappers(self, installed_apps: list[str]) -> tuple[int, int, int]:
+        """Generate wrappers for all apps - alias for generate_all_wrappers."""
         return self.generate_all_wrappers(installed_apps)
 
 
 def main():
-    """Command-line interface for wrapper generation"""
+    """Command-line interface for wrapper generation."""
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -625,11 +624,11 @@ Examples:
     )
 
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output"
+        "--verbose", "-v", action="store_true", help="Enable verbose output",
     )
 
     parser.add_argument(
-        "--force", action="store_true", help="Force regeneration of all wrappers"
+        "--force", action="store_true", help="Force regeneration of all wrappers",
     )
 
     parser.add_argument(
@@ -644,10 +643,6 @@ Examples:
     if not args.emit:
         bin_dir = os.path.expanduser(args.bin_dir)
         if not validate_home_dir(bin_dir) if UTILS_AVAILABLE else True:
-            print(
-                f"Error: BIN_DIR must be under your HOME directory: {bin_dir}",
-                file=sys.stderr,
-            )
             return 1
 
     # Create generator and run

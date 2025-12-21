@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
-"""
-Comprehensive edge case and error condition tests for fplaunchwrapper
-Tests failure scenarios, boundary conditions, and error recovery
+"""Comprehensive edge case and error condition tests for fplaunchwrapper
+Tests failure scenarios, boundary conditions, and error recovery.
 """
 
-import sys
-import pytest
-import tempfile
+import builtins
+import contextlib
 import os
 import shutil
-import stat
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
 import threading
 import time
+from pathlib import Path
+from typing import NoReturn
+from unittest.mock import Mock, patch
+
+import pytest
 
 try:
+    from fplaunch.cleanup import WrapperCleanup
     from fplaunch.generate import WrapperGenerator
+    from fplaunch.launch import AppLauncher
     from fplaunch.manage import WrapperManager
     from fplaunch.systemd_setup import SystemdSetup
-    from fplaunch.cleanup import WrapperCleanup
-    from fplaunch.launch import AppLauncher
 
     MODULES_AVAILABLE = True
 except ImportError:
@@ -29,11 +30,11 @@ except ImportError:
 
 @pytest.mark.skipif(not MODULES_AVAILABLE, reason="Required modules not available")
 class TestInputValidationEdgeCases:
-    """Test input validation edge cases and boundary conditions"""
+    """Test input validation edge cases and boundary conditions."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp(prefix="fp_edge_test_"))
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -45,10 +46,10 @@ class TestInputValidationEdgeCases:
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def test_empty_and_none_inputs(self, temp_env):
-        """Test handling of empty and None inputs"""
+    def test_empty_and_none_inputs(self, temp_env) -> None:
+        """Test handling of empty and None inputs."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         # Test empty app name
@@ -66,10 +67,10 @@ class TestInputValidationEdgeCases:
         result = manager.set_preference("firefox", "")
         assert result is False  # Should reject empty
 
-    def test_extremely_long_inputs(self, temp_env):
-        """Test handling of extremely long inputs"""
+    def test_extremely_long_inputs(self, temp_env) -> None:
+        """Test handling of extremely long inputs."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         # Very long app name
@@ -82,10 +83,10 @@ class TestInputValidationEdgeCases:
         result = manager.set_preference("test", long_pref)
         assert isinstance(result, bool)  # Should handle gracefully
 
-    def test_unicode_and_special_characters(self, temp_env):
-        """Test handling of Unicode and special characters"""
+    def test_unicode_and_special_characters(self, temp_env) -> None:
+        """Test handling of Unicode and special characters."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         # Unicode app names
@@ -105,13 +106,13 @@ class TestInputValidationEdgeCases:
             except UnicodeError:
                 pass  # Unicode errors acceptable
 
-    def test_malformed_flatpak_ids(self, temp_env):
-        """Test handling of malformed Flatpak IDs"""
-        if not "WrapperGenerator" in globals():
+    def test_malformed_flatpak_ids(self, temp_env) -> None:
+        """Test handling of malformed Flatpak IDs."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True
+            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True,
         )
 
         malformed_ids = [
@@ -134,10 +135,10 @@ class TestInputValidationEdgeCases:
             except Exception:
                 pass  # Exceptions acceptable for malformed input
 
-    def test_path_injection_attempts(self, temp_env):
-        """Test path injection and traversal attempts"""
+    def test_path_injection_attempts(self, temp_env) -> None:
+        """Test path injection and traversal attempts."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         # Path traversal attempts
@@ -159,11 +160,11 @@ class TestInputValidationEdgeCases:
 
 
 class TestSystemResourceEdgeCases:
-    """Test system resource exhaustion and limits"""
+    """Test system resource exhaustion and limits."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp(prefix="fp_resource_test_"))
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -175,8 +176,8 @@ class TestSystemResourceEdgeCases:
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def test_disk_space_exhaustion_simulation(self, temp_env):
-        """Test behavior when disk space is exhausted"""
+    def test_disk_space_exhaustion_simulation(self, temp_env) -> None:
+        """Test behavior when disk space is exhausted."""
         # Create a very small "disk" by filling it up
         small_file = temp_env["temp_dir"] / "filler"
         # Write a large file to simulate low disk space
@@ -187,22 +188,22 @@ class TestSystemResourceEdgeCases:
             pass  # May fail on some systems
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         # Should handle disk space issues gracefully
         result = manager.set_preference("test", "flatpak")
         assert isinstance(result, bool)  # Should not crash
 
-    def test_permission_denied_scenarios(self, temp_env):
-        """Test permission denied scenarios"""
+    def test_permission_denied_scenarios(self, temp_env) -> None:
+        """Test permission denied scenarios."""
         # Make config directory read-only
         config_dir = temp_env["config_dir"]
         config_dir.chmod(0o444)  # Read-only
 
         try:
             manager = WrapperManager(
-                config_dir=str(config_dir), verbose=True, emit_mode=True
+                config_dir=str(config_dir), verbose=True, emit_mode=True,
             )
 
             result = manager.set_preference("test", "flatpak")
@@ -211,10 +212,10 @@ class TestSystemResourceEdgeCases:
             # Restore permissions for cleanup
             config_dir.chmod(0o755)
 
-    def test_file_descriptor_exhaustion(self, temp_env):
-        """Test file descriptor exhaustion handling"""
+    def test_file_descriptor_exhaustion(self, temp_env) -> None:
+        """Test file descriptor exhaustion handling."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         # Open many file descriptors to simulate exhaustion
@@ -233,19 +234,17 @@ class TestSystemResourceEdgeCases:
 
         finally:
             for f in opened_files:
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     f.close()
-                except:
-                    pass
 
     @patch("os.path.exists")
-    def test_missing_system_directories(self, mock_exists, temp_env):
-        """Test missing system directories"""
+    def test_missing_system_directories(self, mock_exists, temp_env) -> None:
+        """Test missing system directories."""
         # Mock that key directories don't exist
         mock_exists.return_value = False
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         result = manager.set_preference("test", "flatpak")
@@ -253,11 +252,11 @@ class TestSystemResourceEdgeCases:
 
 
 class TestExternalDependencyFailures:
-    """Test failures of external dependencies"""
+    """Test failures of external dependencies."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp(prefix="fp_dependency_test_"))
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -270,25 +269,25 @@ class TestExternalDependencyFailures:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     @patch("subprocess.run")
-    def test_flatpak_command_not_found(self, mock_subprocess, temp_env):
-        """Test Flatpak command not found"""
-        if not "WrapperGenerator" in globals():
+    def test_flatpak_command_not_found(self, mock_subprocess, temp_env) -> None:
+        """Test Flatpak command not found."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         # Mock command not found
         mock_subprocess.side_effect = FileNotFoundError("flatpak not found")
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True
+            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True,
         )
 
         result = generator.generate_wrapper("org.test.app")
         assert result is False  # Should fail gracefully
 
     @patch("subprocess.run")
-    def test_flatpak_command_failure(self, mock_subprocess, temp_env):
-        """Test Flatpak command execution failure"""
-        if not "WrapperGenerator" in globals():
+    def test_flatpak_command_failure(self, mock_subprocess, temp_env) -> None:
+        """Test Flatpak command execution failure."""
+        if "WrapperGenerator" not in globals():
             pytest.skip("WrapperGenerator not available")
 
         # Mock command failure
@@ -298,24 +297,24 @@ class TestExternalDependencyFailures:
         mock_subprocess.return_value = mock_result
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True
+            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True,
         )
 
         result = generator.generate_wrapper("org.test.app")
         assert isinstance(result, bool)  # Should handle failure
 
     @patch.dict("os.environ", {"PATH": "/nonexistent"})
-    def test_missing_system_commands(self, temp_env):
-        """Test missing system commands"""
+    def test_missing_system_commands(self, temp_env) -> None:
+        """Test missing system commands."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         result = manager.set_preference("test", "flatpak")
         assert isinstance(result, bool)  # Should handle missing commands
 
-    def test_corrupted_config_files(self, temp_env):
-        """Test corrupted configuration files"""
+    def test_corrupted_config_files(self, temp_env) -> None:
+        """Test corrupted configuration files."""
         # Create corrupted config files
         config_file = temp_env["config_dir"] / "config.toml"
         config_file.write_text("invalid toml syntax {{{{")
@@ -324,20 +323,20 @@ class TestExternalDependencyFailures:
         pref_file.write_text("corrupted\x00\x01\x02data")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         result = manager.set_preference("firefox", "flatpak")
         assert isinstance(result, bool)  # Should handle corruption
 
     @patch("os.access")
-    def test_insufficient_permissions(self, mock_access, temp_env):
-        """Test insufficient file permissions"""
+    def test_insufficient_permissions(self, mock_access, temp_env) -> None:
+        """Test insufficient file permissions."""
         # Mock no write access
         mock_access.return_value = False
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         result = manager.set_preference("test", "flatpak")
@@ -345,11 +344,11 @@ class TestExternalDependencyFailures:
 
 
 class TestConcurrencyAndRaceConditions:
-    """Test concurrent access and race conditions"""
+    """Test concurrent access and race conditions."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp(prefix="fp_concurrency_test_"))
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -361,8 +360,8 @@ class TestConcurrencyAndRaceConditions:
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def test_concurrent_config_operations(self, temp_env):
-        """Test concurrent configuration operations"""
+    def test_concurrent_config_operations(self, temp_env) -> None:
+        """Test concurrent configuration operations."""
         manager = WrapperManager(
             config_dir=str(temp_env["config_dir"]),
             verbose=False,  # Reduce output noise
@@ -372,7 +371,7 @@ class TestConcurrencyAndRaceConditions:
         results = []
         errors = []
 
-        def worker(thread_id):
+        def worker(thread_id) -> None:
             try:
                 for i in range(50):
                     result = manager.set_preference(f"app_{thread_id}_{i}", "flatpak")
@@ -394,18 +393,18 @@ class TestConcurrencyAndRaceConditions:
         assert len(errors) == 0
         assert len(results) > 0
 
-    def test_concurrent_file_operations(self, temp_env):
-        """Test concurrent file operations"""
+    def test_concurrent_file_operations(self, temp_env) -> None:
+        """Test concurrent file operations."""
         results = []
         errors = []
 
-        def file_worker(thread_id):
+        def file_worker(thread_id) -> None:
             try:
                 for i in range(20):
                     file_path = temp_env["config_dir"] / f"test_{thread_id}_{i}.tmp"
                     with open(file_path, "w") as f:
                         f.write(f"test data {i}")
-                    with open(file_path, "r") as f:
+                    with open(file_path) as f:
                         content = f.read()
                     os.unlink(file_path)
                     results.append(content)
@@ -426,11 +425,11 @@ class TestConcurrencyAndRaceConditions:
         assert len(errors) == 0
         assert len(results) > 0
 
-    def test_lock_contention(self, temp_env):
-        """Test lock contention scenarios"""
+    def test_lock_contention(self, temp_env) -> None:
+        """Test lock contention scenarios."""
         # This would test file locking mechanisms if implemented
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         # Simulate lock contention
@@ -444,11 +443,11 @@ class TestConcurrencyAndRaceConditions:
 
 
 class TestTimeoutAndInterruptHandling:
-    """Test timeout and interrupt handling"""
+    """Test timeout and interrupt handling."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp(prefix="fp_timeout_test_"))
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -461,31 +460,31 @@ class TestTimeoutAndInterruptHandling:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     @patch("subprocess.run")
-    def test_command_timeout_handling(self, mock_subprocess, temp_env):
-        """Test command timeout handling"""
+    def test_command_timeout_handling(self, mock_subprocess, temp_env) -> None:
+        """Test command timeout handling."""
         from subprocess import TimeoutExpired
 
         # Mock timeout
         mock_subprocess.side_effect = TimeoutExpired("command", 30)
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         result = manager.set_preference("test", "flatpak")
         assert isinstance(result, bool)  # Should handle timeout
 
-    def test_signal_interrupt_handling(self, temp_env):
-        """Test signal interrupt handling"""
+    def test_signal_interrupt_handling(self, temp_env) -> None:
+        """Test signal interrupt handling."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         # Simulate interrupt
         import signal
 
-        def interrupt_handler(signum, frame):
-            raise KeyboardInterrupt()
+        def interrupt_handler(signum, frame) -> NoReturn:
+            raise KeyboardInterrupt
 
         old_handler = signal.signal(signal.SIGINT, interrupt_handler)
 
@@ -500,13 +499,13 @@ class TestTimeoutAndInterruptHandling:
             signal.signal(signal.SIGINT, old_handler)
 
     @patch("time.sleep")
-    def test_operation_timeout(self, mock_sleep, temp_env):
-        """Test operation timeout scenarios"""
+    def test_operation_timeout(self, mock_sleep, temp_env) -> None:
+        """Test operation timeout scenarios."""
         # Mock slow operations
         mock_sleep.side_effect = lambda x: time.sleep(0.01)  # Short sleep
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         start_time = time.time()
@@ -519,11 +518,11 @@ class TestTimeoutAndInterruptHandling:
 
 
 class TestMemoryAndResourceLimits:
-    """Test memory and resource limit handling"""
+    """Test memory and resource limit handling."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp(prefix="fp_memory_test_"))
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -535,8 +534,8 @@ class TestMemoryAndResourceLimits:
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def test_large_data_handling(self, temp_env):
-        """Test handling of large amounts of data"""
+    def test_large_data_handling(self, temp_env) -> None:
+        """Test handling of large amounts of data."""
         manager = WrapperManager(
             config_dir=str(temp_env["config_dir"]),
             verbose=False,  # Reduce output
@@ -552,8 +551,8 @@ class TestMemoryAndResourceLimits:
         pref_files = list(temp_env["config_dir"].glob("*.pref"))
         assert len(pref_files) > 900  # Most should succeed
 
-    def test_deep_directory_structures(self, temp_env):
-        """Test deep directory structure handling"""
+    def test_deep_directory_structures(self, temp_env) -> None:
+        """Test deep directory structure handling."""
         # Create deep directory structure
         deep_dir = temp_env["config_dir"]
         for i in range(10):
@@ -569,19 +568,18 @@ class TestMemoryAndResourceLimits:
         result = manager.set_preference("deep_test", "flatpak")
         assert isinstance(result, bool)  # Should handle deep paths
 
-    def test_extreme_unicode_content(self, temp_env):
-        """Test extreme Unicode content handling"""
+    def test_extreme_unicode_content(self, temp_env) -> None:
+        """Test extreme Unicode content handling."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         # Test with extremely long Unicode strings
-        unicode_content = "🚀🌟💫⭐" * 1000  # Very long emoji string
         result = manager.set_preference("unicode_test", "flatpak")
         assert isinstance(result, bool)  # Should handle Unicode gracefully
 
         # Test with mixed encodings and special Unicode
-        special_unicode = "".join(
+        "".join(
             chr(i) for i in range(0x100, 0x200)
         )  # Various Unicode chars
         try:

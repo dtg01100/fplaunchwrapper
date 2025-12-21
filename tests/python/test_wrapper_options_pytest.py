@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""
-Pytest replacement for test_wrapper_options.sh
-Tests wrapper script options and functionality
+"""Pytest replacement for test_wrapper_options.sh
+Tests wrapper script options and functionality.
 """
 
-import sys
-import pytest
-import tempfile
-import subprocess
 import os
+import subprocess
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
+
+import pytest
 
 # Add lib to path
 # Import the module to test
@@ -23,11 +22,11 @@ except ImportError:
 
 
 class TestWrapperOptions:
-    """Test wrapper script options and functionality"""
+    """Test wrapper script options and functionality."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp(prefix="fpwrapper_options_"))
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -44,8 +43,8 @@ class TestWrapperOptions:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_help_option(self, mock_subprocess, temp_env):
-        """Test --fpwrapper-help option - replaces Test 1"""
+    def test_help_option(self, mock_subprocess, temp_env) -> None:
+        """Test --fpwrapper-help option - replaces Test 1."""
         # Generate a wrapper with help functionality
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -55,7 +54,7 @@ class TestWrapperOptions:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -66,7 +65,7 @@ class TestWrapperOptions:
         # Test --fpwrapper-help option
         cmd = [str(wrapper_path), "--fpwrapper-help"]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
         )
 
         # Should show help information
@@ -80,8 +79,8 @@ class TestWrapperOptions:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_info_option(self, mock_subprocess, temp_env):
-        """Test --fpwrapper-info option - replaces Test 2"""
+    def test_info_option(self, mock_subprocess, temp_env) -> None:
+        """Test --fpwrapper-info option - replaces Test 2."""
         # Create preference file
         pref_file = temp_env["config_dir"] / "firefox.pref"
         pref_file.write_text("flatpak\n")
@@ -95,7 +94,7 @@ class TestWrapperOptions:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -105,7 +104,7 @@ class TestWrapperOptions:
         # Test --fpwrapper-info option
         cmd = [str(wrapper_path), "--fpwrapper-info"]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -117,8 +116,8 @@ class TestWrapperOptions:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_config_dir_option(self, mock_subprocess, temp_env):
-        """Test --fpwrapper-config-dir option - replaces Test 3"""
+    def test_config_dir_option(self, mock_subprocess, temp_env) -> None:
+        """Test --fpwrapper-config-dir option - replaces Test 3."""
         # Generate wrapper
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -128,7 +127,7 @@ class TestWrapperOptions:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -138,7 +137,7 @@ class TestWrapperOptions:
         # Test --fpwrapper-config-dir option
         cmd = [str(wrapper_path), "--fpwrapper-config-dir"]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -152,8 +151,8 @@ class TestWrapperOptions:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_sandbox_info_option(self, mock_subprocess, temp_env):
-        """Test --fpwrapper-sandbox-info option - replaces Test 4"""
+    def test_sandbox_info_option(self, mock_subprocess, temp_env) -> None:
+        """Test --fpwrapper-sandbox-info option - replaces Test 4."""
 
         # Mock flatpak info command
         def mock_run(cmd, **kwargs):
@@ -175,7 +174,7 @@ class TestWrapperOptions:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -185,7 +184,7 @@ class TestWrapperOptions:
         # Test --fpwrapper-sandbox-info option
         cmd = [str(wrapper_path), "--fpwrapper-sandbox-info"]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -194,8 +193,8 @@ class TestWrapperOptions:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_sandbox_edit_option(self, mock_subprocess, temp_env):
-        """Test --fpwrapper-edit-sandbox option - replaces Test 5"""
+    def test_sandbox_edit_option(self, mock_subprocess, temp_env) -> None:
+        """Test --fpwrapper-edit-sandbox option - replaces Test 5."""
         # Mock interactive input and flatpak commands
         call_count = 0
 
@@ -222,7 +221,7 @@ class TestWrapperOptions:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -231,11 +230,11 @@ class TestWrapperOptions:
 
         # Mock stdin for interactive choice
         with patch(
-            "sys.stdin", Mock(readline=lambda: "5\n")
+            "sys.stdin", Mock(readline=lambda: "5\n"),
         ):  # Choose "Show current overrides"
             cmd = [str(wrapper_path), "--fpwrapper-edit-sandbox"]
             result = subprocess.run(
-                cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+                cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
             )
 
             # Should work (exact behavior depends on interactive choices)
@@ -243,13 +242,13 @@ class TestWrapperOptions:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_sandbox_yolo_option(self, mock_subprocess, temp_env):
-        """Test --fpwrapper-sandbox-yolo option - replaces Test 6"""
+    def test_sandbox_yolo_option(self, mock_subprocess, temp_env) -> None:
+        """Test --fpwrapper-sandbox-yolo option - replaces Test 6."""
 
         # Mock flatpak override command
         def mock_run(cmd, **kwargs):
             if "flatpak override" in " ".join(cmd) and "--filesystem=host" in " ".join(
-                cmd
+                cmd,
             ):
                 result = Mock()
                 result.returncode = 0
@@ -270,7 +269,7 @@ class TestWrapperOptions:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -281,7 +280,7 @@ class TestWrapperOptions:
         with patch("sys.stdin", Mock(readline=lambda: "yes\n")):
             cmd = [str(wrapper_path), "--fpwrapper-sandbox-yolo"]
             result = subprocess.run(
-                cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+                cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
             )
 
             # Should have called flatpak override with dangerous permissions
@@ -292,8 +291,8 @@ class TestWrapperOptions:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_sandbox_reset_option(self, mock_subprocess, temp_env):
-        """Test --fpwrapper-sandbox-reset option - replaces Test 7"""
+    def test_sandbox_reset_option(self, mock_subprocess, temp_env) -> None:
+        """Test --fpwrapper-sandbox-reset option - replaces Test 7."""
 
         # Mock flatpak override --reset command
         def mock_run(cmd, **kwargs):
@@ -317,7 +316,7 @@ class TestWrapperOptions:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -327,7 +326,7 @@ class TestWrapperOptions:
         # Test --fpwrapper-sandbox-reset option
         cmd = [str(wrapper_path), "--fpwrapper-sandbox-reset"]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -339,8 +338,8 @@ class TestWrapperOptions:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_run_unrestricted_option(self, mock_subprocess, temp_env):
-        """Test --fpwrapper-run-unrestricted option - replaces Test 8"""
+    def test_run_unrestricted_option(self, mock_subprocess, temp_env) -> None:
+        """Test --fpwrapper-run-unrestricted option - replaces Test 8."""
 
         # Mock flatpak run command
         def mock_run(cmd, **kwargs):
@@ -364,7 +363,7 @@ class TestWrapperOptions:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -374,7 +373,7 @@ class TestWrapperOptions:
         # Test --fpwrapper-run-unrestricted option
         cmd = [str(wrapper_path), "--fpwrapper-run-unrestricted", "--version"]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -385,8 +384,8 @@ class TestWrapperOptions:
         )
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
-    def test_set_override_option(self, temp_env):
-        """Test --fpwrapper-set-override option - replaces Test 9"""
+    def test_set_override_option(self, temp_env) -> None:
+        """Test --fpwrapper-set-override option - replaces Test 9."""
         # Generate wrapper
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -396,7 +395,7 @@ class TestWrapperOptions:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -406,7 +405,7 @@ class TestWrapperOptions:
         # Test --fpwrapper-set-override system
         cmd = [str(wrapper_path), "--fpwrapper-set-override", "system"]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -415,8 +414,8 @@ class TestWrapperOptions:
         assert pref_file.exists()
         assert pref_file.read_text().strip() == "system"
 
-    def test_script_management_options(self, temp_env):
-        """Test script management options - replaces Test 10"""
+    def test_script_management_options(self, temp_env) -> None:
+        """Test script management options - replaces Test 10."""
         # Create wrapper manually for this test
         wrapper_content = """#!/bin/bash
 # Generated by fplaunchwrapper
@@ -468,14 +467,14 @@ echo "testapp executed"
         # Test --fpwrapper-set-pre-script
         cmd = [str(wrapper_path), "--fpwrapper-set-pre-script", str(pre_script)]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
         )
         assert result.returncode == 0
 
         # Test --fpwrapper-set-post-script
         cmd = [str(wrapper_path), "--fpwrapper-set-post-script", str(post_script)]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"]
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
         )
         assert result.returncode == 0
 
@@ -486,8 +485,8 @@ echo "testapp executed"
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_force_interactive_option(self, mock_subprocess, temp_env):
-        """Test --fpwrapper-force-interactive option - replaces Test 11"""
+    def test_force_interactive_option(self, mock_subprocess, temp_env) -> None:
+        """Test --fpwrapper-force-interactive option - replaces Test 11."""
         # Generate wrapper
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -497,7 +496,7 @@ echo "testapp executed"
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -507,7 +506,7 @@ echo "testapp executed"
         # Test --fpwrapper-force-interactive
         cmd = [str(wrapper_path), "--fpwrapper-force-interactive"]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"], input="1\n"
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"], input="1\n",
         )  # Choose system
 
         # Should work in non-interactive mode when forced
@@ -515,8 +514,8 @@ echo "testapp executed"
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_non_interactive_bypass(self, mock_subprocess, temp_env):
-        """Test non-interactive bypass functionality - replaces Test 12"""
+    def test_non_interactive_bypass(self, mock_subprocess, temp_env) -> None:
+        """Test non-interactive bypass functionality - replaces Test 12."""
 
         # Mock flatpak command for system binary detection
         def mock_run(cmd, **kwargs):
@@ -526,7 +525,7 @@ echo "testapp executed"
                 result.returncode = 0
                 result.stdout = "/usr/bin/firefox\n"
                 return result
-            elif "flatpak run" in cmd_str:
+            if "flatpak run" in cmd_str:
                 result = Mock()
                 result.returncode = 0
                 result.stdout = "Firefox launched\n"
@@ -546,7 +545,7 @@ echo "testapp executed"
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -560,7 +559,7 @@ echo "testapp executed"
         env["FPWRAPPER_FORCE"] = "non-interactive"  # Force non-interactive mode
 
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=temp_env["temp_dir"], env=env
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"], env=env,
         )
 
         # Should bypass interactive prompts and use system binary if available

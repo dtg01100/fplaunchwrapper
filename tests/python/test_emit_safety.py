@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
-"""
-Pytest tests for emit-based safe testing
-"""
+"""Pytest tests for emit-based safe testing."""
 
-import sys
-import pytest
 import subprocess
 from pathlib import Path
 
+import pytest
+
+
 # Add lib to path
 class TestEmitSafety:
-    """Test emit mode safety features"""
+    """Test emit mode safety features."""
 
     def run_emit_test(self, command, description):
-        """Run a command with emit mode and return success"""
+        """Run a command with emit mode and return success."""
         try:
             result = subprocess.run(
                 command,
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 cwd=Path(__file__).parent.parent,
                 timeout=30,
@@ -26,14 +25,14 @@ class TestEmitSafety:
         except Exception:
             return False
 
-    def test_generate_emit_safety(self):
-        """Test that generate --emit doesn't create files"""
+    def test_generate_emit_safety(self) -> None:
+        """Test that generate --emit doesn't create files."""
         command = ["python", "-m", "lib.cli", "generate", "--emit", "/tmp/test-bin"]
         success = self.run_emit_test(command, "generate emit safety")
         assert success
 
-    def test_manage_set_pref_emit_safety(self):
-        """Test that set-pref --emit doesn't create files"""
+    def test_manage_set_pref_emit_safety(self) -> None:
+        """Test that set-pref --emit doesn't create files."""
         command = [
             "python",
             "-m",
@@ -46,26 +45,26 @@ class TestEmitSafety:
         success = self.run_emit_test(command, "set-pref emit safety")
         assert success
 
-    def test_systemd_setup_emit_safety(self):
-        """Test that setup-systemd --emit doesn't create files"""
+    def test_systemd_setup_emit_safety(self) -> None:
+        """Test that setup-systemd --emit doesn't create files."""
         command = ["python", "-m", "lib.cli", "setup-systemd", "--emit"]
         success = self.run_emit_test(command, "setup-systemd emit safety")
         assert success
 
-    def test_global_emit_flag_safety(self):
-        """Test that global --emit flag works safely"""
+    def test_global_emit_flag_safety(self) -> None:
+        """Test that global --emit flag works safely."""
         command = ["python", "-m", "lib.cli", "--emit", "set-pref", "chrome", "system"]
         success = self.run_emit_test(command, "global emit flag safety")
         assert success
 
-    def test_config_emit_safety(self):
-        """Test that config --emit works safely"""
+    def test_config_emit_safety(self) -> None:
+        """Test that config --emit works safely."""
         command = ["python", "-m", "lib.cli", "config", "--emit"]
         success = self.run_emit_test(command, "config emit safety")
         assert success
 
-    def test_monitor_emit_safety(self):
-        """Test that monitor --emit works safely"""
+    def test_monitor_emit_safety(self) -> None:
+        """Test that monitor --emit works safely."""
         command = ["python", "-m", "lib.cli", "monitor", "--emit"]
         success = self.run_emit_test(command, "monitor emit safety")
         assert success

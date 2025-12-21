@@ -1,28 +1,26 @@
 #!/usr/bin/env python3
-"""
-Safe Integration Tests for fplaunchwrapper
+"""Safe Integration Tests for fplaunchwrapper.
 
 Tests full CLI workflows and component interactions with ZERO side effects.
 All operations are completely isolated in temporary directories with full mocking.
 """
 
-import sys
-import pytest
-import tempfile
 import os
 import shutil
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, call
-import subprocess
+from unittest.mock import Mock, patch
+
+import pytest
 
 # Import modules safely
 try:
-    from fplaunch.generate import WrapperGenerator
-    from fplaunch.manage import WrapperManager
     from fplaunch.cleanup import WrapperCleanup
-    from fplaunch.launch import AppLauncher
-    from fplaunch.systemd_setup import SystemdSetup
     from fplaunch.cli import main as cli_main
+    from fplaunch.generate import WrapperGenerator
+    from fplaunch.launch import AppLauncher
+    from fplaunch.manage import WrapperManager
+    from fplaunch.systemd_setup import SystemdSetup
 
     MODULES_AVAILABLE = True
 except ImportError:
@@ -31,8 +29,7 @@ except ImportError:
 
 @pytest.mark.skipif(not MODULES_AVAILABLE, reason="Required modules not available")
 class TestSafeIntegrationWorkflows:
-    """
-    Integration tests that simulate real-world usage without touching the system.
+    """Integration tests that simulate real-world usage without touching the system.
 
     All tests run in complete isolation with:
     - Temporary directories for all operations
@@ -43,7 +40,7 @@ class TestSafeIntegrationWorkflows:
 
     @pytest.fixture
     def isolated_env(self):
-        """Create completely isolated test environment"""
+        """Create completely isolated test environment."""
         temp_base = Path(tempfile.mkdtemp(prefix="fp_integration_"))
 
         # Create isolated directory structure
@@ -70,9 +67,8 @@ class TestSafeIntegrationWorkflows:
         except Exception:
             pass  # Best effort cleanup
 
-    def test_app_installation_workflow(self, isolated_env):
-        """
-        Test complete app installation workflow: generate -> install -> verify
+    def test_app_installation_workflow(self, isolated_env) -> None:
+        """Test complete app installation workflow: generate -> install -> verify.
 
         This simulates: fplaunch-generate firefox -> fplaunch-manage install firefox
         """
@@ -80,16 +76,16 @@ class TestSafeIntegrationWorkflows:
 
         # Mock all external commands for complete isolation
         with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
+            "os.path.exists", return_value=True,
         ), patch("os.makedirs"), patch(
-            "shutil.which", return_value="/usr/bin/flatpak"
+            "shutil.which", return_value="/usr/bin/flatpak",
         ), patch("pathlib.Path.home", return_value=isolated_env["home_dir"]):
             # Configure mocks to simulate successful operations
             mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
 
             # Step 1: Generate wrapper
             generator = WrapperGenerator(
-                bin_dir=str(isolated_env["bin_dir"]), verbose=False, emit_mode=True
+                bin_dir=str(isolated_env["bin_dir"]), verbose=False, emit_mode=True,
             )
 
             success = generator.generate_wrapper(app_id)
@@ -120,18 +116,17 @@ class TestSafeIntegrationWorkflows:
                 "All subdirs should remain"
             )
 
-    def test_app_management_workflow(self, isolated_env):
-        """
-        Test app management operations: enable/disable/update/remove
+    def test_app_management_workflow(self, isolated_env) -> None:
+        """Test app management operations: enable/disable/update/remove.
 
         Simulates: fplaunch-manage enable firefox, disable, update, remove
         """
         app_id = "org.libreoffice.LibreOffice"
 
         with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
+            "os.path.exists", return_value=True,
         ), patch("os.makedirs"), patch(
-            "pathlib.Path.home", return_value=isolated_env["home_dir"]
+            "pathlib.Path.home", return_value=isolated_env["home_dir"],
         ):
             mock_run.return_value = Mock(returncode=0, stdout="enabled", stderr="")
 
@@ -160,16 +155,15 @@ class TestSafeIntegrationWorkflows:
             # Verify complete isolation - no real commands executed
             assert mock_run.call_count >= 4, "All operations should have been mocked"
 
-    def test_cleanup_workflow(self, isolated_env):
-        """
-        Test cleanup operations: remove wrappers, clean config, systemd cleanup
+    def test_cleanup_workflow(self, isolated_env) -> None:
+        """Test cleanup operations: remove wrappers, clean config, systemd cleanup.
 
         Simulates: fplaunch-cleanup --all --force
         """
         with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
+            "os.path.exists", return_value=True,
         ), patch("os.remove"), patch("shutil.rmtree"), patch(
-            "pathlib.Path.home", return_value=isolated_env["home_dir"]
+            "pathlib.Path.home", return_value=isolated_env["home_dir"],
         ):
             mock_run.return_value = Mock(returncode=0, stdout="cleaned", stderr="")
 
@@ -194,24 +188,23 @@ class TestSafeIntegrationWorkflows:
                 "Temp environment should be untouched"
             )
 
-    def test_launcher_workflow(self, isolated_env):
-        """
-        Test app launching workflow with environment setup
+    def test_launcher_workflow(self, isolated_env) -> None:
+        """Test app launching workflow with environment setup.
 
         Simulates: fplaunch-launch firefox
         """
         app_id = "com.spotify.Client"
 
         with patch("subprocess.run") as mock_run, patch(
-            "subprocess.Popen"
+            "subprocess.Popen",
         ) as mock_popen, patch("os.path.exists", return_value=True), patch(
-            "os.environ.copy", return_value={}
+            "os.environ.copy", return_value={},
         ), patch("pathlib.Path.home", return_value=isolated_env["home_dir"]):
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
             mock_popen.return_value = Mock()
 
             launcher = AppLauncher(
-                config_dir=str(isolated_env["config_dir"]), verbose=False
+                config_dir=str(isolated_env["config_dir"]), verbose=False,
             )
 
             # Test app launch
@@ -221,18 +214,17 @@ class TestSafeIntegrationWorkflows:
             # Verify mocking - no real processes started
             assert mock_popen.call_count >= 1, "Should have attempted to launch process"
 
-    def test_systemd_integration_workflow(self, isolated_env):
-        """
-        Test systemd service management without touching real systemd
+    def test_systemd_integration_workflow(self, isolated_env) -> None:
+        """Test systemd service management without touching real systemd.
 
         Simulates: fplaunch-setup-systemd enable firefox
         """
         app_id = "org.gnome.Calculator"
 
         with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
+            "os.path.exists", return_value=True,
         ), patch("os.makedirs"), patch(
-            "pathlib.Path.home", return_value=isolated_env["home_dir"]
+            "pathlib.Path.home", return_value=isolated_env["home_dir"],
         ):
             mock_run.return_value = Mock(returncode=0, stdout="enabled", stderr="")
 
@@ -257,20 +249,19 @@ class TestSafeIntegrationWorkflows:
                 "No real systemd files should be created"
             )
 
-    def test_cross_component_integration(self, isolated_env):
-        """
-        Test components working together: generate -> manage -> launch -> cleanup
+    def test_cross_component_integration(self, isolated_env) -> None:
+        """Test components working together: generate -> manage -> launch -> cleanup.
 
         This is the complete user workflow in safe isolation
         """
         app_id = "com.visualstudio.Code"
 
         with patch("subprocess.run") as mock_run, patch(
-            "subprocess.Popen"
+            "subprocess.Popen",
         ) as mock_popen, patch("os.path.exists", return_value=True), patch(
-            "os.makedirs"
+            "os.makedirs",
         ), patch("os.remove"), patch("shutil.rmtree"), patch(
-            "pathlib.Path.home", return_value=isolated_env["home_dir"]
+            "pathlib.Path.home", return_value=isolated_env["home_dir"],
         ):
             mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
             mock_popen.return_value = Mock()
@@ -293,7 +284,7 @@ class TestSafeIntegrationWorkflows:
 
             # Step 3: Launch app
             launcher = AppLauncher(
-                config_dir=str(isolated_env["config_dir"]), verbose=False
+                config_dir=str(isolated_env["config_dir"]), verbose=False,
             )
             assert launcher.launch_app(app_id) is not None
 
@@ -313,21 +304,20 @@ class TestSafeIntegrationWorkflows:
             assert isolated_env["config_dir"].exists()
             assert isolated_env["data_dir"].exists()
 
-    def test_error_recovery_workflow(self, isolated_env):
-        """
-        Test error handling and recovery in integrated workflows
+    def test_error_recovery_workflow(self, isolated_env) -> None:
+        """Test error handling and recovery in integrated workflows.
 
         Ensures failures don't leave the system in bad state
         """
         app_id = "com.error.TestApp"
 
         with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
+            "os.path.exists", return_value=True,
         ), patch("pathlib.Path.home", return_value=isolated_env["home_dir"]):
             # Configure mock to fail on first call, succeed on retry
             mock_run.side_effect = [
                 Mock(
-                    returncode=1, stdout="", stderr="command failed"
+                    returncode=1, stdout="", stderr="command failed",
                 ),  # First call fails
                 Mock(returncode=0, stdout="success", stderr=""),  # Retry succeeds
             ]
@@ -345,18 +335,17 @@ class TestSafeIntegrationWorkflows:
             # Verify both calls were made (initial failure + recovery)
             assert mock_run.call_count == 2, "Should have attempted retry"
 
-    def test_concurrent_workflow_simulation(self, isolated_env):
-        """
-        Test multiple apps being managed concurrently (simulated)
+    def test_concurrent_workflow_simulation(self, isolated_env) -> None:
+        """Test multiple apps being managed concurrently (simulated).
 
         Ensures isolation between different app operations
         """
         app_ids = ["org.app.One", "org.app.Two", "org.app.Three"]
 
         with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
+            "os.path.exists", return_value=True,
         ), patch("os.makedirs"), patch(
-            "pathlib.Path.home", return_value=isolated_env["home_dir"]
+            "pathlib.Path.home", return_value=isolated_env["home_dir"],
         ):
             mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
 
@@ -380,19 +369,18 @@ class TestSafeIntegrationWorkflows:
                 "All operations should complete"
             )
 
-    def test_isolation_validation(self, isolated_env):
-        """
-        Validate that tests leave no traces and are completely isolated
+    def test_isolation_validation(self, isolated_env) -> None:
+        """Validate that tests leave no traces and are completely isolated.
 
         This test verifies the test framework itself is safe
         """
         # Track filesystem state before operations
         before_files = set()
-        for root, dirs, files in os.walk(isolated_env["temp_base"]):
+        for root, _dirs, files in os.walk(isolated_env["temp_base"]):
             before_files.update(os.path.join(root, f) for f in files)
 
         with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
+            "os.path.exists", return_value=True,
         ), patch("pathlib.Path.home", return_value=isolated_env["home_dir"]):
             mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
 
@@ -412,7 +400,7 @@ class TestSafeIntegrationWorkflows:
 
         # Track filesystem state after operations
         after_files = set()
-        for root, dirs, files in os.walk(isolated_env["temp_base"]):
+        for root, _dirs, files in os.walk(isolated_env["temp_base"]):
             after_files.update(os.path.join(root, f) for f in files)
 
         # Filesystem should be unchanged (all operations mocked)
@@ -426,18 +414,14 @@ class TestSafeIntegrationWorkflows:
 
 @pytest.mark.skipif(not MODULES_AVAILABLE, reason="Required modules not available")
 class TestCLISafeIntegration:
-    """
-    Test CLI commands in complete isolation without executing real commands
-    """
+    """Test CLI commands in complete isolation without executing real commands."""
 
-    def test_cli_command_isolation(self, tmp_path):
-        """
-        Test that CLI commands are properly mocked and don't execute real operations
-        """
+    def test_cli_command_isolation(self, tmp_path) -> None:
+        """Test that CLI commands are properly mocked and don't execute real operations."""
         with patch("sys.argv", ["fplaunch-generate", "firefox"]), patch(
-            "subprocess.run"
+            "subprocess.run",
         ) as mock_run, patch("os.path.exists", return_value=True), patch(
-            "pathlib.Path.home", return_value=tmp_path / "home"
+            "pathlib.Path.home", return_value=tmp_path / "home",
         ), patch("sys.stdout"):
             mock_run.return_value = Mock(returncode=0, stdout="generated", stderr="")
 
@@ -448,7 +432,7 @@ class TestCLISafeIntegration:
             from fplaunch.generate import WrapperGenerator
 
             generator = WrapperGenerator(
-                bin_dir=str(tmp_path / "bin"), config_dir=str(tmp_path / "config")
+                bin_dir=str(tmp_path / "bin"), config_dir=str(tmp_path / "config"),
             )
 
             result = generator.generate_wrapper("org.mozilla.firefox")

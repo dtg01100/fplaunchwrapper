@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""
-Unit tests for launch.py
-Tests application launching functionality with proper mocking
+"""Unit tests for launch.py
+Tests application launching functionality with proper mocking.
 """
 
-import sys
-import pytest
-import tempfile
 import os
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch
+
+import pytest
 
 # Add lib to path
 # Import the module to test
 try:
-    from fplaunch. import AppLauncher, main
+    from fplaunch.launch import AppLauncher, main
 except ImportError:
     # Mock it if not available
     AppLauncher = None
@@ -22,24 +21,24 @@ except ImportError:
 
 
 class TestApplicationLauncher:
-    """Test application launching functionality"""
+    """Test application launching functionality."""
 
-    def setup_method(self):
-        """Set up test environment"""
+    def setup_method(self) -> None:
+        """Set up test environment."""
         self.temp_dir = Path(tempfile.mkdtemp())
         self.bin_dir = self.temp_dir / "bin"
         self.config_dir = self.temp_dir / "config"
         self.bin_dir.mkdir()
         self.config_dir.mkdir()
 
-    def teardown_method(self):
-        """Clean up test environment"""
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
         import shutil
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_application_launcher_creation(self):
-        """Test AppLauncher creation"""
+    def test_application_launcher_creation(self) -> None:
+        """Test AppLauncher creation."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -55,8 +54,8 @@ class TestApplicationLauncher:
         assert str(launcher.config_dir) == str(self.config_dir)
 
     @patch("subprocess.run")
-    def test_launch_successful_execution(self, mock_subprocess):
-        """Test successful application launch"""
+    def test_launch_successful_execution(self, mock_subprocess) -> None:
+        """Test successful application launch."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -79,8 +78,8 @@ class TestApplicationLauncher:
         mock_subprocess.assert_called_once()
 
     @patch("subprocess.run")
-    def test_launch_command_not_found(self, mock_subprocess):
-        """Test launch when command is not found"""
+    def test_launch_command_not_found(self, mock_subprocess) -> None:
+        """Test launch when command is not found."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -98,8 +97,8 @@ class TestApplicationLauncher:
         assert result is False
 
     @patch("subprocess.run")
-    def test_launch_with_arguments(self, mock_subprocess):
-        """Test launch with command line arguments"""
+    def test_launch_with_arguments(self, mock_subprocess) -> None:
+        """Test launch with command line arguments."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -124,8 +123,8 @@ class TestApplicationLauncher:
         assert "https://example.com" in call_args[0][0]
 
     @patch("subprocess.run")
-    def test_launch_wrapper_preference_handling(self, mock_subprocess):
-        """Test launch respects wrapper preferences"""
+    def test_launch_wrapper_preference_handling(self, mock_subprocess) -> None:
+        """Test launch respects wrapper preferences."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -148,8 +147,8 @@ class TestApplicationLauncher:
         expected_cmd = [str(self.bin_dir / "firefox")]
         assert call_args[0][0] == expected_cmd
 
-    def test_launch_wrapper_existence_check(self):
-        """Test launch checks if wrapper exists"""
+    def test_launch_wrapper_existence_check(self) -> None:
+        """Test launch checks if wrapper exists."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -167,8 +166,8 @@ class TestApplicationLauncher:
         # Should find the wrapper
         assert launcher._find_wrapper() == wrapper_path
 
-    def test_launch_wrapper_not_found(self):
-        """Test launch when wrapper doesn't exist"""
+    def test_launch_wrapper_not_found(self) -> None:
+        """Test launch when wrapper doesn't exist."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -182,8 +181,8 @@ class TestApplicationLauncher:
         assert launcher._find_wrapper() is None
 
     @patch("subprocess.run")
-    def test_launch_fallback_to_flatpak(self, mock_subprocess):
-        """Test fallback to direct Flatpak execution"""
+    def test_launch_fallback_to_flatpak(self, mock_subprocess) -> None:
+        """Test fallback to direct Flatpak execution."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -211,8 +210,8 @@ class TestApplicationLauncher:
         assert "flatpak" in call_args[0][0][0]
 
     @patch("subprocess.run")
-    def test_launch_error_handling(self, mock_subprocess):
-        """Test error handling during launch"""
+    def test_launch_error_handling(self, mock_subprocess) -> None:
+        """Test error handling during launch."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -234,8 +233,8 @@ class TestApplicationLauncher:
 
     @patch.dict("os.environ", {"FPWRAPPER_DEBUG": "1"})
     @patch("subprocess.run")
-    def test_launch_debug_mode(self, mock_subprocess):
-        """Test launch in debug mode"""
+    def test_launch_debug_mode(self, mock_subprocess) -> None:
+        """Test launch in debug mode."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -254,8 +253,8 @@ class TestApplicationLauncher:
         assert result is True
         # Should still work in debug mode
 
-    def test_launch_path_resolution(self):
-        """Test launch path resolution logic"""
+    def test_launch_path_resolution(self) -> None:
+        """Test launch path resolution logic."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -270,8 +269,8 @@ class TestApplicationLauncher:
         assert launcher._get_wrapper_path("test_app") == expected_path
 
     @patch("os.path.exists")
-    def test_launch_wrapper_validation(self, mock_exists):
-        """Test wrapper validation logic"""
+    def test_launch_wrapper_validation(self, mock_exists) -> None:
+        """Test wrapper validation logic."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -290,8 +289,8 @@ class TestApplicationLauncher:
         assert launcher._wrapper_exists("test_app") is False
 
     @patch("subprocess.run")
-    def test_launch_environment_preservation(self, mock_subprocess):
-        """Test that launch preserves environment"""
+    def test_launch_environment_preservation(self, mock_subprocess) -> None:
+        """Test that launch preserves environment."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -316,8 +315,8 @@ class TestApplicationLauncher:
         call_kwargs = mock_subprocess.call_args[1]
         assert "env" in call_kwargs
 
-    def test_launch_argument_validation(self):
-        """Test launch argument validation"""
+    def test_launch_argument_validation(self) -> None:
+        """Test launch argument validation."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -333,8 +332,8 @@ class TestApplicationLauncher:
             assert launcher.app_name == app_name
 
     @patch("subprocess.run")
-    def test_launch_timeout_handling(self, mock_subprocess):
-        """Test launch timeout handling"""
+    def test_launch_timeout_handling(self, mock_subprocess) -> None:
+        """Test launch timeout handling."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -354,12 +353,11 @@ class TestApplicationLauncher:
         assert result is False
 
     @patch("subprocess.run")
-    def test_launch_signal_handling(self, mock_subprocess):
-        """Test launch signal handling"""
+    def test_launch_signal_handling(self, mock_subprocess) -> None:
+        """Test launch signal handling."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
-        import signal
 
         # Mock signal interruption
         mock_subprocess.side_effect = KeyboardInterrupt()
@@ -376,12 +374,12 @@ class TestApplicationLauncher:
 
 
 class TestLaunchMainFunction:
-    """Test the main function for launch module"""
+    """Test the main function for launch module."""
 
     @patch("sys.argv", ["fplaunch-launch", "firefox"])
     @patch("launch.AppLauncher.launch")
-    def test_main_function_basic(self, mock_launch):
-        """Test main function basic operation"""
+    def test_main_function_basic(self, mock_launch) -> None:
+        """Test main function basic operation."""
         if not main:
             pytest.skip("main function not available")
 
@@ -393,8 +391,8 @@ class TestLaunchMainFunction:
         mock_launch.assert_called_once()
 
     @patch("sys.argv", ["fplaunch-launch", "firefox", "--help"])
-    def test_main_function_help(self):
-        """Test main function help handling"""
+    def test_main_function_help(self) -> None:
+        """Test main function help handling."""
         if not main:
             pytest.skip("main function not available")
 
@@ -404,8 +402,8 @@ class TestLaunchMainFunction:
         assert result == 0
 
     @patch("sys.argv", ["fplaunch-launch"])
-    def test_main_function_no_args(self):
-        """Test main function with no arguments"""
+    def test_main_function_no_args(self) -> None:
+        """Test main function with no arguments."""
         if not main:
             pytest.skip("main function not available")
 
@@ -416,8 +414,8 @@ class TestLaunchMainFunction:
 
     @patch("sys.argv", ["fplaunch-launch", "nonexistent_app"])
     @patch("launch.AppLauncher.launch")
-    def test_main_function_app_not_found(self, mock_launch):
-        """Test main function when app is not found"""
+    def test_main_function_app_not_found(self, mock_launch) -> None:
+        """Test main function when app is not found."""
         if not main:
             pytest.skip("main function not available")
 
@@ -430,11 +428,11 @@ class TestLaunchMainFunction:
 
 
 class TestLaunchIntegration:
-    """Test launch integration with other components"""
+    """Test launch integration with other components."""
 
     @patch("subprocess.run")
-    def test_launch_with_config_manager(self, mock_subprocess):
-        """Test launch integration with config manager"""
+    def test_launch_with_config_manager(self, mock_subprocess) -> None:
+        """Test launch integration with config manager."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -453,8 +451,8 @@ class TestLaunchIntegration:
         assert result is True
         # Should respect configuration from config dir
 
-    def test_launch_wrapper_script_execution(self):
-        """Test that launch can execute wrapper scripts"""
+    def test_launch_wrapper_script_execution(self) -> None:
+        """Test that launch can execute wrapper scripts."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -479,8 +477,8 @@ exit 0
         assert os.access(wrapper, os.X_OK)
 
     @patch("subprocess.run")
-    def test_launch_performance(self, mock_subprocess):
-        """Test launch performance"""
+    def test_launch_performance(self, mock_subprocess) -> None:
+        """Test launch performance."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -504,8 +502,8 @@ exit 0
         # Should complete quickly
         assert end_time - start_time < 1.0
 
-    def test_launch_thread_safety(self):
-        """Test thread safety of launch operations"""
+    def test_launch_thread_safety(self) -> None:
+        """Test thread safety of launch operations."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
@@ -514,9 +512,9 @@ exit 0
         results = []
         errors = []
 
-        def worker(app_name):
+        def worker(app_name) -> None:
             try:
-                launcher = AppLauncher(
+                AppLauncher(
                     app_name=app_name,
                     bin_dir=str(self.bin_dir),
                     config_dir=str(self.config_dir),

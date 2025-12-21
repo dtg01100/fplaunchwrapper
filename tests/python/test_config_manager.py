@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""
-Unit tests for config_manager.py
-Tests configuration file management with proper mocking
+"""Unit tests for config_manager.py
+Tests configuration file management with proper mocking.
 """
 
-import sys
-import pytest
 import tempfile
-import os
 from pathlib import Path
-from unittest.mock import Mock, patch, mock_open, MagicMock
+from unittest.mock import patch
+
+import pytest
 
 # Add lib to path
 # Import the module to test
@@ -22,23 +20,23 @@ except ImportError:
 
 
 class TestConfigManager:
-    """Test configuration manager functionality"""
+    """Test configuration manager functionality."""
 
-    def setup_method(self):
-        """Set up test environment"""
+    def setup_method(self) -> None:
+        """Set up test environment."""
         self.temp_dir = Path(tempfile.mkdtemp())
         self.config_dir = self.temp_dir / ".config" / "fplaunchwrapper"
         self.data_dir = self.temp_dir / ".local" / "share" / "fplaunchwrapper"
         self.config_file = self.config_dir / "config.toml"
 
-    def teardown_method(self):
-        """Clean up test environment"""
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
         import shutil
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_create_config_manager(self):
-        """Test config manager creation"""
+    def test_create_config_manager(self) -> None:
+        """Test config manager creation."""
         if not create_config_manager:
             pytest.skip("config_manager module not available")
 
@@ -50,8 +48,8 @@ class TestConfigManager:
             assert hasattr(config, "config_dir")
             assert hasattr(config, "data_dir")
 
-    def test_config_manager_initialization(self):
-        """Test config manager initialization with defaults"""
+    def test_config_manager_initialization(self) -> None:
+        """Test config manager initialization with defaults."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -69,14 +67,14 @@ class TestConfigManager:
         assert isinstance(config.config.blocklist, list)
 
     @patch("pathlib.Path.home")
-    def test_config_directory_creation(self, mock_home):
-        """Test config directory creation"""
+    def test_config_directory_creation(self, mock_home) -> None:
+        """Test config directory creation."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
         mock_home.return_value = self.temp_dir
 
-        config = EnhancedConfigManager()
+        EnhancedConfigManager()
 
         # Should create config directory
         assert self.config_dir.exists()
@@ -84,8 +82,8 @@ class TestConfigManager:
 
     @patch("pathlib.Path.home")
     @patch("tomli.load")
-    def test_config_file_loading(self, mock_tomli_load, mock_home):
-        """Test loading configuration from TOML file"""
+    def test_config_file_loading(self, mock_tomli_load, mock_home) -> None:
+        """Test loading configuration from TOML file."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -114,8 +112,8 @@ class TestConfigManager:
 
     @patch("pathlib.Path.home")
     @patch("tomli.load", side_effect=FileNotFoundError)
-    def test_config_file_missing(self, mock_tomli_load, mock_home):
-        """Test behavior when config file doesn't exist"""
+    def test_config_file_missing(self, mock_tomli_load, mock_home) -> None:
+        """Test behavior when config file doesn't exist."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -130,8 +128,8 @@ class TestConfigManager:
 
     @patch("pathlib.Path.home")
     @patch("tomli.load", side_effect=Exception("Parse error"))
-    def test_config_file_parse_error(self, mock_tomli_load, mock_home):
-        """Test handling of config file parse errors"""
+    def test_config_file_parse_error(self, mock_tomli_load, mock_home) -> None:
+        """Test handling of config file parse errors."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -145,8 +143,8 @@ class TestConfigManager:
 
     @patch("pathlib.Path.home")
     @patch("tomli_w.dump")
-    def test_config_save(self, mock_tomli_dump, mock_home):
-        """Test saving configuration to file"""
+    def test_config_save(self, mock_tomli_dump, mock_home) -> None:
+        """Test saving configuration to file."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -165,8 +163,8 @@ class TestConfigManager:
         mock_tomli_dump.assert_called_once()
 
     @patch("pathlib.Path.home")
-    def test_config_validation(self, mock_home):
-        """Test configuration validation"""
+    def test_config_validation(self, mock_home) -> None:
+        """Test configuration validation."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -191,11 +189,12 @@ class TestConfigManager:
                 # If we get here, config is valid
                 assert True
             except Exception:
-                assert False, f"Valid config {valid_config} should not raise exception"
+                msg = f"Valid config {valid_config} should not raise exception"
+                raise AssertionError(msg)
 
     @patch("pathlib.Path.home")
-    def test_config_directory_paths(self, mock_home):
-        """Test configuration directory path resolution"""
+    def test_config_directory_paths(self, mock_home) -> None:
+        """Test configuration directory path resolution."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -212,8 +211,8 @@ class TestConfigManager:
 
     @patch("pathlib.Path.home")
     @patch.dict("os.environ", {"XDG_CONFIG_HOME": "/custom/config"})
-    def test_xdg_config_home_support(self, mock_home):
-        """Test XDG_CONFIG_HOME environment variable support"""
+    def test_xdg_config_home_support(self, mock_home) -> None:
+        """Test XDG_CONFIG_HOME environment variable support."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -227,8 +226,8 @@ class TestConfigManager:
 
     @patch("pathlib.Path.home")
     @patch.dict("os.environ", {"XDG_DATA_HOME": "/custom/data"})
-    def test_xdg_data_home_support(self, mock_home):
-        """Test XDG_DATA_HOME environment variable support"""
+    def test_xdg_data_home_support(self, mock_home) -> None:
+        """Test XDG_DATA_HOME environment variable support."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -241,8 +240,8 @@ class TestConfigManager:
         assert str(config.data_dir) == str(expected_data_dir)
 
     @patch("pathlib.Path.home")
-    def test_config_reset_to_defaults(self, mock_home):
-        """Test resetting configuration to defaults"""
+    def test_config_reset_to_defaults(self, mock_home) -> None:
+        """Test resetting configuration to defaults."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -264,8 +263,8 @@ class TestConfigManager:
 
     @patch("pathlib.Path.home")
     @patch("tomli_w.dump")
-    def test_atomic_config_save(self, mock_tomli_dump, mock_home):
-        """Test atomic configuration saving"""
+    def test_atomic_config_save(self, mock_tomli_dump, mock_home) -> None:
+        """Test atomic configuration saving."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -279,8 +278,8 @@ class TestConfigManager:
         # Verify atomic save was attempted
         mock_tomli_dump.assert_called_once()
 
-    def test_config_schema_validation(self):
-        """Test configuration schema validation"""
+    def test_config_schema_validation(self) -> None:
+        """Test configuration schema validation."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -295,8 +294,8 @@ class TestConfigManager:
             )
 
     @patch("pathlib.Path.home")
-    def test_config_migration_handling(self, mock_home):
-        """Test handling of old configuration formats"""
+    def test_config_migration_handling(self, mock_home) -> None:
+        """Test handling of old configuration formats."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -314,11 +313,11 @@ class TestConfigManager:
 
 
 class TestConfigManagerIntegration:
-    """Test config manager integration with other components"""
+    """Test config manager integration with other components."""
 
     @patch("pathlib.Path.home")
-    def test_config_manager_with_generate(self, mock_home):
-        """Test config manager integration with generator"""
+    def test_config_manager_with_generate(self, mock_home) -> None:
+        """Test config manager integration with generator."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -331,8 +330,8 @@ class TestConfigManagerIntegration:
         assert config.data_dir.exists() or config.data_dir.parent.exists()
 
     @patch("pathlib.Path.home")
-    def test_config_manager_thread_safety(self, mock_home):
-        """Test thread safety of config manager"""
+    def test_config_manager_thread_safety(self, mock_home) -> None:
+        """Test thread safety of config manager."""
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
@@ -343,7 +342,7 @@ class TestConfigManagerIntegration:
         results = []
         errors = []
 
-        def worker():
+        def worker() -> None:
             try:
                 config = EnhancedConfigManager()
                 results.append(config.config.debug_mode)
@@ -352,7 +351,7 @@ class TestConfigManagerIntegration:
 
         # Run multiple threads
         threads = []
-        for i in range(5):
+        for _i in range(5):
             t = threading.Thread(target=worker)
             threads.append(t)
             t.start()

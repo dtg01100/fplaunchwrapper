@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""
-Pytest tests for final fplaunchwrapper validation
-"""
+"""Pytest tests for final fplaunchwrapper validation."""
 
-import sys
-import pytest
-import tempfile
-import shutil
-from pathlib import Path
 import io
+import shutil
+import sys
+import tempfile
 from contextlib import redirect_stdout
+from pathlib import Path
+
+import pytest
 
 # Add lib to path
 # Mock python_utils
@@ -36,11 +35,11 @@ except ImportError:
 
 @pytest.mark.skipif(not MODULES_AVAILABLE, reason="Required modules not available")
 class TestFinalValidation:
-    """Final validation tests for fplaunchwrapper"""
+    """Final validation tests for fplaunchwrapper."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp())
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -52,10 +51,10 @@ class TestFinalValidation:
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def test_core_emit_functionality(self, temp_env):
-        """Test core emit functionality works"""
+    def test_core_emit_functionality(self, temp_env) -> None:
+        """Test core emit functionality works."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         output = io.StringIO()
@@ -67,10 +66,10 @@ class TestFinalValidation:
         assert "EMIT:" in content
         assert "Would write" in content
 
-    def test_safety_features(self, temp_env):
-        """Test safety features - no side effects"""
+    def test_safety_features(self, temp_env) -> None:
+        """Test safety features - no side effects."""
         # Count files before
-        before_files = set(f for f in temp_env["temp_dir"].rglob("*") if f.is_file())
+        before_files = {f for f in temp_env["temp_dir"].rglob("*") if f.is_file()}
 
         # Run emit operations
         manager = WrapperManager(
@@ -82,20 +81,20 @@ class TestFinalValidation:
         manager.set_preference("firefox", "flatpak")
 
         setup = SystemdSetup(
-            bin_dir=str(temp_env["bin_dir"]), emit_mode=True, emit_verbose=True
+            bin_dir=str(temp_env["bin_dir"]), emit_mode=True, emit_verbose=True,
         )
         setup.install_systemd_units()
 
         # Count files after
-        after_files = set(f for f in temp_env["temp_dir"].rglob("*") if f.is_file())
+        after_files = {f for f in temp_env["temp_dir"].rglob("*") if f.is_file()}
 
         # Should be no new files
         assert before_files == after_files
 
-    def test_error_handling(self, temp_env):
-        """Test error handling in emit mode"""
+    def test_error_handling(self, temp_env) -> None:
+        """Test error handling in emit mode."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
         )
 
         # Test invalid preference
@@ -105,12 +104,12 @@ class TestFinalValidation:
 
         assert result is False
 
-    def test_performance(self, temp_env):
-        """Test performance - emit operations are fast"""
+    def test_performance(self, temp_env) -> None:
+        """Test performance - emit operations are fast."""
         import time
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=False, emit_mode=True
+            config_dir=str(temp_env["config_dir"]), verbose=False, emit_mode=True,
         )
 
         start_time = time.time()

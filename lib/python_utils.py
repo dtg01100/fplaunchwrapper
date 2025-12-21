@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
+"""Robust Python utilities for fplaunchwrapper
+This script provides secure implementations of critical operations.
 """
-Robust Python utilities for fplaunchwrapper
-This script provides secure implementations of critical operations
-"""
+from __future__ import annotations
 
-import os
-import sys
-import re
+import contextlib
 import hashlib
+import os
+import re
+import sys
 import tempfile
-import shlex
 import unicodedata
 from pathlib import Path
 
@@ -25,7 +25,7 @@ except ImportError:
 
 
 def sanitize_string(input_str):
-    """Safely sanitize a string for use in Python code"""
+    """Safely sanitize a string for use in Python code."""
     if not input_str:
         return ""
 
@@ -44,13 +44,12 @@ def sanitize_string(input_str):
     sanitized = sanitized.replace(">", "\\>")
     sanitized = sanitized.replace("\n", "\\n")
     sanitized = sanitized.replace("\r", "\\r")
-    sanitized = sanitized.replace("\t", "\\t")
+    return sanitized.replace("\t", "\\t")
 
-    return sanitized
 
 
 def canonicalize_path_no_resolve(path):
-    """Normalize a path without resolving symlinks"""
+    """Normalize a path without resolving symlinks."""
     try:
         # Expand tilde
         if path.startswith("~"):
@@ -61,16 +60,14 @@ def canonicalize_path_no_resolve(path):
             path = os.path.abspath(path)
 
         # Collapse '.' and '..' without resolving symlinks
-        path = os.path.normpath(path)
+        return os.path.normpath(path)
 
-        return path
-    except Exception as e:
-        print(f"Path normalization failed: {e}", file=sys.stderr)
+    except Exception:
         return None
 
 
 def validate_home_dir(dir_path):
-    """Validate that a directory is within HOME"""
+    """Validate that a directory is within HOME."""
     try:
         # Expand tilde
         if dir_path.startswith("~"):
@@ -89,13 +86,12 @@ def validate_home_dir(dir_path):
             return abs_dir
 
         return None
-    except Exception as e:
-        print(f"Home directory validation failed: {e}", file=sys.stderr)
+    except Exception:
         return None
 
 
-def is_wrapper_file(file_path):
-    """Check if a file is a valid wrapper script"""
+def is_wrapper_file(file_path) -> bool | None:
+    """Check if a file is a valid wrapper script."""
     try:
         # Basic validation
         if not os.path.isfile(file_path):
@@ -111,7 +107,7 @@ def is_wrapper_file(file_path):
             return False
 
         # Read file content with proper encoding
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             content = f.read(min(8192, size))
 
         # Check for binary content
@@ -135,20 +131,16 @@ def is_wrapper_file(file_path):
 
         # Validate ID format
         id_value = re.search(r'ID="([^"]*)"', id_match.group())
-        if not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1)):
-            return False
-
-        return True
-    except Exception as e:
-        print(f"Wrapper file validation failed: {e}", file=sys.stderr)
+        return not (not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1)))
+    except Exception:
         return False
 
 
 def get_wrapper_id(file_path):
-    """Extract the wrapper ID from a wrapper script"""
+    """Extract the wrapper ID from a wrapper script."""
     try:
         # Read file content with proper encoding
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             content = f.read(8192)
 
         # Try standard ID format first
@@ -162,13 +154,12 @@ def get_wrapper_id(file_path):
             return comment_match.group(1)
 
         return None
-    except Exception as e:
-        print(f"Wrapper ID extraction failed: {e}", file=sys.stderr)
+    except Exception:
         return None
 
 
 def sanitize_id_to_name(id_str):
-    """Sanitize a Flatpak ID to a safe name"""
+    """Sanitize a Flatpak ID to a safe name."""
     try:
         # Extract last component after dots
         name = id_str.split(".")[-1].lower()
@@ -182,10 +173,8 @@ def sanitize_id_to_name(id_str):
             pass
 
         # Convert to ASCII if possible
-        try:
+        with contextlib.suppress(UnicodeError):
             name = name.encode("ascii", "ignore").decode("ascii")
-        except UnicodeError:
-            pass
 
         # Replace non-alphanumeric characters with hyphens
         name = re.sub(r"[^a-z0-9_\-]", "-", name)
@@ -201,16 +190,14 @@ def sanitize_id_to_name(id_str):
             name = f"app-{hash_obj.hexdigest()[:8]}"
 
         # Limit length
-        name = name[:100]
+        return name[:100]
 
-        return name
-    except Exception as e:
-        print(f"Name sanitization failed: {e}", file=sys.stderr)
+    except Exception:
         return f"app-{hashlib.sha256(id_str.encode()).hexdigest()[:8]}"
 
 
 def find_executable(cmd):
-    """Find an executable in PATH with security checks"""
+    """Find an executable in PATH with security checks."""
     try:
         # Check if absolute or relative path
         if "/" in cmd:
@@ -227,13 +214,12 @@ def find_executable(cmd):
                 return os.path.abspath(exe_path)
 
         return None
-    except Exception as e:
-        print(f"Executable search failed: {e}", file=sys.stderr)
+    except Exception:
         return None
 
 
 def safe_mktemp(template="tmp.XXXXXX", dir_param=None):
-    """Create a secure temporary file"""
+    """Create a secure temporary file."""
     try:
         # Determine directory
         if dir_param and os.path.isdir(dir_param):
@@ -260,13 +246,12 @@ def safe_mktemp(template="tmp.XXXXXX", dir_param=None):
         )
         os.close(fd)
         return path
-    except Exception as e:
-        print(f"Temp file creation failed: {e}", file=sys.stderr)
+    except Exception:
         return None
 
 
-def acquire_lock(lock_name="fplaunch", timeout_seconds=30):
-    """Acquire a file-based lock with timeout"""
+def acquire_lock(lock_name="fplaunch", timeout_seconds=30) -> bool | None:
+    """Acquire a file-based lock with timeout."""
     try:
         # Get config directory
         from pathlib import Path
@@ -300,13 +285,12 @@ def acquire_lock(lock_name="fplaunch", timeout_seconds=30):
 
         return False  # Timeout
 
-    except Exception as e:
-        print(f"Lock acquisition failed: {e}", file=sys.stderr)
+    except Exception:
         return False
 
 
-def release_lock(lock_name="fplaunch"):
-    """Release a file-based lock"""
+def release_lock(lock_name="fplaunch") -> bool | None:
+    """Release a file-based lock."""
     try:
         from pathlib import Path
 
@@ -322,25 +306,20 @@ def release_lock(lock_name="fplaunch"):
                 # Remove lock files
                 import shutil
 
-                try:
+                with contextlib.suppress(FileNotFoundError):
                     shutil.rmtree(lockfile)
-                except FileNotFoundError:
-                    pass
-                try:
+                with contextlib.suppress(FileNotFoundError):
                     pidfile.unlink()
-                except FileNotFoundError:
-                    pass
                 return True
 
         return False
 
-    except Exception as e:
-        print(f"Lock release failed: {e}", file=sys.stderr)
+    except Exception:
         return False
 
 
 def get_temp_dir():
-    """Get the best available temporary directory"""
+    """Get the best available temporary directory."""
     for temp_dir in [
         os.getenv("TMPDIR"),
         os.getenv("TMP"),
@@ -358,53 +337,37 @@ def get_temp_dir():
 if __name__ == "__main__":
     # Command line interface for testing
     if len(sys.argv) < 2:
-        print("Usage: python3 utils.py <operation> [args...]")
         sys.exit(1)
 
     operation = sys.argv[1]
 
     if operation == "canonicalize_path":
         if len(sys.argv) != 3:
-            print("Usage: python3 utils.py canonicalize_path <path>")
             sys.exit(1)
         result = canonicalize_path_no_resolve(sys.argv[2])
-        print(result or "")
     elif operation == "validate_home":
         if len(sys.argv) != 3:
-            print("Usage: python3 utils.py validate_home <dir>")
             sys.exit(1)
         result = validate_home_dir(sys.argv[2])
-        print(result or "")
     elif operation == "sanitize_name":
         if len(sys.argv) != 3:
-            print("Usage: python3 utils.py sanitize_name <id>")
             sys.exit(1)
         result = sanitize_id_to_name(sys.argv[2])
-        print(result or "")
     elif operation == "find_executable":
         if len(sys.argv) != 3:
-            print("Usage: python3 utils.py find_executable <cmd>")
             sys.exit(1)
         result = find_executable(sys.argv[2])
-        print(result or "")
     elif operation == "is_wrapper_file":
         if len(sys.argv) != 3:
-            print("Usage: python3 utils.py is_wrapper_file <file>")
             sys.exit(1)
         result = is_wrapper_file(sys.argv[2])
-        print("1" if result else "0")
     elif operation == "get_wrapper_id":
         if len(sys.argv) != 3:
-            print("Usage: python3 utils.py get_wrapper_id <file>")
             sys.exit(1)
         result = get_wrapper_id(sys.argv[2])
-        print(result or "")
     elif operation == "safe_mktemp":
         if len(sys.argv) < 3:
-            print("Usage: python3 utils.py safe_mktemp <template> [dir]")
             sys.exit(1)
         result = safe_mktemp(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
-        print(result or "")
     else:
-        print(f"Unknown operation: {operation}")
         sys.exit(1)

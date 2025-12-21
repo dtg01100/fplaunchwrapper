@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
+"""Focused edge case tests that work in the test environment
+Tests input validation, error handling, and boundary conditions.
 """
-Focused edge case tests that work in the test environment
-Tests input validation, error handling, and boundary conditions
-"""
+from __future__ import annotations
 
-import sys
-import pytest
-import tempfile
 import os
+import tempfile
 from pathlib import Path
+
+import pytest
 
 # Add lib to path
 # Import what we can
 try:
     from fplaunch.python_utils import (
-        sanitize_string,
-        validate_home_dir,
-        sanitize_id_to_name,
         canonicalize_path_no_resolve,
         find_executable,
+        sanitize_id_to_name,
+        sanitize_string,
+        validate_home_dir,
     )
 
     UTILS_AVAILABLE = True
@@ -27,11 +27,11 @@ except ImportError:
 
 
 class TestInputValidationEdgeCases:
-    """Test input validation edge cases that work with python_utils"""
+    """Test input validation edge cases that work with python_utils."""
 
     @pytest.mark.skipif(not UTILS_AVAILABLE, reason="python_utils not available")
-    def test_empty_and_none_inputs(self):
-        """Test handling of empty and None inputs"""
+    def test_empty_and_none_inputs(self) -> None:
+        """Test handling of empty and None inputs."""
         # Test sanitize_string with empty input
         result = sanitize_string("")
         assert result == ""
@@ -44,8 +44,8 @@ class TestInputValidationEdgeCases:
         assert result.startswith("app-")  # Should generate hash-based fallback
 
     @pytest.mark.skipif(not UTILS_AVAILABLE, reason="python_utils not available")
-    def test_extremely_long_inputs(self):
-        """Test handling of extremely long inputs"""
+    def test_extremely_long_inputs(self) -> None:
+        """Test handling of extremely long inputs."""
         # Very long string
         long_string = "a" * 10000
         result = sanitize_string(long_string)
@@ -57,8 +57,8 @@ class TestInputValidationEdgeCases:
         assert len(result) < 200  # Should be limited/truncated
 
     @pytest.mark.skipif(not UTILS_AVAILABLE, reason="python_utils not available")
-    def test_unicode_and_special_characters(self):
-        """Test handling of Unicode and special characters"""
+    def test_unicode_and_special_characters(self) -> None:
+        """Test handling of Unicode and special characters."""
         # Unicode strings
         unicode_strings = [
             "tëst",  # Accented
@@ -72,8 +72,8 @@ class TestInputValidationEdgeCases:
             # Should handle without crashing
 
     @pytest.mark.skipif(not UTILS_AVAILABLE, reason="python_utils not available")
-    def test_malformed_flatpak_ids(self):
-        """Test handling of malformed Flatpak IDs"""
+    def test_malformed_flatpak_ids(self) -> None:
+        """Test handling of malformed Flatpak IDs."""
         malformed_ids = [
             "",  # Empty
             "no-dots",  # No dots
@@ -88,8 +88,8 @@ class TestInputValidationEdgeCases:
             # Should handle malformed input gracefully
 
     @pytest.mark.skipif(not UTILS_AVAILABLE, reason="python_utils not available")
-    def test_path_injection_attempts(self):
-        """Test path injection and traversal attempts"""
+    def test_path_injection_attempts(self) -> None:
+        """Test path injection and traversal attempts."""
         injection_paths = [
             "../../../etc/passwd",
             "/etc/passwd",
@@ -107,8 +107,8 @@ class TestInputValidationEdgeCases:
             assert result is None or isinstance(result, str)
 
     @pytest.mark.skipif(not UTILS_AVAILABLE, reason="python_utils not available")
-    def test_command_injection_prevention(self):
-        """Test command injection prevention"""
+    def test_command_injection_prevention(self) -> None:
+        """Test command injection prevention."""
         injection_attempts = [
             '"; rm -rf / #',
             "$(rm -rf /)",
@@ -126,10 +126,10 @@ class TestInputValidationEdgeCases:
 
 
 class TestSystemResourceEdgeCases:
-    """Test system resource edge cases"""
+    """Test system resource edge cases."""
 
-    def test_file_operations_with_no_permissions(self):
-        """Test file operations when permissions are denied"""
+    def test_file_operations_with_no_permissions(self) -> None:
+        """Test file operations when permissions are denied."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a read-only directory
             test_dir = Path(temp_dir) / "readonly"
@@ -153,8 +153,8 @@ class TestSystemResourceEdgeCases:
                 # Restore permissions for cleanup
                 test_dir.chmod(0o755)
 
-    def test_extreme_file_sizes(self):
-        """Test handling of extreme file sizes"""
+    def test_extreme_file_sizes(self) -> None:
+        """Test handling of extreme file sizes."""
         with tempfile.NamedTemporaryFile(delete=False) as f:
             temp_file = f.name
 
@@ -165,15 +165,15 @@ class TestSystemResourceEdgeCases:
                 f.write(large_content)
 
             # Should be able to read it back
-            with open(temp_file, "r") as f:
+            with open(temp_file) as f:
                 read_content = f.read()
                 assert len(read_content) == 1000000
 
         finally:
             os.unlink(temp_file)
 
-    def test_deep_directory_structures(self):
-        """Test deep directory structure handling"""
+    def test_deep_directory_structures(self) -> None:
+        """Test deep directory structure handling."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create very deep directory structure
             deep_path = Path(temp_dir)
@@ -186,8 +186,8 @@ class TestSystemResourceEdgeCases:
             test_file.write_text("deep file")
             assert test_file.exists()
 
-    def test_special_file_types(self):
-        """Test handling of special file types"""
+    def test_special_file_types(self) -> None:
+        """Test handling of special file types."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
@@ -207,17 +207,17 @@ class TestSystemResourceEdgeCases:
 
 
 class TestConcurrencyEdgeCases:
-    """Test concurrency and race condition edge cases"""
+    """Test concurrency and race condition edge cases."""
 
-    def test_concurrent_file_access(self):
-        """Test concurrent file access patterns"""
+    def test_concurrent_file_access(self) -> None:
+        """Test concurrent file access patterns."""
         import threading
         import time
 
         results = []
         errors = []
 
-        def file_writer(thread_id, temp_file):
+        def file_writer(thread_id, temp_file) -> None:
             try:
                 for i in range(100):
                     with open(temp_file, "a") as f:
@@ -246,7 +246,7 @@ class TestConcurrencyEdgeCases:
             assert len(results) == 5
 
             # File should contain content from all threads
-            with open(temp_file, "r") as f:
+            with open(temp_file) as f:
                 content = f.read()
                 assert len(content) > 0
                 # Should contain lines from different threads
@@ -256,16 +256,16 @@ class TestConcurrencyEdgeCases:
         finally:
             os.unlink(temp_file)
 
-    def test_atomic_file_operations(self):
-        """Test atomic file operation patterns"""
-        import tempfile
+    def test_atomic_file_operations(self) -> None:
+        """Test atomic file operation patterns."""
         import os
+        import tempfile
 
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = Path(temp_dir) / "atomic_test.txt"
 
             # Test atomic write using temp file + rename pattern
-            def atomic_write(content):
+            def atomic_write(content) -> bool | None:
                 temp_fd, temp_path = tempfile.mkstemp(dir=temp_dir, text=True)
                 try:
                     with os.fdopen(temp_fd, "w") as f:
@@ -287,10 +287,10 @@ class TestConcurrencyEdgeCases:
 
 
 class TestEncodingAndUnicodeEdgeCases:
-    """Test encoding and Unicode edge cases"""
+    """Test encoding and Unicode edge cases."""
 
-    def test_various_unicode_encodings(self):
-        """Test various Unicode encodings and edge cases"""
+    def test_various_unicode_encodings(self) -> None:
+        """Test various Unicode encodings and edge cases."""
         unicode_strings = [
             "café",  # Latin-1 supplement
             "naïve",  # Latin extended
@@ -316,8 +316,8 @@ class TestEncodingAndUnicodeEdgeCases:
                 # Some edge cases might fail, which is acceptable
                 pass
 
-    def test_mixed_encoding_scenarios(self):
-        """Test mixed encoding scenarios"""
+    def test_mixed_encoding_scenarios(self) -> None:
+        """Test mixed encoding scenarios."""
         # Test strings with mixed character sets
         mixed_strings = [
             "English: Hello 日本語: こんにちは Ελληνικά: Γεια σας",
@@ -330,10 +330,9 @@ class TestEncodingAndUnicodeEdgeCases:
             assert isinstance(mixed_str, str)
             assert len(mixed_str) > 10
 
-    def test_string_normalization(self):
-        """Test Unicode string normalization"""
+    def test_string_normalization(self) -> None:
+        """Test Unicode string normalization."""
         # Test various Unicode normalization forms
-        test_string = "café"
 
         # Different representations of the same character
         forms = [
@@ -350,10 +349,10 @@ class TestEncodingAndUnicodeEdgeCases:
 
 
 class TestBoundaryConditionEdgeCases:
-    """Test boundary condition edge cases"""
+    """Test boundary condition edge cases."""
 
-    def test_empty_collections_and_sequences(self):
-        """Test handling of empty collections and sequences"""
+    def test_empty_collections_and_sequences(self) -> None:
+        """Test handling of empty collections and sequences."""
         # Test with empty lists, dicts, etc.
         empty_cases = [
             [],  # Empty list
@@ -367,8 +366,8 @@ class TestBoundaryConditionEdgeCases:
             # Should handle empty inputs gracefully
             assert empty_case is not None  # Just test they exist
 
-    def test_maximum_values(self):
-        """Test handling of maximum values"""
+    def test_maximum_values(self) -> None:
+        """Test handling of maximum values."""
         # Test with very large numbers, strings, etc.
         large_cases = [
             2**63 - 1,  # Max int64
@@ -380,8 +379,8 @@ class TestBoundaryConditionEdgeCases:
             # Should handle large inputs (may be slow, but shouldn't crash)
             assert large_case is not None
 
-    def test_minimum_values(self):
-        """Test handling of minimum values"""
+    def test_minimum_values(self) -> None:
+        """Test handling of minimum values."""
         # Test with minimum values
         min_cases = [
             -(2**63),  # Min int64
@@ -390,12 +389,12 @@ class TestBoundaryConditionEdgeCases:
             [],  # Empty list
         ]
 
-        for min_case in min_cases:
+        for _min_case in min_cases:
             # Should handle minimum inputs
             assert True  # Just test they don't crash
 
-    def test_type_boundary_cases(self):
-        """Test type boundary cases"""
+    def test_type_boundary_cases(self) -> None:
+        """Test type boundary cases."""
         # Test with different types that might be passed unexpectedly
         boundary_types = [
             None,

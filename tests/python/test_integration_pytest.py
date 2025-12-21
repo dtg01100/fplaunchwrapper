@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""
-Pytest replacement for test_integration.sh
-Tests complete integration workflows using proper mocking
+"""Pytest replacement for test_integration.sh
+Tests complete integration workflows using proper mocking.
 """
 
-import sys
-import pytest
-import tempfile
 import os
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
+
+import pytest
 
 # Add lib to path
 # Import modules to test
@@ -25,11 +24,11 @@ except ImportError:
 
 
 class TestIntegrationWorkflows:
-    """Test complete integration workflows"""
+    """Test complete integration workflows."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp(prefix="fpwrapper_integration_"))
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -49,8 +48,8 @@ class TestIntegrationWorkflows:
         reason="Required modules not available",
     )
     @patch("subprocess.run")
-    def test_complete_wrapper_lifecycle(self, mock_subprocess, temp_env):
-        """Test complete wrapper lifecycle - replaces Test 1"""
+    def test_complete_wrapper_lifecycle(self, mock_subprocess, temp_env) -> None:
+        """Test complete wrapper lifecycle - replaces Test 1."""
         # Mock flatpak command
         mock_result = Mock()
         mock_result.returncode = 0
@@ -66,7 +65,7 @@ class TestIntegrationWorkflows:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -93,7 +92,7 @@ class TestIntegrationWorkflows:
 
         # Step 3: Update wrapper (regenerate)
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -112,8 +111,8 @@ class TestIntegrationWorkflows:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_multiple_wrappers_collision_handling(self, mock_subprocess, temp_env):
-        """Test multiple wrappers with collision handling - replaces Test 2"""
+    def test_multiple_wrappers_collision_handling(self, mock_subprocess, temp_env) -> None:
+        """Test multiple wrappers with collision handling - replaces Test 2."""
         # Mock flatpak command returning multiple apps
         mock_result = Mock()
         mock_result.returncode = 0
@@ -135,21 +134,14 @@ class TestIntegrationWorkflows:
         ]
 
         # Generate all wrappers
-        for app_id, expected_name in apps:
+        for app_id, _expected_name in apps:
             with patch.object(
-                generator, "get_installed_flatpaks", return_value=[app_id]
+                generator, "get_installed_flatpaks", return_value=[app_id],
             ):
                 result = generator.generate_wrapper(app_id)
                 assert result is True
 
         # Verify all 5 wrappers were created (including collision resolution)
-        expected_names = [
-            "chrome",
-            "chromium",
-            "edge",
-            "firefox",
-            "browser",
-        ]  # chrome collision creates chromium
         created_wrappers = []
 
         for wrapper_file in temp_env["bin_dir"].glob("*"):
@@ -172,8 +164,8 @@ class TestIntegrationWorkflows:
         reason="Required modules not available",
     )
     @patch("subprocess.run")
-    def test_preference_override_workflow(self, mock_subprocess, temp_env):
-        """Test preference override and fallback workflow - replaces Test 3"""
+    def test_preference_override_workflow(self, mock_subprocess, temp_env) -> None:
+        """Test preference override and fallback workflow - replaces Test 3."""
         # Mock flatpak command
         mock_result = Mock()
         mock_result.returncode = 0
@@ -195,7 +187,7 @@ class TestIntegrationWorkflows:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"]
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -215,8 +207,8 @@ class TestIntegrationWorkflows:
         assert pref_file.read_text().strip() == "flatpak"
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_alias_creation_and_resolution(self, temp_env):
-        """Test alias creation and resolution - replaces Test 4"""
+    def test_alias_creation_and_resolution(self, temp_env) -> None:
+        """Test alias creation and resolution - replaces Test 4."""
         # Create base wrappers
         wrappers = ["firefox", "chrome"]
         for wrapper in wrappers:
@@ -253,15 +245,15 @@ class TestIntegrationWorkflows:
         assert "surf:browser" in content
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_environment_script_integration(self, temp_env):
-        """Test environment variables + pre-launch script integration - replaces Test 5"""
+    def test_environment_script_integration(self, temp_env) -> None:
+        """Test environment variables + pre-launch script integration - replaces Test 5."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Set environment variables
         result = manager.set_environment_variable(
-            "firefox", "BROWSER_ENV", "test_value"
+            "firefox", "BROWSER_ENV", "test_value",
         )
         assert result is True
 
@@ -282,10 +274,10 @@ class TestIntegrationWorkflows:
         assert os.access(pre_script, os.X_OK)
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_blocklist_prevents_generation(self, temp_env):
-        """Test blocklist prevents wrapper regeneration - replaces Test 6"""
+    def test_blocklist_prevents_generation(self, temp_env) -> None:
+        """Test blocklist prevents wrapper regeneration - replaces Test 6."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Block firefox
@@ -310,10 +302,10 @@ class TestIntegrationWorkflows:
         assert "org.mozilla.firefox" not in content
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_configuration_workflow(self, temp_env):
-        """Test export-modify-import configuration workflow - replaces Test 8"""
+    def test_configuration_workflow(self, temp_env) -> None:
+        """Test export-modify-import configuration workflow - replaces Test 8."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Create initial configuration
@@ -331,7 +323,7 @@ class TestIntegrationWorkflows:
         # Modify current configuration
         manager.set_preference("firefox", "system")  # Change preference
         manager.set_environment_variable(
-            "firefox", "TEST_VAR", "modified_value"
+            "firefox", "TEST_VAR", "modified_value",
         )  # Change env var
 
         # Import configuration (should restore original state)
@@ -352,8 +344,8 @@ class TestIntegrationWorkflows:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_path_resolution_workflow(self, mock_subprocess, temp_env):
-        """Test PATH-aware system binary resolution - replaces Test 8"""
+    def test_path_resolution_workflow(self, mock_subprocess, temp_env) -> None:
+        """Test PATH-aware system binary resolution - replaces Test 8."""
 
         # Mock command -v to simulate system binary detection
         def mock_run(cmd, **kwargs):
@@ -363,14 +355,13 @@ class TestIntegrationWorkflows:
                 result.returncode = 0
                 result.stdout = "/usr/bin/firefox\n"
                 return result
-            elif "command -v chrome" in cmd_str:
+            if "command -v chrome" in cmd_str:
                 result = Mock()
                 result.returncode = 1  # Not found
                 return result
-            else:
-                result = Mock()
-                result.returncode = 0
-                return result
+            result = Mock()
+            result.returncode = 0
+            return result
 
         mock_subprocess.side_effect = mock_run
 
@@ -405,8 +396,8 @@ class TestIntegrationWorkflows:
         not (GENERATE_AVAILABLE and MANAGE_AVAILABLE),
         reason="Required modules not available",
     )
-    def test_real_world_scenario_simulation(self, temp_env):
-        """Test real-world usage scenario simulation"""
+    def test_real_world_scenario_simulation(self, temp_env) -> None:
+        """Test real-world usage scenario simulation."""
         # Simulate a typical user workflow
 
         manager = WrapperManager(
@@ -457,8 +448,8 @@ class TestIntegrationWorkflows:
         assert backup_file.exists()
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_error_recovery_and_edge_cases(self, temp_env):
-        """Test error recovery and edge cases in integration"""
+    def test_error_recovery_and_edge_cases(self, temp_env) -> None:
+        """Test error recovery and edge cases in integration."""
         manager = WrapperManager(
             config_dir=str(temp_env["config_dir"]),
             bin_dir=str(temp_env["bin_dir"]),
@@ -487,8 +478,8 @@ class TestIntegrationWorkflows:
         result = manager.set_preference("test", long_value)
         assert isinstance(result, bool)
 
-    def test_cross_component_data_consistency(self, temp_env):
-        """Test data consistency across components"""
+    def test_cross_component_data_consistency(self, temp_env) -> None:
+        """Test data consistency across components."""
         # This test ensures that data created by one component
         # is properly readable/usable by other components
 

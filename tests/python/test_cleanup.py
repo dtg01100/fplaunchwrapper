@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""
-Unit tests for cleanup.py
-Tests cleanup functionality with proper mocking to avoid side effects
+"""Unit tests for cleanup.py
+Tests cleanup functionality with proper mocking to avoid side effects.
 """
 
-import sys
-import pytest
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import patch
+
+import pytest
 
 # Add lib to path
 # Import the module to test
@@ -22,10 +21,10 @@ except ImportError:
 
 
 class TestWrapperCleanup:
-    """Test cleanup manager functionality"""
+    """Test cleanup manager functionality."""
 
-    def setup_method(self):
-        """Set up test environment"""
+    def setup_method(self) -> None:
+        """Set up test environment."""
         self.temp_dir = Path(tempfile.mkdtemp())
         self.bin_dir = self.temp_dir / "bin"
         self.config_dir = self.temp_dir / "config"
@@ -43,12 +42,12 @@ class TestWrapperCleanup:
         (self.config_dir / "chrome.pref").write_text("system")
         (self.data_dir / "cache_file").write_text("cache data")
 
-    def teardown_method(self):
-        """Clean up test environment"""
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_cleanup_manager_creation(self):
-        """Test WrapperCleanup creation"""
+    def test_cleanup_manager_creation(self) -> None:
+        """Test WrapperCleanup creation."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -65,8 +64,8 @@ class TestWrapperCleanup:
         assert str(manager.data_dir) == str(self.data_dir)
         assert manager.dry_run is True
 
-    def test_cleanup_identify_artifacts(self):
-        """Test identification of artifacts to clean"""
+    def test_cleanup_identify_artifacts(self) -> None:
+        """Test identification of artifacts to clean."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -85,8 +84,8 @@ class TestWrapperCleanup:
         assert any("chrome" in str(artifact) for artifact in artifacts)
         assert any("cache_file" in str(artifact) for artifact in artifacts)
 
-    def test_cleanup_dry_run_mode(self):
-        """Test cleanup in dry-run mode"""
+    def test_cleanup_dry_run_mode(self) -> None:
+        """Test cleanup in dry-run mode."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -113,8 +112,8 @@ class TestWrapperCleanup:
         # Should not have removed any files in dry-run mode
         assert before_count == after_count
 
-    def test_cleanup_actual_removal(self):
-        """Test actual cleanup (with caution)"""
+    def test_cleanup_actual_removal(self) -> None:
+        """Test actual cleanup (with caution)."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -141,8 +140,8 @@ class TestWrapperCleanup:
         # Should have removed some files
         assert after_count < before_count
 
-    def test_cleanup_selective_removal(self):
-        """Test selective cleanup of different artifact types"""
+    def test_cleanup_selective_removal(self) -> None:
+        """Test selective cleanup of different artifact types."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -170,8 +169,8 @@ class TestWrapperCleanup:
         # Data should remain
         assert (self.data_dir / "cache_file").exists()
 
-    def test_cleanup_validation(self):
-        """Test cleanup validation and safety checks"""
+    def test_cleanup_validation(self) -> None:
+        """Test cleanup validation and safety checks."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -189,8 +188,8 @@ class TestWrapperCleanup:
         assert result is True
 
     @patch("shutil.rmtree")
-    def test_cleanup_error_handling(self, mock_rmtree):
-        """Test error handling during cleanup"""
+    def test_cleanup_error_handling(self, mock_rmtree) -> None:
+        """Test error handling during cleanup."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -209,8 +208,8 @@ class TestWrapperCleanup:
         # Should handle errors gracefully
         assert result is False
 
-    def test_cleanup_backup_creation(self):
-        """Test backup creation during cleanup"""
+    def test_cleanup_backup_creation(self) -> None:
+        """Test backup creation during cleanup."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -234,8 +233,8 @@ class TestWrapperCleanup:
         assert len(backup_files) > 0
 
     @patch("os.path.exists")
-    def test_cleanup_path_validation(self, mock_exists):
-        """Test path validation in cleanup"""
+    def test_cleanup_path_validation(self, mock_exists) -> None:
+        """Test path validation in cleanup."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -254,8 +253,8 @@ class TestWrapperCleanup:
         # Should handle non-existent paths
         assert isinstance(artifacts, list)
 
-    def test_cleanup_summary_reporting(self):
-        """Test cleanup summary reporting"""
+    def test_cleanup_summary_reporting(self) -> None:
+        """Test cleanup summary reporting."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -275,8 +274,8 @@ class TestWrapperCleanup:
         assert "data_files" in summary
 
     @patch("os.access")
-    def test_cleanup_permission_checks(self, mock_access):
-        """Test permission checks during cleanup"""
+    def test_cleanup_permission_checks(self, mock_access) -> None:
+        """Test permission checks during cleanup."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -295,8 +294,8 @@ class TestWrapperCleanup:
         # Should handle permission issues
         assert result is True  # Dry run should succeed
 
-    def test_cleanup_progress_reporting(self):
-        """Test progress reporting during cleanup"""
+    def test_cleanup_progress_reporting(self) -> None:
+        """Test progress reporting during cleanup."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -312,8 +311,8 @@ class TestWrapperCleanup:
         assert result is True
 
     @patch.dict("os.environ", {"FPWRAPPER_FORCE": "1"})
-    def test_cleanup_force_mode(self):
-        """Test cleanup in force mode"""
+    def test_cleanup_force_mode(self) -> None:
+        """Test cleanup in force mode."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -329,8 +328,8 @@ class TestWrapperCleanup:
 
         assert result is True
 
-    def test_cleanup_interactive_mode(self):
-        """Test interactive cleanup mode"""
+    def test_cleanup_interactive_mode(self) -> None:
+        """Test interactive cleanup mode."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -350,11 +349,11 @@ class TestWrapperCleanup:
 
 
 class TestCleanupMainFunction:
-    """Test the main function for cleanup module"""
+    """Test the main function for cleanup module."""
 
     @patch("sys.argv", ["fplaunch-cleanup", "--dry-run"])
-    def test_main_dry_run(self):
-        """Test main function with dry-run"""
+    def test_main_dry_run(self) -> None:
+        """Test main function with dry-run."""
         if not main:
             pytest.skip("main function not available")
 
@@ -363,8 +362,8 @@ class TestCleanupMainFunction:
         assert result == 0
 
     @patch("sys.argv", ["fplaunch-cleanup", "--help"])
-    def test_main_help(self):
-        """Test main function help"""
+    def test_main_help(self) -> None:
+        """Test main function help."""
         if not main:
             pytest.skip("main function not available")
 
@@ -373,8 +372,8 @@ class TestCleanupMainFunction:
         assert result == 0
 
     @patch("sys.argv", ["fplaunch-cleanup"])
-    def test_main_actual_cleanup(self):
-        """Test main function actual cleanup"""
+    def test_main_actual_cleanup(self) -> None:
+        """Test main function actual cleanup."""
         if not main:
             pytest.skip("main function not available")
 
@@ -384,8 +383,8 @@ class TestCleanupMainFunction:
         assert isinstance(result, int)
 
     @patch("sys.argv", ["fplaunch-cleanup", "--force"])
-    def test_main_force_mode(self):
-        """Test main function force mode"""
+    def test_main_force_mode(self) -> None:
+        """Test main function force mode."""
         if not main:
             pytest.skip("main function not available")
 
@@ -395,17 +394,16 @@ class TestCleanupMainFunction:
 
 
 class TestCleanupIntegration:
-    """Test cleanup integration with other components"""
+    """Test cleanup integration with other components."""
 
-    def test_cleanup_with_generate_integration(self):
-        """Test cleanup integration after generation"""
+    def test_cleanup_with_generate_integration(self) -> None:
+        """Test cleanup integration after generation."""
         # This would test that cleanup can remove generated wrappers
         # For now, just verify the concept
-        pass
 
     @patch("os.path.exists")
-    def test_cleanup_systemd_integration(self, mock_exists):
-        """Test cleanup of systemd units"""
+    def test_cleanup_systemd_integration(self, mock_exists) -> None:
+        """Test cleanup of systemd units."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -423,8 +421,8 @@ class TestCleanupIntegration:
 
         assert result is True
 
-    def test_cleanup_performance(self):
-        """Test cleanup performance with many files"""
+    def test_cleanup_performance(self) -> None:
+        """Test cleanup performance with many files."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -451,8 +449,8 @@ class TestCleanupIntegration:
         # Should complete quickly even with many files
         assert end_time - start_time < 5.0
 
-    def test_cleanup_thread_safety(self):
-        """Test thread safety of cleanup operations"""
+    def test_cleanup_thread_safety(self) -> None:
+        """Test thread safety of cleanup operations."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -461,7 +459,7 @@ class TestCleanupIntegration:
         results = []
         errors = []
 
-        def worker():
+        def worker() -> None:
             try:
                 manager = WrapperCleanup(
                     bin_dir=str(self.bin_dir),
@@ -476,7 +474,7 @@ class TestCleanupIntegration:
 
         # Run multiple threads
         threads = []
-        for i in range(3):
+        for _i in range(3):
             t = threading.Thread(target=worker)
             threads.append(t)
             t.start()
@@ -490,8 +488,8 @@ class TestCleanupIntegration:
         assert all(results)
 
     @patch("tempfile.mkdtemp")
-    def test_cleanup_temp_file_handling(self, mock_mkdtemp):
-        """Test temporary file handling during cleanup"""
+    def test_cleanup_temp_file_handling(self, mock_mkdtemp) -> None:
+        """Test temporary file handling during cleanup."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 

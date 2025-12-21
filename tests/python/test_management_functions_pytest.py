@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""
-Pytest replacement for test_management_functions.sh
-Tests management functionality using proper mocking
+"""Pytest replacement for test_management_functions.sh
+Tests management functionality using proper mocking.
 """
 
-import sys
-import pytest
-import tempfile
 import os
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+
+import pytest
 
 # Add lib to path
 # Import the module to test
@@ -22,11 +20,11 @@ except ImportError:
 
 
 class TestManagementFunctions:
-    """Test management functions with pytest"""
+    """Test management functions with pytest."""
 
     @pytest.fixture
     def temp_env(self):
-        """Create temporary test environment"""
+        """Create temporary test environment."""
         temp_dir = Path(tempfile.mkdtemp(prefix="fpwrapper_mgmt_"))
         bin_dir = temp_dir / "bin"
         config_dir = temp_dir / "config"
@@ -42,10 +40,10 @@ class TestManagementFunctions:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_preference_setting(self, temp_env):
-        """Test preference setting - replaces Test 1"""
+    def test_preference_setting(self, temp_env) -> None:
+        """Test preference setting - replaces Test 1."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Test valid preference
@@ -70,8 +68,8 @@ class TestManagementFunctions:
         assert result is False
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_alias_management(self, temp_env):
-        """Test alias management - replaces Test 2"""
+    def test_alias_management(self, temp_env) -> None:
+        """Test alias management - replaces Test 2."""
         # Create a wrapper first
         wrapper_path = temp_env["bin_dir"] / "firefox"
         wrapper_path.write_text("#!/bin/bash\necho firefox\n")
@@ -103,10 +101,10 @@ class TestManagementFunctions:
         assert result is True  # Alias creation doesn't validate target exists
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_environment_variable_management(self, temp_env):
-        """Test environment variable management - replaces Test 3"""
+    def test_environment_variable_management(self, temp_env) -> None:
+        """Test environment variable management - replaces Test 3."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Set environment variable
@@ -121,7 +119,7 @@ class TestManagementFunctions:
 
         # Set another variable
         result = manager.set_environment_variable(
-            "firefox", "ANOTHER_VAR", "another_value"
+            "firefox", "ANOTHER_VAR", "another_value",
         )
         assert result is True
 
@@ -130,10 +128,10 @@ class TestManagementFunctions:
         assert "ANOTHER_VAR=another_value" in content
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_blocklist_management(self, temp_env):
-        """Test blocklist management - replaces Test 4"""
+    def test_blocklist_management(self, temp_env) -> None:
+        """Test blocklist management - replaces Test 4."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Block an app
@@ -159,10 +157,10 @@ class TestManagementFunctions:
         assert result is True  # Should succeed (idempotent)
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_unblock_functionality(self, temp_env):
-        """Test unblock functionality - replaces Test 5"""
+    def test_unblock_functionality(self, temp_env) -> None:
+        """Test unblock functionality - replaces Test 5."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # First block some apps
@@ -184,10 +182,10 @@ class TestManagementFunctions:
         assert result is True  # Should succeed (idempotent)
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_export_import_preferences(self, temp_env):
-        """Test export/import preferences - replaces Test 6"""
+    def test_export_import_preferences(self, temp_env) -> None:
+        """Test export/import preferences - replaces Test 6."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Create some preferences
@@ -232,10 +230,10 @@ class TestManagementFunctions:
         assert (temp_env["config_dir"] / "vlc.pref").read_text().strip() == "flatpak"
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_script_management(self, temp_env):
-        """Test script management - replaces Test 7"""
+    def test_script_management(self, temp_env) -> None:
+        """Test script management - replaces Test 7."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Create pre-launch script
@@ -261,8 +259,8 @@ class TestManagementFunctions:
         assert os.access(post_script, os.X_OK)
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_wrapper_removal(self, temp_env):
-        """Test wrapper removal - replaces Test 8"""
+    def test_wrapper_removal(self, temp_env) -> None:
+        """Test wrapper removal - replaces Test 8."""
         # Create test files
         wrapper_file = temp_env["bin_dir"] / "testapp"
         wrapper_file.write_text("#!/bin/bash\necho testapp\n")
@@ -300,8 +298,8 @@ class TestManagementFunctions:
             assert "myalias:testapp" not in content
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_list_wrappers(self, temp_env):
-        """Test list wrappers - replaces Test 9"""
+    def test_list_wrappers(self, temp_env) -> None:
+        """Test list wrappers - replaces Test 9."""
         # Create test wrappers
         wrappers = ["firefox", "chrome", "vlc"]
         for wrapper in wrappers:
@@ -323,10 +321,10 @@ class TestManagementFunctions:
             assert wrapper in found_wrappers
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_edge_cases_and_security(self, temp_env):
-        """Test edge cases and security - replaces aggressive testing in shell script"""
+    def test_edge_cases_and_security(self, temp_env) -> None:
+        """Test edge cases and security - replaces aggressive testing in shell script."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Test empty preference values
@@ -360,8 +358,8 @@ class TestManagementFunctions:
         assert True
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_performance_and_resource_efficiency(self, temp_env):
-        """Test performance and resource efficiency"""
+    def test_performance_and_resource_efficiency(self, temp_env) -> None:
+        """Test performance and resource efficiency."""
         import time
 
         manager = WrapperManager(
@@ -389,18 +387,18 @@ class TestManagementFunctions:
         assert total_size > 0
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_concurrent_operation_testing(self, temp_env):
-        """Test concurrent operations"""
+    def test_concurrent_operation_testing(self, temp_env) -> None:
+        """Test concurrent operations."""
         import threading
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=False, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=False, emit_mode=False,
         )
 
         results = []
         errors = []
 
-        def worker(thread_id):
+        def worker(thread_id) -> None:
             try:
                 for i in range(10):
                     result = manager.set_preference(f"thread{thread_id}_{i}", "flatpak")
@@ -424,10 +422,10 @@ class TestManagementFunctions:
         assert all(results)  # All operations should succeed
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_data_integrity_validation(self, temp_env):
-        """Test data integrity and error recovery"""
+    def test_data_integrity_validation(self, temp_env) -> None:
+        """Test data integrity and error recovery."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False
+            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
         )
 
         # Test corrupted preference file recovery
