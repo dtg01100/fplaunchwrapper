@@ -55,12 +55,16 @@ class TestWrapperGeneration:
         mock_subprocess.return_value = mock_result
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=False,
+            bin_dir=str(temp_env["bin_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Mock the get_installed_flatpaks method
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
 
@@ -94,12 +98,16 @@ class TestWrapperGeneration:
         mock_subprocess.return_value = mock_result
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=False,
+            bin_dir=str(temp_env["bin_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # This should skip due to collision
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["com.visualstudio.code"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["com.visualstudio.code"],
         ):
             result = generator.generate_wrapper("com.visualstudio.code")
 
@@ -131,14 +139,18 @@ class TestWrapperGeneration:
 
         # Firefox should be blocked
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is False  # Should be blocked
 
         # Chrome should work
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["com.google.chrome"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["com.google.chrome"],
         ):
             result = generator.generate_wrapper("com.google.chrome")
             assert result is True
@@ -153,7 +165,9 @@ class TestWrapperGeneration:
             pytest.skip("WrapperGenerator not available")
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=False,
+            bin_dir=str(temp_env["bin_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Test invalid names
@@ -191,7 +205,9 @@ class TestWrapperGeneration:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
 
@@ -227,7 +243,9 @@ class TestWrapperGeneration:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
 
@@ -260,7 +278,9 @@ class TestWrapperGeneration:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
 
@@ -276,7 +296,7 @@ class TestWrapperGeneration:
             pytest.skip("WrapperGenerator not available")
 
         # Create obsolete wrapper
-        old_wrapper = temp_dir / "bin" / "oldapp"
+        old_wrapper = temp_env["bin_dir"] / "oldapp"
         old_wrapper.write_text("#!/bin/bash\necho oldapp\n")
         old_wrapper.chmod(0o755)
 
@@ -321,7 +341,9 @@ class TestManagementFunctions:
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Test valid preference
@@ -343,7 +365,9 @@ class TestManagementFunctions:
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Create a wrapper first
@@ -371,7 +395,9 @@ class TestManagementFunctions:
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Set environment variable
@@ -390,7 +416,9 @@ class TestManagementFunctions:
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Block an app
@@ -407,9 +435,13 @@ class TestManagementFunctions:
         result = manager.unblock_app("org.mozilla.firefox")
         assert result is True
 
-        # Check it was removed
-        content = blocklist_file.read_text()
-        assert "org.mozilla.firefox" not in content
+        # Check it was removed - file may be deleted if empty
+        if blocklist_file.exists():
+            content = blocklist_file.read_text()
+            assert "org.mozilla.firefox" not in content
+        else:
+            # File deleted when empty
+            pass
 
     def test_export_import_preferences(self, temp_env) -> None:
         """Test export/from fplaunch import preferences - replaces test_management_functions.sh Test 6."""
@@ -417,7 +449,9 @@ class TestManagementFunctions:
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Create some preferences
@@ -448,7 +482,9 @@ class TestManagementFunctions:
             pytest.skip("WrapperManager not available")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Create pre-launch script
@@ -463,7 +499,8 @@ class TestManagementFunctions:
         assert pre_script.read_text() == script_content
         assert os.access(pre_script, os.X_OK)
 
-    def test_wrapper_removal(self, temp_env) -> None:
+    @patch("rich.prompt.Confirm.ask", return_value=True)
+    def test_wrapper_removal(self, mock_confirm, temp_env) -> None:
         """Test wrapper removal - replaces test_management_functions.sh Test 8."""
         if "WrapperManager" not in globals():
             pytest.skip("WrapperManager not available")
@@ -498,7 +535,9 @@ class TestManagementFunctions:
 
         # Create test wrapper
         wrapper_file = temp_env["bin_dir"] / "testapp"
-        wrapper_file.write_text("#!/bin/bash\necho testapp\n")
+        wrapper_file.write_text(
+            "#!/bin/bash\n# Generated by fplaunchwrapper\necho testapp\n"
+        )
         wrapper_file.chmod(0o755)
 
         manager = WrapperManager(
@@ -511,7 +550,8 @@ class TestManagementFunctions:
         # List wrappers
         wrappers = manager.list_wrappers()
         assert len(wrappers) >= 1
-        assert "testapp" in wrappers
+        wrapper_names = [w["name"] for w in wrappers]
+        assert "testapp" in wrapper_names
 
 
 if __name__ == "__main__":

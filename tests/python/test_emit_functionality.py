@@ -45,7 +45,7 @@ except ImportError:
 
 
 @pytest.mark.skipif(
-    not GENERATE_AVAILABLE or True, reason="WrapperGenerator tests disabled for CI",
+    not GENERATE_AVAILABLE, reason="WrapperGenerator tests disabled when WrapperGenerator not available",
 )
 class TestEmitFunctionality:
     """Test emit functionality."""

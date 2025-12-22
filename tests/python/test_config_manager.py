@@ -12,7 +12,7 @@ import pytest
 # Add lib to path
 # Import the module to test
 try:
-    from fplaunch.config_manager import EnhancedConfigManager
+    from fplaunch.config_manager import EnhancedConfigManager, create_config_manager
 except ImportError:
     # Mock it if not available
     EnhancedConfigManager = None
@@ -183,14 +183,11 @@ class TestConfigManager:
 
         for valid_config in valid_configs:
             # Should not raise exceptions for valid configs
-            try:
-                for key, value in valid_config.items():
-                    setattr(config.config, key, value)
-                # If we get here, config is valid
-                assert True
-            except Exception:
-                msg = f"Valid config {valid_config} should not raise exception"
-                raise AssertionError(msg)
+            for key, value in valid_config.items():
+                setattr(config.config, key, value)
+                # Verify the value was actually set
+                actual_value = getattr(config.config, key)
+                assert actual_value == value, f"Expected {key}={value}, got {actual_value}"
 
     @patch("pathlib.Path.home")
     def test_config_directory_paths(self, mock_home) -> None:

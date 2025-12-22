@@ -38,6 +38,8 @@ Classifier: Programming Language :: Python :: 3.8
 Classifier: Programming Language :: Python :: 3.9
 Classifier: Programming Language :: Python :: 3.10
 Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
 Classifier: Topic :: System :: Systems Administration
 Classifier: Topic :: Utilities
 Requires-Python: >=3.8
@@ -60,6 +62,7 @@ Provides-Extra: dev
 Requires-Dist: pytest>=7.0.0; extra == "dev"
 Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
 Requires-Dist: pytest-mock>=3.10.0; extra == "dev"
+Requires-Dist: pytest-timeout>=2.2.0; extra == "dev"
 Requires-Dist: ruff>=0.14.0; extra == "dev"
 Requires-Dist: black>=23.0.0; extra == "dev"
 Requires-Dist: flake8>=6.0.0; extra == "dev"

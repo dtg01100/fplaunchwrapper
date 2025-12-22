@@ -57,6 +57,26 @@ coverage.xml
 .hypothesis/
 PACKAGING_TEST_RESULTS.md
 
+# Cache and benchmark directories
+.ruff_cache/
+.benchmarks/
+
+# Configuration files
+.bandit
+.coveragerc
+
+# Log files
+test_run.log
+test_results.txt
+
+# Generated scripts
+fplaunch-cleanup
+fplaunch-generate
+fplaunch-setup-systemd
+
+# Bash completion
+fplaunch_completion.bash
+
 # Temporary files
 /tmp/
 *.tmp

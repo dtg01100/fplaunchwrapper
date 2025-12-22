@@ -2,6 +2,7 @@
 """Modern CLI interface for fplaunchwrapper using Click
 Provides a user-friendly command-line interface with rich formatting.
 """
+
 from __future__ import annotations
 
 import os
@@ -55,15 +56,22 @@ def run_command(
 
         # Return a mock completed process for emit mode
         return subprocess.CompletedProcess(
-            args=cmd, returncode=0, stdout="", stderr="",
+            args=cmd,
+            returncode=0,
+            stdout="",
+            stderr="",
         )
 
     # Normal execution
     if description and console:
         with console.status(f"[bold green]{description}..."):
-            result = subprocess.run(cmd, check=False, capture_output=not show_output, text=True)
+            result = subprocess.run(
+                cmd, check=False, capture_output=not show_output, text=True
+            )
     else:
-        result = subprocess.run(cmd, check=False, capture_output=not show_output, text=True)
+        result = subprocess.run(
+            cmd, check=False, capture_output=not show_output, text=True
+        )
 
     return result
 
@@ -102,10 +110,14 @@ if CLICK_AVAILABLE:
     @click.group()
     @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
     @click.option(
-        "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
     )
     @click.option(
-        "--emit-verbose", is_flag=True, help="Show detailed file contents in emit mode",
+        "--emit-verbose",
+        is_flag=True,
+        help="Show detailed file contents in emit mode",
     )
     @click.option(
         "--config-dir",
@@ -137,13 +149,19 @@ if CLICK_AVAILABLE:
 
     @cli.command()
     @click.argument(
-        "bin_dir", type=click.Path(dir_okay=True, writable=True), required=False,
+        "bin_dir",
+        type=click.Path(dir_okay=True, writable=True),
+        required=False,
     )
     @click.option(
-        "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
     )
     @click.option(
-        "--emit-verbose", is_flag=True, help="Show detailed file contents in emit mode",
+        "--emit-verbose",
+        is_flag=True,
+        help="Show detailed file contents in emit mode",
     )
     @click.pass_context
     def generate(ctx, bin_dir, emit, emit_verbose):
@@ -213,10 +231,14 @@ if CLICK_AVAILABLE:
     @click.argument("app_name")
     @click.argument("preference", type=click.Choice(["system", "flatpak"]))
     @click.option(
-        "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
     )
     @click.option(
-        "--emit-verbose", is_flag=True, help="Show detailed file contents in emit mode",
+        "--emit-verbose",
+        is_flag=True,
+        help="Show detailed file contents in emit mode",
     )
     @click.pass_context
     def set_pref(ctx, app_name, preference, emit, emit_verbose) -> int | None:
@@ -249,7 +271,9 @@ if CLICK_AVAILABLE:
     @cli.command()
     @click.argument("app_name")
     @click.option(
-        "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
     )
     @click.pass_context
     def launch(ctx, app_name, emit):
@@ -257,25 +281,16 @@ if CLICK_AVAILABLE:
 
         APP_NAME: Application name to launch
         """
-        emit_mode = emit or ctx.obj["emit"]
+        # Use Python backend
+        try:
+            from .launch import AppLauncher
 
-        script_path = find_fplaunch_script("fplaunch-launch")
-        if not script_path:
-            # Try direct wrapper execution
-            wrapper_path = Path(ctx.obj["config_dir"]) / "bin" / app_name
-            if wrapper_path.exists():
-                script_path = wrapper_path
-            else:
-                if console:
-                    console.print("[red]Error:[/red] Launch script not found")
-                else:
-                    pass
-                return 1
-
-        cmd = [str(script_path), app_name]
-        result = run_command(
-            cmd, f"Launching {app_name}", show_output=False, emit_mode=emit_mode,
-        )
+            launcher = AppLauncher(app_name)
+            return 0 if launcher.launch() else 1
+        except ImportError as e:
+            if console:
+                console.print(f"[red]Error:[/red] Failed to import launcher: {e}")
+            return 1
 
         if result.returncode != 0 and not emit_mode:
             if console:
@@ -291,7 +306,9 @@ if CLICK_AVAILABLE:
     @cli.command()
     @click.argument("app_name")
     @click.option(
-        "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
     )
     @click.pass_context
     def remove(ctx, app_name, emit):
@@ -311,7 +328,9 @@ if CLICK_AVAILABLE:
 
         cmd = [str(script_path), "remove", app_name]
         result = run_command(
-            cmd, f"Removing wrapper for {app_name}", emit_mode=emit_mode,
+            cmd,
+            f"Removing wrapper for {app_name}",
+            emit_mode=emit_mode,
         )
 
         if result.returncode == 0:
@@ -332,10 +351,79 @@ if CLICK_AVAILABLE:
 
     @cli.command()
     @click.option(
-        "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
     )
     @click.pass_context
-    def monitor(ctx, emit) -> int:
+    def systemd_setup(ctx, emit) -> int:
+        """Set up systemd user service for Flatpak monitoring.
+
+        Creates and enables a systemd user service that automatically
+        monitors for Flatpak installation changes and regenerates wrappers.
+        """
+        # Use Python backend
+        try:
+            from .systemd_setup import SystemdSetup
+
+            setup = SystemdSetup()
+            return setup.run()
+        except ImportError as e:
+            if console:
+                console.print(f"[red]Error:[/red] Failed to import systemd setup: {e}")
+            return 1
+
+    @cli.command()
+    @click.option(
+        "--dry-run",
+        is_flag=True,
+        help="Show what would be cleaned without actually removing files",
+    )
+    @click.option(
+        "--force",
+        is_flag=True,
+        help="Force cleanup without confirmation",
+    )
+    @click.option(
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
+    )
+    @click.pass_context
+    def cleanup(ctx, dry_run, force, emit) -> int:
+        """Clean up orphaned wrapper files and artifacts.
+
+        Removes wrapper scripts and configuration files that are no longer
+        needed due to uninstalled Flatpak applications or outdated configurations.
+        """
+        # Use Python backend
+        try:
+            from .cleanup import WrapperCleanup
+
+            cleanup_manager = WrapperCleanup(
+                bin_dir=str(Path(ctx.obj["config_dir"]) / "bin"),
+                dry_run=dry_run,
+                force=force,
+            )
+            return cleanup_manager.run()
+        except ImportError as e:
+            if console:
+                console.print(f"[red]Error:[/red] Failed to import cleanup: {e}")
+            return 1
+
+    @cli.command()
+    @click.option(
+        "--daemon",
+        is_flag=True,
+        help="Run in daemon mode (background)",
+    )
+    @click.option(
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
+    )
+    @click.pass_context
+    def monitor(ctx, daemon, emit) -> int:
         """Start Flatpak monitoring daemon.
 
         Monitors for Flatpak installation changes and automatically
@@ -355,38 +443,83 @@ if CLICK_AVAILABLE:
                 pass
             return 0
 
+        # Use Python backend
         try:
-            from lib.flatpak_monitor import start_flatpak_monitoring
+            from .flatpak_monitor import main as monitor_main
 
+            # Set up argv for monitor_main
+            import sys
+
+            original_argv = sys.argv
+            try:
+                if daemon:
+                    sys.argv = ["monitor", "--daemon"]
+                else:
+                    sys.argv = ["monitor"]
+                monitor_main()
+                return 0
+            finally:
+                sys.argv = original_argv
+        except ImportError as e:
             if console:
-                console.print("[bold blue]Starting Flatpak monitoring...[/bold blue]")
-                console.print("Press Ctrl+C to stop")
-
-            start_flatpak_monitoring(daemon=False)
-
-            if console:
-                console.print("[green]✓[/green] Monitoring stopped")
-
-        except ImportError:
-            if console:
-                console.print(
-                    "[red]Error:[/red] Flatpak monitoring not available (install watchdog)",
-                )
-            else:
-                pass
+                console.print(f"[red]Error:[/red] Failed to import monitor: {e}")
             return 1
 
-        return 0
+    @cli.command()
+    @click.argument("action", required=False)
+    @click.argument("value", required=False)
+    @click.option(
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
+    )
+    @click.pass_context
+    def config(ctx, action, value, emit) -> int:
+        """Manage fplaunchwrapper configuration.
+
+        ACTION: Configuration action (show, init, block, unblock)
+        VALUE: Value for the action (e.g., app name for block/unblock)
+        """
+        # Use Python backend
+        try:
+            from .config_manager import main as config_main
+
+            # Set up argv for config_main
+            import sys
+
+            original_argv = sys.argv
+            try:
+                if action:
+                    if value:
+                        sys.argv = ["config", action, value]
+                    else:
+                        sys.argv = ["config", action]
+                else:
+                    sys.argv = ["config", "show"]
+                config_main()
+                return 0
+            finally:
+                sys.argv = original_argv
+        except ImportError as e:
+            if console:
+                console.print(f"[red]Error:[/red] Failed to import config manager: {e}")
+            return 1
 
     @cli.command()
     @click.option(
-        "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
     )
     @click.option(
-        "--emit-verbose", is_flag=True, help="Show detailed file contents in emit mode",
+        "--emit-verbose",
+        is_flag=True,
+        help="Show detailed file contents in emit mode",
     )
     @click.option(
-        "--bin-dir", type=click.Path(dir_okay=True), help="Wrapper bin directory",
+        "--bin-dir",
+        type=click.Path(dir_okay=True),
+        help="Wrapper bin directory",
     )
     @click.option(
         "--script",
@@ -401,7 +534,7 @@ if CLICK_AVAILABLE:
         regeneration when Flatpak applications are installed or removed.
         """
         try:
-            from lib.systemd_setup import SystemdSetup
+            from .systemd_setup import SystemdSetup
 
             setup = SystemdSetup(
                 bin_dir=bin_dir,
@@ -420,7 +553,63 @@ if CLICK_AVAILABLE:
 
     @cli.command()
     @click.option(
-        "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
+        "--daemon",
+        is_flag=True,
+        help="Run in daemon mode (background)",
+    )
+    @click.option(
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
+    )
+    @click.pass_context
+    def monitor(ctx, daemon, emit) -> int:
+        """Start Flatpak monitoring daemon.
+
+        Monitors for Flatpak installation changes and automatically
+        regenerates wrappers when applications are installed or removed.
+        """
+        emit_mode = emit or ctx.obj["emit"]
+
+        if emit_mode:
+            if console:
+                console.print(
+                    "[cyan]📋 EMIT:[/cyan] Would start Flatpak monitoring daemon",
+                )
+                console.print(
+                    "[dim]   Purpose: Monitor Flatpak installations and auto-regenerate wrappers[/dim]",
+                )
+            else:
+                pass
+            return 0
+
+        # Use Python backend
+        try:
+            from .flatpak_monitor import main as monitor_main
+
+            # Set up argv for monitor_main
+            import sys
+
+            original_argv = sys.argv
+            try:
+                if daemon:
+                    sys.argv = ["monitor", "--daemon"]
+                else:
+                    sys.argv = ["monitor"]
+                monitor_main()
+                return 0
+            finally:
+                sys.argv = original_argv
+        except ImportError as e:
+            if console:
+                console.print(f"[red]Error:[/red] Failed to import monitor: {e}")
+            return 1
+
+    @cli.command()
+    @click.option(
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
     )
     @click.pass_context
     def config(ctx, emit) -> int:
@@ -436,32 +625,26 @@ if CLICK_AVAILABLE:
                     "[cyan]📋 EMIT:[/cyan] Would display current configuration",
                 )
                 console.print(
-                    "[dim]   Purpose: Show fplaunchwrapper settings and directories[/dim]",
+                    "[dim]   Purpose: Show fplaunchwrapper settings and preferences[/dim]",
                 )
             else:
                 pass
             return 0
 
+        # Show configuration
         try:
-            from lib.config_manager import create_config_manager
+            from .config_manager import main as config_main
 
-            config = create_config_manager()
+            # Set up argv for config_main
+            import sys
 
-            if console:
-                # Display configuration with rich formatting
-                console.print(
-                    Panel.fit(
-                        f"[bold]Configuration Directory:[/bold] {config.config_dir}\n"
-                        f"[bold]Data Directory:[/bold] {config.data_dir}\n"
-                        f"[bold]Bin Directory:[/bold] {config.config.bin_dir}\n"
-                        f"[bold]Debug Mode:[/bold] {config.config.debug_mode}\n"
-                        f"[bold]Log Level:[/bold] {config.config.log_level}\n"
-                        f"[bold]Blocked Apps:[/bold] {', '.join(config.config.blocklist) if config.config.blocklist else 'None'}",
-                        title="fplaunchwrapper Configuration",
-                    ),
-                )
-            else:
-                pass
+            original_argv = sys.argv
+            try:
+                sys.argv = ["config", "show"]
+                config_main()
+                return 0
+            finally:
+                sys.argv = original_argv
 
         except ImportError:
             if console:
@@ -474,15 +657,33 @@ if CLICK_AVAILABLE:
 
         return 0
 
+    # Export cli as main for entry point
+    main = cli
+
     if __name__ == "__main__":
-        cli()
+        sys.exit(main())
+
+    def main() -> int:
+        """Main entry point that wraps the Click CLI."""
+        try:
+            # Call the Click CLI group
+            cli()
+            return 0
+        except SystemExit as e:
+            # Click raises SystemExit, convert to int return code
+            return e.code if isinstance(e.code, int) else (0 if e.code == 0 else 1)
+        except Exception as e:
+            # Handle any other exceptions
+            if console:
+                console.print(f"[red]Error:[/red] {e}")
+            return 1
 
 else:
     # Fallback CLI without Click
-    def main() -> None:
+    def main() -> int:
         """Fallback CLI without Click."""
         if len(sys.argv) < 2:
-            sys.exit(1)
+            return 1
 
         command = sys.argv[1]
 
@@ -490,21 +691,24 @@ else:
             bin_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser("~/bin")
             script_path = find_fplaunch_script("fplaunch-generate")
             if script_path:
-                run_command(
-                    [str(script_path), bin_dir], f"Generating wrappers in {bin_dir}",
-                )
+                return run_command(
+                    [str(script_path), bin_dir],
+                    f"Generating wrappers in {bin_dir}",
+                ).returncode
             else:
-                pass
+                return 1
 
         elif command == "list":
             script_path = find_fplaunch_script("fplaunch-manage")
             if script_path:
-                run_command([str(script_path), "list"], "Listing wrappers")
+                return run_command(
+                    [str(script_path), "list"], "Listing wrappers"
+                ).returncode
             else:
-                pass
+                return 1
 
         else:
-            pass
+            return 1
 
     if __name__ == "__main__":
-        main()
+        sys.exit(main())

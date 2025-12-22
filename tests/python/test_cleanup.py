@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """Unit tests for cleanup.py
-Tests cleanup functionality with proper mocking to avoid side effects.
+Tests cleanup functionality with REAL code execution (minimal mocking).
 """
 
 import shutil
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-# Add lib to path
 # Import the module to test
 try:
     from fplaunch.cleanup import WrapperCleanup, main
 except ImportError:
-    # Mock it if not available
+    # Skip if not available
     WrapperCleanup = None
     main = None
 
@@ -65,10 +66,11 @@ class TestWrapperCleanup:
         assert manager.dry_run is True
 
     def test_cleanup_identify_artifacts(self) -> None:
-        """Test identification of artifacts to clean."""
+        """Test identification of artifacts to clean (REAL execution)."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
+        # Real object with real directories
         manager = WrapperCleanup(
             bin_dir=str(self.bin_dir),
             config_dir=str(self.config_dir),
@@ -76,16 +78,22 @@ class TestWrapperCleanup:
             dry_run=True,
         )
 
+        # Actually call the real method
         artifacts = manager._identify_artifacts()
 
-        # Should find wrapper scripts, preferences, and data files
+        # Verify real results
         assert len(artifacts) >= 3
         assert any("firefox" in str(artifact) for artifact in artifacts)
         assert any("chrome" in str(artifact) for artifact in artifacts)
         assert any("cache_file" in str(artifact) for artifact in artifacts)
+        
+        # Verify they're Path objects pointing to real locations
+        for artifact in artifacts:
+            assert isinstance(artifact, Path)
+            assert str(self.temp_dir) in str(artifact)
 
     def test_cleanup_dry_run_mode(self) -> None:
-        """Test cleanup in dry-run mode."""
+        """Test cleanup in dry-run mode (REAL execution, no changes)."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
@@ -98,6 +106,7 @@ class TestWrapperCleanup:
 
         # Count files before
         before_files = list(self.temp_dir.rglob("*"))
+        before_count = len(before_files)
         before_count = len([f for f in before_files if f.is_file()])
 
         result = manager.cleanup()
@@ -395,6 +404,29 @@ class TestCleanupMainFunction:
 
 class TestCleanupIntegration:
     """Test cleanup integration with other components."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.data_dir = self.temp_dir / "data"
+
+        # Create directories
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+        self.data_dir.mkdir()
+
+        # Create some test files
+        (self.bin_dir / "firefox").write_text("#!/bin/bash\necho firefox\n")
+        (self.bin_dir / "chrome").write_text("#!/bin/bash\necho chrome\n")
+        (self.config_dir / "firefox.pref").write_text("flatpak")
+        (self.config_dir / "chrome.pref").write_text("system")
+        (self.data_dir / "cache_file").write_text("cache data")
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_cleanup_with_generate_integration(self) -> None:
         """Test cleanup integration after generation."""

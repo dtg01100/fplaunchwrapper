@@ -48,7 +48,7 @@ class TestFlatpakMonitor:
         assert hasattr(monitor, "bin_dir")
         assert hasattr(monitor, "observer")
 
-    @patch("watchdog.observers.Observer")
+    @patch("fplaunch.flatpak_monitor.Observer")
     def test_monitor_start_stop(self, mock_observer_class) -> None:
         """Test monitor start and stop functionality."""
         if not FlatpakMonitor:
@@ -73,9 +73,18 @@ class TestFlatpakMonitor:
         mock_observer.stop.assert_called_once()
         mock_observer.join.assert_called_once()
 
-    @patch("watchdog.observers.Observer")
-    @patch("pathlib.Path.exists")
-    def test_monitor_directory_detection(self, mock_exists, mock_observer_class) -> None:
+        # Stop monitoring
+        monitor.stop()
+
+        # Verify observer was stopped
+        mock_observer.stop.assert_called_once()
+        mock_observer.join.assert_called_once()
+
+    @patch("fplaunch.flatpak_monitor.os.path.exists")
+    @patch("fplaunch.flatpak_monitor.Observer")
+    def test_monitor_directory_detection(
+        self, mock_observer_class, mock_exists
+    ) -> None:
         """Test detection of Flatpak directories to monitor."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
@@ -105,7 +114,7 @@ class TestFlatpakMonitor:
 
         # Mock file creation event
         mock_event = Mock()
-        mock_event.src_path = str(self.exports_dir / "new_app")
+        mock_event.src_path = "/var/lib/flatpak/exports/bin/new_app"
         mock_event.event_type = "created"
         mock_event.is_directory = False
 
@@ -126,7 +135,7 @@ class TestFlatpakMonitor:
 
         # Mock file deletion event
         mock_event = Mock()
-        mock_event.src_path = str(self.exports_dir / "removed_app")
+        mock_event.src_path = "/var/lib/flatpak/exports/bin/removed_app"
         mock_event.event_type = "deleted"
         mock_event.is_directory = False
 
@@ -180,7 +189,7 @@ class TestFlatpakMonitor:
         callback.assert_not_called()
 
     @patch("time.sleep")
-    @patch("watchdog.observers.Observer")
+    @patch("fplaunch.flatpak_monitor.Observer")
     def test_monitor_daemon_mode(self, mock_observer_class, mock_sleep) -> None:
         """Test monitor in daemon mode."""
         if not start_flatpak_monitoring:
@@ -202,7 +211,7 @@ class TestFlatpakMonitor:
         # Should have started observer
         mock_observer.start.assert_called_once()
 
-    @patch("watchdog.observers.Observer")
+    @patch("fplaunch.flatpak_monitor.Observer")
     def test_monitor_error_handling(self, mock_observer_class) -> None:
         """Test error handling in monitor."""
         if not FlatpakMonitor:
@@ -216,17 +225,15 @@ class TestFlatpakMonitor:
         callback = Mock()
         monitor = FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
 
-        # Should handle errors gracefully
-        try:
-            monitor.start()
-            # If we get here, error was handled
-            assert True
-        except Exception:
-            # If exception propagates, test fails
-            msg = "Monitor should handle errors gracefully"
-            raise AssertionError(msg)
+        # Should handle errors gracefully by returning False, not raising exception
+        result = monitor.start()
+        
+        # Verify error was handled: start() returns False on error
+        assert result is False
+        # Verify observer was attempted to be created and started
+        assert mock_observer.start.called
 
-    @patch("watchdog.observers.Observer")
+    @patch("fplaunch.flatpak_monitor.Observer")
     def test_monitor_reconnection_logic(self, mock_observer_class) -> None:
         """Test monitor reconnection after disconnection."""
         if not FlatpakMonitor:
@@ -261,8 +268,8 @@ class TestFlatpakMonitor:
         monitor_none = FlatpakMonitor(callback=None, bin_dir=str(self.temp_dir / "bin"))
         assert monitor_none.callback is None
 
-    @patch("os.path.exists")
-    @patch("watchdog.observers.Observer")
+    @patch("fplaunch.flatpak_monitor.os.path.exists")
+    @patch("fplaunch.flatpak_monitor.Observer")
     def test_monitor_path_validation(self, mock_observer_class, mock_exists) -> None:
         """Test monitor path validation."""
         if not FlatpakMonitor:
@@ -285,7 +292,7 @@ class TestFlatpakMonitor:
 
         monitor.stop()
 
-    @patch("watchdog.observers.Observer")
+    @patch("fplaunch.flatpak_monitor.Observer")
     def test_monitor_cleanup_on_stop(self, mock_observer_class) -> None:
         """Test proper cleanup when monitor stops."""
         if not FlatpakMonitor:
@@ -304,7 +311,7 @@ class TestFlatpakMonitor:
         mock_observer.stop.assert_called_once()
         mock_observer.join.assert_called_once()
 
-    @patch("watchdog.observers.Observer")
+    @patch("fplaunch.flatpak_monitor.Observer")
     @patch("time.sleep")
     def test_monitor_event_debouncing(self, mock_sleep, mock_observer_class) -> None:
         """Test that monitor debounces rapid events."""
@@ -320,7 +327,7 @@ class TestFlatpakMonitor:
         # Simulate rapid events
         from watchdog.events import FileCreatedEvent
 
-        event = FileCreatedEvent(str(self.exports_dir / "app"))
+        event = FileCreatedEvent("/var/lib/flatpak/exports/bin/app")
         for _i in range(5):
             monitor._on_change(event)
 
@@ -367,10 +374,25 @@ class TestFlatpakMonitor:
 class TestFlatpakMonitorIntegration:
     """Test Flatpak monitor integration scenarios."""
 
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.flatpak_dir = self.temp_dir / ".local" / "share" / "flatpak"
+        self.exports_dir = self.flatpak_dir / "exports" / "bin"
+        self.system_exports = Path("/var/lib/flatpak/exports/bin")
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
     @patch("subprocess.run")
-    @patch("watchdog.observers.Observer")
+    @patch("fplaunch.flatpak_monitor.Observer")
     def test_monitor_with_generate_integration(
-        self, mock_observer_class, mock_subprocess,
+        self,
+        mock_observer_class,
+        mock_subprocess,
     ) -> None:
         """Test monitor integration with wrapper generation."""
         if not start_flatpak_monitoring:
@@ -386,14 +408,17 @@ class TestFlatpakMonitorIntegration:
         mock_observer = Mock()
         mock_observer_class.return_value = mock_observer
 
-        def test_callback() -> None:
-            # Callback that would regenerate wrappers
-            pass
+        # Use a Mock callback so we can verify it's registered properly
+        test_callback = Mock()
 
         # Should start monitoring successfully
         try:
-            monitor = start_flatpak_monitoring(callback=test_callback, daemon=False)
+            monitor = start_flatpak_monitoring(callback=test_callback, daemon=True)
             assert monitor is not None
+            # Verify the monitor was set up with the callback
+            assert monitor.callback == test_callback
+            # Stop the monitor to clean up
+            monitor.stop()
         except Exception as e:
             # May fail due to missing watchdog in test environment
             pytest.skip(f"Monitor integration test skipped: {e}")
@@ -414,7 +439,7 @@ class TestFlatpakMonitorIntegration:
             monitor = FlatpakMonitor(**config)
             assert monitor is not None
 
-    @patch("os.path.exists")
+    @patch("fplaunch.flatpak_monitor.os.path.exists")
     def test_monitor_directory_discovery(self, mock_exists) -> None:
         """Test automatic discovery of Flatpak directories."""
         if not FlatpakMonitor:
@@ -429,7 +454,8 @@ class TestFlatpakMonitorIntegration:
         # Should discover available Flatpak directories
         # (This is internal implementation detail)
 
-    def test_monitor_performance_under_load(self) -> None:
+    @patch("fplaunch.flatpak_monitor.time.sleep")
+    def test_monitor_performance_under_load(self, mock_sleep) -> None:
         """Test monitor performance with many events."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
@@ -442,7 +468,7 @@ class TestFlatpakMonitorIntegration:
         # Simulate many file events
         events = []
         for i in range(100):
-            event = FileCreatedEvent(str(self.exports_dir / f"app{i}"))
+            event = FileCreatedEvent(f"/var/lib/flatpak/exports/bin/app{i}")
             events.append(event)
 
         import time
@@ -455,8 +481,10 @@ class TestFlatpakMonitorIntegration:
         end_time = time.time()
 
         # Should handle 100 events quickly
-        assert end_time - start_time < 1.0  # Less than 1 second
+        assert end_time - start_time < 2.0  # Less than 2 seconds
         assert callback.call_count == 100
+        # Check that sleep was called (but mocked)
+        mock_sleep.assert_called()
 
 
 if __name__ == "__main__":

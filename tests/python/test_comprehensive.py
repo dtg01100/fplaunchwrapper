@@ -33,7 +33,8 @@ class TestComprehensiveSuite:
         try:
             result = subprocess.run(
                 cmd,
-                check=False, cwd=Path(__file__).parent.parent,
+                check=False,
+                cwd=Path(__file__).resolve().parents[2],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -47,12 +48,14 @@ class TestComprehensiveSuite:
 
     def test_cli_help_command(self) -> None:
         """Test CLI help command."""
-        self.run_command_test(["python", "-m", "lib.cli", "--help"], "CLI help command")
+        import sys
+        self.run_command_test([sys.executable, "-m", "fplaunch.cli", "--help"], "CLI help command")
 
     def test_cli_config_command(self) -> None:
         """Test CLI config command."""
+        import sys
         self.run_command_test(
-            ["python", "-m", "lib.cli", "config"], "CLI config command",
+            [sys.executable, "-m", "fplaunch.cli", "config"], "CLI config command",
         )
 
     def test_emit_mode_no_side_effects(self, temp_env) -> None:
@@ -61,18 +64,19 @@ class TestComprehensiveSuite:
         before_count = sum(1 for _ in temp_env["temp_dir"].rglob("*") if _.is_file())
 
         # Run emit commands
+        import sys
         self.run_command_test(
-            ["python", "-m", "lib.cli", "generate", "--emit", str(temp_env["bin_dir"])],
+            [sys.executable, "-m", "fplaunch.cli", "generate", "--emit", str(temp_env["bin_dir"])],
             "Generate emit mode",
         )
 
         self.run_command_test(
-            ["python", "-m", "lib.cli", "set-pref", "firefox", "flatpak", "--emit"],
+            [sys.executable, "-m", "fplaunch.cli", "set-pref", "firefox", "flatpak", "--emit"],
             "Set-pref emit mode",
         )
 
         self.run_command_test(
-            ["python", "-m", "lib.cli", "setup-systemd", "--emit"],
+            [sys.executable, "-m", "fplaunch.cli", "setup-systemd", "--emit"],
             "Setup-systemd emit mode",
         )
 
@@ -86,34 +90,36 @@ class TestComprehensiveSuite:
         """Test emit verbose shows detailed content."""
         # Test that emit verbose commands produce output with content markers
         # This is a basic smoke test - full validation would require more setup
+        import sys
         self.run_command_test(
-            ["python", "-m", "lib.cli", "config", "--emit"], "Config emit mode",
+            [sys.executable, "-m", "fplaunch.cli", "config", "--emit"], "Config emit mode",
         )
 
         self.run_command_test(
-            ["python", "-m", "lib.cli", "monitor", "--emit"], "Monitor emit mode",
+            [sys.executable, "-m", "fplaunch.cli", "monitor", "--emit"], "Monitor emit mode",
         )
 
     def test_cli_emit_flags_integration(self) -> None:
         """Test CLI emit flags work properly."""
         # Test individual emit flags
+        import sys
         commands = [
             (
-                ["python", "-m", "lib.cli", "generate", "--emit", "/tmp/test"],
+                [sys.executable, "-m", "fplaunch.cli", "generate", "--emit", "/tmp/test"],
                 "generate --emit",
             ),
             (
-                ["python", "-m", "lib.cli", "set-pref", "test", "flatpak", "--emit"],
+                [sys.executable, "-m", "fplaunch.cli", "set-pref", "test", "flatpak", "--emit"],
                 "set-pref --emit",
             ),
             (
-                ["python", "-m", "lib.cli", "setup-systemd", "--emit"],
+                [sys.executable, "-m", "fplaunch.cli", "setup-systemd", "--emit"],
                 "setup-systemd --emit",
             ),
-            (["python", "-m", "lib.cli", "config", "--emit"], "config --emit"),
-            (["python", "-m", "lib.cli", "monitor", "--emit"], "monitor --emit"),
+            ([sys.executable, "-m", "fplaunch.cli", "config", "--emit"], "config --emit"),
+            ([sys.executable, "-m", "fplaunch.cli", "monitor", "--emit"], "monitor --emit"),
             (
-                ["python", "-m", "lib.cli", "--emit", "generate", "/tmp/test"],
+                [sys.executable, "-m", "fplaunch.cli", "--emit", "generate", "/tmp/test"],
                 "global --emit flag",
             ),
         ]
@@ -124,18 +130,26 @@ class TestComprehensiveSuite:
     def test_error_handling(self) -> None:
         """Test error handling in CLI."""
         # Test invalid command
-        self.run_command_test(
-            ["python", "-m", "lib.cli", "nonexistent"],
-            "Invalid command handling",
-            expect_success=False,
-        )
+        # Test invalid command - ensure CLI returns non-zero for unknown command
+        import sys
+        # Call main() directly with manipulated argv to ensure exit code reflects error
+        cmd = [
+            sys.executable,
+            "-c",
+            (
+                "import sys; sys.argv = ['fplaunch.cli','nonexistentcmd']; import fplaunch.cli; sys.exit(fplaunch.cli.main())"
+            ),
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        assert result.returncode != 0, f"Expected non-zero exit code for unknown command, got {result.returncode}\nstdout:{result.stdout}\nstderr:{result.stderr}"
 
     def test_integration_workflow(self) -> None:
         """Test basic integration workflow."""
         # This is a smoke test for the overall system
         # In a real scenario, this would test a complete workflow
+        import sys
         self.run_command_test(
-            ["python", "-m", "lib.cli", "--help"], "Basic CLI integration",
+            [sys.executable, "-m", "fplaunch.cli", "--help"], "Basic CLI integration",
         )
 
 

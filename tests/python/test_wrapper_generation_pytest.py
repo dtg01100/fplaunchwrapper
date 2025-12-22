@@ -160,6 +160,7 @@ class TestWrapperGeneration:
 
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
+            config_dir=str(temp_env["config_dir"]),
             verbose=True,
             emit_mode=False,
         )

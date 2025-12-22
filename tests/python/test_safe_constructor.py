@@ -4,6 +4,7 @@
 Tests that classes can be instantiated and basic methods called without side effects.
 """
 
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -28,13 +29,16 @@ class TestSafeConstructorValidation:
     def test_wrapper_generator_constructor(self) -> None:
         """Test WrapperGenerator can be created safely."""
         with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True,
+            "os.path.exists",
+            return_value=True,
         ):
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
 
             # Test correct constructor parameters
             generator = WrapperGenerator(
-                bin_dir="/tmp/test_bin", verbose=False, emit_mode=True,
+                bin_dir="/tmp/test_bin",
+                verbose=False,
+                emit_mode=True,
             )
 
             assert generator is not None
@@ -140,12 +144,25 @@ class TestSafeConstructorValidation:
                 mock_run.return_value = Mock(returncode=0, stdout="safe", stderr="")
                 mock_popen.return_value = Mock()
 
+                # Create directories
+                safe_config = Path("/tmp/safe_config")
+                safe_config.mkdir(parents=True, exist_ok=True)
+                safe_bin = Path("/tmp/safe_bin")
+                safe_bin.mkdir(parents=True, exist_ok=True)
+
+                # Create bin_dir file to avoid read error
+                (safe_config / "bin_dir").write_text(str(safe_bin))
+
                 # Create all component instances
                 generator = WrapperGenerator(
-                    "/tmp/safe_bin", verbose=False, emit_mode=True,
+                    "/tmp/safe_bin",
+                    verbose=False,
+                    emit_mode=True,
                 )
                 manager = WrapperManager(
-                    config_dir="/tmp/safe_config", verbose=False, emit_mode=True,
+                    config_dir="/tmp/safe_config",
+                    verbose=False,
+                    emit_mode=True,
                 )
                 cleaner = WrapperCleanup(bin_dir="/tmp/safe_bin", dry_run=True)
                 launcher = AppLauncher(config_dir="/tmp/safe_config")
@@ -173,7 +190,6 @@ class TestSafeConstructorValidation:
                 assert os.environ.get("HOME", "") == original_home, (
                     "HOME should not change"
                 )
-
 
         finally:
             # Restore if anything went wrong (defensive)

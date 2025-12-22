@@ -102,7 +102,7 @@ class TestIntegrationWorkflows:
         assert pref_file.read_text().strip() == "flatpak"
 
         # Step 4: Remove wrapper and config
-        result = manager.remove_wrapper("firefox")
+        result = manager.remove_wrapper("firefox", force=True)
         assert result is True
 
         # Verify complete cleanup
@@ -298,8 +298,13 @@ class TestIntegrationWorkflows:
         assert result is True
 
         # Verify it was removed from blocklist
-        content = blocklist_file.read_text()
-        assert "org.mozilla.firefox" not in content
+        # The file may be deleted when empty, or may remain with empty content
+        if blocklist_file.exists():
+            content = blocklist_file.read_text()
+            assert "org.mozilla.firefox" not in content
+        else:
+            # File was deleted, which means blocklist is empty - this is also valid
+            pass
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
     def test_configuration_workflow(self, temp_env) -> None:

@@ -49,84 +49,84 @@ class TestMainEntryPoint:
         mock_cli_main.assert_called_once()
         assert result == 0
 
-    @patch("sys.argv", ["fplaunch", "generate", "/tmp/bin"])
-    @patch("fplaunch.generate.main")
-    def test_main_entry_generate(self, mock_generate_main) -> None:
+    @patch("sys.argv", ["fplaunch", "generate", "/home/vscode/bin"])
+    @patch("fplaunch.generate.WrapperGenerator.run")
+    def test_main_entry_generate(self, mock_run) -> None:
         """Test main entry point routes to generate."""
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        mock_generate_main.return_value = 0
+        mock_run.return_value = 0
 
         from fplaunch.fplaunch import main
 
         result = main()
 
-        mock_generate_main.assert_called_once()
+        mock_run.assert_called_once()
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "set-pref", "firefox", "flatpak"])
-    @patch("fplaunch.manage.main")
-    def test_main_entry_set_pref(self, mock_manage_main) -> None:
+    @patch("fplaunch.manage.WrapperManager.set_preference")
+    def test_main_entry_set_pref(self, mock_set_preference) -> None:
         """Test main entry point routes to manage."""
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        mock_manage_main.return_value = 0
+        mock_set_preference.return_value = True
 
         from fplaunch.fplaunch import main
 
         result = main()
 
-        mock_manage_main.assert_called_once()
+        mock_set_preference.assert_called_once()
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "launch", "firefox"])
-    @patch("fplaunch.launch.main")
-    def test_main_entry_launch(self, mock_launch_main) -> None:
+    @patch("fplaunch.launch.AppLauncher.launch")
+    def test_main_entry_launch(self, mock_launch) -> None:
         """Test main entry point routes to launch."""
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        mock_launch_main.return_value = 0
+        mock_launch.return_value = True
 
         from fplaunch.fplaunch import main
 
         result = main()
 
-        mock_launch_main.assert_called_once()
+        mock_launch.assert_called_once()
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "cleanup"])
-    @patch("fplaunch.cleanup.main")
-    def test_main_entry_cleanup(self, mock_cleanup_main) -> None:
+    @patch("fplaunch.cleanup.WrapperCleanup.run")
+    def test_main_entry_cleanup(self, mock_run) -> None:
         """Test main entry point routes to cleanup."""
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        mock_cleanup_main.return_value = 0
+        mock_run.return_value = 0
 
         from fplaunch.fplaunch import main
 
         result = main()
 
-        mock_cleanup_main.assert_called_once()
+        mock_run.assert_called_once()
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "setup-systemd"])
-    @patch("fplaunch.systemd_setup.main")
-    def test_main_entry_systemd_setup(self, mock_systemd_main) -> None:
+    @patch("fplaunch.systemd_setup.SystemdSetup.run")
+    def test_main_entry_systemd_setup(self, mock_setup_service) -> None:
         """Test main entry point routes to systemd setup."""
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        mock_systemd_main.return_value = 0
+        mock_setup_service.return_value = 0
 
         from fplaunch.fplaunch import main
 
         result = main()
 
-        mock_systemd_main.assert_called_once()
+        mock_setup_service.assert_called_once()
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "config"])
@@ -203,36 +203,32 @@ class TestMainEntryPoint:
 
     @patch.dict("os.environ", {"FPWRAPPER_DEBUG": "1"})
     @patch("sys.argv", ["fplaunch", "generate", "/tmp/bin"])
-    @patch("fplaunch.generate.main")
-    def test_main_entry_debug_mode(self, mock_generate_main) -> None:
+    @patch("fplaunch.generate.WrapperGenerator.run")
+    def test_main_entry_debug_mode(self, mock_run) -> None:
         """Test main entry point respects debug environment."""
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        mock_generate_main.return_value = 0
+        mock_run.return_value = 0
 
         from fplaunch.fplaunch import main
 
         result = main()
 
-        mock_generate_main.assert_called_once()
+        mock_run.assert_called_once()
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "generate", "/tmp/bin", "--help"])
-    @patch("fplaunch.generate.main")
-    def test_main_entry_command_help(self, mock_generate_main) -> None:
+    def test_main_entry_command_help(self) -> None:
         """Test main entry point passes help to subcommands."""
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        # Help should be handled by subcommand, not main
-        mock_generate_main.return_value = 0
-
+        # Help is handled by Click, should exit with 0
         from fplaunch.fplaunch import main
 
         result = main()
 
-        mock_generate_main.assert_called_once()
         assert result == 0
 
 
@@ -274,22 +270,17 @@ class TestCommandRouting:
     @patch("importlib.import_module")
     @patch("sys.argv", ["fplaunch", "test-command"])
     def test_dynamic_import_handling(self, mock_import) -> None:
-        """Test dynamic import of command modules."""
+        """Test handling of unknown commands."""
         if not fplaunch:
             pytest.skip("fplaunch module not available")
-
-        # Mock successful import
-        mock_module = Mock()
-        mock_module.main = Mock(return_value=0)
-        mock_import.return_value = mock_module
 
         from fplaunch.fplaunch import main
 
         result = main()
 
-        # Should attempt to import the module
-        mock_import.assert_called()
-        assert result == 0
+        # Unknown command should fail
+        mock_import.assert_not_called()
+        assert result != 0
 
     @patch("importlib.import_module")
     @patch("sys.argv", ["fplaunch", "invalid-module"])

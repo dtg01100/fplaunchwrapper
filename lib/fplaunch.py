@@ -13,16 +13,24 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
 def main():
     """Main entry point."""
     try:
-        from .cli import cli
+        from . import cli
 
-        return cli()
-    except ImportError:
+        # Call main if it exists (it should)
+        if hasattr(cli, 'main'):
+            return cli.main()
+        else:
+            # Fallback - shouldn't happen
+            return 1
+    except (ImportError, AttributeError):
         try:
             # Fallback for when running as installed package
-            from fplaunch.cli import cli
+            from fplaunch import cli
 
-            return cli()
-        except ImportError:
+            if hasattr(cli, 'main'):
+                return cli.main()
+            else:
+                return 1
+        except (ImportError, AttributeError):
             return 1
 
 

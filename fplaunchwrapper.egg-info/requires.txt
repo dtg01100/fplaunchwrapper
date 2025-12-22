@@ -15,6 +15,7 @@ fplaunchwrapper[advanced,dev,integration,robustness,security]
 pytest>=7.0.0
 pytest-cov>=4.0.0
 pytest-mock>=3.10.0
+pytest-timeout>=2.2.0
 ruff>=0.14.0
 black>=23.0.0
 flake8>=6.0.0

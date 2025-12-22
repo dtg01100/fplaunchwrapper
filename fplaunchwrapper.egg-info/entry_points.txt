@@ -1,5 +1,5 @@
 [console_scripts]
-fplaunch = fplaunch:main
+fplaunch = fplaunch.fplaunch:main
 fplaunch-cleanup = fplaunch.cleanup:main
 fplaunch-cli = fplaunch.cli:main
 fplaunch-config = fplaunch.config_manager:main

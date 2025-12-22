@@ -62,7 +62,8 @@ def canonicalize_path_no_resolve(path):
         # Collapse '.' and '..' without resolving symlinks
         return os.path.normpath(path)
 
-    except Exception:
+    except (TypeError, ValueError, OSError) as e:
+        # Handle specific path-related exceptions
         return None
 
 
@@ -86,7 +87,8 @@ def validate_home_dir(dir_path):
             return abs_dir
 
         return None
-    except Exception:
+    except (TypeError, ValueError, OSError) as e:
+        # Handle specific path-related exceptions
         return None
 
 
@@ -132,7 +134,8 @@ def is_wrapper_file(file_path) -> bool | None:
         # Validate ID format
         id_value = re.search(r'ID="([^"]*)"', id_match.group())
         return not (not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1)))
-    except Exception:
+    except (IOError, OSError, UnicodeDecodeError, re.error) as e:
+        # Handle specific file and regex exceptions
         return False
 
 
@@ -154,7 +157,8 @@ def get_wrapper_id(file_path):
             return comment_match.group(1)
 
         return None
-    except Exception:
+    except (IOError, OSError, UnicodeDecodeError, re.error) as e:
+        # Handle specific file and regex exceptions
         return None
 
 
@@ -192,8 +196,12 @@ def sanitize_id_to_name(id_str):
         # Limit length
         return name[:100]
 
-    except Exception:
-        return f"app-{hashlib.sha256(id_str.encode()).hexdigest()[:8]}"
+    except (TypeError, AttributeError, UnicodeDecodeError, re.error) as e:
+        # Handle specific string processing exceptions
+        try:
+            return f"app-{hashlib.sha256(id_str.encode('utf-8')).hexdigest()[:8]}"
+        except Exception:
+            return "app-fallback"
 
 
 def find_executable(cmd):
@@ -214,7 +222,8 @@ def find_executable(cmd):
                 return os.path.abspath(exe_path)
 
         return None
-    except Exception:
+    except (TypeError, OSError, AttributeError) as e:
+        # Handle specific file system exceptions
         return None
 
 
@@ -246,7 +255,8 @@ def safe_mktemp(template="tmp.XXXXXX", dir_param=None):
         )
         os.close(fd)
         return path
-    except Exception:
+    except (IOError, OSError, ValueError) as e:
+        # Handle specific file system and template exceptions
         return None
 
 
@@ -285,7 +295,8 @@ def acquire_lock(lock_name="fplaunch", timeout_seconds=30) -> bool | None:
 
         return False  # Timeout
 
-    except Exception:
+    except (IOError, OSError, PermissionError, RuntimeError) as e:
+        # Handle specific file system and permission exceptions
         return False
 
 
@@ -314,7 +325,8 @@ def release_lock(lock_name="fplaunch") -> bool | None:
 
         return False
 
-    except Exception:
+    except (IOError, OSError, PermissionError) as e:
+        # Handle specific file system and permission exceptions
         return False
 
 

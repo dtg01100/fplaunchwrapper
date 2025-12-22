@@ -67,14 +67,23 @@ class EnhancedConfigManager:
 
     def __init__(self, app_name="fplaunchwrapper") -> None:
         self.app_name = app_name
-        self.config_dir = Path(user_config_dir(app_name))
-        self.data_dir = Path(user_data_dir(app_name))
+        # Resolve config/data directories using XDG variables with Path.home fallback
+        xdg_config_home = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
+        xdg_data_home = os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
+        self.config_dir = Path(xdg_config_home) / app_name
+        self.data_dir = Path(xdg_data_home) / app_name
         self.config_file = self.config_dir / "config.toml"
         self.config = WrapperConfig()
 
-        # Ensure directories exist
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-        self.data_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure directories exist (best-effort; ignore read-only errors)
+        try:
+            self.config_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
+        try:
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
 
         # Load configuration
         self.load_config()
@@ -182,6 +191,16 @@ class EnhancedConfigManager:
         self.config.bin_dir = os.path.expanduser("~/bin")
         self.config.config_dir = str(self.config_dir)
         self.config.data_dir = str(self.data_dir)
+        self.config.debug_mode = False
+        self.config.log_level = "INFO"
+        self.config.blocklist = []
+
+    # Additional API used by tests
+    def reset_to_defaults(self) -> None:
+        """Reset configuration values back to defaults."""
+        self._create_default_config()
+        # Also persist defaults
+        self.save_config()
 
     def _load_fallback_config(self) -> None:
         """Fallback config loading for systems without TOML support."""

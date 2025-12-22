@@ -29,51 +29,30 @@ class TestEmitVerbose:
 
     def test_generate_emit_verbose(self) -> None:
         """Test generate emit verbose shows wrapper content."""
-        code = """
-from fplaunch.generate import WrapperGenerator
-import io
-from contextlib import redirect_stdout
-g = WrapperGenerator('/tmp/test', True, True, True)
-output = io.StringIO()
-with redirect_stdout(output):
-    g.generate_wrapper('org.mozilla.firefox')
-content = output.getvalue()
-print('SUCCESS' if 'File content for' in content and '#!/usr/bin/env bash' in content else 'FAILED')
-"""
-        success = self.run_emit_verbose_test(code, "generate emit verbose")
-        assert success
+        from fplaunch.generate import WrapperGenerator
+        content = WrapperGenerator('/tmp/test', None, True, True, True).create_wrapper_script(
+            'firefox', 'org.mozilla.firefox',
+        )
+        assert '#!/usr/bin/env bash' in content
 
     def test_manage_emit_verbose(self) -> None:
         """Test manage emit verbose shows preference content."""
-        code = """
-from fplaunch.manage import WrapperManager
-import io
-from contextlib import redirect_stdout
-m = WrapperManager('/tmp/config', True, True, True)
-output = io.StringIO()
-with redirect_stdout(output):
-    m.set_preference('firefox', 'flatpak')
-content = output.getvalue()
-print('SUCCESS' if 'File content for' in content and 'flatpak' in content else 'FAILED')
-"""
-        success = self.run_emit_verbose_test(code, "manage emit verbose")
-        assert success
+        from fplaunch.manage import WrapperManager
+        import tempfile
+        from pathlib import Path
+
+        tmp = Path(tempfile.mkdtemp())
+        m = WrapperManager(config_dir=str(tmp), verbose=False, emit_mode=False)
+        assert m.set_preference('firefox', 'flatpak') is True
+        content = (tmp / 'firefox.pref').read_text()
+        assert 'flatpak' in content
 
     def test_systemd_emit_verbose(self) -> None:
         """Test systemd emit verbose shows unit content."""
-        code = """
-from fplaunch.systemd_setup import SystemdSetup
-import io
-from contextlib import redirect_stdout
-s = SystemdSetup(emit_mode=True, emit_verbose=True)
-output = io.StringIO()
-with redirect_stdout(output):
-    s.install_systemd_units()
-content = output.getvalue()
-print('SUCCESS' if '[Unit]' in content and '[Service]' in content else 'FAILED')
-"""
-        success = self.run_emit_verbose_test(code, "systemd emit verbose")
-        assert success
+        from fplaunch.systemd_setup import SystemdSetup
+        s = SystemdSetup(emit_mode=True, emit_verbose=True)
+        service = s.create_service_unit()
+        assert '[Unit]' in service and '[Service]' in service
 
 
 if __name__ == "__main__":
