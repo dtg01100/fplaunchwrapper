@@ -31,7 +31,7 @@ class TestMainEntryPoint:
         self.mock_flatpak_monitor = Mock()
 
     @patch("sys.argv", ["fplaunch", "--help"])
-    @patch("fplaunch.cli.main")
+    @patch("lib.cli.main")
     def test_main_entry_help(self, mock_cli_main) -> None:
         """Test main entry point with help flag."""
         if not fplaunch:
@@ -130,7 +130,7 @@ class TestMainEntryPoint:
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "config"])
-    @patch("fplaunch.config_manager.main")
+    @patch("lib.config_manager.main")
     def test_main_entry_config(self, mock_config_main) -> None:
         """Test main entry point routes to config manager."""
         if not fplaunch:
@@ -146,7 +146,7 @@ class TestMainEntryPoint:
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "monitor"])
-    @patch("fplaunch.flatpak_monitor.main")
+    @patch("lib.flatpak_monitor.main")
     def test_main_entry_monitor(self, mock_monitor_main) -> None:
         """Test main entry point routes to monitor."""
         if not fplaunch:

@@ -48,7 +48,7 @@ class TestFlatpakMonitor:
         assert hasattr(monitor, "bin_dir")
         assert hasattr(monitor, "observer")
 
-    @patch("fplaunch.flatpak_monitor.Observer")
+    @patch("lib.flatpak_monitor.Observer")
     def test_monitor_start_stop(self, mock_observer_class) -> None:
         """Test monitor start and stop functionality."""
         if not FlatpakMonitor:
@@ -80,8 +80,8 @@ class TestFlatpakMonitor:
         mock_observer.stop.assert_called_once()
         mock_observer.join.assert_called_once()
 
-    @patch("fplaunch.flatpak_monitor.os.path.exists")
-    @patch("fplaunch.flatpak_monitor.Observer")
+    @patch("lib.flatpak_monitor.os.path.exists")
+    @patch("lib.flatpak_monitor.Observer")
     def test_monitor_directory_detection(
         self, mock_observer_class, mock_exists
     ) -> None:
@@ -189,7 +189,7 @@ class TestFlatpakMonitor:
         callback.assert_not_called()
 
     @patch("time.sleep")
-    @patch("fplaunch.flatpak_monitor.Observer")
+    @patch("lib.flatpak_monitor.Observer")
     def test_monitor_daemon_mode(self, mock_observer_class, mock_sleep) -> None:
         """Test monitor in daemon mode."""
         if not start_flatpak_monitoring:
@@ -211,7 +211,7 @@ class TestFlatpakMonitor:
         # Should have started observer
         mock_observer.start.assert_called_once()
 
-    @patch("fplaunch.flatpak_monitor.Observer")
+    @patch("lib.flatpak_monitor.Observer")
     def test_monitor_error_handling(self, mock_observer_class) -> None:
         """Test error handling in monitor."""
         if not FlatpakMonitor:
@@ -233,7 +233,7 @@ class TestFlatpakMonitor:
         # Verify observer was attempted to be created and started
         assert mock_observer.start.called
 
-    @patch("fplaunch.flatpak_monitor.Observer")
+    @patch("lib.flatpak_monitor.Observer")
     def test_monitor_reconnection_logic(self, mock_observer_class) -> None:
         """Test monitor reconnection after disconnection."""
         if not FlatpakMonitor:
@@ -268,8 +268,8 @@ class TestFlatpakMonitor:
         monitor_none = FlatpakMonitor(callback=None, bin_dir=str(self.temp_dir / "bin"))
         assert monitor_none.callback is None
 
-    @patch("fplaunch.flatpak_monitor.os.path.exists")
-    @patch("fplaunch.flatpak_monitor.Observer")
+    @patch("lib.flatpak_monitor.os.path.exists")
+    @patch("lib.flatpak_monitor.Observer")
     def test_monitor_path_validation(self, mock_observer_class, mock_exists) -> None:
         """Test monitor path validation."""
         if not FlatpakMonitor:
@@ -292,7 +292,7 @@ class TestFlatpakMonitor:
 
         monitor.stop()
 
-    @patch("fplaunch.flatpak_monitor.Observer")
+    @patch("lib.flatpak_monitor.Observer")
     def test_monitor_cleanup_on_stop(self, mock_observer_class) -> None:
         """Test proper cleanup when monitor stops."""
         if not FlatpakMonitor:
@@ -311,7 +311,7 @@ class TestFlatpakMonitor:
         mock_observer.stop.assert_called_once()
         mock_observer.join.assert_called_once()
 
-    @patch("fplaunch.flatpak_monitor.Observer")
+    @patch("lib.flatpak_monitor.Observer")
     @patch("time.sleep")
     def test_monitor_event_debouncing(self, mock_sleep, mock_observer_class) -> None:
         """Test that monitor debounces rapid events."""
@@ -388,7 +388,7 @@ class TestFlatpakMonitorIntegration:
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("subprocess.run")
-    @patch("fplaunch.flatpak_monitor.Observer")
+    @patch("lib.flatpak_monitor.Observer")
     def test_monitor_with_generate_integration(
         self,
         mock_observer_class,

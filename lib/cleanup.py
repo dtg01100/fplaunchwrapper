@@ -569,9 +569,19 @@ class WrapperCleanup:
         return True
 
     def cleanup_app(self, app_id: str) -> bool:
-        """Simulate cleanup app for testing."""
-        self.log(f"Simulating cleanup of {app_id}")
-        return True
+        """Clean up a specific app wrapper."""
+        wrapper_path = self.bin_dir / app_id
+        if wrapper_path.exists():
+            try:
+                wrapper_path.unlink()
+                self.log(f"Removed wrapper: {app_id}")
+                return True
+            except Exception as e:
+                self.log(f"Failed to remove wrapper {app_id}: {e}")
+                return False
+        else:
+            self.log(f"Wrapper not found: {app_id}")
+            return True
 
 
 def main() -> int:

@@ -17,9 +17,17 @@ def is_test_environment() -> bool:
         return True
     
     # Check if we're being imported by pytest or unittest
-    if any("pytest" in module for module in sys.modules):
+    if "pytest" in sys.modules:
         return True
-    if any("unittest" in module for module in sys.modules):
+    if "unittest" in sys.modules:
+        return True
+    
+    # Check for pytest-specific environment variables
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return True
+    
+    # Check for other pytest environment variables
+    if any(key.startswith("PYTEST_") for key in os.environ):
         return True
     
     return False
