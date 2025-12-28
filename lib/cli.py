@@ -189,12 +189,13 @@ if CLICK_AVAILABLE:
             )
             return generator.run()
         except ImportError as e:
-            if console:
-                console.print(
+            if console_err:
+                console_err.print(
                     f"[red]Error:[/red] Failed to import wrapper generator: {e}",
                 )
             else:
-                pass
+                import sys
+                print(f"Error: Failed to import wrapper generator: {e}", file=sys.stderr)
             return 1
 
     @cli.command()

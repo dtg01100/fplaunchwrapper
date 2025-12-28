@@ -36,6 +36,7 @@ except ImportError:
     UTILS_AVAILABLE = False
 
 console = Console() if RICH_AVAILABLE else None
+console_err = Console(stderr=True) if RICH_AVAILABLE else None
 
 
 class WrapperGenerator:
@@ -70,19 +71,28 @@ class WrapperGenerator:
             (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
 
     def log(self, message: str, level: str = "info") -> None:
-        """Log a message."""
-        if self.verbose or level in ["error", "warning"]:
-            if console:
-                if level == "error":
-                    console.print(f"[red]ERROR:[/red] {message}")
-                elif level == "warning":
-                    console.print(f"[yellow]WARN:[/yellow] {message}")
-                elif level == "success":
-                    console.print(f"[green]✓[/green] {message}")
-                else:
-                    console.print(message)
+        """Log a message to appropriate stream."""
+        if level == "error":
+            if console_err:
+                console_err.print(f"[red]ERROR:[/red] {message}")
             else:
-                pass
+                print(f"ERROR: {message}", file=sys.stderr)
+        elif level == "warning":
+            if console_err:
+                console_err.print(f"[yellow]WARN:[/yellow] {message}")
+            else:
+                print(f"WARN: {message}", file=sys.stderr)
+        elif level == "success":
+            if console:
+                console.print(f"[green]✓[/green] {message}")
+            else:
+                print(f"✓ {message}")
+        else:
+            # info messages
+            if console:
+                console.print(message)
+            else:
+                print(message)
 
     def run_command(
         self, cmd: list[str], description: str = "",
