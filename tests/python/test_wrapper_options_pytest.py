@@ -410,6 +410,33 @@ class TestWrapperOptions:
         assert pref_file.exists()
         assert pref_file.read_text().strip() == "system"
 
+    @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
+    def test_set_preference_alias(self, temp_env) -> None:
+        """Test --fpwrapper-set-preference alias for override."""
+        generator = WrapperGenerator(
+            bin_dir=str(temp_env["bin_dir"]),
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        with patch.object(
+            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+        ):
+            assert generator.generate_wrapper("org.mozilla.firefox") is True
+
+        wrapper_path = temp_env["bin_dir"] / "firefox"
+
+        cmd = [str(wrapper_path), "--fpwrapper-set-preference", "flatpak"]
+        result = subprocess.run(
+            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+        )
+
+        assert result.returncode == 0
+        pref_file = temp_env["config_dir"] / "firefox.pref"
+        assert pref_file.exists()
+        assert pref_file.read_text().strip() == "flatpak"
+
     def test_script_management_options(self, temp_env) -> None:
         """Test script management options - replaces Test 10."""
         # Create wrapper manually for this test

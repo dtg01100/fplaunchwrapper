@@ -239,7 +239,7 @@ firefox --fpwrapper-force-interactive --help
 
 ## Related Commands
 
-- `fplaunch-manage`: Manage wrapper preferences and settings
+- `fplaunch-manage`: Manage wrapper preferences and settings (aliases: `search`→`discover`, `rm`→`remove`)
 - `fplaunch-generate`: Regenerate all wrappers
 - `fplaunch-setup-systemd`: Enable automatic updates
 - `fplaunch-cleanup`: Remove all wrappers and configuration

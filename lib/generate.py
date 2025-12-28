@@ -55,6 +55,12 @@ class WrapperGenerator:
             verbose, emit_mode, emit_verbose = config_dir, verbose, emit_mode
             config_dir = None
 
+        # Validate inputs to avoid creating unexpected artifact paths (e.g., MagicMock reprs)
+        if not isinstance(bin_dir, (str, os.PathLike)):
+            raise TypeError("bin_dir must be a string or path-like object")
+        if config_dir is not None and not isinstance(config_dir, (str, os.PathLike, bool)):
+            raise TypeError("config_dir must be a string or path-like object or None")
+
         self.bin_dir = Path(bin_dir).expanduser().resolve()
         self.verbose = verbose
         self.emit_mode = emit_mode
@@ -471,6 +477,7 @@ if [ "$1" = "--fpwrapper-help" ]; then
     echo "  --fpwrapper-sandbox-reset Reset sandbox to defaults"
     echo "  --fpwrapper-run-unrestricted Run with unrestricted permissions"
     echo "  --fpwrapper-set-override [system|flatpak] Set launch preference"
+    echo "  --fpwrapper-set-preference [system|flatpak] Alias for --fpwrapper-set-override"
     echo "  --fpwrapper-launch [system|flatpak] Launch once without saving"
     echo "  --fpwrapper-set-pre-script <script> Set pre-launch script"
     echo "  --fpwrapper-set-post-script <script> Set post-run script"
@@ -506,8 +513,8 @@ if [ "$1" = "--fpwrapper-sandbox-info" ]; then
     exit 0
 fi
 
-# Set override
-if [ "$1" = "--fpwrapper-set-override" ]; then
+# Set override (allow alias for preference)
+if [ "$1" = "--fpwrapper-set-override" ] || [ "$1" = "--fpwrapper-set-preference" ]; then
     if [ -z "$2" ]; then
         echo "Usage: $0 --fpwrapper-set-override [system|flatpak]" >&2
         exit 1

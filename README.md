@@ -119,7 +119,7 @@ When run from scripts, desktop files, or IDEs:
 fplaunch-cli generate [DIR]     # Generate wrapper scripts
 fplaunch-cli list              # List all wrappers
 fplaunch-cli set-pref APP PREF # Set launch preference (system/flatpak)
-fplaunch-cli remove APP        # Remove a wrapper
+fplaunch-cli remove APP        # Remove a wrapper (alias: rm)
 fplaunch-cli launch APP        # Launch an application
 fplaunch-cli monitor           # Start real-time monitoring daemon
 fplaunch-cli config            # Show current configuration
@@ -735,7 +735,7 @@ fplaunch-setup-systemd
 - YOLO mode: `chrome --fpwrapper-sandbox-yolo` to grant all permissions (use with caution).
 - Set override: `chrome --fpwrapper-set-override [system|flatpak]` to force preference (prompts if not specified).
 - Env vars: Set transient env vars via `fplaunch-manage set-env` (for permanent, use `flatpak override <app> --env=VAR=value`).
-- Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`, `fplaunch-manage search <keyword>`, `fplaunch-manage info <name>`.
+- Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`, `fplaunch-manage search <keyword>`, `fplaunch-manage info <name>`. (`search` is a silent alias for `discover`.)
 - Search: `fplaunch-manage search <keyword>` to find wrappers by name, ID, or description.
 - Install: `fplaunch-manage install <app>` to install a Flatpak and create wrapper.
 - Launch: `fplaunch-manage launch <name>` to launch a wrapper.

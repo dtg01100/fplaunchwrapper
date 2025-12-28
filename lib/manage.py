@@ -813,7 +813,16 @@ def main() -> int | None:
 
     parser.add_argument(
         "command",
-        choices=["list", "remove", "set-pref", "info", "discover", "cleanup"],
+        choices=[
+            "list",
+            "remove",
+            "rm",
+            "set-pref",
+            "info",
+            "discover",
+            "search",
+            "cleanup",
+        ],
         help="Command to execute",
     )
 
@@ -845,17 +854,23 @@ def main() -> int | None:
 
     manager = WrapperManager(args.config_dir, args.verbose, args.emit)
 
+    command = args.command
+    if command == "search":
+        command = "discover"
+    elif command == "rm":
+        command = "remove"
+
     try:
-        if args.command == "list":
+        if command == "list":
             manager.display_wrappers()
 
-        elif args.command == "remove":
+        elif command == "remove":
             if not args.args:
                 parser.error("remove requires a wrapper name")
             success = manager.remove_wrapper(args.args[0], args.force)
             return 0 if success else 1
 
-        elif args.command == "set-pref":
+        elif command == "set-pref":
             if len(args.args) != 2:
                 parser.error(
                     "set-pref requires wrapper name and preference (system|flatpak)",
@@ -863,16 +878,16 @@ def main() -> int | None:
             success = manager.set_preference(args.args[0], args.args[1])
             return 0 if success else 1
 
-        elif args.command == "info":
+        elif command == "info":
             if not args.args:
                 parser.error("info requires a wrapper name")
             success = manager.show_info(args.args[0])
             return 0 if success else 1
 
-        elif args.command == "discover":
+        elif command == "discover":
             manager.discover_features()
 
-        elif args.command == "cleanup":
+        elif command == "cleanup":
             removed_count = manager.cleanup_obsolete()
             manager.log(f"Cleaned up {removed_count} obsolete wrappers")
 
