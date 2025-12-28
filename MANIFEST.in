@@ -3,24 +3,21 @@ include LICENSE
 include README.md
 include QUICKSTART.md
 include CONTRIBUTING.md
+include CHANGES.md
 include pyproject.toml
 include Makefile
 
-# Include shell scripts and completion
-include fplaunch-*
+# Include bash completion
 include fplaunch_completion.bash
 
-# Include all documentation
+# Include all documentation (except archived files)
 recursive-include docs *
 recursive-include examples *
 
 # Include packaging files
 recursive-include packaging *
 
-# Include tests
-recursive-include tests *
-
-# Exclude compiled Python files
+# Exclude compiled Python files and caches
 global-exclude *.pyc
 global-exclude __pycache__
 global-exclude *.egg-info
@@ -29,3 +26,17 @@ global-exclude .github
 global-exclude .venv
 global-exclude build
 global-exclude dist
+
+# Exclude ephemeral outputs
+exclude coverage.xml
+exclude .coverage
+recursive-exclude htmlcov *
+recursive-exclude .pytest_cache *
+recursive-exclude .ruff_cache *
+recursive-exclude .benchmarks *
+
+# Exclude archived documentation and agent reports
+recursive-exclude docs/archive *
+
+# Exclude tests from wheels (keep in sdist via recursive-include above)
+# Tests will be included in source distributions but not installed

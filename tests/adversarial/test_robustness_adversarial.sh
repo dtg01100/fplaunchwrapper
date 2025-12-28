@@ -44,6 +44,7 @@ PASSED=0
 FAILED=0
 WEIRD_CASES_HANDLED=0
 ROBUSTNESS_ISSUES=0
+TEST_HOME=""
 
 pass() {
     echo -e "${GREEN}✓${NC} $1"
@@ -176,6 +177,8 @@ EOF
     
     # Create weird log
     touch "$test_home/weird-log.txt"
+
+    TEST_HOME="$test_home"
     
     echo "$test_home"
 }
@@ -191,6 +194,8 @@ cleanup_weird_env() {
     fi
     rm -rf "$test_home"
 }
+
+trap '[[ -n "${TEST_HOME:-}" ]] && cleanup_weird_env "$TEST_HOME"' EXIT INT TERM ERR
 
 # WEIRD SETUP 1: No HOME directory
 test_no_home_directory() {
@@ -766,6 +771,7 @@ main() {
     
     # Cleanup
     cleanup_weird_env "$test_home"
+    TEST_HOME=""
     
     # Results
     echo ""

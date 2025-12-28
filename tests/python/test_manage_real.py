@@ -270,7 +270,7 @@ flatpak run "$ID" "$@"
             bin_dir=str(self.bin_dir),
         )
 
-        result = mgr.set_preference("firefox", "invalid")
+        result = mgr.set_preference("firefox", "invalid value!")
 
         assert result is False
 

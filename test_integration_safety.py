@@ -10,13 +10,54 @@ import os
 import tempfile
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch, Mock
 import time
 
 
-def test_integration_safety():
+def _build_safe_env(isolated_home=None):
+    """Return paths for a safe test environment and a cleanup callback."""
+    if isolated_home is not None:
+        return isolated_home, (lambda: None)
+
+    base_dir = Path(tempfile.mkdtemp(prefix="fp_safe_"))
+    config_dir = base_dir / ".config" / "fplaunchwrapper"
+    data_dir = base_dir / ".local" / "share" / "fplaunchwrapper"
+    cache_dir = base_dir / ".cache" / "fplaunchwrapper"
+    bin_dir = base_dir / "bin"
+
+    for path in (config_dir, data_dir, cache_dir, bin_dir):
+        path.mkdir(parents=True, exist_ok=True)
+
+    old_env = {key: os.environ.get(key) for key in ("HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME")}
+    os.environ["HOME"] = str(base_dir)
+    os.environ["XDG_CONFIG_HOME"] = str(config_dir.parent)
+    os.environ["XDG_DATA_HOME"] = str(data_dir.parent)
+    os.environ["XDG_CACHE_HOME"] = str(cache_dir.parent)
+
+    def cleanup():
+        for key, value in old_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        shutil.rmtree(base_dir, ignore_errors=True)
+
+    env = SimpleNamespace(
+        home=base_dir,
+        config_dir=config_dir,
+        data_dir=data_dir,
+        cache_dir=cache_dir,
+        bin_dir=bin_dir,
+    )
+    return env, cleanup
+
+
+def test_integration_safety(isolated_home=None):
     """Test that integration tests are completely safe and isolated"""
     print("🛡️  Testing Integration Test Safety...")
+
+    env, cleanup = _build_safe_env(isolated_home)
 
     # Simple safety check - just verify we can import and basic functionality works
     try:
@@ -33,19 +74,20 @@ def test_integration_safety():
 
             # Test that classes can be created safely
             generator = WrapperGenerator(
-                "/tmp/safe_test", verbose=False, emit_mode=True
+                str(env.bin_dir),
+                config_dir=str(env.config_dir),
+                verbose=False,
+                emit_mode=True,
             )
             manager = WrapperManager(
-                config_dir="/tmp/safe_test", verbose=False, emit_mode=True
+                config_dir=str(env.config_dir), verbose=False, emit_mode=True
             )
-            cleaner = WrapperCleanup(bin_dir="/tmp/safe_test", dry_run=True)
-            launcher = AppLauncher(config_dir="/tmp/safe_test")
-
-            # Test that methods can be called (should be safe due to mocking)
-            result1 = generator.generate_wrapper("safe.test.app")
-            result2 = manager.set_preference("safe_app", "flatpak")
-            result3 = cleaner.perform_cleanup()
-            result4 = launcher.launch_app("safe.test.app")
+            cleaner = WrapperCleanup(
+                bin_dir=str(env.bin_dir), config_dir=str(env.config_dir), dry_run=True
+            )
+            launcher = AppLauncher(
+                config_dir=str(env.config_dir), bin_dir=str(env.bin_dir)
+            )
 
             # Just verify methods are callable - actual results may vary due to mocking
             assert callable(generator.generate_wrapper)
@@ -53,16 +95,16 @@ def test_integration_safety():
             assert callable(cleaner.perform_cleanup)
             assert callable(launcher.launch_app)
 
+            # Exercise methods under mocks to ensure no exceptions
+            generator.generate_wrapper("safe.test.app")
+            manager.set_preference("safe_app", "flatpak")
+            cleaner.perform_cleanup()
+            launcher.launch_app("safe.test.app")
+
             print("✅ Basic safety validation passed")
 
-    except Exception as e:
-        print(f"❌ Integration test safety check failed: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return False
-
-    return True
+    finally:
+        cleanup()
 
 
 def test_mock_completeness():
@@ -87,45 +129,37 @@ def test_mock_completeness():
     # any unmocked dangerous operations
 
     print("✅ Mock completeness validation complete")
-    return True
 
 
 def test_isolation_fixtures():
     """Test that our isolation fixtures work correctly"""
     print("🔒 Testing Isolation Fixtures...")
 
-    try:
-        # Test basic tempfile isolation
-        with tempfile.TemporaryDirectory(prefix="fp_isolation_test_") as temp_dir:
-            temp_path = Path(temp_dir)
+    # Test basic tempfile isolation
+    with tempfile.TemporaryDirectory(prefix="fp_isolation_test_") as temp_dir:
+        temp_path = Path(temp_dir)
 
-            # Create directory structure
-            bin_dir = temp_path / "bin"
-            config_dir = temp_path / "config"
-            bin_dir.mkdir(parents=True, exist_ok=True)
-            config_dir.mkdir(parents=True, exist_ok=True)
+        # Create directory structure
+        bin_dir = temp_path / "bin"
+        config_dir = temp_path / "config"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        config_dir.mkdir(parents=True, exist_ok=True)
 
-            # Verify structure exists
-            assert temp_path.exists()
-            assert bin_dir.exists()
-            assert config_dir.exists()
+        # Verify structure exists
+        assert temp_path.exists()
+        assert bin_dir.exists()
+        assert config_dir.exists()
 
-            # Create some test files
-            test_file = bin_dir / "test_wrapper"
-            test_file.write_text("#!/bin/bash\necho test")
+        # Create some test files
+        test_file = bin_dir / "test_wrapper"
+        test_file.write_text("#!/bin/bash\necho test")
 
-            assert test_file.exists()
+        assert test_file.exists()
 
-        # After context manager, temp directory should be gone
-        assert not temp_path.exists(), "Temp directory should be cleaned up"
+    # After context manager, temp directory should be gone
+    assert not temp_path.exists(), "Temp directory should be cleaned up"
 
-        print("✅ Isolation fixtures work correctly")
-
-    except Exception as e:
-        print(f"❌ Isolation fixture test failed: {e}")
-        return False
-
-    return True
+    print("✅ Isolation fixtures work correctly")
 
 
 def main():
@@ -145,11 +179,12 @@ def main():
     for name, test_func in tests:
         print(f"\n🔍 {name}")
         try:
-            if test_func():
+            result = test_func()
+            if result is False:
+                print(f"❌ {name}: FAILED")
+            else:
                 passed += 1
                 print(f"✅ {name}: PASSED")
-            else:
-                print(f"❌ {name}: FAILED")
         except Exception as e:
             print(f"❌ {name}: ERROR - {e}")
 

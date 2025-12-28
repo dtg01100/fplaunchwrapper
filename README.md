@@ -762,6 +762,57 @@ fplaunch-setup-systemd
 - `uninstall.sh`: Manual uninstallation script (for source installs).
 - Bash completion: Automatically configured for all commands.
 
+## Bash Completion
+
+fplaunchwrapper includes Bash completion support for all commands, subcommands, and wrapper names.
+
+### Installation
+
+When using `pip` or `uv tool install`, the completion script is included but must be manually sourced:
+
+```bash
+# Find the completion script location
+COMPLETION_FILE=$(python3 -c "import fplaunch; import os; print(os.path.join(os.path.dirname(fplaunch.__file__), '..', 'fplaunch_completion.bash'))")
+
+# Source in your current shell
+source "$COMPLETION_FILE"
+
+# Add to your ~/.bashrc for permanent activation
+echo "source '$COMPLETION_FILE'" >> ~/.bashrc
+```
+
+When using package managers (`.rpm`, `.deb`) or `install.sh`, completion is automatically configured.
+
+### Usage
+
+Once activated, you can use tab completion with all fplaunchwrapper commands:
+
+```bash
+# Complete command names
+fplaunch-<TAB>
+
+# Complete subcommands
+fplaunch-manage <TAB>
+
+# Complete wrapper names
+fplaunch-manage info <TAB>
+```
+
+### Manual Installation
+
+If automatic installation fails, you can manually install the completion script:
+
+```bash
+# User-level installation (recommended)
+mkdir -p ~/.local/share/bash-completion/completions/
+cp fplaunch_completion.bash ~/.local/share/bash-completion/completions/
+
+# System-wide installation (requires sudo)
+sudo cp fplaunch_completion.bash /usr/share/bash-completion/completions/
+```
+
+Then reload your shell or run `source ~/.bashrc`.
+
 ## Requirements
 
 - **Required:** Bash, Flatpak

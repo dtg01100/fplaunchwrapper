@@ -5,7 +5,11 @@ Simple Performance Testing for fplaunchwrapper - Safe and Isolated
 
 import sys
 import time
+import tempfile
+import shutil
+import os
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch, Mock
 import statistics
 
@@ -18,6 +22,44 @@ try:
     MODULES_AVAILABLE = True
 except ImportError:
     MODULES_AVAILABLE = False
+
+
+def _build_perf_env(isolated_home=None):
+    """Provide a throwaway environment for performance tests."""
+    if isolated_home is not None:
+        return isolated_home, (lambda: None)
+
+    base_dir = Path(tempfile.mkdtemp(prefix="fp_perf_"))
+    config_dir = base_dir / ".config" / "fplaunchwrapper"
+    data_dir = base_dir / ".local" / "share" / "fplaunchwrapper"
+    cache_dir = base_dir / ".cache" / "fplaunchwrapper"
+    bin_dir = base_dir / "bin"
+
+    for path in (config_dir, data_dir, cache_dir, bin_dir):
+        path.mkdir(parents=True, exist_ok=True)
+
+    old_env = {key: os.environ.get(key) for key in ("HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME")}
+    os.environ["HOME"] = str(base_dir)
+    os.environ["XDG_CONFIG_HOME"] = str(config_dir.parent)
+    os.environ["XDG_DATA_HOME"] = str(data_dir.parent)
+    os.environ["XDG_CACHE_HOME"] = str(cache_dir.parent)
+
+    def cleanup():
+        for key, value in old_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        shutil.rmtree(base_dir, ignore_errors=True)
+
+    env = SimpleNamespace(
+        home=base_dir,
+        config_dir=config_dir,
+        data_dir=data_dir,
+        cache_dir=cache_dir,
+        bin_dir=bin_dir,
+    )
+    return env, cleanup
 
 
 def benchmark_operation(name, operation_func, iterations=5):
@@ -43,10 +85,12 @@ def benchmark_operation(name, operation_func, iterations=5):
     return {"avg_time": avg_time, "std_time": std_time}
 
 
-def run_performance_tests():
+def run_performance_tests(isolated_home=None):
     """Run safe performance tests"""
     print("FLAUNCHWRAPPER PERFORMANCE TESTS")
     print("=" * 40)
+
+    env, cleanup = _build_perf_env(isolated_home)
 
     if not MODULES_AVAILABLE:
         print("Required modules not available")
@@ -61,7 +105,10 @@ def run_performance_tests():
         ):
             mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
             generator = WrapperGenerator(
-                bin_dir=f"/tmp/test_{i}", verbose=False, emit_mode=True
+                bin_dir=str(env.bin_dir / f"test_{i}"),
+                config_dir=str(env.config_dir),
+                verbose=False,
+                emit_mode=True,
             )
             return generator.generate_wrapper(f"org.test.app{i}")
 
@@ -71,14 +118,14 @@ def run_performance_tests():
     def manager_test(i):
         with patch("subprocess.run") as mock_run, patch(
             "os.path.exists", return_value=True
-        ), patch("pathlib.Path.home", return_value=Path("/tmp")), patch(
+        ), patch("pathlib.Path.home", return_value=env.home), patch(
             "pathlib.Path.exists", return_value=True
-        ), patch("pathlib.Path.read_text", return_value="/tmp/bin"), patch(
+        ), patch("pathlib.Path.read_text", return_value=str(env.bin_dir)), patch(
             "pathlib.Path.is_file", return_value=True
         ):
             mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
             manager = WrapperManager(
-                config_dir=f"/tmp/test_{i}", verbose=False, emit_mode=True
+                config_dir=str(env.config_dir), verbose=False, emit_mode=True
             )
             manager.set_preference(f"app_{i}", "flatpak")
             return manager.get_preference(f"app_{i}")
@@ -93,6 +140,7 @@ def run_performance_tests():
         status = "FAST" if avg_time < 50 else "SLOW" if avg_time > 200 else "OK"
         print(f"{test_name}: {avg_time:.1f}ms ({status})")
 
+    cleanup()
     return results
 
 

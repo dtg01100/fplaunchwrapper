@@ -43,6 +43,7 @@ PASSED=0
 FAILED=0
 ATTACKS_BLOCKED=0
 VULNERABILITIES_FOUND=0
+TEST_HOME=""
 
 pass() {
     echo -e "${GREEN}✓${NC} $1"
@@ -245,6 +246,8 @@ EOF
     
     # Create attack log
     touch "$test_home/attack-log.txt"
+
+    TEST_HOME="$test_home"
     
     echo "$test_home"
 }
@@ -260,6 +263,7 @@ cleanup_adversarial_env() {
     fi
     rm -rf "$test_home"
 }
+trap '[[ -n "${TEST_HOME:-}" ]] && cleanup_adversarial_env "$TEST_HOME"' EXIT INT TERM ERR
 
 # ATTACK 1: Malicious package installation
 test_malicious_package_installation() {
@@ -573,6 +577,7 @@ main() {
     
     # Cleanup
     cleanup_adversarial_env "$test_home"
+    TEST_HOME=""
     
     # Results
     echo ""

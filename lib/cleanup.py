@@ -46,6 +46,7 @@ class WrapperCleanup:
         data_dir: str | None = None,
         dry_run: bool = False,
         assume_yes: bool = False,
+        verbose: bool | None = None,
         # Extended flags for tests
         remove_wrappers: bool | None = None,
         remove_prefs: bool | None = None,
@@ -71,6 +72,7 @@ class WrapperCleanup:
         )
         self.force = force
         self.interactive = interactive
+        self.verbose = bool(verbose) if verbose is not None else False
 
         # Set up directories
         self.bin_dir = Path(bin_dir or (Path.home() / "bin"))
@@ -570,7 +572,10 @@ class WrapperCleanup:
 
     def cleanup_app(self, app_id: str) -> bool:
         """Clean up a specific app wrapper."""
-        wrapper_path = self.bin_dir / app_id
+        from fplaunch.python_utils import sanitize_id_to_name
+
+        safe_name = sanitize_id_to_name(app_id)
+        wrapper_path = self.bin_dir / safe_name
         if wrapper_path.exists():
             try:
                 wrapper_path.unlink()

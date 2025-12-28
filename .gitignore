@@ -68,14 +68,12 @@ PACKAGING_TEST_RESULTS.md
 # Log files
 test_run.log
 test_results.txt
+*.log
 
 # Generated scripts
 fplaunch-cleanup
 fplaunch-generate
 fplaunch-setup-systemd
-
-# Bash completion
-fplaunch_completion.bash
 
 # Temporary files
 /tmp/
@@ -87,12 +85,11 @@ fplaunch_completion.bash
 # Development artifacts
 .devcontainer/local/
 *.patch.orig
-system_detection_fix.patch
+
+# Agent artifacts (archived)
+memory-bank/
+docs/archive/
 
 # Keep these test files
 !run_tests.py
 !test_*.py
-!advanced_edge_cases_test.py
-!break_test.py
-!weird_setup_test.py
-!ultra_edge_cases_test.py

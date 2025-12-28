@@ -99,7 +99,7 @@ class TestFinalValidation:
         # Test invalid preference
         output = io.StringIO()
         with redirect_stdout(output):
-            result = manager.set_preference("test", "invalid")
+            result = manager.set_preference("test", "invalid value!")
 
         assert result is False
 

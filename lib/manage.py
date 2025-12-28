@@ -357,12 +357,16 @@ class WrapperManager:
             self.log("Invalid preference: must be a non-empty string", "error")
             return False
 
+        # Accept traditional modes and sanitized Flatpak IDs
         if preference not in ["system", "flatpak"]:
-            self.log(
-                f"Invalid preference: {preference}. Use 'system' or 'flatpak'",
-                "error",
-            )
-            return False
+            import re
+
+            if not re.match(r"^[A-Za-z0-9._-]+$", preference):
+                self.log(
+                    f"Invalid preference: {preference}. Use 'system', 'flatpak', or a valid Flatpak ID",
+                    "error",
+                )
+                return False
 
         pref_file = self.config_dir / f"{wrapper_name}.pref"
 

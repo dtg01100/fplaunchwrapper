@@ -63,8 +63,8 @@ class TestManagementFunctions:
         assert chrome_pref.exists()
         assert chrome_pref.read_text().strip() == "system"
 
-        # Test invalid preference
-        result = manager.set_preference("edge", "invalid")
+        # Test invalid preference (with special characters not allowed in Flatpak IDs)
+        result = manager.set_preference("edge", "invalid value!")
         assert result is False
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")

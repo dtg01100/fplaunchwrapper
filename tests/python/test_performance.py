@@ -50,7 +50,7 @@ class TestPerformance:
         for i in range(num_wrappers):
             app_name = f"test_app_{i}"
             flatpak_id = f"org.test.App{i}"
-            apps.append((app_name, flatpak_id))
+            apps.append(app_name)
 
         start_time = time.time()
         results = []
@@ -85,7 +85,7 @@ class TestPerformance:
         for i in range(num_wrappers):
             app_name = f"test_app_{i}"
             flatpak_id = f"org.test.App{i}"
-            apps.append((app_name, flatpak_id))
+            apps.append(app_name)
 
         start_time = time.time()
         results = []
@@ -225,12 +225,13 @@ class TestPerformance:
         # Set preferences for all apps and measure performance
         manager = WrapperManager(
             config_dir=str(self.config_dir),
+            bin_dir=str(self.bin_dir),
             verbose=True
         )
         start_time = time.time()
         results = []
-        for app_name, flatpak_id in apps:
-            pref_result = manager.set_preference(app_name, flatpak_id)
+        for app_name in apps:
+            pref_result = manager.set_preference(app_name, "flatpak")
             results.append(pref_result)
         end_time = time.time()
 

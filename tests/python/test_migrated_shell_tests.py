@@ -355,8 +355,8 @@ class TestManagementFunctions:
         assert pref_file.exists()
         assert pref_file.read_text().strip() == "flatpak"
 
-        # Test invalid preference
-        result = manager.set_preference("chrome", "invalid")
+        # Test invalid preference (with invalid characters for Flatpak IDs)
+        result = manager.set_preference("chrome", "invalid value!")
         assert result is False
 
     def test_alias_management(self, temp_env) -> None:

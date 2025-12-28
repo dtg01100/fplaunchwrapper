@@ -219,8 +219,15 @@ class WrapperGenerator:
 
         return False
 
-    def generate_wrapper(self, app_id: str) -> bool:
-        """Generate a wrapper script for a single application."""
+    def generate_wrapper(self, app_id: str, flatpak_id: str | None = None) -> bool:
+        """Generate a wrapper script for a single application.
+
+        Args:
+            app_id: Logical app name or identifier used for wrapper naming.
+            flatpak_id: Optional explicit Flatpak ID. If provided, it must
+                be a sanitized, safe ID. When omitted, app_id is used as the
+                Flatpak ID.
+        """
         if not UTILS_AVAILABLE:
             msg = "Python utilities not available"
             raise RuntimeError(msg)
@@ -236,10 +243,35 @@ class WrapperGenerator:
             self.log(f"Skipping invalid app ID: {app_id}", "warning")
             return False
 
+        target_flatpak_id = flatpak_id or app_id
+
+        # Basic flatpak ID validation: allow alnum, dot, dash, underscore
+        import re
+
+        if not re.match(r"^[A-Za-z0-9._-]+$", target_flatpak_id):
+            if flatpak_id is not None:
+                self.log(
+                    f"Skipping invalid Flatpak ID: {target_flatpak_id}",
+                    "warning",
+                )
+                return False
+            # If no explicit flatpak_id was provided, fall back to a sanitized name
+            target_flatpak_id = sanitize_id_to_name(app_id)
+            if not target_flatpak_id:
+                self.log(
+                    f"Skipping invalid app ID (unsanitizable): {app_id}",
+                    "warning",
+                )
+                return False
+
         wrapper_path = self.bin_dir / wrapper_name
 
-        # Check for existing wrapper
-        wrapper_existed = wrapper_path.exists()
+        # Check for existing wrapper (handle permission errors gracefully)
+        try:
+            wrapper_existed = wrapper_path.exists()
+        except PermissionError:
+            self.log(f"Permission denied accessing {wrapper_path}", "error")
+            return False
         if wrapper_existed:
             existing_id = get_wrapper_id(str(wrapper_path)) if UTILS_AVAILABLE else None
             # If the existing file isn't recognized as our wrapper, treat it as a name collision
@@ -264,7 +296,7 @@ class WrapperGenerator:
                 return False
 
         # Create the wrapper script
-        wrapper_content = self.create_wrapper_script(wrapper_name, app_id)
+        wrapper_content = self.create_wrapper_script(wrapper_name, target_flatpak_id)
 
         if self.emit_mode:
             # In emit mode, just show what would be done

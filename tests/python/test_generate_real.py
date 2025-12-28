@@ -159,8 +159,8 @@ class TestWrapperGeneratorReal:
 
         assert result.returncode != 0
 
-    @patch("fplaunch.generate.find_executable")
-    @patch("subprocess.run")
+    @patch("lib.generate.find_executable")
+    @patch("lib.generate.subprocess.run")
     def test_get_installed_flatpaks(self, mock_run, mock_find) -> None:
         """Test get_installed_flatpaks() retrieves app list."""
         # Mock find_executable to return flatpak path
@@ -187,8 +187,8 @@ class TestWrapperGeneratorReal:
         assert "org.gimp.GIMP" in apps
         assert sorted(apps) == apps  # Should be sorted
 
-    @patch("fplaunch.generate.find_executable")
-    @patch("subprocess.run")
+    @patch("lib.generate.find_executable")
+    @patch("lib.generate.subprocess.run")
     def test_get_installed_flatpaks_with_duplicates(self, mock_run, mock_find) -> None:
         """Test get_installed_flatpaks() removes duplicates."""
         mock_find.return_value = "/usr/bin/flatpak"
@@ -211,8 +211,8 @@ class TestWrapperGeneratorReal:
         assert len(apps) == 3
         assert apps.count("org.mozilla.firefox") == 1
 
-    @patch("fplaunch.generate.find_executable")
-    @patch("subprocess.run")
+    @patch("lib.generate.find_executable")
+    @patch("lib.generate.subprocess.run")
     def test_get_installed_flatpaks_error_handling(self, mock_run, mock_find) -> None:
         """Test get_installed_flatpaks() handles errors."""
         mock_find.return_value = "/usr/bin/flatpak"
@@ -543,8 +543,8 @@ class TestMainFunction:
         finally:
             sys.argv = old_argv
 
-    @patch("fplaunch.generate.find_executable")
-    @patch("subprocess.run")
+    @patch("lib.generate.find_executable")
+    @patch("lib.generate.subprocess.run")
     def test_main_with_emit_flag(self, mock_run, mock_find) -> None:
         """Test main() with --emit flag."""
         mock_find.return_value = "/usr/bin/flatpak"
