@@ -17,6 +17,10 @@ try:
 except ImportError:
     RICH_AVAILABLE = False
 
+# Initialize Rich consoles for stdout and stderr
+console = Console() if RICH_AVAILABLE else None
+console_err = Console(stderr=True) if RICH_AVAILABLE else None
+
 # Import our utilities
 try:
     from .python_utils import (
@@ -30,8 +34,6 @@ try:
     UTILS_AVAILABLE = True
 except ImportError:
     UTILS_AVAILABLE = False
-
-console = Console() if RICH_AVAILABLE else None
 
 
 class WrapperManager:
@@ -81,19 +83,42 @@ class WrapperManager:
             self.config_dir.mkdir(parents=True, exist_ok=True)
 
     def log(self, message: str, level: str = "info") -> None:
-        """Log a message."""
-        if self.verbose or level in ["error", "warning"]:
-            if console:
-                if level == "error":
-                    console.print(f"[red]ERROR:[/red] {message}")
-                elif level == "warning":
-                    console.print(f"[yellow]WARN:[/yellow] {message}")
-                elif level == "success":
-                    console.print(f"[green]✓[/green] {message}")
-                else:
-                    console.print(message)
+        """Log a message to stdout or stderr based on level.
+        
+        Error and warning messages go to stderr.
+        Info and success messages go to stdout.
+        Always prints regardless of verbose mode.
+        """
+        if level == "error":
+            # Errors always go to stderr
+            if console_err:
+                console_err.print(f"[red]ERROR:[/red] {message}")
             else:
-                pass
+                print(f"ERROR: {message}", file=sys.stderr)
+        elif level == "warning":
+            # Warnings always go to stderr
+            if console_err:
+                console_err.print(f"[yellow]WARN:[/yellow] {message}")
+            else:
+                print(f"WARNING: {message}", file=sys.stderr)
+        elif level == "success":
+            # Success messages go to stdout
+            if console:
+                console.print(f"[green]✓[/green] {message}")
+            else:
+                print(f"✓ {message}")
+        elif level in ["info", "emit"]:
+            # Info and emit messages go to stdout
+            if console:
+                console.print(message)
+            else:
+                print(message)
+        else:
+            # Default: info/stdout
+            if console:
+                console.print(message)
+            else:
+                print(message)
 
     def list_wrappers(self) -> list[dict[str, str]]:
         """List all installed wrappers."""
@@ -147,7 +172,8 @@ class WrapperManager:
                     f"Run 'fplaunch generate {self.bin_dir}' to create wrappers",
                 )
             else:
-                pass
+                print("No wrappers found")
+                print(f"Run 'fplaunch generate {self.bin_dir}' to create wrappers")
             return
 
         if console:
@@ -162,8 +188,13 @@ class WrapperManager:
             console.print(table)
             console.print(f"\n[green]{len(wrappers)}[/green] wrappers found")
         else:
+            # Plain text fallback
+            print("Flatpak Wrappers:")
+            print(f"{'Wrapper':<30} {'Flatpak ID':<30} {'Path'}")
+            print("-" * 90)
             for wrapper in wrappers:
-                pass
+                print(f"{wrapper['name']:<30} {wrapper['id']:<30} {wrapper['path']}")
+            print(f"\n{len(wrappers)} wrappers found")
 
     def remove_wrapper(self, wrapper_name: str, force: bool = False) -> bool:
         """Remove a specific wrapper."""
@@ -273,75 +304,6 @@ class WrapperManager:
             self.log(f"Failed to remove wrapper '{wrapper_name}': {e}", "error")
             return False
 
-        # Confirm removal unless forced
-        if not force:
-            if console:
-                from rich.prompt import Confirm
-
-                if not Confirm.ask(
-                    f"Are you sure you want to remove wrapper '{wrapper_name}'?",
-                ):
-                    console.print("[yellow]Removal cancelled[/yellow]")
-                    return False
-            else:
-                response = input(
-                    f"Are you sure you want to remove wrapper '{wrapper_name}'? (y/n): ",
-                )
-                if response.lower() not in ["y", "yes"]:
-                    return False
-
-        try:
-            # Remove wrapper file
-            wrapper_path.unlink()
-            self.log(f"Removed wrapper: {wrapper_name}", "success")
-
-            # Remove preference file
-            pref_file = self.config_dir / f"{wrapper_name}.pref"
-            if pref_file.exists():
-                pref_file.unlink()
-                self.log(f"Removed preference file for: {wrapper_name}")
-
-            # Remove aliases
-            aliases_file = self.config_dir / "aliases"
-            if aliases_file.exists():
-                try:
-                    content = aliases_file.read_text()
-                    lines = content.split("\n")
-                    new_lines = []
-
-                    for line in lines:
-                        if line.strip() and not line.startswith(f"{wrapper_name} "):
-                            new_lines.append(line)
-
-                    if new_lines:
-                        aliases_file.write_text("\n".join(new_lines))
-                    else:
-                        aliases_file.unlink()
-
-                    self.log(f"Removed aliases for: {wrapper_name}")
-
-                except Exception as e:
-                    self.log(f"Warning: Could not remove aliases: {e}", "warning")
-
-            # Remove symlinks pointing to this wrapper
-            if self.bin_dir.exists():
-                for item in self.bin_dir.iterdir():
-                    if item.is_symlink() and item.readlink() == wrapper_path:
-                        try:
-                            item.unlink()
-                            self.log(f"Removed symlink: {item.name}")
-                        except Exception as e:
-                            self.log(
-                                f"Warning: Could not remove symlink {item.name}: {e}",
-                                "warning",
-                            )
-
-            return True
-
-        except Exception as e:
-            self.log(f"Failed to remove wrapper '{wrapper_name}': {e}", "error")
-            return False
-
     def set_preference(self, wrapper_name: str, preference: str) -> bool:
         """Set launch preference for a wrapper."""
         # Validate inputs
@@ -405,19 +367,6 @@ class WrapperManager:
             self.log(f"Failed to set preference for '{wrapper_name}': {e}", "error")
             return False
 
-        pref_file = self.config_dir / f"{wrapper_name}.pref"
-
-        try:
-            pref_file.write_text(preference)
-            self.log(
-                f"Set preference for '{wrapper_name}' to '{preference}'",
-                "success",
-            )
-            return True
-        except Exception as e:
-            self.log(f"Failed to set preference for '{wrapper_name}': {e}", "error")
-            return False
-
     def get_preference(self, wrapper_name: str) -> str | None:
         """Get launch preference for a wrapper."""
         pref_file = self.config_dir / f"{wrapper_name}.pref"
@@ -469,32 +418,16 @@ class WrapperManager:
         if UTILS_AVAILABLE and is_wrapper_file(str(wrapper_path)):
             wrapper_id = get_wrapper_id(str(wrapper_path))
 
+        info_lines = [
+            f"Wrapper: {wrapper_name}",
+            f"Path: {wrapper_path}",
+            f"Flatpak ID: {wrapper_id or 'Unknown'}",
+            f"Preference: {preference or 'Not set'}",
+            f"Executable: {'Yes' if os.access(wrapper_path, os.X_OK) else 'No'}",
+        ]
+
         if console:
             from rich.panel import Panel
-
-            info_lines = [
-                f"[bold]Wrapper:[/bold] {wrapper_name}",
-                f"[bold]Path:[/bold] {wrapper_path}",
-                f"[bold]Flatpak ID:[/bold] {wrapper_id or 'Unknown'}",
-                f"[bold]Preference:[/bold] {preference or 'Not set'}",
-                f"[bold]Executable:[/bold] {'Yes' if os.access(wrapper_path, os.X_OK) else 'No'}",
-            ]
-
-            # Check if Flatpak app exists
-            flatpak_path = find_executable("flatpak")
-            if wrapper_id and flatpak_path:
-                import subprocess
-
-                result = subprocess.run(
-                    [flatpak_path, "info", wrapper_id],
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                )
-                if result.returncode == 0:
-                    info_lines.append("[bold]Flatpak Status:[/bold] Installed")
-                else:
-                    info_lines.append("[bold]Flatpak Status:[/bold] Not installed")
 
             console.print(
                 Panel.fit(
@@ -503,7 +436,12 @@ class WrapperManager:
                 ),
             )
         else:
-            pass
+            # Plain text fallback
+            print(f"\nWrapper Information: {wrapper_name}")
+            print("-" * 40)
+            for line in info_lines:
+                print(line)
+            print()
 
         return True
 
@@ -544,10 +482,23 @@ class WrapperManager:
 
             for example in examples:
                 console.print(f"  [green]$[/green] {example}")
-
         else:
+            # Plain text fallback
+            print("fplaunchwrapper Features:")
+            print(f"{'Feature':<25} {'Description'}")
+            print("-" * 70)
             for feature, description in features:
-                pass
+                print(f"{feature:<25} {description}")
+            print("\nUsage Examples:")
+            examples = [
+                "fplaunch generate ~/bin          # Generate wrappers",
+                "fplaunch list                     # List all wrappers",
+                "fplaunch set-pref firefox flatpak # Set preference",
+                "fplaunch monitor                  # Monitor for changes",
+                "firefox --fpwrapper-help          # Wrapper help",
+            ]
+            for example in examples:
+                print(f"  $ {example}")
 
     def cleanup_obsolete(self) -> int:
         """Clean up wrappers for uninstalled applications."""

@@ -33,8 +33,9 @@ except ImportError:
     RICH_AVAILABLE = False
 
 
-# Initialize Rich console if available
+# Initialize Rich consoles for stdout and stderr
 console = Console() if RICH_AVAILABLE else None
+console_err = Console(stderr=True) if RICH_AVAILABLE else None
 
 
 def run_command(
@@ -219,12 +220,13 @@ if CLICK_AVAILABLE:
             return 0
 
         except ImportError as e:
-            if console:
-                console.print(
+            if console_err:
+                console_err.print(
                     f"[red]Error:[/red] Failed to import wrapper manager: {e}",
                 )
             else:
-                pass
+                import sys
+                print(f"Error: Failed to import wrapper manager: {e}", file=sys.stderr)
             return 1
 
     @cli.command()
@@ -260,12 +262,13 @@ if CLICK_AVAILABLE:
             return 0 if manager.set_preference(app_name, preference) else 1
 
         except ImportError as e:
-            if console:
-                console.print(
+            if console_err:
+                console_err.print(
                     f"[red]Error:[/red] Failed to import wrapper manager: {e}",
                 )
             else:
-                pass
+                import sys
+                print(f"Error: Failed to import wrapper manager: {e}", file=sys.stderr)
             return 1
 
     @cli.command()
@@ -288,8 +291,11 @@ if CLICK_AVAILABLE:
             launcher = AppLauncher(app_name)
             return 0 if launcher.launch() else 1
         except ImportError as e:
-            if console:
-                console.print(f"[red]Error:[/red] Failed to import launcher: {e}")
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import launcher: {e}")
+            else:
+                import sys
+                print(f"Error: Failed to import launcher: {e}", file=sys.stderr)
             return 1
 
         if result.returncode != 0 and not emit_mode:
@@ -320,10 +326,11 @@ if CLICK_AVAILABLE:
 
         script_path = find_fplaunch_script("fplaunch-manage")
         if not script_path:
-            if console:
-                console.print("[red]Error:[/red] fplaunch-manage script not found")
+            if console_err:
+                console_err.print("[red]Error:[/red] fplaunch-manage script not found")
             else:
-                pass
+                import sys
+                print("Error: fplaunch-manage script not found", file=sys.stderr)
             return 1
 
         cmd = [str(script_path), "remove", app_name]
@@ -369,8 +376,8 @@ if CLICK_AVAILABLE:
             setup = SystemdSetup()
             return setup.run()
         except ImportError as e:
-            if console:
-                console.print(f"[red]Error:[/red] Failed to import systemd setup: {e}")
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import systemd setup: {e}")
             return 1
 
     @cli.command()
@@ -407,8 +414,11 @@ if CLICK_AVAILABLE:
             )
             return cleanup_manager.run()
         except ImportError as e:
-            if console:
-                console.print(f"[red]Error:[/red] Failed to import cleanup: {e}")
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import cleanup: {e}")
+            else:
+                import sys
+                print(f"Error: Failed to import cleanup: {e}", file=sys.stderr)
             return 1
 
     @cli.command()
@@ -461,8 +471,11 @@ if CLICK_AVAILABLE:
             finally:
                 sys.argv = original_argv
         except ImportError as e:
-            if console:
-                console.print(f"[red]Error:[/red] Failed to import monitor: {e}")
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import monitor: {e}")
+            else:
+                import sys
+                print(f"Error: Failed to import monitor: {e}", file=sys.stderr)
             return 1
 
     @cli.command()
@@ -501,11 +514,12 @@ if CLICK_AVAILABLE:
             finally:
                 sys.argv = original_argv
         except ImportError as e:
-            if console:
-                console.print(f"[red]Error:[/red] Failed to import config manager: {e}")
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import config manager: {e}")
+            else:
+                import sys
+                print(f"Error: Failed to import config manager: {e}", file=sys.stderr)
             return 1
-
-    @cli.command()
     @click.option(
         "--emit",
         is_flag=True,
@@ -545,10 +559,11 @@ if CLICK_AVAILABLE:
             return setup.run()
 
         except ImportError as e:
-            if console:
-                console.print(f"[red]Error:[/red] Failed to import systemd setup: {e}")
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import systemd setup: {e}")
             else:
-                pass
+                import sys
+                print(f"Error: Failed to import systemd setup: {e}", file=sys.stderr)
             return 1
 
     @cli.command()
@@ -601,8 +616,11 @@ if CLICK_AVAILABLE:
             finally:
                 sys.argv = original_argv
         except ImportError as e:
-            if console:
-                console.print(f"[red]Error:[/red] Failed to import monitor: {e}")
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import monitor: {e}")
+            else:
+                import sys
+                print(f"Error: Failed to import monitor: {e}", file=sys.stderr)
             return 1
 
     @cli.command()
@@ -674,8 +692,11 @@ if CLICK_AVAILABLE:
             return e.code if isinstance(e.code, int) else (0 if e.code == 0 else 1)
         except Exception as e:
             # Handle any other exceptions
-            if console:
-                console.print(f"[red]Error:[/red] {e}")
+            if console_err:
+                console_err.print(f"[red]Error:[/red] {e}")
+            else:
+                import sys
+                print(f"Error: {e}", file=sys.stderr)
             return 1
 
 else:
