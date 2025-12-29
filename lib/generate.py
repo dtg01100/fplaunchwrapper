@@ -379,6 +379,10 @@ NAME="{wrapper_name}"
 ID="{app_id}"
 PREF_DIR="{self.config_dir}"
 PREF_FILE="$PREF_DIR/$NAME.pref"
+# Hook/script locations
+HOOK_DIR="$PREF_DIR/scripts/$NAME"
+PRE_SCRIPT="$HOOK_DIR/pre-launch.sh"
+POST_SCRIPT="$HOOK_DIR/post-run.sh"
 # Load environment variables if present
 ENV_FILE="$PREF_DIR/$NAME.env"
 if [ -f "$ENV_FILE" ]; then
@@ -431,10 +435,43 @@ run_single_launch() {{
 
 # Pre-launch script execution
 run_pre_launch_script() {{
-    pre_script="$PREF_DIR/scripts/$NAME/pre-launch.sh"
-    if [ -x "$pre_script" ]; then
-        "$pre_script" "$@"
+    if [ -x "$PRE_SCRIPT" ]; then
+        "$PRE_SCRIPT" "$@"
     fi
+}}
+
+set_pre_script() {{
+    local script_path="$1"
+    if [ -z "$script_path" ]; then
+        echo "Usage: $NAME --fpwrapper-set-pre-script <script_path>" >&2
+        exit 1
+    fi
+    if [ ! -f "$script_path" ]; then
+        echo "Script not found: $script_path" >&2
+        exit 1
+    fi
+    mkdir -p "$HOOK_DIR"
+    cp "$script_path" "$PRE_SCRIPT"
+    chmod +x "$PRE_SCRIPT"
+    echo "Pre-launch script set to $script_path"
+    exit 0
+}}
+
+set_post_script() {{
+    local script_path="$1"
+    if [ -z "$script_path" ]; then
+        echo "Usage: $NAME --fpwrapper-set-post-script <script_path>" >&2
+        exit 1
+    fi
+    if [ ! -f "$script_path" ]; then
+        echo "Script not found: $script_path" >&2
+        exit 1
+    fi
+    mkdir -p "$HOOK_DIR"
+    cp "$script_path" "$POST_SCRIPT"
+    chmod +x "$POST_SCRIPT"
+    echo "Post-run script set to $script_path"
+    exit 0
 }}
 
 # One-shot launch
@@ -513,6 +550,47 @@ if [ "$1" = "--fpwrapper-sandbox-info" ]; then
     exit 0
 fi
 
+# Edit sandbox permissions (non-destructive display/validation)
+if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
+    if command -v flatpak >/dev/null 2>&1; then
+        echo "Sandbox editor for $ID"
+        # Show current overrides if available; ignore failures for portability
+        flatpak override --show "$ID" >/dev/null 2>&1 || true
+    else
+        echo "Flatpak not available - cannot edit sandbox"
+    fi
+    exit 0
+fi
+
+# Manage hook scripts
+if [ "$1" = "--fpwrapper-set-pre-script" ]; then
+    set_pre_script "$2"
+fi
+
+if [ "$1" = "--fpwrapper-set-post-script" ]; then
+    set_post_script "$2"
+fi
+
+if [ "$1" = "--fpwrapper-remove-pre-script" ]; then
+    if [ -f "$PRE_SCRIPT" ]; then
+        rm "$PRE_SCRIPT"
+        echo "Pre-launch script removed"
+    else
+        echo "No pre-launch script configured"
+    fi
+    exit 0
+fi
+
+if [ "$1" = "--fpwrapper-remove-post-script" ]; then
+    if [ -f "$POST_SCRIPT" ]; then
+        rm "$POST_SCRIPT"
+        echo "Post-run script removed"
+    else
+        echo "No post-run script configured"
+    fi
+    exit 0
+fi
+
 # Set override (allow alias for preference)
 if [ "$1" = "--fpwrapper-set-override" ] || [ "$1" = "--fpwrapper-set-preference" ]; then
     if [ -z "$2" ]; then
@@ -571,6 +649,9 @@ if ! is_interactive; then
         run_single_launch "$ONE_SHOT_PREF" "$@"
     fi
 
+    # Ensure pre-launch hooks run in non-interactive flows
+    run_pre_launch_script "$@"
+
     # Find next executable in PATH
     IFS=: read -ra PATH_DIRS <<< "$PATH"
     for dir in "${{PATH_DIRS[@]}}"; do
@@ -581,6 +662,7 @@ if ! is_interactive; then
     done
 
     # Run flatpak
+    run_pre_launch_script "$@"
     exec flatpak run "$ID" "$@"
 fi
 
@@ -604,13 +686,16 @@ fi
 # Interactive launch logic
 if [ "$PREF" = "system" ]; then
     if [ "$SYSTEM_EXISTS" = true ]; then
+        run_pre_launch_script "$@"
         exec "$NAME" "$@"
     else
         # System command gone, fall back to flatpak
         echo "flatpak" > "$PREF_FILE"
+        run_pre_launch_script "$@"
         exec flatpak run "$ID" "$@"
     fi
 elif [ "$PREF" = "flatpak" ]; then
+    run_pre_launch_script "$@"
     exec flatpak run "$ID" "$@"
 else
     # No preference set - show interactive prompt
@@ -638,10 +723,12 @@ else
         if [ "$SYSTEM_EXISTS" = true ]; then
             PREF="system"
             echo "$PREF" > "$PREF_FILE"
+            run_pre_launch_script "$@"
             exec "$NAME" "$@"
         else
             PREF="flatpak"
             echo "$PREF" > "$PREF_FILE"
+            run_pre_launch_script "$@"
             exec flatpak run "$ID" "$@"
         fi
     fi
