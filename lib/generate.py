@@ -550,15 +550,263 @@ if [ "$1" = "--fpwrapper-sandbox-info" ]; then
     exit 0
 fi
 
-# Edit sandbox permissions (non-destructive display/validation)
+# Edit sandbox permissions - Full interactive implementation
 if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
-    if command -v flatpak >/dev/null 2>&1; then
-        echo "Sandbox editor for $ID"
-        # Show current overrides if available; ignore failures for portability
-        flatpak override --show "$ID" >/dev/null 2>&1 || true
-    else
+    if ! command -v flatpak >/dev/null 2>&1; then
         echo "Flatpak not available - cannot edit sandbox"
+        exit 1
     fi
+    
+    if ! is_interactive; then
+        echo "Error: Sandbox editing requires interactive CLI" >&2
+        exit 1
+    fi
+    
+    # Check if Flatseal is installed
+    if flatpak list --app 2>/dev/null | grep -q "com.github.tchx84.Flatseal"; then
+        echo "Launching Flatseal for $ID..."
+        flatpak run com.github.tchx84.Flatseal "$ID" 2>/dev/null &
+        exit 0
+    fi
+    
+    # Check if user previously declined Flatseal installation
+    FLATSEAL_DECLINED_MARKER="${{XDG_CONFIG_HOME:-$HOME/.config}}/fplaunchwrapper/flatseal_declined"
+    
+    if [ ! -f "$FLATSEAL_DECLINED_MARKER" ]; then
+        echo ""
+        echo "Flatseal (GUI permissions editor) not found."
+        read -r -p "Would you like to install it? [y/N] " install_flatseal
+        case "$install_flatseal" in
+            [yY]|[yY][eE][sS])
+                echo "Installing Flatseal..."
+                if flatpak install flathub com.github.tchx84.Flatseal -y; then
+                    echo "Flatseal installed successfully. Launching..."
+                    flatpak run com.github.tchx84.Flatseal "$ID" 2>/dev/null &
+                    exit 0
+                else
+                    echo "Failed to install Flatseal. Falling back to CLI editor."
+                fi
+                ;;
+            *)
+                echo "Flatseal installation declined. Using CLI editor."
+                mkdir -p "$(dirname "$FLATSEAL_DECLINED_MARKER")"
+                touch "$FLATSEAL_DECLINED_MARKER"
+                ;;
+        esac
+    fi
+    
+    # CLI fallback - Interactive permission editor
+    echo ""
+    echo "=========================================="
+    echo "Sandbox Permissions Editor for $ID"
+    echo "=========================================="
+    echo ""
+    
+    # Show current overrides
+    echo "Current permissions:"
+    if flatpak override --show --user "$ID" 2>/dev/null | grep -q "^\\["; then
+        flatpak override --show --user "$ID" 2>/dev/null | grep -v "^\\[" || echo "  (none)"
+    else
+        echo "  (using defaults)"
+    fi
+    echo ""
+    
+    # Built-in presets
+    PRESET_DEVELOPMENT="--filesystem=home --filesystem=host --device=dri"
+    PRESET_MEDIA="--device=dri --socket=pulseaudio --socket=wayland --socket=x11 --share=ipc"
+    PRESET_NETWORK="--share=network --share=ipc"
+    PRESET_MINIMAL="--share=ipc"
+    
+    # Load custom presets from config
+    CUSTOM_PRESETS=()
+    if command -v python3 >/dev/null 2>&1; then
+        while IFS= read -r preset_name; do
+            [ -n "$preset_name" ] && CUSTOM_PRESETS+=("$preset_name")
+        done < <(python3 -m fplaunch.config_manager list-presets 2>/dev/null)
+    fi
+    
+    # Display menu
+    echo "Select an option:"
+    echo "  1) Manual entry (line-by-line)"
+    echo "  2) Apply preset: Development (filesystem access, graphics)"
+    echo "  3) Apply preset: Media (audio/video/graphics)"
+    echo "  4) Apply preset: Network (networking + IPC)"
+    echo "  5) Apply preset: Minimal (IPC only)"
+    
+    menu_option=6
+    for custom_preset in "${{CUSTOM_PRESETS[@]}}"; do
+        echo "  $menu_option) Apply custom preset: $custom_preset"
+        ((menu_option++))
+    done
+    
+    echo "  $menu_option) Show current overrides"
+    ((menu_option++))
+    echo "  $menu_option) Reset to defaults"
+    ((menu_option++))
+    echo "  $menu_option) Cancel"
+    echo ""
+    
+    read -r -p "Choose option: " choice
+    
+    case "$choice" in
+        1)
+            # Manual entry
+            echo ""
+            echo "Enter permissions one per line (empty line to finish)"
+            echo "Examples:"
+            echo "  --filesystem=home"
+            echo "  --filesystem=host"
+            echo "  --device=dri"
+            echo "  --device=all"
+            echo "  --share=network"
+            echo "  --share=ipc"
+            echo "  --socket=x11"
+            echo "  --socket=wayland"
+            echo "  --socket=pulseaudio"
+            echo ""
+            
+            PERMISSIONS=()
+            while true; do
+                read -r -p "Permission: " perm
+                [ -z "$perm" ] && break
+                
+                # Validate format
+                if [[ "$perm" =~ ^--[a-z-]+(=.+)?$ ]]; then
+                    PERMISSIONS+=("$perm")
+                else
+                    echo "  Warning: Invalid format (must start with --, e.g., --filesystem=home)"
+                fi
+            done
+            
+            if [ ${{#PERMISSIONS[@]}} -eq 0 ]; then
+                echo "No permissions entered."
+                exit 0
+            fi
+            
+            echo ""
+            echo "Permissions to apply:"
+            printf '  %s\\n' "${{PERMISSIONS[@]}}"
+            echo ""
+            read -r -p "Apply these ${{#PERMISSIONS[@]}} permissions? [y/N] " confirm
+            
+            if [[ "$confirm" =~ ^[yY]$ ]]; then
+                for perm in "${{PERMISSIONS[@]}}"; do
+                    if flatpak override --user "$ID" "$perm" 2>/dev/null; then
+                        echo "  ✓ Applied: $perm"
+                    else
+                        echo "  ✗ Failed: $perm"
+                    fi
+                done
+                echo ""
+                echo "Permissions updated. Final state:"
+                flatpak override --show --user "$ID" 2>/dev/null | grep -v "^\\[" || echo "  (none)"
+            else
+                echo "Cancelled."
+            fi
+            ;;
+        2|3|4|5)
+            # Built-in presets
+            case "$choice" in
+                2) PRESET_NAME="Development"; PRESET_PERMS=($PRESET_DEVELOPMENT) ;;
+                3) PRESET_NAME="Media"; PRESET_PERMS=($PRESET_MEDIA) ;;
+                4) PRESET_NAME="Network"; PRESET_PERMS=($PRESET_NETWORK) ;;
+                5) PRESET_NAME="Minimal"; PRESET_PERMS=($PRESET_MINIMAL) ;;
+            esac
+            
+            echo ""
+            echo "Preset: $PRESET_NAME"
+            echo "Permissions:"
+            printf '  %s\\n' "${{PRESET_PERMS[@]}}"
+            echo ""
+            read -r -p "Apply these ${{#PRESET_PERMS[@]}} permissions? [y/N] " confirm
+            
+            if [[ "$confirm" =~ ^[yY]$ ]]; then
+                for perm in "${{PRESET_PERMS[@]}}"; do
+                    if flatpak override --user "$ID" "$perm" 2>/dev/null; then
+                        echo "  ✓ Applied: $perm"
+                    else
+                        echo "  ✗ Failed: $perm"
+                    fi
+                done
+                echo ""
+                echo "Permissions updated. Final state:"
+                flatpak override --show --user "$ID" 2>/dev/null | grep -v "^\\[" || echo "  (none)"
+            else
+                echo "Cancelled."
+            fi
+            ;;
+        *)
+            # Check if it's a custom preset
+            custom_index=$((choice - 6))
+            if [ "$custom_index" -ge 0 ] && [ "$custom_index" -lt ${{#CUSTOM_PRESETS[@]}} ]; then
+                PRESET_NAME="${{CUSTOM_PRESETS[$custom_index]}}"
+                
+                # Load preset permissions
+                PRESET_PERMS=()
+                if command -v python3 >/dev/null 2>&1; then
+                    while IFS= read -r perm; do
+                        [ -n "$perm" ] && PRESET_PERMS+=("$perm")
+                    done < <(python3 -m fplaunch.config_manager get-preset "$PRESET_NAME" 2>/dev/null)
+                fi
+                
+                if [ ${{#PRESET_PERMS[@]}} -eq 0 ]; then
+                    echo "Failed to load preset: $PRESET_NAME"
+                    exit 1
+                fi
+                
+                echo ""
+                echo "Custom preset: $PRESET_NAME"
+                echo "Permissions:"
+                printf '  %s\\n' "${{PRESET_PERMS[@]}}"
+                echo ""
+                read -r -p "Apply these ${{#PRESET_PERMS[@]}} permissions? [y/N] " confirm
+                
+                if [[ "$confirm" =~ ^[yY]$ ]]; then
+                    for perm in "${{PRESET_PERMS[@]}}"; do
+                        if flatpak override --user "$ID" "$perm" 2>/dev/null; then
+                            echo "  ✓ Applied: $perm"
+                        else
+                            echo "  ✗ Failed: $perm"
+                        fi
+                    done
+                    echo ""
+                    echo "Permissions updated. Final state:"
+                    flatpak override --show --user "$ID" 2>/dev/null | grep -v "^\\[" || echo "  (none)"
+                else
+                    echo "Cancelled."
+                fi
+            elif [ "$choice" = "$((menu_option - 3))" ]; then
+                # Show current overrides
+                echo ""
+                echo "Current overrides for $ID:"
+                flatpak override --show --user "$ID" 2>/dev/null || echo "  (using defaults)"
+            elif [ "$choice" = "$((menu_option - 2))" ]; then
+                # Reset to defaults
+                echo ""
+                echo "Current overrides:"
+                flatpak override --show --user "$ID" 2>/dev/null | grep -v "^\\[" || echo "  (none)"
+                echo ""
+                echo "WARNING: This will reset ALL permissions to defaults."
+                echo "This action cannot be undone!"
+                echo ""
+                read -r -p "Type 'yes' to confirm reset: " confirm
+                
+                if [ "$confirm" = "yes" ]; then
+                    if flatpak override --user --reset "$ID" 2>/dev/null; then
+                        echo "Permissions reset to defaults."
+                    else
+                        echo "Failed to reset permissions."
+                        exit 1
+                    fi
+                else
+                    echo "Reset cancelled."
+                fi
+            else
+                # Cancel
+                echo "Cancelled."
+            fi
+            ;;
+    esac
     exit 0
 fi
 

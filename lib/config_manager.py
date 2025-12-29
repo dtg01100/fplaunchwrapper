@@ -61,6 +61,7 @@ class WrapperConfig:
     debug_mode: bool = False
     log_level: str = "INFO"
     active_profile: str = "default"  # Current active profile
+    permission_presets: dict[str, list[str]] = field(default_factory=dict)  # Custom permission presets
 
 
 class EnhancedConfigManager:
@@ -126,6 +127,17 @@ class EnhancedConfigManager:
         # Blocklist
         if "blocklist" in data:
             self.config.blocklist = list(data["blocklist"])
+        
+        # Permission presets
+        if "permission_presets" in data:
+            presets_data = data["permission_presets"]
+            if isinstance(presets_data, dict):
+                for preset_name, preset_data in presets_data.items():
+                    if isinstance(preset_data, dict) and "permissions" in preset_data:
+                        self.config.permission_presets[preset_name] = list(preset_data["permissions"])
+                    elif isinstance(preset_data, list):
+                        # Support direct list format
+                        self.config.permission_presets[preset_name] = list(preset_data)
 
         # Global preferences
         if "global_preferences" in data:
@@ -184,6 +196,14 @@ class EnhancedConfigManager:
                 if prefs.post_launch_script:
                     app_data["post_launch_script"] = prefs.post_launch_script
                 data["app_preferences"][app_id] = app_data
+        
+        # Permission presets
+        if self.config.permission_presets:
+            data["permission_presets"] = {}
+            for preset_name, permissions in self.config.permission_presets.items():
+                data["permission_presets"][preset_name] = {
+                    "permissions": list(permissions)
+                }
 
         return data
 
@@ -235,6 +255,46 @@ class EnhancedConfigManager:
     def is_blocked(self, app_id: str) -> bool:
         """Check if app is blocked."""
         return app_id in self.config.blocklist
+    
+    def list_permission_presets(self) -> list[str]:
+        """List available permission preset names."""
+        return sorted(self.config.permission_presets.keys())
+    
+    def get_permission_preset(self, preset_name: str) -> list[str] | None:
+        """Get permissions for a specific preset.
+        
+        Args:
+            preset_name: Name of the preset to retrieve
+        
+        Returns:
+            List of permission strings, or None if preset not found
+        """
+        return self.config.permission_presets.get(preset_name)
+    
+    def add_permission_preset(self, preset_name: str, permissions: list[str]) -> None:
+        """Add or update a permission preset.
+        
+        Args:
+            preset_name: Name for the preset
+            permissions: List of permission strings (e.g., ['--filesystem=home', '--device=dri'])
+        """
+        self.config.permission_presets[preset_name] = list(permissions)
+        self.save_config()
+    
+    def remove_permission_preset(self, preset_name: str) -> bool:
+        """Remove a permission preset.
+        
+        Args:
+            preset_name: Name of the preset to remove
+        
+        Returns:
+            True if preset was removed, False if it didn't exist
+        """
+        if preset_name in self.config.permission_presets:
+            del self.config.permission_presets[preset_name]
+            self.save_config()
+            return True
+        return False
 
     def list_profiles(self) -> list[str]:
         """List available configuration profiles."""
@@ -446,6 +506,25 @@ def main() -> None:
                 sys.exit(1)
             config = create_config_manager()
             config.remove_from_blocklist(sys.argv[2])
+        
+        elif cmd == "list-presets":
+            # List available permission presets
+            config = create_config_manager()
+            presets = config.list_permission_presets()
+            for preset in presets:
+                print(preset)
+        
+        elif cmd == "get-preset":
+            # Get permissions for a specific preset
+            if len(sys.argv) < 3:
+                sys.exit(1)
+            config = create_config_manager()
+            permissions = config.get_permission_preset(sys.argv[2])
+            if permissions:
+                for perm in permissions:
+                    print(perm)
+            else:
+                sys.exit(1)
 
         else:
             sys.exit(1)
