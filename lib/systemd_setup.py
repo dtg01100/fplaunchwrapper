@@ -604,6 +604,98 @@ WantedBy=timers.target
         except Exception:
             return []
 
+    def disable_systemd_units(self) -> bool:
+        """Disable and remove systemd units."""
+        try:
+            if self.emit_mode:
+                self.log("EMIT: Would disable systemd units")
+                return True
+
+            # Check if units exist
+            if not self.systemd_unit_dir.exists():
+                self.log("Systemd unit directory does not exist", "warning")
+                return False
+
+            # Disable and remove units
+            unit_names = ["flatpak-wrappers.service", "flatpak-wrappers.path", "flatpak-wrappers.timer"]
+            
+            for unit_name in unit_names:
+                unit_path = self.systemd_unit_dir / unit_name
+                if unit_path.exists():
+                    try:
+                        # Disable the unit
+                        subprocess.run(
+                            ["systemctl", "--user", "disable", unit_name],
+                            check=False,
+                            capture_output=True,
+                        )
+                        # Stop the unit
+                        subprocess.run(
+                            ["systemctl", "--user", "stop", unit_name],
+                            check=False,
+                            capture_output=True,
+                        )
+                        # Remove the unit file
+                        unit_path.unlink()
+                    except Exception:
+                        pass
+
+            # Reload systemd daemon
+            subprocess.run(
+                ["systemctl", "--user", "daemon-reload"],
+                check=False,
+                capture_output=True,
+            )
+            
+            return True
+
+        except Exception:
+            return False
+
+    def check_systemd_status(self) -> dict:
+        """Check the status of systemd timer units."""
+        try:
+            systemctl_path = shutil.which("systemctl")
+            if not systemctl_path:
+                return {"enabled": False, "active": False, "units": {}}
+
+            status = {
+                "enabled": False,
+                "active": False,
+                "units": {}
+            }
+
+            unit_names = ["flatpak-wrappers.service", "flatpak-wrappers.path", "flatpak-wrappers.timer"]
+            
+            for unit_name in unit_names:
+                # Check if enabled
+                result = subprocess.run(
+                    ["systemctl", "--user", "is-enabled", unit_name],
+                    check=False,
+                    capture_output=True,
+                )
+                enabled = result.returncode == 0
+                
+                # Check if active
+                result = subprocess.run(
+                    ["systemctl", "--user", "is-active", unit_name],
+                    check=False,
+                    capture_output=True,
+                )
+                active = result.returncode == 0
+                
+                status["units"][unit_name] = enabled and active
+                
+                if enabled:
+                    status["enabled"] = True
+                if active:
+                    status["active"] = True
+
+            return status
+
+        except Exception:
+            return {"enabled": False, "active": False, "units": {}}
+
     # Legacy compatibility aliases for testing
     def enable_service(self, app_id: str) -> bool:
         """Legacy alias for enable_app_service (for backward compatibility)."""

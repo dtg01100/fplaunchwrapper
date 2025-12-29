@@ -513,6 +513,407 @@ if CLICK_AVAILABLE:
             return 1
     # (duplicate setup_systemd/monitor/config variants removed)
 
+    @cli.command()
+    @click.argument("action", required=False)
+    @click.argument("name", required=False)
+    @click.option("--copy-from", help="Copy configuration from existing profile")
+    @click.pass_context
+    def profiles(ctx, action, name, copy_from) -> int:
+        """Manage configuration profiles.
+
+        ACTION: Profile action (list, create, switch, current, export, import)
+        NAME: Profile name (for create, switch, export, import actions)
+        """
+        try:
+            from .config_manager import EnhancedConfigManager
+
+            manager = EnhancedConfigManager()
+
+            if not action or action == "list":
+                # List all profiles
+                profiles = manager.list_profiles()
+                current = manager.get_active_profile()
+                
+                if console:
+                    console.print("[bold]Available Profiles:[/bold]")
+                    for profile in profiles:
+                        marker = " ✓" if profile == current else ""
+                        console.print(f"  {profile}{marker}")
+                else:
+                    for profile in profiles:
+                        marker = " (current)" if profile == current else ""
+                        print(f"  {profile}{marker}")
+                return 0
+
+            elif action == "create":
+                if not name:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Profile name required for create action")
+                    else:
+                        print("Error: Profile name required for create action", file=sys.stderr)
+                    return 1
+                
+                success = manager.create_profile(name, copy_from=copy_from)
+                if success:
+                    if console:
+                        console.print(f"[green]✓[/green] Created profile: {name}")
+                    else:
+                        print(f"Created profile: {name}")
+                    return 0
+                else:
+                    if console_err:
+                        console_err.print(f"[red]Error:[/red] Failed to create profile: {name}")
+                    else:
+                        print(f"Error: Failed to create profile: {name}", file=sys.stderr)
+                    return 1
+
+            elif action == "switch":
+                if not name:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Profile name required for switch action")
+                    else:
+                        print("Error: Profile name required for switch action", file=sys.stderr)
+                    return 1
+                
+                success = manager.switch_profile(name)
+                if success:
+                    if console:
+                        console.print(f"[green]✓[/green] Switched to profile: {name}")
+                    else:
+                        print(f"Switched to profile: {name}")
+                    return 0
+                else:
+                    if console_err:
+                        console_err.print(f"[red]Error:[/red] Failed to switch to profile: {name}")
+                    else:
+                        print(f"Error: Failed to switch to profile: {name}", file=sys.stderr)
+                    return 1
+
+            elif action == "current":
+                current = manager.get_active_profile()
+                if console:
+                    console.print(f"Current profile: [bold]{current}[/bold]")
+                else:
+                    print(f"Current profile: {current}")
+                return 0
+
+            elif action == "export":
+                if not name:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Profile name required for export action")
+                    else:
+                        print("Error: Profile name required for export action", file=sys.stderr)
+                    return 1
+                
+                export_path = Path(name).with_suffix(".toml")
+                success = manager.export_profile(name, export_path)
+                if success:
+                    if console:
+                        console.print(f"[green]✓[/green] Exported profile to: {export_path}")
+                    else:
+                        print(f"Exported profile to: {export_path}")
+                    return 0
+                else:
+                    if console_err:
+                        console_err.print(f"[red]Error:[/red] Failed to export profile: {name}")
+                    else:
+                        print(f"Error: Failed to export profile: {name}", file=sys.stderr)
+                    return 1
+
+            elif action == "import":
+                if not name:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Profile name and path required for import action")
+                    else:
+                        print("Error: Profile name and path required for import action", file=sys.stderr)
+                    return 1
+                
+                import_path = Path(name)
+                if not import_path.exists():
+                    if console_err:
+                        console_err.print(f"[red]Error:[/red] File not found: {import_path}")
+                    else:
+                        print(f"Error: File not found: {import_path}", file=sys.stderr)
+                    return 1
+                
+                profile_name = import_path.stem
+                success = manager.import_profile(profile_name, import_path)
+                if success:
+                    if console:
+                        console.print(f"[green]✓[/green] Imported profile: {profile_name}")
+                    else:
+                        print(f"Imported profile: {profile_name}")
+                    return 0
+                else:
+                    if console_err:
+                        console_err.print(f"[red]Error:[/red] Failed to import profile from: {import_path}")
+                    else:
+                        print(f"Error: Failed to import profile from: {import_path}", file=sys.stderr)
+                    return 1
+
+            else:
+                if console_err:
+                    console_err.print(f"[red]Error:[/red] Unknown action: {action}")
+                else:
+                    print(f"Error: Unknown action: {action}", file=sys.stderr)
+                return 1
+
+        except ImportError as e:
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import config manager: {e}")
+            else:
+                print(f"Error: Failed to import config manager: {e}", file=sys.stderr)
+            return 1
+
+    @cli.command()
+    @click.argument("action", required=False)
+    @click.argument("name", required=False)
+    @click.option("--permissions", multiple=True, help="Flatpak permissions (e.g., --filesystem=home)")
+    @click.pass_context
+    def presets(ctx, action, name, permissions) -> int:
+        """Manage permission presets for sandbox editing.
+
+        ACTION: Preset action (list, get, add, remove)
+        NAME: Preset name
+        """
+        try:
+            from .config_manager import EnhancedConfigManager
+
+            manager = EnhancedConfigManager()
+
+            if not action or action == "list":
+                # List all presets
+                presets = manager.list_permission_presets()
+                
+                if console:
+                    if presets:
+                        console.print("[bold]Available Permission Presets:[/bold]")
+                        for preset_name in presets:
+                            console.print(f"  {preset_name}")
+                    else:
+                        console.print("[yellow]No custom presets defined[/yellow]")
+                else:
+                    if presets:
+                        print("Available Permission Presets:")
+                        for preset_name in presets:
+                            print(f"  {preset_name}")
+                    else:
+                        print("No custom presets defined")
+                return 0
+
+            elif action == "get":
+                if not name:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Preset name required for get action")
+                    else:
+                        print("Error: Preset name required for get action", file=sys.stderr)
+                    return 1
+                
+                perms = manager.get_permission_preset(name)
+                if perms:
+                    if console:
+                        console.print(f"[bold]Preset: {name}[/bold]")
+                        for perm in perms:
+                            console.print(f"  {perm}")
+                    else:
+                        print(f"Preset: {name}")
+                        for perm in perms:
+                            print(f"  {perm}")
+                    return 0
+                else:
+                    if console_err:
+                        console_err.print(f"[red]Error:[/red] Preset not found: {name}")
+                    else:
+                        print(f"Error: Preset not found: {name}", file=sys.stderr)
+                    return 1
+
+            elif action == "add":
+                if not name or not permissions:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Preset name and permissions required for add action")
+                    else:
+                        print("Error: Preset name and permissions required for add action", file=sys.stderr)
+                    return 1
+                
+                manager.add_permission_preset(name, list(permissions))
+                if console:
+                    console.print(f"[green]✓[/green] Added preset: {name}")
+                else:
+                    print(f"Added preset: {name}")
+                return 0
+
+            elif action == "remove":
+                if not name:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Preset name required for remove action")
+                    else:
+                        print("Error: Preset name required for remove action", file=sys.stderr)
+                    return 1
+                
+                success = manager.remove_permission_preset(name)
+                if success:
+                    if console:
+                        console.print(f"[green]✓[/green] Removed preset: {name}")
+                    else:
+                        print(f"Removed preset: {name}")
+                    return 0
+                else:
+                    if console_err:
+                        console_err.print(f"[red]Error:[/red] Preset not found: {name}")
+                    else:
+                        print(f"Error: Preset not found: {name}", file=sys.stderr)
+                    return 1
+
+            else:
+                if console_err:
+                    console_err.print(f"[red]Error:[/red] Unknown action: {action}")
+                else:
+                    print(f"Error: Unknown action: {action}", file=sys.stderr)
+                return 1
+
+        except ImportError as e:
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import config manager: {e}")
+            else:
+                print(f"Error: Failed to import config manager: {e}", file=sys.stderr)
+            return 1
+
+    @cli.command()
+    @click.argument("action", required=False)
+    @click.option(
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
+    )
+    @click.option(
+        "--emit-verbose",
+        is_flag=True,
+        help="Show detailed file contents in emit mode",
+    )
+    @click.pass_context
+    def systemd(ctx, action, emit, emit_verbose) -> int | None:
+        """Manage optional systemd timer for automatic wrapper generation.
+
+        ACTION: Systemd action (enable, disable, status, test)
+        """
+        try:
+            from .systemd_setup import SystemdSetup
+
+            setup = SystemdSetup(
+                emit_mode=emit or ctx.obj.get("emit", False),
+                emit_verbose=emit_verbose or ctx.obj.get("emit_verbose", False),
+            )
+
+            if not action or action == "enable":
+                # Enable systemd timer/path units
+                if console:
+                    console.print("[bold cyan]Enabling systemd timer for wrapper generation...[/bold cyan]")
+                
+                # Check prerequisites
+                if not setup.check_prerequisites():
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Prerequisites not met for systemd setup")
+                    else:
+                        print("Error: Prerequisites not met for systemd setup", file=sys.stderr)
+                    return 1
+                
+                # Install units
+                if setup.install_systemd_units():
+                    if console:
+                        console.print("[green]✓[/green] Systemd timer enabled successfully")
+                    else:
+                        print("Systemd timer enabled successfully")
+                    
+                    if console:
+                        console.print("[dim]Wrappers will be regenerated automatically on Flatpak changes[/dim]")
+                    return 0
+                else:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Failed to enable systemd timer")
+                    else:
+                        print("Error: Failed to enable systemd timer", file=sys.stderr)
+                    return 1
+
+            elif action == "disable":
+                # Disable systemd timer/path units
+                if console:
+                    console.print("[bold cyan]Disabling systemd timer...[/bold cyan]")
+                
+                if setup.disable_systemd_units():
+                    if console:
+                        console.print("[green]✓[/green] Systemd timer disabled successfully")
+                    else:
+                        print("Systemd timer disabled successfully")
+                    return 0
+                else:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Failed to disable systemd timer")
+                    else:
+                        print("Error: Failed to disable systemd timer", file=sys.stderr)
+                    return 1
+
+            elif action == "status":
+                # Check systemd timer status
+                if console:
+                    console.print("[bold cyan]Checking systemd timer status...[/bold cyan]")
+                
+                status = setup.check_systemd_status()
+                if console:
+                    if status.get("enabled"):
+                        console.print("[green]✓[/green] Systemd timer is [bold green]enabled[/bold green]")
+                    else:
+                        console.print("[yellow]✗[/yellow] Systemd timer is [bold yellow]disabled[/bold yellow]")
+                    
+                    if status.get("active"):
+                        console.print(f"  [green]Status:[/green] [bold green]active[/bold green]")
+                    else:
+                        console.print(f"  [yellow]Status:[/yellow] [bold yellow]inactive[/bold yellow]")
+                    
+                    if status.get("units"):
+                        console.print("[bold]Units:[/bold]")
+                        for unit_name, unit_status in status["units"].items():
+                            status_color = "green" if unit_status else "red"
+                            console.print(f"  [{status_color}]{'✓' if unit_status else '✗'}[/{status_color}] {unit_name}")
+                else:
+                    print(f"Systemd timer enabled: {status.get('enabled')}")
+                    print(f"Systemd timer active: {status.get('active')}")
+                return 0
+
+            elif action == "test":
+                # Test systemd timer installation
+                if console:
+                    console.print("[bold cyan]Testing systemd timer installation...[/bold cyan]")
+                
+                # Run in emit mode to show what would be installed
+                setup_test = SystemdSetup(emit_mode=True, emit_verbose=True)
+                if setup_test.check_prerequisites():
+                    setup_test.install_systemd_units()
+                    if console:
+                        console.print("[green]✓[/green] Systemd timer test completed (no changes made)")
+                    else:
+                        print("Systemd timer test completed (no changes made)")
+                    return 0
+                else:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Prerequisites not met")
+                    else:
+                        print("Error: Prerequisites not met", file=sys.stderr)
+                    return 1
+
+            else:
+                if console_err:
+                    console_err.print(f"[red]Error:[/red] Unknown action: {action}")
+                else:
+                    print(f"Error: Unknown action: {action}", file=sys.stderr)
+                return 1
+
+        except ImportError as e:
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import systemd setup: {e}")
+            else:
+                print(f"Error: Failed to import systemd setup: {e}", file=sys.stderr)
+            return 1
+
     # Add command aliases for convenience
     # 'rm' is an alias for 'remove' (for shell users)
     cli.add_command(remove, name="rm")

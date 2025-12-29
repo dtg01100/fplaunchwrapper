@@ -423,13 +423,22 @@ run_single_launch() {{
 
     if [ "$choice" = "system" ]; then
         if [ "$SYSTEM_EXISTS" = true ]; then
-            exec "$NAME" "$@"
+            "$NAME" "$@"
+            local exit_code=$?
+            run_post_launch_script "$exit_code" "system"
+            exit "$exit_code"
         else
             echo "System binary not found; falling back to flatpak for this launch." >&2
-            exec flatpak run "$ID" "$@"
+            flatpak run "$ID" "$@"
+            local exit_code=$?
+            run_post_launch_script "$exit_code" "flatpak"
+            exit "$exit_code"
         fi
     else
-        exec flatpak run "$ID" "$@"
+        flatpak run "$ID" "$@"
+        local exit_code=$?
+        run_post_launch_script "$exit_code" "flatpak"
+        exit "$exit_code"
     fi
 }}
 
@@ -437,6 +446,22 @@ run_single_launch() {{
 run_pre_launch_script() {{
     if [ -x "$PRE_SCRIPT" ]; then
         "$PRE_SCRIPT" "$@"
+    fi
+}}
+
+# Post-launch script execution
+run_post_launch_script() {{
+    local exit_code="$1"
+    local source="$2"  # "system" or "flatpak"
+    
+    if [ -x "$POST_SCRIPT" ]; then
+        (
+            export FPWRAPPER_EXIT_CODE="$exit_code"
+            export FPWRAPPER_SOURCE="$source"
+            export FPWRAPPER_WRAPPER_NAME="$NAME"
+            export FPWRAPPER_APP_ID="$ID"
+            "$POST_SCRIPT"
+        ) 2>&1 || echo "[fplaunchwrapper] Warning: Post-launch script failed with exit code $?" >&2
     fi
 }}
 
@@ -492,6 +517,12 @@ if [ "$1" = "--fpwrapper-launch" ]; then
     esac
 fi
 
+# Force interactive mode
+if [ "$1" = "--fpwrapper-force-interactive" ]; then
+    FPWRAPPER_FORCE="interactive"
+    shift
+fi
+
 # Discover system info
 set_system_info
 
@@ -516,6 +547,7 @@ if [ "$1" = "--fpwrapper-help" ]; then
     echo "  --fpwrapper-set-override [system|flatpak] Set launch preference"
     echo "  --fpwrapper-set-preference [system|flatpak] Alias for --fpwrapper-set-override"
     echo "  --fpwrapper-launch [system|flatpak] Launch once without saving"
+    echo "  --fpwrapper-force-interactive Force interactive mode (even in scripts)"
     echo "  --fpwrapper-set-pre-script <script> Set pre-launch script"
     echo "  --fpwrapper-set-post-script <script> Set post-run script"
     echo "  --fpwrapper-remove-pre-script Remove pre-launch script"
@@ -905,13 +937,19 @@ if ! is_interactive; then
     for dir in "${{PATH_DIRS[@]}}"; do
         [ -z "$dir" ] && continue
         if [ -x "$dir/$NAME" ] && [ "$dir/$NAME" != "$SCRIPT_BIN_DIR/$NAME" ]; then
-            exec "$dir/$NAME" "$@"
+            "$dir/$NAME" "$@"
+            local exit_code=$?
+            run_post_launch_script "$exit_code" "system"
+            exit "$exit_code"
         fi
     done
 
     # Run flatpak
     run_pre_launch_script "$@"
-    exec flatpak run "$ID" "$@"
+    flatpak run "$ID" "$@"
+    local exit_code=$?
+    run_post_launch_script "$exit_code" "flatpak"
+    exit "$exit_code"
 fi
 
 # For now, just run the interactive logic
@@ -935,16 +973,25 @@ fi
 if [ "$PREF" = "system" ]; then
     if [ "$SYSTEM_EXISTS" = true ]; then
         run_pre_launch_script "$@"
-        exec "$NAME" "$@"
+        "$NAME" "$@"
+        local exit_code=$?
+        run_post_launch_script "$exit_code" "system"
+        exit "$exit_code"
     else
         # System command gone, fall back to flatpak
         echo "flatpak" > "$PREF_FILE"
         run_pre_launch_script "$@"
-        exec flatpak run "$ID" "$@"
+        flatpak run "$ID" "$@"
+        local exit_code=$?
+        run_post_launch_script "$exit_code" "flatpak"
+        exit "$exit_code"
     fi
 elif [ "$PREF" = "flatpak" ]; then
     run_pre_launch_script "$@"
-    exec flatpak run "$ID" "$@"
+    flatpak run "$ID" "$@"
+    local exit_code=$?
+    run_post_launch_script "$exit_code" "flatpak"
+    exit "$exit_code"
 else
     # No preference set - show interactive prompt
     if is_interactive && [ "$SYSTEM_EXISTS" = true ]; then
@@ -965,19 +1012,33 @@ else
         fi
 
         echo "$PREF" > "$PREF_FILE"
-        exec flatpak run "$ID" "$@"
+        run_pre_launch_script "$@"
+        if [ "$PREF" = "system" ]; then
+            "$NAME" "$@"
+        else
+            flatpak run "$ID" "$@"
+        fi
+        local exit_code=$?
+        run_post_launch_script "$exit_code" "$PREF"
+        exit "$exit_code"
     else
         # Non-interactive or only flatpak available
         if [ "$SYSTEM_EXISTS" = true ]; then
             PREF="system"
             echo "$PREF" > "$PREF_FILE"
             run_pre_launch_script "$@"
-            exec "$NAME" "$@"
+            "$NAME" "$@"
+            local exit_code=$?
+            run_post_launch_script "$exit_code" "system"
+            exit "$exit_code"
         else
             PREF="flatpak"
             echo "$PREF" > "$PREF_FILE"
             run_pre_launch_script "$@"
-            exec flatpak run "$ID" "$@"
+            flatpak run "$ID" "$@"
+            local exit_code=$?
+            run_post_launch_script "$exit_code" "flatpak"
+            exit "$exit_code"
         fi
     fi
 fi

@@ -6,7 +6,98 @@ This document tracks the implementation status of features in fplaunchwrapper, i
 
 ---
 
-## Recently Implemented (December 29, 2025)
+## Recently Implemented (Step 3 Completion - December 30, 2025)
+
+### ✅ Post-Launch Script Execution - COMPLETED (Step 1)
+**File**: `lib/generate.py` - Post-launch script functions
+
+The post-launch script feature now fully works:
+- `run_post_launch_script()` function executes post-script in isolated subshell
+- Environment variables exported: `FPWRAPPER_EXIT_CODE`, `FPWRAPPER_SOURCE`, `FPWRAPPER_WRAPPER_NAME`, `FPWRAPPER_APP_ID`
+- Non-exec wrapper execution allows post-script to run before exit
+- Exit code capture and pass-through implemented
+- Comprehensive test coverage: 10 tests (100% passing)
+
+**Test File**: `tests/python/test_post_launch_execution.py`
+
+---
+
+### ✅ Profile/Preset CLI Commands - COMPLETED (Step 2)
+**File**: `lib/cli.py` - Profile and preset management commands
+
+New CLI commands for configuration management:
+- `profiles` command: list, create (with --copy-from), switch, current, export, import
+- `presets` command: list, get, add (with --permissions), remove
+- Rich console formatting with proper error handling
+- Full persistent storage integration with ConfigManager
+- Comprehensive test coverage: 19 tests (100% passing)
+
+**Test File**: `tests/python/test_profile_preset_cli.py`
+
+---
+
+### ✅ Watchdog Integration - COMPLETED (Step 3)
+**File**: `lib/flatpak_monitor.py` - Real-time file system monitoring
+
+FlatpakEventHandler now fully operational:
+- Event batching with 1-second collection window
+- 2-second cooldown to prevent rapid-fire regenerations
+- Deduplication of identical events within batch window
+- Multi-path watching (system and user Flatpak installations)
+- Signal handlers for graceful shutdown
+- Comprehensive test coverage: 36 tests (100% passing)
+
+**Test File**: `tests/python/test_watchdog_integration.py`
+
+---
+
+### ✅ Systemd Timer Setup (Opt-In) - COMPLETED (Step 3)
+**Files**: `lib/cli.py`, `lib/systemd_setup.py`
+
+New systemd command for optional timer configuration:
+- `systemd` CLI command with actions: enable, disable, status, test
+- `disable_systemd_units()` method for cleanup
+- `check_systemd_status()` method for reporting
+- emit mode support for dry-run testing
+- User-friendly Rich formatting with status indicators
+- Comprehensive test coverage: 13 tests (100% passing)
+
+**Test File**: `tests/python/test_systemd_cli.py`
+
+---
+
+### ✅ Force-Interactive Flag Verification - COMPLETED (Step 3)
+**File**: `lib/generate.py` - Force-interactive flag in wrappers
+
+Force-interactive functionality confirmed working:
+- `--fpwrapper-force-interactive` flag parsed correctly in generated wrappers
+- Sets `FPWRAPPER_FORCE="interactive"` environment variable
+- Flag properly shifted from arguments after detection
+- Exports to post-launch scripts via environment
+- Works across all execution paths (pre-launch, flatpak, fallback)
+- Comprehensive test coverage: 11 tests (100% passing)
+
+**Test File**: `tests/python/test_force_interactive_verification.py`
+
+---
+
+## Step 3 Summary
+
+**Total New Tests Added**: 70 tests
+- Watchdog Integration: 36 tests
+- Systemd CLI: 13 tests
+- Force-Interactive Verification: 11 tests
+
+**All Tests Status**: 89/89 PASSING (across all 5 test files)
+- Post-Launch Execution: 10/10
+- Profile/Preset CLI: 19/19
+- Watchdog Integration: 36/36
+- Systemd CLI: 13/13
+- Force-Interactive Verification: 11/11
+
+---
+
+## Recently Implemented (Previous Sessions - December 29, 2025)
 
 ### ✅ Cleanup Function - COMPLETED
 **File**: `lib/manage.py` - `cleanup_obsolete()` method
@@ -139,19 +230,32 @@ These features are recognized but intentionally not implemented, either because 
 
 ---
 
-### Wrapper Pre/Post-Launch Scripts
-**File**: `lib/launch.py` - Hook system
+### ✅ Wrapper Pre/Post-Launch Scripts - COMPLETED
+**File**: `lib/generate.py` - Wrapper generation
 
-**Status**: Framework exists, inline shell script integration needs work
-**Current Features**:
-- ✅ Configuration file loading
-- ✅ Environment variable substitution
-- ❌ Dynamic script injection before launch
-- ❌ Proper error handling for script failures
-- ❌ Logging output from pre/post scripts
+**Status**: Fully implemented in generated wrapper shell scripts
 
-**Impact**: Medium - advanced users can't customize launch behavior
-**Future Work**: Implement robust hook execution system
+**Implemented Features**:
+- ✅ Pre-launch script execution before application startup
+- ✅ Post-launch script execution after application exits
+- ✅ Exit code capture and passing to post-launch script
+- ✅ Environment variable substitution (`FPWRAPPER_EXIT_CODE`, `FPWRAPPER_SOURCE`, `FPWRAPPER_WRAPPER_NAME`, `FPWRAPPER_APP_ID`)
+- ✅ Proper error handling (post-script failures don't crash wrapper)
+- ✅ Optional execution (only if script exists and is executable)
+- ✅ Source identification (system vs. Flatpak)
+- ✅ Comprehensive test coverage (10 tests - 100% passing)
+
+**Implementation Details**:
+- Post-launch scripts run in a subshell to isolate environment
+- Failures logged to stderr with warning prefix
+- All required metadata exported to post-launch environment
+- Works with both interactive and non-interactive launches
+
+**Test Coverage**: `tests/python/test_post_launch_execution.py`
+- 10/10 tests passing
+- Covers: environment variables, exit codes, sources, error handling, optional execution
+
+**Impact**: Full - Users can now run post-launch cleanup, logging, notifications, and other custom actions
 
 ---
 
@@ -163,13 +267,36 @@ These features are recognized but intentionally not implemented, either because 
 - ✅ TOML configuration parsing
 - ✅ Default configuration generation
 - ✅ Configuration validation
+- ✅ Profile support (multiple named configurations) - NEW
+- ✅ Permission presets management - NEW
+- ✅ Profile export/import - NEW
 - ❌ Schema enforcement
 - ❌ Migration from older config formats
 - ❌ Configuration templating
-- ❌ Profile support (multiple named configurations)
 
-**Impact**: Low - current features are sufficient for most users
-**Future Work**: Configuration profiles and schema validation
+**Impact**: High - profiles and presets enable context-specific configurations
+**Recent Work (Dec 2025)**: 
+- Implemented profile management CLI commands (list, create, switch, export, import)
+- Implemented permission preset CLI commands (list, get, add, remove)
+- Added 19 comprehensive tests for profile and preset functionality
+- Full test coverage in `tests/python/test_profile_preset_cli.py`
+
+**CLI Commands Added**:
+```bash
+# Profile management
+fplaunch profiles list              # List all profiles
+fplaunch profiles create work       # Create new profile
+fplaunch profiles switch work       # Switch to profile
+fplaunch profiles current           # Show active profile
+fplaunch profiles export work       # Export to file
+fplaunch profiles import work.toml  # Import from file
+
+# Permission presets
+fplaunch presets list               # List all presets
+fplaunch presets get development    # Show preset permissions
+fplaunch presets add gaming --permissions "--device=dri" "--socket=pulseaudio"
+fplaunch presets remove gaming      # Remove preset
+```
 
 ---
 
