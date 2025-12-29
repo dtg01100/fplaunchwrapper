@@ -230,8 +230,8 @@ class WrapperGenerator:
                 line = line.strip()
                 if line and line == app_id:
                     return True
-        except Exception:
-            pass
+        except Exception as e:
+            self.log(f"Warning: Failed to read blocklist file: {e}", "warning")
 
         return False
 
@@ -295,9 +295,9 @@ class WrapperGenerator:
                 try:
                     # Try reading file to ensure it's a real file and not a mocked path
                     _ = wrapper_path.read_text()
-                except Exception:
+                except Exception as e:
                     # Can't read file (possibly mocked); allow creation
-                    pass
+                    self.log(f"Note: Could not verify existing wrapper file: {e}", "info")
                 else:
                     self.log(
                         f"Name collision for '{wrapper_name}': existing file not a wrapper",

@@ -53,7 +53,7 @@ def run_command(
             if description:
                 console.print(f"[dim]   Purpose: {description}[/dim]")
         elif description:
-            pass
+            print(f"Purpose: {description}")
 
         # Return a mock completed process for emit mode
         return subprocess.CompletedProcess(
@@ -299,17 +299,6 @@ if CLICK_AVAILABLE:
                 print(f"Error: Failed to import launcher: {e}", file=sys.stderr)
             return 1
 
-        if result.returncode != 0 and not emit_mode:
-            if console:
-                console.print(
-                    f"[red]✗[/red] Failed to launch {app_name}: {result.stderr}",
-                )
-            else:
-                pass
-            return result.returncode
-
-        return 0
-
     @cli.command()
     @click.argument("app_name")
     @click.option(
@@ -347,12 +336,13 @@ if CLICK_AVAILABLE:
                     f"[green]✓[/green] Removed wrapper for [bold]{app_name}[/bold]",
                 )
             else:
-                pass
+                print(f"Removed wrapper for {app_name}")
         elif not emit_mode:
             if console:
                 console.print(f"[red]✗[/red] Failed to remove wrapper: {result.stderr}")
             else:
-                pass
+                import sys
+                print(f"Error: Failed to remove wrapper: {result.stderr}", file=sys.stderr)
             return result.returncode
 
         return 0
@@ -523,9 +513,18 @@ if CLICK_AVAILABLE:
             return 1
     # (duplicate setup_systemd/monitor/config variants removed)
 
-    # Minimal, silent aliases
+    # Add command aliases for convenience
+    # 'rm' is an alias for 'remove' (for shell users)
     cli.add_command(remove, name="rm")
-    cli.add_command(systemd_setup, name="systemd_setup")
+    
+    # 'show' is an alias for 'list' (intuitive alternative)
+    cli.add_command(list, name="show")
+    
+    # 'pref' is an alias for 'set-pref' (shorter typing)
+    cli.add_command(set_pref, name="pref")
+    
+    # 'clean' is an alias for 'cleanup'
+    cli.add_command(cleanup, name="clean")
 
     # Export cli as main for entry point
     main = cli

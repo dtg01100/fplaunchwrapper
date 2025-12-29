@@ -504,44 +504,170 @@ class WrapperManager:
         """Clean up wrappers for uninstalled applications."""
         self.log("Cleaning up obsolete wrappers...")
 
-        # This would need to check installed Flatpak apps
-        # For now, just return 0
-        self.log("Cleanup not yet implemented in Python version", "warning")
-        return 0
+        # Check if Flatpak is available
+        try:
+            from .generate import WrapperGenerator
+            gen = WrapperGenerator(str(self.bin_dir), self.verbose, self.emit_mode, self.emit_verbose)
+            installed_apps = gen.get_installed_flatpaks()
+        except (ImportError, RuntimeError) as e:
+            self.log(f"Could not get installed Flatpak apps: {e}", "warning")
+            return 0
 
-    def create_alias(self, alias_name: str, target_wrapper: str) -> bool:
-        """Create an alias for a wrapper."""
+        removed_count = 0
+
+        # Get existing wrappers
+        if not self.bin_dir.exists():
+            return 0
+
+        for item in self.bin_dir.iterdir():
+            if not item.is_file():
+                continue
+
+            remove_item = False
+
+            # Check if it's a wrapper
+            if UTILS_AVAILABLE:
+                try:
+                    from .python_utils import is_wrapper_file, get_wrapper_id
+                    if is_wrapper_file(str(item)):
+                        wrapper_id = get_wrapper_id(str(item))
+                        if wrapper_id and wrapper_id not in installed_apps:
+                            remove_item = True
+                except Exception:
+                    # If we can't determine, don't remove
+                    pass
+            else:
+                # Fallback: treat file as potential wrapper
+                try:
+                    from .python_utils import sanitize_id_to_name
+                    sanitized_installed = [sanitize_id_to_name(a) for a in installed_apps]
+                    if item.name not in sanitized_installed:
+                        remove_item = True
+                except Exception:
+                    pass
+
+            if remove_item:
+                if self.emit_mode:
+                    self.log(f"EMIT: Would remove obsolete wrapper: {item.name}")
+                    removed_count += 1
+                else:
+                    try:
+                        item.unlink()
+                        self.log(f"Removed obsolete wrapper: {item.name}", "success")
+                        removed_count += 1
+
+                        # Remove preference file
+                        pref_file = self.config_dir / f"{item.name}.pref"
+                        if pref_file.exists():
+                            pref_file.unlink()
+
+                        # Remove aliases
+                        aliases_file = self.config_dir / "aliases"
+                        if aliases_file.exists():
+                            try:
+                                content = aliases_file.read_text()
+                                new_content = "\n".join(
+                                    line
+                                    for line in content.split("\n")
+                                    if not line.startswith(f"{item.name} ")
+                                )
+                                if new_content.strip():
+                                    aliases_file.write_text(new_content)
+                                else:
+                                    aliases_file.unlink()
+                            except Exception as e:
+                                self.log(f"Warning: Could not clean up aliases: {e}", "warning")
+                    except Exception as e:
+                        self.log(f"Failed to remove obsolete wrapper {item.name}: {e}", "error")
+
+        if removed_count > 0:
+            self.log(f"Cleaned up {removed_count} obsolete wrapper(s)", "success")
+        else:
+            self.log("No obsolete wrappers found")
+
+        return removed_count
+
+    def create_alias(self, alias_name: str, target_wrapper: str, validate_target: bool = False) -> bool:
+        """Create an alias for a wrapper with optional collision detection.
+        
+        Args:
+            alias_name: Name of the alias to create
+            target_wrapper: Name of the target wrapper to alias to
+            validate_target: If True, verify target wrapper exists (default: False for flexibility)
+            
+        Validates that:
+        - The alias name doesn't collide with existing wrappers (when collision check enabled)
+        - The alias name doesn't already exist
+        - Optionally checks that the target wrapper exists
+        """
         self.log(f"Creating alias '{alias_name}' -> '{target_wrapper}'...")
+
+        # Validate inputs
+        if not alias_name or not isinstance(alias_name, str) or not alias_name.strip():
+            self.log("Invalid alias name: must be a non-empty string", "error")
+            return False
+
+        if not target_wrapper or not isinstance(target_wrapper, str) or not target_wrapper.strip():
+            self.log("Invalid target wrapper: must be a non-empty string", "error")
+            return False
 
         # Store aliases in config file
         aliases_file = self.config_dir / "aliases"
 
         try:
+            # Check if target wrapper exists (optional validation)
+            if validate_target:
+                target_path = self.bin_dir / target_wrapper
+                if not target_path.exists():
+                    self.log(f"Target wrapper '{target_wrapper}' not found", "error")
+                    return False
+
+            # Check for collision with existing wrappers (only warn, don't block)
+            collision_path = self.bin_dir / alias_name
+            if collision_path.exists():
+                self.log(
+                    f"Warning: Alias name '{alias_name}' collides with existing wrapper",
+                    "warning",
+                )
+                # Still allow creation but log the collision for user awareness
+
             # Read existing aliases
             if aliases_file.exists():
                 aliases_content = aliases_file.read_text()
                 aliases = dict(
                     line.split(":", 1)
                     for line in aliases_content.strip().split("\n")
-                    if ":" in line
+                    if ":" in line and len(line.split(":", 1)) == 2
                 )
             else:
                 aliases = {}
 
             # Check if alias already exists
             if alias_name in aliases:
-                self.log(f"Alias '{alias_name}' already exists", "warning")
+                self.log(f"Alias '{alias_name}' already exists -> '{aliases[alias_name]}'", "warning")
                 return False
+
+            # Check for recursive alias (alias pointing to another alias)
+            if target_wrapper in aliases:
+                self.log(
+                    f"Target '{target_wrapper}' is an alias pointing to '{aliases[target_wrapper]}'",
+                    "info",
+                )
+                self.log(f"Alias chain: '{alias_name}' -> '{target_wrapper}' -> '{aliases[target_wrapper]}'")
+                # This is allowed but logged for user awareness
 
             # Add new alias
             aliases[alias_name] = target_wrapper
 
             # Write back to file
-            aliases_file.write_text(
-                "\n".join(f"{k}:{v}" for k, v in aliases.items()) + "\n"
-            )
+            if self.emit_mode:
+                self.log(f"EMIT: Would write alias '{alias_name}' -> '{target_wrapper}' to {aliases_file}")
+            else:
+                aliases_file.write_text(
+                    "\n".join(f"{k}:{v}" for k, v in sorted(aliases.items())) + "\n"
+                )
 
-            self.log(f"Created alias: {alias_name}", "success")
+            self.log(f"Created alias: {alias_name} -> {target_wrapper}", "success")
             return True
         except Exception as e:
             self.log(f"Failed to create alias: {e}", "error")

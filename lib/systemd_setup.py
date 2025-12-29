@@ -429,21 +429,189 @@ WantedBy=timers.target
             self.log(f"Setup failed: {e}", "error")
             return 1
 
-    # Safe integration test methods
-    def enable_service(self, app_id: str) -> bool:
-        """Simulate enabling service for testing."""
-        self.log(f"Simulating enabling service for {app_id}")
-        return True
+    # App-specific service management
+    def enable_app_service(self, app_id: str) -> bool:
+        """Enable automatic wrapper monitoring for a specific app.
+        
+        Creates an app-specific timer that monitors for wrapper updates.
+        """
+        if not app_id:
+            return False
 
-    def disable_service(self, app_id: str) -> bool:
-        """Simulate disabling service for testing."""
-        self.log(f"Simulating disabling service for {app_id}")
-        return True
+        systemctl_path = shutil.which("systemctl")
+        if not systemctl_path:
+            self.log("systemctl not found", "error")
+            return False
+
+        try:
+            # Create app-specific timer unit
+            service_name = f"flatpak-wrapper-{app_id}.service"
+            timer_name = f"flatpak-wrapper-{app_id}.timer"
+
+            if self.emit_mode:
+                self.log(f"EMIT: Would create service unit for {app_id}")
+                self.log(f"EMIT: Would enable {timer_name}")
+                return True
+
+            # Create service unit
+            service_content = f"""[Unit]
+Description=Generate wrapper for {app_id}
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'test -x {self.wrapper_script} && {self.wrapper_script} {self.bin_dir} {app_id}'
+"""
+
+            service_file = self.systemd_unit_dir / service_name
+            service_file.write_text(service_content)
+            self.log(f"Created service unit: {service_name}")
+
+            # Create timer unit (runs daily for this app)
+            timer_content = f"""[Unit]
+Description=Timer for {app_id} wrapper generation
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit={service_name}
+
+[Install]
+WantedBy=timers.target
+"""
+
+            timer_file = self.systemd_unit_dir / timer_name
+            timer_file.write_text(timer_content)
+            self.log(f"Created timer unit: {timer_name}")
+
+            # Enable the timer
+            result = subprocess.run(
+                [systemctl_path, "--user", "enable", timer_name],
+                check=False,
+                capture_output=True,
+            )
+
+            if result.returncode == 0:
+                self.log(f"Enabled timer for {app_id}", "success")
+                return True
+            else:
+                self.log(f"Failed to enable timer for {app_id}", "error")
+                return False
+
+        except Exception as e:
+            self.log(f"Error enabling service for {app_id}: {e}", "error")
+            return False
+
+    def disable_app_service(self, app_id: str) -> bool:
+        """Disable app-specific wrapper monitoring service.
+        
+        Removes the app-specific timer and service units.
+        """
+        if not app_id:
+            return False
+
+        systemctl_path = shutil.which("systemctl")
+        if not systemctl_path:
+            self.log("systemctl not found", "error")
+            return False
+
+        try:
+            timer_name = f"flatpak-wrapper-{app_id}.timer"
+            service_name = f"flatpak-wrapper-{app_id}.service"
+
+            if self.emit_mode:
+                self.log(f"EMIT: Would disable {timer_name}")
+                self.log(f"EMIT: Would remove {service_name}")
+                return True
+
+            # Disable timer
+            subprocess.run(
+                [systemctl_path, "--user", "disable", timer_name],
+                check=False,
+                capture_output=True,
+            )
+
+            # Stop timer if running
+            subprocess.run(
+                [systemctl_path, "--user", "stop", timer_name],
+                check=False,
+                capture_output=True,
+            )
+
+            # Remove unit files
+            timer_file = self.systemd_unit_dir / timer_name
+            service_file = self.systemd_unit_dir / service_name
+
+            if timer_file.exists():
+                timer_file.unlink()
+                self.log(f"Removed timer unit: {timer_name}")
+
+            if service_file.exists():
+                service_file.unlink()
+                self.log(f"Removed service unit: {service_name}")
+
+            # Reload daemon
+            subprocess.run(
+                [systemctl_path, "--user", "daemon-reload"],
+                check=False,
+                capture_output=True,
+            )
+
+            self.log(f"Disabled service for {app_id}", "success")
+            return True
+
+        except Exception as e:
+            self.log(f"Error disabling service for {app_id}: {e}", "error")
+            return False
 
     def reload_services(self) -> bool:
-        """Simulate reloading services for testing."""
-        self.log("Simulating reloading services")
-        return True
+        """Reload systemd user daemon to apply unit changes."""
+        systemctl_path = shutil.which("systemctl")
+        if not systemctl_path:
+            self.log("systemctl not found", "error")
+            return False
+
+        try:
+            if self.emit_mode:
+                self.log("EMIT: Would reload systemd user daemon")
+                return True
+
+            result = subprocess.run(
+                [systemctl_path, "--user", "daemon-reload"],
+                check=False,
+                capture_output=True,
+            )
+
+            if result.returncode == 0:
+                self.log("Reloaded systemd user daemon", "success")
+                return True
+            else:
+                self.log("Failed to reload systemd user daemon", "error")
+                return False
+
+        except Exception as e:
+            self.log(f"Error reloading services: {e}", "error")
+            return False
+
+    def list_app_services(self) -> list[str]:
+        """List all app-specific services that are enabled."""
+        try:
+            apps = []
+            for unit_file in self.systemd_unit_dir.glob("flatpak-wrapper-*.timer"):
+                # Extract app_id from filename
+                app_id = unit_file.stem.replace("flatpak-wrapper-", "")
+                apps.append(app_id)
+            return sorted(apps)
+        except Exception:
+            return []
+
+    # Legacy compatibility aliases for testing
+    def enable_service(self, app_id: str) -> bool:
+        """Legacy alias for enable_app_service (for backward compatibility)."""
+        return self.enable_app_service(app_id)
+
+    def disable_service(self, app_id: str) -> bool:
+        """Legacy alias for disable_app_service (for backward compatibility)."""
+        return self.disable_app_service(app_id)
 
 
 def main():

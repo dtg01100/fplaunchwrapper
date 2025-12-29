@@ -91,7 +91,7 @@ def test_systemd_setup_alias(cli_mod, runner, monkeypatch):
 
     monkeypatch.setattr("lib.systemd_setup.SystemdSetup", FakeSystemdSetup)
 
-    result = runner.invoke(cli_mod.cli, ["systemd_setup"], catch_exceptions=False)
+    result = runner.invoke(cli_mod.cli, ["systemd-setup"], catch_exceptions=False)
     assert result.exit_code == 0
     assert calls == {"init": True, "run": True}
 

@@ -60,6 +60,7 @@ class WrapperConfig:
     app_preferences: dict[str, AppPreferences] = field(default_factory=dict)
     debug_mode: bool = False
     log_level: str = "INFO"
+    active_profile: str = "default"  # Current active profile
 
 
 class EnhancedConfigManager:
@@ -234,6 +235,146 @@ class EnhancedConfigManager:
     def is_blocked(self, app_id: str) -> bool:
         """Check if app is blocked."""
         return app_id in self.config.blocklist
+
+    def list_profiles(self) -> list[str]:
+        """List available configuration profiles."""
+        profiles_dir = self.config_dir / "profiles"
+        if not profiles_dir.exists():
+            return ["default"]
+        
+        profiles = ["default"]
+        for profile_file in profiles_dir.glob("*.toml"):
+            profile_name = profile_file.stem
+            if profile_name not in profiles:
+                profiles.append(profile_name)
+        return sorted(profiles)
+
+    def create_profile(self, profile_name: str, copy_from: str | None = None) -> bool:
+        """Create a new configuration profile.
+        
+        Args:
+            profile_name: Name of the new profile
+            copy_from: Profile name to copy configuration from (optional)
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        if not profile_name or profile_name == "default":
+            return False
+
+        profiles_dir = self.config_dir / "profiles"
+        try:
+            profiles_dir.mkdir(parents=True, exist_ok=True)
+            profile_file = profiles_dir / f"{profile_name}.toml"
+            
+            if profile_file.exists():
+                return False
+
+            if copy_from and copy_from != "default":
+                # Copy from another profile
+                source_file = profiles_dir / f"{copy_from}.toml"
+                if source_file.exists():
+                    profile_file.write_text(source_file.read_text())
+                else:
+                    # Source doesn't exist, create empty
+                    profile_file.write_text("")
+            else:
+                # Create new profile with default content
+                profile_file.write_text("")
+
+            return True
+        except OSError:
+            return False
+
+    def switch_profile(self, profile_name: str) -> bool:
+        """Switch to a different configuration profile.
+        
+        Args:
+            profile_name: Name of the profile to switch to
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        if profile_name not in self.list_profiles():
+            return False
+
+        self.config.active_profile = profile_name
+        self.save_config()
+        
+        # Reload configuration from the new profile
+        if profile_name != "default":
+            profiles_dir = self.config_dir / "profiles"
+            profile_file = profiles_dir / f"{profile_name}.toml"
+            if profile_file.exists():
+                try:
+                    if TOML_AVAILABLE:
+                        with open(profile_file, "rb") as f:
+                            data = tomli.load(f)
+                        self._parse_config_data(data)
+                    return True
+                except (OSError, ValueError):
+                    return False
+        return True
+
+    def get_active_profile(self) -> str:
+        """Get the currently active profile name."""
+        return self.config.active_profile
+
+    def export_profile(self, profile_name: str, export_path: Path) -> bool:
+        """Export a profile to a file.
+        
+        Args:
+            profile_name: Name of the profile to export
+            export_path: Path where to save the exported profile
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            if profile_name == "default":
+                content = self._serialize_config()
+            else:
+                profiles_dir = self.config_dir / "profiles"
+                profile_file = profiles_dir / f"{profile_name}.toml"
+                if not profile_file.exists():
+                    return False
+                content = profile_file.read_text()
+
+            if TOML_AVAILABLE and isinstance(content, dict):
+                with open(export_path, "wb") as f:
+                    tomli_w.dump(content, f)
+            else:
+                export_path.write_text(content)
+
+            return True
+        except (OSError, ValueError):
+            return False
+
+    def import_profile(self, profile_name: str, import_path: Path) -> bool:
+        """Import a profile from a file.
+        
+        Args:
+            profile_name: Name for the imported profile
+            import_path: Path to the file to import from
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        if not import_path.exists():
+            return False
+
+        try:
+            profiles_dir = self.config_dir / "profiles"
+            profiles_dir.mkdir(parents=True, exist_ok=True)
+            
+            if profile_name == "default":
+                return False  # Can't overwrite default profile
+
+            profile_file = profiles_dir / f"{profile_name}.toml"
+            profile_file.write_text(import_path.read_text())
+            return True
+        except OSError:
+            return False
 
 
 # Pydantic models for enhanced validation (if available)

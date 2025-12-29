@@ -71,6 +71,119 @@ class AppLauncher:
                 return True, self._safety_check
         return True, self._safety_check
 
+    def _get_hook_scripts(self, app_name: str, hook_type: str) -> list[Path]:
+        """Get pre or post-launch hook scripts for an app.
+        
+        Hook scripts are stored in:
+        - ~/.config/fplaunchwrapper/hooks/{app_name}.{pre,post}.sh
+        - ~/.config/fplaunchwrapper/hooks/{app_name}/{pre,post}/*.sh
+        """
+        hooks_dir = self.config_dir / "hooks"
+        scripts = []
+
+        # Single hook files
+        if hook_type in ["pre", "post"]:
+            single_hook = hooks_dir / f"{app_name}.{hook_type}.sh"
+            if single_hook.exists() and os.access(single_hook, os.X_OK):
+                scripts.append(single_hook)
+
+        # Hook directory
+        hook_dir = hooks_dir / app_name / hook_type
+        if hook_dir.exists() and hook_dir.is_dir():
+            for script in sorted(hook_dir.glob("*.sh")):
+                if script.is_file() and os.access(script, os.X_OK):
+                    scripts.append(script)
+
+        return scripts
+
+    def _substitute_environment(self, script_path: Path) -> str:
+        """Substitute environment variables in hook script content."""
+        content = script_path.read_text()
+
+        # Available substitutions
+        env_vars = {
+            "APP_NAME": self.app_name or "",
+            "APP_ID": self.app_name or "",
+            "WRAPPER_PATH": str(self._get_wrapper_path()),
+            "CONFIG_DIR": str(self.config_dir),
+            "BIN_DIR": str(self.bin_dir),
+            "HOME": str(Path.home()),
+        }
+
+        # Add custom environment if provided
+        if self.env:
+            env_vars.update(self.env)
+
+        # Substitute ${VAR} patterns
+        for var_name, var_value in env_vars.items():
+            content = content.replace(f"${{{var_name}}}", str(var_value))
+            content = content.replace(f"${var_name}", str(var_value))
+
+        return content
+
+    def _run_hook_scripts(self, hook_type: str) -> bool:
+        """Run pre or post-launch hook scripts.
+        
+        Args:
+            hook_type: Either 'pre' or 'post'
+            
+        Returns:
+            True if all scripts succeeded or no scripts exist, False if any failed
+        """
+        scripts = self._get_hook_scripts(self.app_name, hook_type)
+
+        if not scripts:
+            return True
+
+        if self.verbose:
+            print(f"Running {hook_type}-launch scripts for {self.app_name}", file=sys.stderr)
+
+        for script_path in scripts:
+            try:
+                if self.debug:
+                    print(f"Executing {hook_type} hook: {script_path}", file=sys.stderr)
+
+                # Try running the script directly
+                result = subprocess.run(
+                    [str(script_path)],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+
+                if result.returncode != 0:
+                    if self.verbose:
+                        print(
+                            f"Warning: {hook_type} hook failed ({script_path}): {result.stderr}",
+                            file=sys.stderr,
+                        )
+                    # Don't fail the whole launch if hook fails
+                    if hook_type == "pre":
+                        # Pre-hooks are more critical
+                        return False
+
+                elif self.verbose and result.stdout:
+                    print(f"{hook_type} hook output: {result.stdout}", file=sys.stderr)
+
+            except subprocess.TimeoutExpired:
+                if self.verbose:
+                    print(
+                        f"Warning: {hook_type} hook timed out ({script_path})",
+                        file=sys.stderr,
+                    )
+                if hook_type == "pre":
+                    return False
+            except Exception as e:
+                if self.verbose:
+                    print(
+                        f"Warning: Error running {hook_type} hook ({script_path}): {e}",
+                        file=sys.stderr,
+                    )
+                if hook_type == "pre":
+                    return False
+
+        return True
+
     def launch_app(self, app_name: str, args: list[str] | None = None) -> bool:
         """Convenience wrapper for legacy API: set the app name and call launch."""
         self.app_name = app_name
@@ -97,11 +210,17 @@ class AppLauncher:
         return None
 
     def launch(self) -> bool:
-        """Launch the application."""
+        """Launch the application with pre/post-launch hook support."""
         try:
             # Safety check using lazy-loaded safety module
             safety_available, safe_launch_check = self._get_safety_check()
             if safety_available and not safe_launch_check(self.app_name, self._find_wrapper()):
+                return False
+
+            # Run pre-launch hooks
+            if not self._run_hook_scripts("pre"):
+                if self.verbose:
+                    print(f"Pre-launch hooks failed for {self.app_name}", file=sys.stderr)
                 return False
 
             wrapper_path = self._find_wrapper()
@@ -120,7 +239,17 @@ class AppLauncher:
                 run_kwargs["env"] = self.env
 
             result = subprocess.run(cmd, **run_kwargs)
-            return result.returncode == 0
+            launch_success = result.returncode == 0
+
+            # Run post-launch hooks (even if launch failed)
+            if not self._run_hook_scripts("post"):
+                if self.verbose:
+                    print(f"Post-launch hooks failed for {self.app_name}", file=sys.stderr)
+                # Don't fail based on post-launch hook failure
+                # (app already launched)
+
+            return launch_success
+
         except KeyboardInterrupt:
             if self.verbose:
                 print(f"Launch interrupted for {self.app_name}", file=sys.stderr)

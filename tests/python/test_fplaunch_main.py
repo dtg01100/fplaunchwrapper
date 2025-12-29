@@ -113,7 +113,7 @@ class TestMainEntryPoint:
         mock_run.assert_called_once()
         assert result == 0
 
-    @patch("sys.argv", ["fplaunch", "setup-systemd"])
+    @patch("sys.argv", ["fplaunch", "systemd-setup"])
     @patch("fplaunch.systemd_setup.SystemdSetup.run")
     def test_main_entry_systemd_setup(self, mock_setup_service) -> None:
         """Test main entry point routes to systemd setup."""

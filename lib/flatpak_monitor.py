@@ -28,32 +28,35 @@ except ImportError:
 
 
 class FlatpakEventHandler(FileSystemEventHandler):
-    """Handler for Flatpak installation/removal events."""
+    """Handler for Flatpak installation/removal events with event batching."""
 
     def __init__(self, callback=None) -> None:
         self.callback = callback
         self.last_event_time = 0
         self.cooldown_seconds = 2  # Prevent rapid-fire events
+        self.pending_events = []
+        self.batch_window = 1.0  # Collect events for 1 second
+        self.batch_timer = None
 
     def on_created(self, event) -> None:
         """Called when a new file/directory is created."""
         if self._should_process_event(event.src_path):
-            self._trigger_callback("created", event.src_path)
+            self._queue_event("created", event.src_path)
 
     def on_deleted(self, event) -> None:
         """Called when a file/directory is deleted."""
         if self._should_process_event(event.src_path):
-            self._trigger_callback("deleted", event.src_path)
+            self._queue_event("deleted", event.src_path)
 
     def on_modified(self, event) -> None:
         """Called when a file/directory is modified."""
         if self._should_process_event(event.src_path):
-            self._trigger_callback("modified", event.src_path)
+            self._queue_event("modified", event.src_path)
 
     def on_moved(self, event) -> None:
         """Called when a file/directory is moved."""
         if self._should_process_event(event.src_path):
-            self._trigger_callback("moved", event.src_path)
+            self._queue_event("moved", event.src_path)
 
     def _should_process_event(self, path) -> bool:
         """Determine if we should process this event."""
@@ -70,19 +73,60 @@ class FlatpakEventHandler(FileSystemEventHandler):
 
         for flatpak_path in flatpak_paths:
             if path_str.startswith(flatpak_path):
-                # Check cooldown to prevent spam
-                current_time = time.time()
-                if current_time - self.last_event_time > self.cooldown_seconds:
-                    self.last_event_time = current_time
-                    return True
+                return True
 
         return False
 
-    def _trigger_callback(self, event_type, path) -> None:
-        """Trigger the callback function."""
+    def _queue_event(self, event_type, path) -> None:
+        """Queue event for batching instead of processing immediately."""
+        # Add to pending events if not already there
+        event_key = (event_type, path)
+        if event_key not in self.pending_events:
+            self.pending_events.append(event_key)
+
+        # Reset batch timer
+        if self.batch_timer:
+            self.batch_timer.cancel()
+
+        # Import threading here to avoid issues if not available
+        import threading
+        self.batch_timer = threading.Timer(
+            self.batch_window, 
+            self._flush_pending_events
+        )
+        self.batch_timer.daemon = True
+        self.batch_timer.start()
+
+    def _flush_pending_events(self) -> None:
+        """Process all pending events and trigger callback once."""
+        if not self.pending_events:
+            return
+
+        # Check cooldown
+        current_time = time.time()
+        if current_time - self.last_event_time < self.cooldown_seconds:
+            # Still in cooldown, reschedule
+            import threading
+            self.batch_timer = threading.Timer(
+                self.cooldown_seconds - (current_time - self.last_event_time),
+                self._flush_pending_events
+            )
+            self.batch_timer.daemon = True
+            self.batch_timer.start()
+            return
+
+        # Update cooldown timestamp
+        self.last_event_time = current_time
+
+        # Trigger callback with all batched events
         if self.callback:
             with contextlib.suppress(Exception):
-                self.callback(event_type, path)
+                # Pass all pending events to the callback
+                for event_type, path in self.pending_events:
+                    self.callback(event_type, path)
+
+        self.pending_events = []
+        self.batch_timer = None
 
 
 class FlatpakMonitor:
