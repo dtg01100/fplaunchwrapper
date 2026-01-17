@@ -1,5 +1,80 @@
 # Advanced Wrapper Usage
 
+## Configuration Profiles
+
+Profiles allow you to manage multiple wrapper configurations for different contexts (work, home, gaming, etc.).
+
+### Profile Management Commands
+```bash
+# List all available profiles
+fplaunch profiles list
+
+# Create a new profile
+fplaunch profiles create work
+fplaunch profiles create gaming --copy-from default
+
+# Switch to a profile
+fplaunch profiles switch work
+
+# Get current active profile
+fplaunch profiles current
+
+# Export/Import profiles
+fplaunch profiles export work      # Saves to work.toml
+fplaunch profiles import work.toml # Imports from file
+```
+
+### Profile Storage
+```
+~/.config/fplaunchwrapper/
+  ├── config.toml              # Default/main configuration
+  └── profiles/
+      ├── work.toml           # Work profile
+      ├── gaming.toml         # Gaming profile
+      └── custom.toml         # Custom profile
+```
+
+### Use Cases
+- Different wrapper preferences for work/home/gaming
+- Backup and share configurations
+- Per-machine configuration profiles
+- A/B testing different wrapper configurations
+
+## Permission Presets
+
+Permission presets allow you to define and reuse common Flatpak sandbox permission configurations.
+
+### Preset Management Commands
+```bash
+# List all permission presets
+fplaunch presets list
+
+# Get a specific preset's permissions
+fplaunch presets get development
+
+# Add/create a new preset
+fplaunch presets add gaming --permissions "--device=dri" "--socket=pulseaudio"
+fplaunch presets add work --permissions "--filesystem=home" "--share=ipc"
+
+# Remove a preset
+fplaunch presets remove gaming
+```
+
+### Preset Storage
+```toml
+[permission_presets.development]
+permissions = ["--filesystem=home", "--device=dri"]
+
+[permission_presets.media]
+permissions = ["--device=dri", "--socket=pulseaudio"]
+```
+
+### Use Cases
+- Quick permission templates for common use cases
+- Sandbox editing in wrapper script integration
+- Consistent permission sets across multiple wrappers
+- Easy sharing of sandbox configurations
+
 ## Interactive Mode Control
 
 ### Environment Variable: `FPWRAPPER_FORCE`
@@ -239,7 +314,9 @@ firefox --fpwrapper-force-interactive --help
 
 ## Related Commands
 
-- `fplaunch-manage`: Manage wrapper preferences and settings (aliases: `search`→`discover`, `rm`→`remove`)
-- `fplaunch-generate`: Regenerate all wrappers
-- `fplaunch-setup-systemd`: Enable automatic updates
-- `fplaunch-cleanup`: Remove all wrappers and configuration
+- `fplaunch`: Main management utility with commands: list, search, remove, remove-pref, set-pref, set-env, remove-env, list-env, set-pref-all, set-script, set-post-script, remove-script, remove-post-script, set-alias, remove-alias, export-prefs, import-prefs, export-config, import-config, block, unblock, list-blocked, install, launch, regenerate, info, manifest, files, uninstall
+- `fplaunch profiles`: Manage configuration profiles
+- `fplaunch presets`: Manage permission presets
+- `fplaunch systemd`: Manage systemd timer
+- `fplaunch generate`: Regenerate all wrappers
+- `fplaunch cleanup`: Remove all wrappers and configuration

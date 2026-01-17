@@ -29,13 +29,13 @@ fplaunchwrapper creates **smart wrapper scripts** that intelligently choose betw
 uv tool install fplaunchwrapper
 
 # Generate wrappers for all Flatpak apps
-fplaunch-cli generate ~/bin
+fplaunch generate ~/bin
 
 # List all wrappers with beautiful formatting
-fplaunch-cli list
+fplaunch list
 
 # Set launch preference for an app
-fplaunch-cli set-pref firefox flatpak
+fplaunch set-pref firefox flatpak
 
 # Launch app (automatically uses your preference)
 firefox
@@ -98,12 +98,12 @@ When run from scripts, desktop files, or IDEs:
 
 2. **Generate Wrappers**
    ```bash
-   fplaunch-cli generate ~/bin
+   fplaunch generate ~/bin
    ```
 
 3. **List Your Wrappers**
    ```bash
-   fplaunch-cli list
+   fplaunch list
    ```
 
 4. **Launch Applications**
@@ -116,35 +116,54 @@ When run from scripts, desktop files, or IDEs:
 
 #### Core Commands
 ```bash
-fplaunch-cli generate [DIR]     # Generate wrapper scripts
-fplaunch-cli list              # List all wrappers
-fplaunch-cli set-pref APP PREF # Set launch preference (system/flatpak)
-fplaunch-cli remove APP        # Remove a wrapper (alias: rm)
-fplaunch-cli launch APP        # Launch an application
-fplaunch-cli monitor           # Start real-time monitoring daemon
-fplaunch-cli config            # Show current configuration
-fplaunch-cli setup-systemd     # Set up automatic systemd updates
+fplaunch generate [DIR]         # Generate wrapper scripts
+fplaunch list                   # List all wrappers
+fplaunch set-pref APP PREF     # Set launch preference (system/flatpak)
+fplaunch remove APP            # Remove a wrapper (alias: rm)
+fplaunch launch APP            # Launch an application
+fplaunch monitor               # Start real-time monitoring daemon
+fplaunch config                # Show current configuration
+fplaunch systemd enable        # Set up automatic systemd updates
 ```
 
 **All commands support `--emit` for dry-run mode:**
 ```bash
-fplaunch-cli generate --emit    # Show what wrappers would be created
-fplaunch-cli set-pref firefox flatpak --emit  # Show preference changes
-fplaunch-cli setup-systemd --emit             # Show systemd operations
+fplaunch generate --emit        # Show what wrappers would be created
+fplaunch set-pref firefox flatpak --emit  # Show preference changes
+fplaunch systemd enable --emit            # Show systemd operations
 ```
 
 #### Management Commands
 ```bash
-fplaunch-cleanup               # Safely remove all artifacts
-fplaunch-setup-systemd         # Set up automatic updates
-fplaunch-config                # Configuration management
+fplaunch cleanup                # Safely remove all artifacts
+fplaunch systemd enable         # Set up automatic updates
+fplaunch config                 # Configuration management
 ```
 
-#### Direct Commands
+#### Configuration Profiles & Presets
 ```bash
-fplaunch-generate [DIR]        # Direct wrapper generation
-fplaunch-manage list           # Direct wrapper management
-fplaunch-launch APP [ARGS]     # Direct app launching
+# Profile management
+fplaunch profiles list              # List all profiles
+fplaunch profiles create work       # Create new profile
+fplaunch profiles switch work       # Switch to profile
+fplaunch profiles current           # Show active profile
+fplaunch profiles export work       # Export to file
+fplaunch profiles import work.toml  # Import from file
+
+# Permission presets
+fplaunch presets list               # List all presets
+fplaunch presets get development    # Show preset permissions
+fplaunch presets add gaming --permissions "--device=dri" "--socket=pulseaudio"
+fplaunch presets remove gaming      # Remove preset
+```
+
+#### Systemd Management
+```bash
+fplaunch systemd enable            # Enable systemd timer
+fplaunch systemd disable           # Disable systemd timer
+fplaunch systemd status            # Check systemd status
+fplaunch systemd test              # Test systemd configuration
+fplaunch systemd logs              # Show systemd logs
 ```
 
 ### 🎨 Command Examples
@@ -152,53 +171,56 @@ fplaunch-launch APP [ARGS]     # Direct app launching
 **Generate Wrappers:**
 ```bash
 # Generate in default location
-fplaunch-cli generate
+fplaunch generate
 
 # Generate in custom directory
-fplaunch-cli generate ~/my-wrappers
+fplaunch generate ~/my-wrappers
 
 # Generate with verbose output
-fplaunch-cli generate --verbose ~/bin
+fplaunch generate --verbose ~/bin
 ```
 
 **Manage Preferences:**
 ```bash
 # Set Firefox to use Flatpak
-fplaunch-cli set-pref firefox flatpak
+fplaunch set-pref firefox flatpak
 
 # Set Chrome to use system package
-fplaunch-cli set-pref chrome system
+fplaunch set-pref chrome system
 
 # Remove a wrapper
-fplaunch-cli remove vlc
+fplaunch remove vlc
 ```
 
 **Monitor for Changes:**
 ```bash
 # Start monitoring daemon
-fplaunch-cli monitor
+fplaunch monitor
 
 # Set up automatic systemd monitoring
-fplaunch-setup-systemd
+fplaunch systemd enable
 ```
 
 **Get Information:**
 ```bash
 # Show all wrappers
-fplaunch-cli list
+fplaunch list
 
 # Show detailed info for specific app
-fplaunch-cli info firefox
+fplaunch info firefox
 
 # Show current configuration
-fplaunch-cli config
+fplaunch config
+
+# Search for applications
+fplaunch search firefox
 ```
 
 ### 🔄 Automatic Updates
 
 **Systemd Setup (Recommended):**
 ```bash
-fplaunch-setup-systemd
+fplaunch systemd enable
 ```
 - Monitors Flatpak directory for changes
 - Automatically regenerates wrappers
@@ -206,7 +228,7 @@ fplaunch-setup-systemd
 
 **Cron Fallback:**
 ```bash
-fplaunch-setup-systemd  # Uses cron if systemd unavailable
+fplaunch systemd enable  # Uses cron if systemd unavailable
 ```
 
 ### 🧹 Cleanup
@@ -214,13 +236,13 @@ fplaunch-setup-systemd  # Uses cron if systemd unavailable
 **Safe Cleanup:**
 ```bash
 # Preview what will be removed
-fplaunch-cleanup --dry-run
+fplaunch cleanup --dry-run
 
 # Remove everything (with confirmation)
-fplaunch-cleanup --yes
+fplaunch cleanup --force
 
 # Remove from custom directory
-fplaunch-cleanup --bin-dir ~/my-wrappers
+fplaunch cleanup --bin-dir ~/my-wrappers
 ```
 
 ## Interactive vs Non-Interactive Behavior
@@ -304,7 +326,7 @@ custom_args = ["--new-window"]
 **Configuration Commands:**
 ```bash
 # Show current config
-fplaunch-cli config
+fplaunch config
 
 # Edit configuration manually
 $EDITOR ~/.config/fplaunchwrapper/config.toml
@@ -323,28 +345,28 @@ All fplaunchwrapper commands support `--emit` mode for comprehensive testing wit
 **Emit Examples:**
 ```bash
 # Preview wrapper generation
-fplaunch-cli generate --emit ~/bin
+fplaunch generate --emit ~/bin
 # Output: EMIT: Would create wrapper: firefox
 #         EMIT: Would write 5585 bytes to ~/bin/firefox
 
 # Preview with detailed file contents
-fplaunch-cli generate --emit --emit-verbose ~/bin
+fplaunch generate --emit --emit-verbose ~/bin
 # Output: Shows complete wrapper script content
 
 # Preview preference changes
-fplaunch-cli set-pref firefox flatpak --emit
+fplaunch set-pref firefox flatpak --emit
 # Output: EMIT: Would write 'flatpak' to ~/.config/fplaunchwrapper/firefox.pref
 
 # Preview with file content
-fplaunch-cli set-pref firefox flatpak --emit --emit-verbose
+fplaunch set-pref firefox flatpak --emit --emit-verbose
 # Output: Shows the content that would be written to the preference file
 
 # Preview systemd setup
-fplaunch-cli setup-systemd --emit
+fplaunch systemd enable --emit
 # Output: EMIT: Would run: systemctl --user enable flatpak-wrappers.path
 
 # Preview with systemd unit contents
-fplaunch-cli setup-systemd --emit --emit-verbose
+fplaunch systemd enable --emit --emit-verbose
 # Output: Shows complete systemd service, path, and timer unit files
 ```
 
@@ -355,7 +377,7 @@ fplaunch-cli setup-systemd --emit --emit-verbose
 echo "🧪 Testing fplaunchwrapper configuration..."
 
 # Test wrapper generation
-if fplaunch-cli generate --emit ~/bin | grep -q "EMIT:"; then
+if fplaunch generate --emit ~/bin | grep -q "EMIT:"; then
     echo "✅ Generate command works"
 else
     echo "❌ Generate command failed"
@@ -363,7 +385,7 @@ else
 fi
 
 # Test systemd setup
-if fplaunch-cli setup-systemd --emit | grep -q "systemd unit"; then
+if fplaunch setup-systemd --emit | grep -q "systemd unit"; then
     echo "✅ Systemd setup works"
 else
     echo "❌ Systemd setup failed"
@@ -436,8 +458,8 @@ uv run flake8 lib/ tests/python/
 
 ```
 fplaunchwrapper/
-├── lib/                          # Python modules
-│   ├── fplaunch.py              # Main entry point
+├── fplaunch/                     # Python package
+│   ├── __init__.py             # Package initialization
 │   ├── cli.py                   # CLI interface
 │   ├── generate.py              # Wrapper generation
 │   ├── manage.py                # Wrapper management
@@ -446,15 +468,26 @@ fplaunchwrapper/
 │   ├── systemd_setup.py         # Systemd setup
 │   ├── config_manager.py        # Configuration management
 │   ├── flatpak_monitor.py       # File monitoring
+│   ├── notifications.py         # Notification system
+│   ├── safety.py                # Safety checks
 │   └── python_utils.py          # Utility functions
+├── lib/                          # Backward compatibility
 ├── tests/                       # Test suite
-│   ├── python/                  # Python unit tests
-│   └── test_security_fixes.sh   # Security verification
+│   ├── python/                  # Python unit tests (494+ tests)
+│   └── adversarial/             # Adversarial testing
 ├── docs/                        # Documentation
+│   ├── ADVANCED_USAGE.md        # Advanced features
+│   ├── IMPLEMENTATION_STATUS.md # Implementation tracking
+│   ├── DEFERRED_FEATURES_IMPLEMENTATION.md # Completed features
+│   └── FPWRAPPER_FORCE.md       # Interactive mode control
+├── examples/                    # Usage examples
+│   ├── script-usage-guide.md    # Script examples
+│   ├── pre-launch-examples.md   # Pre-launch hooks
+│   └── post-run-examples.md     # Post-run hooks
 ├── packaging/                   # Package building
 ├── pyproject.toml               # Python package config
 ├── setup-dev.sh                 # Development setup
-└── requirements.txt             # Dependencies
+└── Makefile                     # Build automation
 ```
 
 ### Contributing
@@ -554,7 +587,7 @@ flatpak --version
 flatpak list --app
 
 # Run with verbose output
-fplaunch-cli generate --verbose ~/bin
+fplaunch generate --verbose ~/bin
 ```
 
 **Permission denied errors:**
@@ -563,7 +596,7 @@ fplaunch-cli generate --verbose ~/bin
 chmod 755 ~/bin
 
 # Or use system directory (if admin)
-sudo fplaunch-cli generate /usr/local/bin
+sudo fplaunch generate /usr/local/bin
 ```
 
 **Monitoring not working:**
@@ -572,7 +605,7 @@ sudo fplaunch-cli generate /usr/local/bin
 uv pip install watchdog
 
 # Check systemd setup
-fplaunch-setup-systemd
+fplaunch systemd enable
 ```
 
 ### Getting Help
@@ -640,7 +673,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv tool install fplaunchwrapper
 
 # Verify installation
-fplaunch-cli --help
+fplaunch --help
 ```
 
 **Using pip:**
@@ -652,7 +685,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv tool install fplaunchwrapper
 
 # Verify installation
-fplaunch-cli --help
+fplaunch --help
 ```
 
 **Using pip:**
@@ -673,7 +706,7 @@ sudo dpkg -i fplaunchwrapper_*.deb
 sudo apt-get install -f  # Install dependencies
 
 # Generate wrappers
-fplaunch-generate ~/bin
+fplaunch generate ~/bin
 ```
 
 **Red Hat/Fedora (.rpm):**
@@ -682,7 +715,7 @@ fplaunch-generate ~/bin
 sudo rpm -Uvh fplaunchwrapper-*.rpm
 
 # Generate wrappers
-fplaunch-generate ~/bin
+fplaunch generate ~/bin
 ```
 
 ### Development Installation
@@ -705,13 +738,13 @@ pip install -e ".[dev]"
 sudo dnf install fplaunchwrapper-*.rpm
 
 # Generate wrapper scripts for your user
-fplaunch-manage regenerate
+fplaunch regenerate
 
 # (Optional) Enable automatic updates
-fplaunch-setup-systemd
+fplaunch systemd enable
 ```
 
-**Important**: Package installation installs system files and commands. Each user must run `fplaunch-manage regenerate` to generate wrappers in their home directory and optionally `fplaunch-setup-systemd` to enable automatic updates.
+**Important**: Package installation installs system files and commands. Each user must run `fplaunch regenerate` to generate wrappers in their home directory and optionally `fplaunch systemd enable` to enable automatic updates.
 
 ### From Source
 
@@ -734,30 +767,30 @@ fplaunch-setup-systemd
 - Edit sandbox: `chrome --fpwrapper-edit-sandbox` for interactive permission editing.
 - YOLO mode: `chrome --fpwrapper-sandbox-yolo` to grant all permissions (use with caution).
 - Set override: `chrome --fpwrapper-set-override [system|flatpak]` to force preference (prompts if not specified).
-- Env vars: Set transient env vars via `fplaunch-manage set-env` (for permanent, use `flatpak override <app> --env=VAR=value`).
-- Manage: `fplaunch-manage` for interactive menu (uses dialog if available), or CLI commands like `fplaunch-manage list`, `fplaunch-manage search <keyword>`, `fplaunch-manage info <name>`. (`search` is a silent alias for `discover`.)
-- Search: `fplaunch-manage search <keyword>` to find wrappers by name, ID, or description.
-- Install: `fplaunch-manage install <app>` to install a Flatpak and create wrapper.
-- Launch: `fplaunch-manage launch <name>` to launch a wrapper.
+- Env vars: Set transient env vars via `fplaunch set-env` (for permanent, use `flatpak override <app> --env=VAR=value`).
+- Manage: `fplaunch` for interactive menu (uses dialog if available), or CLI commands like `fplaunch list`, `fplaunch search <keyword>`, `fplaunch info <name>`. (`search` is a silent alias for `discover`.)
+- Search: `fplaunch search <keyword>` to find wrappers by name, ID, or description.
+- Install: `fplaunch install <app>` to install a Flatpak and create wrapper.
+- Launch: `fplaunch launch <name>` to launch a wrapper.
   - Examples:
-   - `fplaunch-manage set-alias chrome browser`
-   - `fplaunch-manage export-prefs prefs.tar.gz`
-   - `fplaunch-manage export-config full_backup.tar.gz` to export complete configuration
-   - `fplaunch-manage info chrome` to show detailed app info and manifest
-   - `fplaunch-manage manifest chrome local > manifest.ini` to save local manifest
-   - `fplaunch-manage set-env chrome MOZ_ENABLE_WAYLAND 1` to set environment variables
-   - `fplaunch-manage set-script chrome ~/scripts/chrome-prelaunch.sh` to set pre-launch script
-   - `fplaunch-manage set-post-script chrome ~/scripts/chrome-postrun.sh` to set post-run script
-   - `fplaunch-manage remove-script chrome` to remove pre-launch script
-   - `fplaunch-manage remove-post-script chrome` to remove post-run script
-   - `fplaunch-manage block com.example.App` to block an app
+   - `fplaunch set-alias chrome browser`
+   - `fplaunch export-prefs prefs.tar.gz`
+   - `fplaunch export-config full_backup.tar.gz` to export complete configuration
+   - `fplaunch info chrome` to show detailed app info and manifest
+   - `fplaunch manifest chrome local > manifest.ini` to save local manifest
+   - `fplaunch set-env chrome MOZ_ENABLE_WAYLAND 1` to set environment variables
+   - `fplaunch set-script chrome ~/scripts/chrome-prelaunch.sh` to set pre-launch script
+   - `fplaunch set-post-script chrome ~/scripts/chrome-postrun.sh` to set post-run script
+   - `fplaunch remove-script chrome` to remove pre-launch script
+   - `fplaunch remove-post-script chrome` to remove post-run script
+   - `fplaunch block com.example.App` to block an app
 
 ## Commands
 
-- `fplaunch-manage`: Main management utility with commands: list, search, remove, remove-pref, set-pref, set-env, remove-env, list-env, set-pref-all, set-script, set-post-script, remove-script, remove-post-script, set-alias, remove-alias, export-prefs, import-prefs, export-config, import-config, block, unblock, list-blocked, install, launch, regenerate, info, manifest, files, uninstall.
-- `fplaunch-generate`: Generates/updates wrappers.
-- `fplaunch-setup-systemd`: Configures systemd for auto-updates.
-- `fplaunch-cleanup`: Removes all per-user artifacts (run before uninstalling).
+- `fplaunch`: Main management utility with commands: list, search, remove, remove-pref, set-pref, set-env, remove-env, list-env, set-pref-all, set-script, set-post-script, remove-script, remove-post-script, set-alias, remove-alias, export-prefs, import-prefs, export-config, import-config, block, unblock, list-blocked, install, launch, regenerate, info, manifest, files, uninstall.
+- `fplaunch generate`: Generates/updates wrappers.
+- `fplaunch systemd enable`: Configures systemd for auto-updates.
+- `fplaunch cleanup`: Removes all per-user artifacts (run before uninstalling).
 - `install.sh`: Manual installation script (for source installs, accepts optional bin directory).
 - `uninstall.sh`: Manual uninstallation script (for source installs).
 - Bash completion: Automatically configured for all commands.
@@ -792,10 +825,10 @@ Once activated, you can use tab completion with all fplaunchwrapper commands:
 fplaunch-<TAB>
 
 # Complete subcommands
-fplaunch-manage <TAB>
+fplaunch <TAB>
 
 # Complete wrapper names
-fplaunch-manage info <TAB>
+fplaunch info <TAB>
 ```
 
 ### Manual Installation
@@ -860,8 +893,8 @@ MIT
 - If bash completion doesn't work, source the completion file manually: `source ~/.bashrc.d/fplaunch_completion.bash`
 
 **Debugging:**
-- Use `fplaunch-manage files` to see all generated files
-- Use `fplaunch-manage info <wrapper>` to debug wrapper configuration
+- Use `fplaunch files` to see all generated files
+- Use `fplaunch info <wrapper>` to debug wrapper configuration
 - Check systemd status with `systemctl --user status flatpak-wrappers.*`
 
 **Configuration Directory:** `~/.config/flatpak-wrappers/`

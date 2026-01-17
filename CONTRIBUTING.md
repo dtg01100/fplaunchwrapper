@@ -112,9 +112,9 @@ print('✅ Edge case tests passed')
 ```bash
 # Test CLI functionality (requires installation)
 pip install -e .
-fplaunch-cli generate ~/test-wrappers
-fplaunch-cli list
-fplaunch-cli set-pref firefox flatpak
+fplaunch generate ~/test-wrappers
+fplaunch list
+fplaunch set-pref firefox flatpak
 
 # Test wrapper functionality
 ~/test-wrappers/firefox --fpwrapper-help

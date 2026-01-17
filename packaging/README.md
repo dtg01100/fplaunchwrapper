@@ -53,13 +53,13 @@ sudo dpkg -i fplaunchwrapper_1.1.0_all.deb
 sudo apt-get install -f  # Install any missing dependencies
 
 # REQUIRED: Per-user setup
-fplaunch-manage regenerate
+fplaunch regenerate
 
 # Optional: enable automatic updates (user systemd)
-fplaunch-setup-systemd
+fplaunch systemd enable
 ```
 
-To enable automatic updates, run `fplaunch-setup-systemd`. Systemd units are not enabled by default; running this command is a user-initiated action and signals intent.
+To enable automatic updates, run `fplaunch systemd enable`. Systemd units are not enabled by default; running this command is a user-initiated action and signals intent.
 
 ### Fedora/RHEL/openSUSE
 
@@ -69,33 +69,33 @@ sudo rpm -i fplaunchwrapper-1.1.0-1.noarch.rpm
 sudo dnf install fplaunchwrapper-1.1.0-1.noarch.rpm
 
 # REQUIRED: Per-user setup
-fplaunch-manage regenerate
+fplaunch regenerate
 
 # Optional: enable automatic updates (user systemd)
-fplaunch-setup-systemd
+fplaunch systemd enable
 ```
 
-To enable automatic updates, run `fplaunch-setup-systemd`. Systemd units are not enabled by default; running this command is a user-initiated action and signals intent.
+To enable automatic updates, run `fplaunch systemd enable`. Systemd units are not enabled by default; running this command is a user-initiated action and signals intent.
 
 ## Package Contents
 
 Both packages install to:
-- `/usr/bin/` - User-facing commands (fplaunch-manage, fplaunch-generate, fplaunch-setup-systemd, fplaunch-cleanup)
+- `/usr/bin/` - User-facing commands (fplaunch, fplaunch generate, fplaunch systemd enable, fplaunch cleanup)
 - `/usr/lib/fplaunchwrapper/` - Main scripts and libraries
 - `/usr/share/doc/fplaunchwrapper/` - Documentation
 - `/usr/share/bash-completion/completions/` - Bash completion
 
 After package installation, each user should:
-- Generate wrapper scripts in `~/.local/bin` with `fplaunch-manage regenerate`
-- Optionally enable automatic updates with `fplaunch-setup-systemd`
-- Configure user preferences using `fplaunch-manage` commands
+- Generate wrapper scripts in `~/.local/bin` with `fplaunch regenerate`
+- Optionally enable automatic updates with `fplaunch systemd enable`
+- Configure user preferences using `fplaunch` commands
 
 ### Pre-uninstall Cleanup (Recommended)
 
 Before uninstalling the system package, each user can clean their home directory by running:
 
 ```bash
-fplaunch-cleanup
+fplaunch cleanup
 ```
 
 This removes generated wrappers, aliases, user configs, systemd user units, cron entries, and the bash completion drop-in. It does not remove the system package.

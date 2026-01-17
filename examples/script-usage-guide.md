@@ -85,8 +85,8 @@ chmod +x ~/scripts/chrome-private.sh
 chmod +x ~/scripts/chrome-private-cleanup.sh
 
 # Set up the wrapper (assuming chrome wrapper exists)
-fplaunch-manage set-script chrome ~/scripts/chrome-private.sh
-fplaunch-manage set-post-script chrome ~/scripts/chrome-private-cleanup.sh
+fplaunch set-script chrome ~/scripts/chrome-private.sh
+fplaunch set-post-script chrome ~/scripts/chrome-private-cleanup.sh
 
 # Or using wrapper commands
 chrome --fpwrapper-set-pre-script ~/scripts/chrome-private.sh
@@ -249,17 +249,17 @@ echo "✅ System settings restored"
 ### Setting up scripts via management command:
 ```bash
 # Set pre-launch script
-fplaunch-manage set-script chrome ~/scripts/chrome-private.sh
+fplaunch set-script chrome ~/scripts/chrome-private.sh
 
 # Set post-run script  
-fplaunch-manage set-post-script chrome ~/scripts/chrome-private-cleanup.sh
+fplaunch set-post-script chrome ~/scripts/chrome-private-cleanup.sh
 
 # View current scripts
-ls ~/.config/flatpak-wrappers/scripts/chrome/
+ls ~/.config/fplaunchwrapper/scripts/chrome/
 
 # Remove scripts
-fplaunch-manage remove-script chrome
-fplaunch-manage remove-post-script chrome
+fplaunch remove-script chrome
+fplaunch remove-post-script chrome
 ```
 
 ### Setting up scripts via wrapper commands:

@@ -15,7 +15,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv tool install fplaunchwrapper
 
 # Verify installation
-fplaunch-cli --help
+fplaunch --help
 ```
 
 **Using pip:**
@@ -58,17 +58,17 @@ cd fplaunchwrapper
 
 1. **Verify installation:**
     ```bash
-    fplaunch-cli --help
+    fplaunch --help
     ```
 
 2. **Generate wrappers for your Flatpak apps:**
     ```bash
-    fplaunch-cli generate ~/bin
+    fplaunch generate ~/bin
     ```
 
 3. **List your wrappers:**
     ```bash
-    fplaunch-cli list
+    fplaunch list
     ```
 
 4. **Launch an app:**
@@ -86,26 +86,26 @@ cd fplaunchwrapper
 
 ```bash
 # Generate wrappers in custom directory
-fplaunch-cli generate ~/my-wrappers
+fplaunch generate ~/my-wrappers
 
 # Generate with verbose output
-fplaunch-cli generate --verbose ~/bin
+fplaunch generate --verbose ~/bin
 
 # List all wrappers with beautiful formatting
-fplaunch-cli list
+fplaunch list
 ```
 
 ### Manage Launch Preferences
 
 ```bash
 # Set Firefox to use Flatpak version
-fplaunch-cli set-pref firefox flatpak
+fplaunch set-pref firefox flatpak
 
 # Set Chrome to use system version
-fplaunch-cli set-pref chrome system
+fplaunch set-pref chrome system
 
 # Remove a wrapper completely
-fplaunch-cli remove vlc
+fplaunch remove vlc
 ```
 
 ### 🧪 Safe Testing with Emit Mode
@@ -114,26 +114,26 @@ fplaunch-cli remove vlc
 
 ```bash
 # See what wrappers would be generated
-fplaunch-cli generate --emit ~/bin
+fplaunch generate --emit ~/bin
 
 # Preview with full file contents
-fplaunch-cli generate --emit --emit-verbose ~/bin
+fplaunch generate --emit --emit-verbose ~/bin
 
 # Preview preference changes
-fplaunch-cli set-pref firefox flatpak --emit
+fplaunch set-pref firefox flatpak --emit
 
 # Preview with preference file content
-fplaunch-cli set-pref firefox flatpak --emit --emit-verbose
+fplaunch set-pref firefox flatpak --emit --emit-verbose
 
 # Test systemd setup safely
-fplaunch-cli setup-systemd --emit
+fplaunch setup-systemd --emit
 
 # Test with complete systemd unit files
-fplaunch-cli setup-systemd --emit --emit-verbose
+fplaunch setup-systemd --emit --emit-verbose
 
 # Use global emit flag for any command
-fplaunch-cli --emit set-pref chrome system
-fplaunch-cli --emit-verbose set-pref chrome system
+fplaunch --emit set-pref chrome system
+fplaunch --emit-verbose set-pref chrome system
 ```
 
 **Benefits:**
@@ -146,10 +146,10 @@ fplaunch-cli --emit-verbose set-pref chrome system
 
 ```bash
 # Show detailed info about a wrapper
-fplaunch-cli info firefox
+fplaunch info firefox
 
 # Show current configuration
-fplaunch-cli config
+fplaunch config
 ```
 
 ### Launch Applications
@@ -197,7 +197,7 @@ firefox --fpwrapper-set-override flatpak
 
 **Set up systemd monitoring (recommended):**
 ```bash
-fplaunch-setup-systemd
+fplaunch systemd enable
 ```
 - Monitors for Flatpak app changes
 - Automatically regenerates wrappers
@@ -205,7 +205,7 @@ fplaunch-setup-systemd
 
 **Monitor manually:**
 ```bash
-fplaunch-cli monitor  # Start real-time monitoring
+fplaunch monitor  # Start real-time monitoring
 ```
 
 ### Custom Configuration
@@ -216,7 +216,7 @@ fplaunch-cli monitor  # Start real-time monitoring
 $EDITOR ~/.config/fplaunchwrapper/config.toml
 
 # View current configuration
-fplaunch-cli config
+fplaunch config
 ```
 
 **Example configuration:**
@@ -275,7 +275,7 @@ flatpak install flathub org.mozilla.firefox
 flatpak install flathub org.videolan.VLC
 
 # Regenerate wrappers
-fplaunch-cli generate ~/bin
+fplaunch generate ~/bin
 ```
 
 **Permission errors:**
@@ -284,7 +284,7 @@ fplaunch-cli generate ~/bin
 chmod 755 ~/bin
 
 # Or use a different directory
-fplaunch-cli generate ~/my-wrappers
+fplaunch generate ~/my-wrappers
 ```
 
 **Monitoring not working:**
@@ -293,7 +293,7 @@ fplaunch-cli generate ~/my-wrappers
 uv pip install watchdog
 
 # Try systemd setup
-fplaunch-setup-systemd
+fplaunch systemd enable
 ```
 
 **PATH issues:**
@@ -307,7 +307,7 @@ source ~/.bashrc
 
 ```bash
 # CLI help
-fplaunch-cli --help
+fplaunch --help
 
 # Wrapper help
 firefox --fpwrapper-help
@@ -321,19 +321,19 @@ man fplaunchwrapper  # If installed
 ### Safe Cleanup
 ```bash
 # Preview what will be removed
-fplaunch-cleanup --dry-run
+fplaunch cleanup --dry-run
 
 # Remove everything (with confirmation)
-fplaunch-cleanup --yes
+fplaunch cleanup --yes
 
 # Remove from specific directory
-fplaunch-cleanup --bin-dir ~/my-wrappers
+fplaunch cleanup --bin-dir ~/my-wrappers
 ```
 
 ### Complete Uninstallation
 ```bash
 # Remove user data
-fplaunch-cleanup --yes
+fplaunch cleanup --yes
 
 # Remove systemd units
 systemctl --user disable flatpak-wrappers.path flatpak-wrappers.timer
@@ -362,7 +362,7 @@ pip uninstall fplaunchwrapper
 
 **Next steps:**
 - Install more Flatpak apps: `flatpak install flathub <app-id>`
-- Regenerate wrappers: `fplaunch-cli generate ~/bin`
-- Set up monitoring: `fplaunch-setup-systemd`
+- Regenerate wrappers: `fplaunch generate ~/bin`
+- Set up monitoring: `fplaunch systemd enable`
 
 **Happy Flatpaking!** 🚀

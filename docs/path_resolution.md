@@ -6,7 +6,7 @@ fplaunchwrapper uses a sophisticated, multi-layered approach to resolve paths to
 
 ## Security-Hardened Resolution Process
 
-### 1. **Wrapper Script Generation** (`fplaunch-generate`)
+### 1. **Wrapper Script Generation** (`fplaunch generate`)
 
 When a wrapper is created, the system binary path resolution logic is **embedded directly into each wrapper script** at generation time. This ensures that:
 
@@ -353,9 +353,9 @@ Allows per-application environment customization that applies to both system and
 
 The path resolution works seamlessly with fplaunchwrapper's management features:
 
-- **`fplaunch-manage set-pref`**: Sets user preferences that override automatic detection
-- **`fplaunch-manage block`**: Prevents wrapper creation for specific applications
-- **`fplaunch-manage alias`**: Creates alternative names when path conflicts occur
+- **`fplaunch set-pref`**: Sets user preferences that override automatic detection
+- **`fplaunch block`**: Prevents wrapper creation for specific applications
+- **`fplaunch alias`**: Creates alternative names when path conflicts occur
 - **Environment Variables**: Customizable per-application environment for both execution modes
 
 This comprehensive path resolution system ensures that fplaunchwrapper provides a seamless user experience while maintaining system security and reliability.
