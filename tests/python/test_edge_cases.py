@@ -7,7 +7,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
 
 # Add the project root to the path
 import sys
@@ -15,7 +14,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from fplaunch.generate import WrapperGenerator
 from fplaunch.launch import AppLauncher
-from fplaunch.manage import WrapperManager
 from fplaunch.cleanup import WrapperCleanup
 
 

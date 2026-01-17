@@ -7,7 +7,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
 
 # Add the project root to the path
 import sys

@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 
 # Add the project root to the path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -57,7 +56,7 @@ class TestSafety:
                     assert is_test_environment() is False
                 finally:
                     # Restore unittest modules
-                    import unittest
+                    pass
 
     def test_is_dangerous_wrapper_with_dangerous_content(self, tmp_path: Path) -> None:
         """Test is_dangerous_wrapper with dangerous content."""

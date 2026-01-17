@@ -106,15 +106,26 @@ class SystemdSetup:
 
     def log(self, message: str, level: str = "info") -> None:
         """Log a message."""
-        if level in {"error", "warning"}:
-            pass
+        if level == "error":
+            if console:
+                console.print(f"[red]✗[/red] {message}", file=sys.stderr)
+            else:
+                print(f"Error: {message}", file=sys.stderr)
+        elif level == "warning":
+            if console:
+                console.print(f"[yellow]⚠[/yellow] {message}")
+            else:
+                print(f"Warning: {message}")
         elif level == "success":
             if console:
                 console.print(f"[green]✓[/green] {message}")
             else:
-                pass
-        else:
-            pass
+                print(f"✓ {message}")
+        elif level == "info" or level == "":
+            if console:
+                console.print(message)
+            else:
+                print(message)
 
     def check_prerequisites(self) -> bool:
         """Check if prerequisites are met."""
@@ -343,13 +354,6 @@ WantedBy=timers.target
 
     def install_cron_job(self) -> bool:
         """Install cron job as fallback."""
-        if not self._command_available("crontab"):
-            self.log("Neither systemd nor crontab available.", "error")
-            self.log(
-                f"Please run '{self.wrapper_script} {self.bin_dir}' manually to update wrappers.",
-            )
-            return False
-
         crontab_path = shutil.which("crontab")
         if not crontab_path:
             self.log("Neither systemd nor crontab available.", "error")

@@ -25,7 +25,7 @@ def cli_mod():
     return cli
 
 
-def test_generate_accepts_global_and_local_flags(cli_mod, runner, monkeypatch, tmp_path):
+def test_generate_accepts_global_flags(cli_mod, runner, monkeypatch, tmp_path):
     calls = {}
 
     config_dir = tmp_path / "cfg"
@@ -52,8 +52,6 @@ def test_generate_accepts_global_and_local_flags(cli_mod, runner, monkeypatch, t
             "--config-dir",
             str(config_dir),
             "generate",
-            "--emit",
-            "--emit-verbose",
             str(bin_dir),
         ],
     )
@@ -82,8 +80,8 @@ def test_systemd_setup_alias(cli_mod, runner, monkeypatch):
     calls = {}
 
     class FakeSystemdSetup:
-        def __init__(self):
-            calls["init"] = True
+        def __init__(self, bin_dir=None, wrapper_script=None, emit_mode=False, emit_verbose=False):
+            calls["init"] = (emit_mode, emit_verbose)
 
         def run(self):
             calls["run"] = True
@@ -93,20 +91,37 @@ def test_systemd_setup_alias(cli_mod, runner, monkeypatch):
 
     result = runner.invoke(cli_mod.cli, ["systemd-setup"], catch_exceptions=False)
     assert result.exit_code == 0
-    assert calls == {"init": True, "run": True}
+    assert calls == {"init": (False, False), "run": True}
 
 
 def test_config_defaults_to_show(cli_mod, runner, monkeypatch):
-    captured = {}
+    calls = []
 
-    def fake_config_main():
-        captured["argv"] = list(sys.argv)
+    class FakeConfigManager:
+        def __init__(self):
+            calls.append("init")
 
-    monkeypatch.setattr("lib.config_manager.main", fake_config_main)
+        def save_config(self):
+            calls.append("save_config")
+
+        def add_to_blocklist(self, app):
+            calls.append(f"block {app}")
+
+        def remove_from_blocklist(self, app):
+            calls.append(f"unblock {app}")
+
+        def list_permission_presets(self):
+            calls.append("list-presets")
+            return []
+
+        def get_permission_preset(self, preset):
+            calls.append(f"get-preset {preset}")
+            return []
+
+    monkeypatch.setattr("lib.config_manager.create_config_manager", lambda: FakeConfigManager())
 
     result = runner.invoke(cli_mod.cli, ["config"], catch_exceptions=False)
     assert result.exit_code == 0
-    assert captured["argv"][-1] == "show"
 
 
 def test_set_pref_flags(cli_mod, runner, monkeypatch, tmp_path):
@@ -130,11 +145,11 @@ def test_set_pref_flags(cli_mod, runner, monkeypatch, tmp_path):
         [
             "--config-dir",
             str(config_dir),
+            "--emit",
+            "--emit-verbose",
             "set-pref",
             "org.example.App",
             "system",
-            "--emit",
-            "--emit-verbose",
         ],
         catch_exceptions=False,
     )

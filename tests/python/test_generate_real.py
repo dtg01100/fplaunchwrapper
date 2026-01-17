@@ -4,7 +4,6 @@
 NO MOCKS (except subprocess for flatpak commands) - Tests actual code paths.
 """
 
-import os
 import shutil
 import subprocess
 import sys

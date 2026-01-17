@@ -7,7 +7,6 @@ wrapper name conflict checking.
 import tempfile
 from pathlib import Path
 
-import pytest
 
 from lib.manage import WrapperManager
 

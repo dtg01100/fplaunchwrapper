@@ -15,10 +15,7 @@ import sys
 import time
 import threading
 import signal
-import tempfile
-import shutil
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch, MagicMock
 import pytest
 
 # Add lib to path for imports
@@ -295,7 +292,7 @@ class TestFlatpakMonitorIntegration:
             result = start_flatpak_monitoring(callback=callback, daemon=False)
             
             assert result is not None
-            mock_monitor_class.assert_called_with(callback=callback)
+            mock_monitor_class.assert_called_with(callback=callback, config=None)
 
 
 class TestFlatpakMonitorEdgeCases:

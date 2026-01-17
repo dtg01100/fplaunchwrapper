@@ -7,7 +7,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -750,7 +750,7 @@ echo "testapp executed"
         self._run_wrapper(generated_wrapper, "--fpwrapper-run-unrestricted", "--version")
 
         log_content = generated_wrapper["flatpak_log"].read_text()
-        assert "override --filesystem=host org.mozilla.firefox" in log_content
+        assert "override --user org.mozilla.firefox --filesystem=host" in log_content
         assert "override --reset org.mozilla.firefox" in log_content
         assert "run --no-sandbox org.mozilla.firefox --version" in log_content
 

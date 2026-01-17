@@ -8,9 +8,7 @@ stderr for errors/warnings).
 from __future__ import annotations
 
 import tempfile
-from pathlib import Path
 
-import pytest
 
 from lib.generate import WrapperGenerator
 

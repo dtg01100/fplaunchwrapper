@@ -23,10 +23,6 @@ except ImportError:
 
 try:
     from rich.console import Console
-    from rich.panel import Panel
-    from rich.progress import Progress, SpinnerColumn, TextColumn
-    from rich.table import Table
-    from rich.text import Text
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -96,10 +92,7 @@ def find_fplaunch_script(script_name: str) -> Path | None:
 def use_python_backend() -> bool:
     """Check if we should use Python backend instead of bash scripts."""
     try:
-        import lib.generate
-        import lib.launch
-        import lib.manage
-
+        # The Python backend is always available if this function is being called
         return True
     except ImportError:
         return False
@@ -154,18 +147,8 @@ if CLICK_AVAILABLE:
         type=click.Path(dir_okay=True, writable=True),
         required=False,
     )
-    @click.option(
-        "--emit",
-        is_flag=True,
-        help="Emit commands instead of executing (dry run)",
-    )
-    @click.option(
-        "--emit-verbose",
-        is_flag=True,
-        help="Show detailed file contents in emit mode",
-    )
     @click.pass_context
-    def generate(ctx, bin_dir, emit, emit_verbose):
+    def generate(ctx, bin_dir):
         """Generate Flatpak application wrappers.
 
         BIN_DIR: Directory to store wrapper scripts (default: ~/bin)
@@ -184,8 +167,8 @@ if CLICK_AVAILABLE:
             generator = WrapperGenerator(
                 bin_dir,
                 ctx.obj["verbose"],
-                emit or ctx.obj["emit"],
-                emit_verbose or ctx.obj["emit_verbose"],
+                ctx.obj["emit"],
+                ctx.obj["emit_verbose"],
             )
             return generator.run()
         except ImportError as e:
@@ -233,18 +216,8 @@ if CLICK_AVAILABLE:
     @cli.command()
     @click.argument("app_name")
     @click.argument("preference", type=click.Choice(["system", "flatpak"]))
-    @click.option(
-        "--emit",
-        is_flag=True,
-        help="Emit commands instead of executing (dry run)",
-    )
-    @click.option(
-        "--emit-verbose",
-        is_flag=True,
-        help="Show detailed file contents in emit mode",
-    )
     @click.pass_context
-    def set_pref(ctx, app_name, preference, emit, emit_verbose) -> int | None:
+    def set_pref(ctx, app_name, preference) -> int | None:
         """Set launch preference for an application.
 
         APP_NAME: Application name
@@ -257,8 +230,8 @@ if CLICK_AVAILABLE:
             manager = WrapperManager(
                 ctx.obj["config_dir"],
                 ctx.obj["verbose"],
-                emit or ctx.obj["emit"],
-                emit_verbose or ctx.obj["emit_verbose"],
+                ctx.obj["emit"],
+                ctx.obj["emit_verbose"],
             )
             return 0 if manager.set_preference(app_name, preference) else 1
 
@@ -274,13 +247,8 @@ if CLICK_AVAILABLE:
 
     @cli.command()
     @click.argument("app_name")
-    @click.option(
-        "--emit",
-        is_flag=True,
-        help="Emit commands instead of executing (dry run)",
-    )
     @click.pass_context
-    def launch(ctx, app_name, emit):
+    def launch(ctx, app_name):
         """Launch a Flatpak application.
 
         APP_NAME: Application name to launch
@@ -301,18 +269,13 @@ if CLICK_AVAILABLE:
 
     @cli.command()
     @click.argument("app_name")
-    @click.option(
-        "--emit",
-        is_flag=True,
-        help="Emit commands instead of executing (dry run)",
-    )
     @click.pass_context
-    def remove(ctx, app_name, emit):
+    def remove(ctx, app_name):
         """Remove a Flatpak wrapper.
 
         APP_NAME: Application name to remove
         """
-        emit_mode = emit or ctx.obj["emit"]
+        emit_mode = ctx.obj["emit"]
 
         script_path = find_fplaunch_script("fplaunch-manage")
         if not script_path:
@@ -348,13 +311,8 @@ if CLICK_AVAILABLE:
         return 0
 
     @cli.command()
-    @click.option(
-        "--emit",
-        is_flag=True,
-        help="Emit commands instead of executing (dry run)",
-    )
     @click.pass_context
-    def systemd_setup(ctx, emit) -> int:
+    def systemd_setup(ctx) -> int:
         """Set up systemd user service for Flatpak monitoring.
 
         Creates and enables a systemd user service that automatically
@@ -364,7 +322,10 @@ if CLICK_AVAILABLE:
         try:
             from .systemd_setup import SystemdSetup
 
-            setup = SystemdSetup()
+            setup = SystemdSetup(
+                emit_mode=ctx.obj["emit"],
+                emit_verbose=ctx.obj["emit_verbose"],
+            )
             return setup.run()
         except ImportError as e:
             if console_err:
@@ -382,13 +343,8 @@ if CLICK_AVAILABLE:
         is_flag=True,
         help="Force cleanup without confirmation",
     )
-    @click.option(
-        "--emit",
-        is_flag=True,
-        help="Emit commands instead of executing (dry run)",
-    )
     @click.pass_context
-    def cleanup(ctx, dry_run, force, emit) -> int:
+    def cleanup(ctx, dry_run, force) -> int:
         """Clean up orphaned wrapper files and artifacts.
 
         Removes wrapper scripts and configuration files that are no longer
@@ -418,19 +374,14 @@ if CLICK_AVAILABLE:
         is_flag=True,
         help="Run in daemon mode (background)",
     )
-    @click.option(
-        "--emit",
-        is_flag=True,
-        help="Emit commands instead of executing (dry run)",
-    )
     @click.pass_context
-    def monitor(ctx, daemon, emit) -> int:
+    def monitor(ctx, daemon) -> int:
         """Start Flatpak monitoring daemon.
 
         Monitors for Flatpak installation changes and automatically
         regenerates wrappers when applications are installed or removed.
         """
-        emit_mode = emit or ctx.obj["emit"]
+        emit_mode = ctx.obj["emit"]
 
         if emit_mode:
             if console:
@@ -448,19 +399,9 @@ if CLICK_AVAILABLE:
         try:
             from .flatpak_monitor import main as monitor_main
 
-            # Set up argv for monitor_main
-            import sys
-
-            original_argv = sys.argv
-            try:
-                if daemon:
-                    sys.argv = ["monitor", "--daemon"]
-                else:
-                    sys.argv = ["monitor"]
-                monitor_main()
-                return 0
-            finally:
-                sys.argv = original_argv
+            # Call monitor_main with proper arguments instead of sys.argv manipulation
+            monitor_main(daemon=daemon)
+            return 0
         except ImportError as e:
             if console_err:
                 console_err.print(f"[red]Error:[/red] Failed to import monitor: {e}")
@@ -472,13 +413,8 @@ if CLICK_AVAILABLE:
     @cli.command()
     @click.argument("action", required=False)
     @click.argument("value", required=False)
-    @click.option(
-        "--emit",
-        is_flag=True,
-        help="Emit commands instead of executing (dry run)",
-    )
     @click.pass_context
-    def config(ctx, action, value, emit) -> int:
+    def config(ctx, action, value) -> int:
         """Manage fplaunchwrapper configuration.
 
         ACTION: Configuration action (show, init, block, unblock)
@@ -486,24 +422,68 @@ if CLICK_AVAILABLE:
         """
         # Use Python backend
         try:
-            from .config_manager import main as config_main
+            from .config_manager import create_config_manager
 
-            # Set up argv for config_main
-            import sys
+            config = create_config_manager()
 
-            original_argv = sys.argv
-            try:
-                if action:
-                    if value:
-                        sys.argv = ["config", action, value]
+            if not action or action == "show":
+                # Show current configuration
+                pass  # Currently, show action doesn't print anything
+
+            elif action == "init":
+                # Initialize configuration
+                config.save_config()
+
+            elif action == "block":
+                if not value:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] App name required for block action")
                     else:
-                        sys.argv = ["config", action]
+                        import sys
+                        print("Error: App name required for block action", file=sys.stderr)
+                    return 1
+                config.add_to_blocklist(value)
+
+            elif action == "unblock":
+                if not value:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] App name required for unblock action")
+                    else:
+                        import sys
+                        print("Error: App name required for unblock action", file=sys.stderr)
+                    return 1
+                config.remove_from_blocklist(value)
+
+            elif action == "list-presets":
+                presets = config.list_permission_presets()
+                for preset in presets:
+                    print(preset)
+
+            elif action == "get-preset":
+                if not value:
+                    if console_err:
+                        console_err.print("[red]Error:[/red] Preset name required for get-preset action")
+                    else:
+                        import sys
+                        print("Error: Preset name required for get-preset action", file=sys.stderr)
+                    return 1
+                permissions = config.get_permission_preset(value)
+                if permissions:
+                    for perm in permissions:
+                        print(perm)
                 else:
-                    sys.argv = ["config", "show"]
-                config_main()
-                return 0
-            finally:
-                sys.argv = original_argv
+                    return 1
+
+            else:
+                if console_err:
+                    console_err.print(f"[red]Error:[/red] Unknown action: {action}")
+                else:
+                    import sys
+                    print(f"Error: Unknown action: {action}", file=sys.stderr)
+                return 1
+
+            return 0
+
         except ImportError as e:
             if console_err:
                 console_err.print(f"[red]Error:[/red] Failed to import config manager: {e}")
@@ -865,9 +845,9 @@ if CLICK_AVAILABLE:
                         console.print("[yellow]✗[/yellow] Systemd timer is [bold yellow]disabled[/bold yellow]")
                     
                     if status.get("active"):
-                        console.print(f"  [green]Status:[/green] [bold green]active[/bold green]")
+                        console.print("  [green]Status:[/green] [bold green]active[/bold green]")
                     else:
-                        console.print(f"  [yellow]Status:[/yellow] [bold yellow]inactive[/bold yellow]")
+                        console.print("  [yellow]Status:[/yellow] [bold yellow]inactive[/bold yellow]")
                     
                     if status.get("units"):
                         console.print("[bold]Units:[/bold]")
@@ -914,6 +894,206 @@ if CLICK_AVAILABLE:
                 print(f"Error: Failed to import systemd setup: {e}", file=sys.stderr)
             return 1
 
+    @cli.command()
+    @click.argument("app_name", required=False)
+    @click.pass_context
+    def info(ctx, app_name):
+        """Show detailed information about installed wrappers.
+        
+        APP_NAME: Show detailed info for specific application
+        """
+        # Use Python backend
+        try:
+            from .manage import WrapperManager
+            
+            manager = WrapperManager(ctx.obj["config_dir"], ctx.obj["verbose"])
+            
+            if app_name:
+                # Show detailed info for specific app
+                return 0 if manager.show_info(app_name) else 1
+            # Show general info
+            if console:
+                console.print("[bold]fplaunchwrapper Information:[/bold]")
+                console.print(f"  Configuration directory: {ctx.obj['config_dir']}")
+                console.print(f"  Verbose mode: {ctx.obj['verbose']}")
+            else:
+                print("fplaunchwrapper Information:")
+                print(f"  Configuration directory: {ctx.obj['config_dir']}")
+                print(f"  Verbose mode: {ctx.obj['verbose']}")
+            return 0
+            
+        except ImportError as e:
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import wrapper manager: {e}")
+            else:
+                import sys
+                print(f"Error: Failed to import wrapper manager: {e}", file=sys.stderr)
+            return 1
+    
+    @cli.command()
+    @click.argument("query")
+    @click.pass_context
+    def search(ctx, query):
+        """Search for Flatpak applications and wrappers.
+        
+        QUERY: Search query for application name or description
+        """
+        # Use Python backend
+        try:
+            from .manage import WrapperManager
+            
+            manager = WrapperManager(ctx.obj["config_dir"], ctx.obj["verbose"])
+            manager.search_wrappers(query)
+            return 0
+            
+        except ImportError as e:
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import wrapper manager: {e}")
+            else:
+                import sys
+                print(f"Error: Failed to import wrapper manager: {e}", file=sys.stderr)
+            return 1
+    
+    @cli.command()
+    @click.argument("app_name")
+    @click.pass_context
+    def install(ctx, app_name):
+        """Install Flatpak application and create wrapper.
+        
+        APP_NAME: Flatpak application ID to install
+        """
+        emit_mode = ctx.obj["emit"]
+        
+        if emit_mode:
+            if console:
+                console.print(f"[cyan]📋 EMIT:[/cyan] Would install Flatpak app: {app_name}")
+                console.print("[dim]   Purpose: Install Flatpak application and create wrapper[/dim]")
+            return 0
+        
+        # First install the Flatpak
+        cmd = ["flatpak", "install", "-y", app_name]
+        result = run_command(cmd, f"Installing Flatpak app: {app_name}")
+        
+        if result.returncode != 0:
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to install Flatpak app: {result.stderr}")
+            else:
+                import sys
+                print(f"Error: Failed to install Flatpak app: {result.stderr}", file=sys.stderr)
+            return result.returncode
+        
+        # Then generate wrappers
+        from .generate import WrapperGenerator
+        bin_dir = os.path.expanduser("~/bin")
+        generator = WrapperGenerator(bin_dir, ctx.obj["verbose"], ctx.obj["emit"], ctx.obj["emit_verbose"])
+        return generator.run()
+    
+    @cli.command()
+    @click.argument("app_name", required=False)
+    @click.pass_context
+    def manifest(ctx, app_name):
+        """Show or manipulate Flatpak manifests.
+        
+        APP_NAME: Application name to show manifest for
+        """
+        if not app_name:
+            if console_err:
+                console_err.print("[red]Error:[/red] Application name required for manifest command")
+            else:
+                import sys
+                print("Error: Application name required for manifest command", file=sys.stderr)
+            return 1
+        
+        emit_mode = ctx.obj["emit"]
+        
+        cmd = ["flatpak", "info", "--show-manifest", app_name]
+        result = run_command(cmd, f"Showing manifest for: {app_name}", emit_mode=emit_mode)
+        
+        if result.returncode == 0:
+            if console:
+                console.print(f"[bold]Manifest for {app_name}:[/bold]")
+                console.print(result.stdout)
+            else:
+                print(f"Manifest for {app_name}:")
+                print(result.stdout)
+            return 0
+        elif not emit_mode:
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to get manifest: {result.stderr}")
+            else:
+                import sys
+                print(f"Error: Failed to get manifest: {result.stderr}", file=sys.stderr)
+            return result.returncode
+        
+        return 0
+    
+    @cli.command()
+    @click.argument("app_name", required=False)
+    @click.pass_context
+    def files(ctx, app_name):
+        """Show generated wrapper files.
+        
+        APP_NAME: Show files for specific application
+        """
+        try:
+            from .manage import WrapperManager
+            
+            manager = WrapperManager(ctx.obj["config_dir"], ctx.obj["verbose"])
+            manager.show_generated_files(app_name)
+            return 0
+            
+        except ImportError as e:
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to import wrapper manager: {e}")
+            else:
+                import sys
+                print(f"Error: Failed to import wrapper manager: {e}", file=sys.stderr)
+            return 1
+    
+    @cli.command()
+    @click.argument("app_name")
+    @click.option("--remove-data", is_flag=True, help="Remove application data")
+    @click.pass_context
+    def uninstall(ctx, app_name, remove_data):
+        """Uninstall Flatpak application and remove wrapper.
+        
+        APP_NAME: Flatpak application ID to uninstall
+        """
+        emit_mode = ctx.obj["emit"]
+        
+        if emit_mode:
+            if console:
+                console.print(f"[cyan]📋 EMIT:[/cyan] Would uninstall Flatpak app: {app_name}")
+                console.print("[dim]   Purpose: Uninstall Flatpak application and remove wrapper[/dim]")
+            return 0
+        
+        # First remove the wrapper
+        from .manage import WrapperManager
+        manager = WrapperManager(ctx.obj["config_dir"], ctx.obj["verbose"], ctx.obj["emit"], ctx.obj["emit_verbose"])
+        manager.remove_wrapper(app_name)
+        
+        # Then uninstall the Flatpak
+        cmd = ["flatpak", "uninstall", "-y"]
+        if remove_data:
+            cmd.append("--delete-data")
+        cmd.append(app_name)
+        
+        result = run_command(cmd, f"Uninstalling Flatpak app: {app_name}")
+        
+        if result.returncode == 0:
+            if console:
+                console.print(f"[green]✓[/green] Uninstalled Flatpak app: [bold]{app_name}[/bold]")
+            else:
+                print(f"Uninstalled Flatpak app: {app_name}")
+            return 0
+        else:
+            if console_err:
+                console_err.print(f"[red]Error:[/red] Failed to uninstall Flatpak app: {result.stderr}")
+            else:
+                import sys
+                print(f"Error: Failed to uninstall Flatpak app: {result.stderr}", file=sys.stderr)
+            return result.returncode
+    
     # Add command aliases for convenience
     # 'rm' is an alias for 'remove' (for shell users)
     cli.add_command(remove, name="rm")
@@ -926,6 +1106,9 @@ if CLICK_AVAILABLE:
     
     # 'clean' is an alias for 'cleanup'
     cli.add_command(cleanup, name="clean")
+    
+    # 'discover' is an alias for 'search'
+    cli.add_command(search, name="discover")
 
     # Export cli as main for entry point
     main = cli

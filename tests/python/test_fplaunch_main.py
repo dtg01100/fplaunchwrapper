@@ -130,19 +130,21 @@ class TestMainEntryPoint:
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "config"])
-    @patch("lib.config_manager.main")
-    def test_main_entry_config(self, mock_config_main) -> None:
+    @patch("lib.config_manager.create_config_manager")
+    def test_main_entry_config(self, mock_create_config) -> None:
         """Test main entry point routes to config manager."""
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        mock_config_main.return_value = 0
+        # Create a mock config manager
+        mock_config = Mock()
+        mock_create_config.return_value = mock_config
 
         from fplaunch.fplaunch import main
 
         result = main()
 
-        mock_config_main.assert_called_once()
+        mock_create_config.assert_called_once()
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "monitor"])

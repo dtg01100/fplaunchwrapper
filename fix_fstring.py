@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+with open('lib/generate.py', 'r') as f:
+    content = f.read()
+
+# Fix the f-string by escaping all ${} patterns that should be literal bash syntax
+import re
+
+# Replace all occurrences of ${#...} with ${{#...}} to escape them in f-strings
+content = re.sub(r'\$\{#', r'\$\{{#', content)
+
+# Write back to file
+with open('lib/generate.py', 'w') as f:
+    f.write(content)
+
+print('Fixed f-string syntax')

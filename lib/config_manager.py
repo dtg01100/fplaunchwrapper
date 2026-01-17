@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Enhanced configuration management for fplaunchwrapper
-Provides type-safe configuration handling with platform-specific paths.
+Provides type-safe configuration handling with platform-specific paths,
+schema validation, migration, and templating.
 """
 from __future__ import annotations
 
 import os
 import sys
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -22,7 +24,7 @@ except ImportError:
 
 
 try:
-    from pydantic import BaseModel, Field, ValidationError, field_validator
+    from pydantic import BaseModel, Field, field_validator, ValidationError
 
     PYDANTIC_AVAILABLE = True
 except ImportError:
@@ -62,10 +64,15 @@ class WrapperConfig:
     log_level: str = "INFO"
     active_profile: str = "default"  # Current active profile
     permission_presets: dict[str, list[str]] = field(default_factory=dict)  # Custom permission presets
+    schema_version: int = 1  # Schema version for migration purposes
 
 
 class EnhancedConfigManager:
-    """Enhanced configuration management with type safety and validation."""
+    """Enhanced configuration management with type safety, validation,
+    migration, and templating support.
+    """
+
+    CURRENT_SCHEMA_VERSION = 1
 
     def __init__(self, app_name="fplaunchwrapper") -> None:
         self.app_name = app_name
@@ -76,6 +83,17 @@ class EnhancedConfigManager:
         self.data_dir = Path(xdg_data_home) / app_name
         self.config_file = self.config_dir / "config.toml"
         self.config = WrapperConfig()
+        self.config.schema_version = self.CURRENT_SCHEMA_VERSION
+
+        # Template variables for substitution
+        self.template_variables = {
+            "HOME": str(Path.home()),
+            "XDG_CONFIG_HOME": os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
+            "XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share")),
+            "XDG_CACHE_HOME": os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")),
+            "CONFIG_DIR": str(self.config_dir),
+            "DATA_DIR": str(self.data_dir),
+        }
 
         # Ensure directories exist (best-effort; ignore read-only errors)
         try:
@@ -90,17 +108,61 @@ class EnhancedConfigManager:
         # Load configuration
         self.load_config()
 
+    def _substitute_variables(self, value: str) -> str:
+        """Substitute template variables in a string.
+        
+        Variables are in the format ${VARIABLE_NAME} or $VARIABLE_NAME.
+        
+        Args:
+            value: String containing variables to substitute
+            
+        Returns:
+            String with variables substituted
+        """
+        def replace_variable(match):
+            var_name = match.group(1) if match.group(1) else match.group(2)
+            return self.template_variables.get(var_name, match.group(0))
+
+        # Handle ${VARIABLE} format
+        value = re.sub(r'\$\{([A-Za-z0-9_]+)\}', replace_variable, value)
+        # Handle $VARIABLE format
+        value = re.sub(r'\$([A-Za-z0-9_]+)', replace_variable, value)
+        return value
+
+    def _process_config_value(self, value: Any) -> Any:
+        """Process configuration value with variable substitution.
+        
+        Handles nested structures (lists, dictionaries) recursively.
+        
+        Args:
+            value: Value to process
+            
+        Returns:
+            Processed value with variables substituted
+        """
+        if isinstance(value, str):
+            return self._substitute_variables(value)
+        elif isinstance(value, list):
+            return [self._process_config_value(v) for v in value]
+        elif isinstance(value, dict):
+            return {k: self._process_config_value(v) for k, v in value.items()}
+        return value
+
     def load_config(self) -> None:
-        """Load configuration from TOML file."""
+        """Load configuration from TOML file with migration and validation."""
         if self.config_file.exists():
             try:
                 if TOML_AVAILABLE:
                     with open(self.config_file, "rb") as f:
                         data = tomli.load(f)
+                    # Migrate configuration if needed
+                    data = self._migrate_config(data)
+                    # Parse configuration with validation
                     self._parse_config_data(data)
                 else:
                     self._load_fallback_config()
-            except (OSError, ValueError, KeyError):
+            except (OSError, ValueError, KeyError, ValidationError) as e:
+                print(f"Configuration error: {e}", file=sys.stderr)
                 self._create_default_config()
         else:
             self._create_default_config()
@@ -117,8 +179,89 @@ class EnhancedConfigManager:
         except (OSError, ValueError):
             pass
 
+    def _migrate_config(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate configuration from older versions to current schema.
+        
+        Args:
+            data: Raw configuration data to migrate
+            
+        Returns:
+            Migrated configuration data
+        """
+        # Get current version from data or assume 0 if not specified
+        version = data.get("schema_version", 0)
+
+        # Migration from version 0 to 1
+        if version < 1:
+            # Example migration: Rename old fields, restructure data, etc.
+            # For demonstration purposes, we'll handle potential legacy fields
+            if "legacy_blocklist" in data:
+                data["blocklist"] = data.get("legacy_blocklist", [])
+                del data["legacy_blocklist"]
+            
+            # Ensure all required fields exist
+            if "permission_presets" not in data:
+                data["permission_presets"] = {}
+            
+            if "active_profile" not in data:
+                data["active_profile"] = "default"
+
+        # Update to current version
+        data["schema_version"] = self.CURRENT_SCHEMA_VERSION
+        return data
+
     def _parse_config_data(self, data: dict[str, Any]) -> None:
-        """Parse configuration data with validation."""
+        """Parse configuration data with validation and variable substitution."""
+        # Process all values with variable substitution
+        processed_data = self._process_config_value(data)
+
+        # Validate with Pydantic if available
+        if PYDANTIC_AVAILABLE:
+            try:
+                # Validate using Pydantic model
+                validated_config = PydanticWrapperConfig(**processed_data)
+                self._apply_validated_config(validated_config)
+            except ValidationError as e:
+                print(f"Configuration validation error: {e}", file=sys.stderr)
+                self._create_default_config()
+                return
+        else:
+            # Fallback validation without Pydantic
+            self._apply_unvalidated_config(processed_data)
+
+    def _apply_validated_config(self, validated_config: "PydanticWrapperConfig") -> None:
+        """Apply validated configuration from Pydantic model."""
+        self.config.bin_dir = validated_config.bin_dir
+        self.config.debug_mode = validated_config.debug_mode
+        self.config.log_level = validated_config.log_level
+        self.config.blocklist = validated_config.blocklist
+        self.config.schema_version = self.CURRENT_SCHEMA_VERSION
+
+        # Convert Pydantic models to dataclasses
+        self.config.global_preferences = AppPreferences(
+            launch_method=validated_config.global_preferences.launch_method,
+            env_vars=dict(validated_config.global_preferences.env_vars),
+            pre_launch_script=validated_config.global_preferences.pre_launch_script,
+            post_launch_script=validated_config.global_preferences.post_launch_script,
+            custom_args=list(validated_config.global_preferences.custom_args),
+        )
+
+        # Process app preferences
+        self.config.app_preferences = {}
+        for app_id, pref_model in validated_config.app_preferences.items():
+            self.config.app_preferences[app_id] = AppPreferences(
+                launch_method=pref_model.launch_method,
+                env_vars=dict(pref_model.env_vars),
+                pre_launch_script=pref_model.pre_launch_script,
+                post_launch_script=pref_model.post_launch_script,
+                custom_args=list(pref_model.custom_args),
+            )
+
+        # Permission presets
+        self.config.permission_presets = validated_config.permission_presets
+
+    def _apply_unvalidated_config(self, data: dict[str, Any]) -> None:
+        """Apply configuration without Pydantic validation (fallback)."""
         # Basic configuration
         self.config.bin_dir = data.get("bin_dir", self.config.bin_dir)
         self.config.debug_mode = data.get("debug_mode", self.config.debug_mode)
@@ -162,8 +305,9 @@ class EnhancedConfigManager:
                 )
 
     def _serialize_config(self) -> dict[str, Any]:
-        """Serialize configuration to TOML-compatible format."""
+        """Serialize configuration to TOML-compatible format with schema version."""
         data = {
+            "schema_version": self.CURRENT_SCHEMA_VERSION,
             "bin_dir": str(self.config.bin_dir),
             "debug_mode": self.config.debug_mode,
             "log_level": self.config.log_level,
@@ -474,6 +618,13 @@ if PYDANTIC_AVAILABLE:
         app_preferences: dict[str, PydanticAppPreferences] = Field(default_factory=dict)
         debug_mode: bool = Field(default=False)
         log_level: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARN|ERROR)$")
+        active_profile: str = Field(default="default")
+        permission_presets: dict[str, list[str]] = Field(default_factory=dict)
+        schema_version: int = Field(default=1, ge=0)
+
+        class Config:
+            """Configuration for Pydantic model."""
+            extra = "forbid"  # Forbid extra fields to maintain schema integrity
 
 
 def create_config_manager():

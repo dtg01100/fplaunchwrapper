@@ -33,7 +33,7 @@ def _restore_pytest_if_missing() -> None:
         if "pytest" not in sys.modules:
             try:
                 sys.modules["pytest"] = importlib.import_module("pytest")
-            except Exception as e:
+            except Exception:
                 # Graceful fallback if pytest cannot be imported
                 pass
 
@@ -100,7 +100,7 @@ def is_dangerous_wrapper(wrapper_path: Path) -> bool:
                 "chromium",
             ]
             return any(pattern in content for pattern in dangerous_patterns)
-    except (IOError, OSError, UnicodeDecodeError) as e:
+    except (IOError, OSError, UnicodeDecodeError):
         # If unreadable, err on the safe side by treating as non-dangerous
         # and letting higher-level checks decide next steps.
         pass

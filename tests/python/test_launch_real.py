@@ -4,15 +4,12 @@
 NO MOCKS - Tests actual code paths (except subprocess calls for safety).
 """
 
-import os
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
 
 # Import actual implementation
 from fplaunch.launch import AppLauncher, main

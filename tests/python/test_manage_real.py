@@ -4,18 +4,13 @@
 NO MOCKS - Tests actual code paths for wrapper management.
 """
 
-import os
 import shutil
-import subprocess
-import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
 
-import pytest
 
 # Import actual implementation
-from fplaunch.manage import WrapperManager, main
+from fplaunch.manage import WrapperManager
 
 
 class TestWrapperManagerReal:

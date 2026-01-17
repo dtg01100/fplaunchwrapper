@@ -12,8 +12,6 @@ from pathlib import Path
 
 # Import our utilities
 try:
-    from python_utils import find_executable
-
     UTILS_AVAILABLE = True
 except ImportError:
     UTILS_AVAILABLE = False

@@ -644,10 +644,12 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
     echo ""
     
     # Built-in presets
-    PRESET_DEVELOPMENT="--filesystem=home --filesystem=host --device=dri"
-    PRESET_MEDIA="--device=dri --socket=pulseaudio --socket=wayland --socket=x11 --share=ipc"
-    PRESET_NETWORK="--share=network --share=ipc"
+    PRESET_DEVELOPMENT="--filesystem=home --filesystem=host --device=dri --socket=x11 --socket=wayland --share=ipc"
+    PRESET_MEDIA="--device=dri --socket=pulseaudio --socket=wayland --socket=x11 --share=ipc --filesystem=~/Music --filesystem=~/Videos"
+    PRESET_NETWORK="--share=network --share=ipc --socket=x11 --socket=wayland"
     PRESET_MINIMAL="--share=ipc"
+    PRESET_GAMING="--device=dri --device=input --socket=pulseaudio --socket=wayland --socket=x11 --share=ipc --share=network --filesystem=~/Games"
+    PRESET_OFFLINE="--device=dri --socket=pulseaudio --socket=wayland --socket=x11 --share=ipc --filesystem=home"
     
     # Load custom presets from config
     CUSTOM_PRESETS=()
@@ -664,8 +666,11 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
     echo "  3) Apply preset: Media (audio/video/graphics)"
     echo "  4) Apply preset: Network (networking + IPC)"
     echo "  5) Apply preset: Minimal (IPC only)"
+    echo "  6) Apply preset: Gaming (graphics, input, audio, network)"
+    echo "  7) Apply preset: Offline (local files, graphics, audio)"
+    echo "  8) Remove specific permission"
     
-    menu_option=6
+    menu_option=9
     for custom_preset in "${{CUSTOM_PRESETS[@]}}"; do
         echo "  $menu_option) Apply custom preset: $custom_preset"
         ((menu_option++))
@@ -736,13 +741,15 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
                 echo "Cancelled."
             fi
             ;;
-        2|3|4|5)
+        2|3|4|5|6|7)
             # Built-in presets
             case "$choice" in
                 2) PRESET_NAME="Development"; PRESET_PERMS=($PRESET_DEVELOPMENT) ;;
                 3) PRESET_NAME="Media"; PRESET_PERMS=($PRESET_MEDIA) ;;
                 4) PRESET_NAME="Network"; PRESET_PERMS=($PRESET_NETWORK) ;;
                 5) PRESET_NAME="Minimal"; PRESET_PERMS=($PRESET_MINIMAL) ;;
+                6) PRESET_NAME="Gaming"; PRESET_PERMS=($PRESET_GAMING) ;;
+                7) PRESET_NAME="Offline"; PRESET_PERMS=($PRESET_OFFLINE) ;;
             esac
             
             echo ""
@@ -762,14 +769,67 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
                 done
                 echo ""
                 echo "Permissions updated. Final state:"
-                flatpak override --show --user "$ID" 2>/dev/null | grep -v "^\\[" || echo "  (none)"
+                flatpak override --show --user "$ID" 2>/dev/null | grep -v "^\[" || echo "  (none)"
             else
                 echo "Cancelled."
             fi
             ;;
+        8)
+            # Remove specific permission
+            echo ""
+            echo "Current permissions to remove:"
+            CURRENT_PERMS=$(flatpak override --show --user "$ID" 2>&1 | grep -v "^\[" | grep -v "No overrides" | awk '{{print $$1}}')
+            
+            if [ -z "$CURRENT_PERMS" ]; then
+                echo "  No custom permissions set"
+                exit 0
+            fi
+            
+            echo "$CURRENT_PERMS" | nl -ba
+            
+            read -r -p "Enter number of permission to remove (or empty to cancel): " perm_number
+            if [ -z "$perm_number" ]; then
+                echo "Cancelled."
+                exit 0
+            fi
+            
+            if [[ "$perm_number" =~ ^[0-9]+$ ]]; then
+                PERM_TO_REMOVE=$(echo "$CURRENT_PERMS" | sed -n "${{perm_number}}p")
+                if [ -n "$PERM_TO_REMOVE" ]; then
+                    echo ""
+                    read -r -p "Remove permission: $PERM_TO_REMOVE? [y/N] " confirm
+                    if [[ "$confirm" =~ ^[yY]$ ]]; then
+                        # Remove the permission by resetting that specific override type
+                        # This is a workaround since flatpak doesn't support direct removal
+                        echo "Removing $PERM_TO_REMOVE..."
+                        # Get current overrides without this permission
+                        NEW_OVERRIDES=$(flatpak override --show --user "$ID" 2>&1 | grep -v "^\[" | grep -v "$PERM_TO_REMOVE")
+                        # Reset all overrides and apply remaining ones
+                        flatpak override --user --reset "$ID" 2>/dev/null
+                        if [ -n "$NEW_OVERRIDES" ]; then
+                            while IFS= read -r line; do
+                                if [ -n "$line" ]; then
+                                    flatpak override --user "$ID" "$line" 2>/dev/null
+                                fi
+                            done <<< "$NEW_OVERRIDES"
+                        fi
+                        echo "Permission removed successfully."
+                        echo ""
+                        echo "Updated permissions:"
+                        flatpak override --show --user "$ID" 2>&1 | grep -v "^\[" || echo "  (using default permissions)"
+                    else
+                        echo "Cancelled."
+                    fi
+                else
+                    echo "Invalid permission number"
+                fi
+            else
+                echo "Invalid input"
+            fi
+            ;;
         *)
             # Check if it's a custom preset
-            custom_index=$((choice - 6))
+            custom_index=$((choice - 9))
             if [ "$custom_index" -ge 0 ] && [ "$custom_index" -lt ${{#CUSTOM_PRESETS[@]}} ]; then
                 PRESET_NAME="${{CUSTOM_PRESETS[$custom_index]}}"
                 
@@ -904,10 +964,31 @@ fi
 # Sandbox yolo
 if [ "$1" = "--fpwrapper-sandbox-yolo" ]; then
     if command -v flatpak >/dev/null 2>&1; then
-        flatpak override --filesystem=host "$ID"
-        echo "YOLO mode applied - full filesystem access granted"
+        # Check if interactive (for safety warning)
+        if is_interactive; then
+            echo ""
+            echo "⚠️  WARNING: YOLO mode grants ALL possible permissions!"
+            echo "This completely disables the Flatpak sandbox and is extremely dangerous."
+            echo "Only use this if you trust the application completely."
+            echo ""
+            read -r -p "Type 'YES' to confirm (case-sensitive): " confirm
+            if [ "$confirm" != "YES" ]; then
+                echo "Cancelled YOLO mode"
+                exit 0
+            fi
+        fi
+        
+        # Apply all possible permissions
+        flatpak override --user "$ID" \
+            --filesystem=host \
+            --device=all \
+            --share=all \
+            --socket=all \
+            --system-talk-name= \
+            --talk-name=
+        echo "YOLO mode applied - ALL permissions granted (sandbox disabled)"
     else
-        echo "Flatpak not available - would grant full permissions"
+        echo "Flatpak not available - would grant all permissions"
     fi
     exit 0
 fi

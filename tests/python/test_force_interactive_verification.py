@@ -11,8 +11,6 @@ Tests verify:
 import os
 import sys
 import tempfile
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
 import pytest
 
 # Add lib to path for imports

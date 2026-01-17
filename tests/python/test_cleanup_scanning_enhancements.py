@@ -7,7 +7,6 @@ unused cron jobs, and orphaned completion files.
 import tempfile
 from pathlib import Path
 
-import pytest
 
 from lib.cleanup import WrapperCleanup
 

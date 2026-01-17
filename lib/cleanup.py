@@ -148,22 +148,11 @@ class WrapperCleanup:
             except FileNotFoundError:
                 pass
 
-        # 2. Scan systemd units
-        systemd_units = [
-            "flatpak-wrappers.service",
-            "flatpak-wrappers.path",
-            "flatpak-wrappers.timer",
-        ]
+        # 2. Scan for all fplaunchwrapper-related systemd units
+        self._scan_systemd_units()
 
-        for unit in systemd_units:
-            unit_path = self.systemd_unit_dir / unit
-            if unit_path.exists():
-                self.cleanup_items["systemd_units"].append(unit_path)
-
-        # 3. Check bash completion
-        bash_completion = Path.home() / ".bashrc.d" / "fplaunch_completion.bash"
-        if bash_completion.exists():
-            self.cleanup_items["completion_files"].append(bash_completion)
+        # 3. Check for shell completion files for various shells
+        self._scan_completion_files()
 
         # 4. Check man pages
         man_dir = Path.home() / ".local" / "share" / "man"
@@ -173,9 +162,8 @@ class WrapperCleanup:
             for manpage in man_dir.glob("man7/fplaunchwrapper.*"):
                 self.cleanup_items["man_pages"].append(manpage)
 
-        # 5. Check cron entries
-        if self._has_cron_entries():
-            self.cleanup_items["cron_entries"].append("fplaunch-generate entries")
+        # 5. Check for all fplaunchwrapper-related cron entries
+        self._scan_cron_entries()
 
         # 6. Preferences and data files
         if self.config_dir.exists():
@@ -186,6 +174,71 @@ class WrapperCleanup:
             for item in self.data_dir.rglob("*"):
                 if item.is_file():
                     self.cleanup_items["data_files"].append(item)
+
+    def _scan_systemd_units(self) -> None:
+        """Scan for all fplaunchwrapper-related systemd units."""
+        if self.systemd_unit_dir.exists():
+            # Find all systemd units related to fplaunchwrapper
+            # This includes the main flatpak-wrappers units and any app-specific units
+            for unit_path in self.systemd_unit_dir.glob("*flatpak*"):
+                if unit_path.is_file() and unit_path.suffix in [".service", ".path", ".timer"]:
+                    self.cleanup_items["systemd_units"].append(unit_path)
+
+    def _scan_completion_files(self) -> None:
+        """Scan for shell completion files for various shells (bash, zsh, fish)."""
+        # Bash completion
+        bash_completion = Path.home() / ".bashrc.d" / "fplaunch_completion.bash"
+        if bash_completion.exists():
+            self.cleanup_items["completion_files"].append(bash_completion)
+        
+        # Zsh completion
+        zsh_completion_dir = Path.home() / ".zsh" / "completions"
+        if zsh_completion_dir.exists():
+            for comp_file in zsh_completion_dir.glob("*fplaunch*"):
+                self.cleanup_items["completion_files"].append(comp_file)
+        
+        # Fish completion
+        fish_completion_dir = Path.home() / ".config" / "fish" / "completions"
+        if fish_completion_dir.exists():
+            for comp_file in fish_completion_dir.glob("*fplaunch*"):
+                self.cleanup_items["completion_files"].append(comp_file)
+        
+        # System-wide completion directories (for user-installed completions)
+        system_completion_dirs = [
+            Path("/usr/local/share/bash-completion/completions"),
+            Path("/usr/local/share/zsh/site-functions"),
+            Path("/usr/local/share/fish/vendor_completions.d"),
+        ]
+        
+        for comp_dir in system_completion_dirs:
+            if comp_dir.exists():
+                for comp_file in comp_dir.glob("*fplaunch*"):
+                    self.cleanup_items["completion_files"].append(comp_file)
+
+    def _scan_cron_entries(self) -> None:
+        """Scan for all fplaunchwrapper-related cron entries."""
+        crontab_path = shutil.which("crontab")
+        if not crontab_path:
+            return
+        
+        try:
+            result = subprocess.run(
+                [crontab_path, "-l"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                # Look for any cron entries related to fplaunchwrapper
+                cron_lines = []
+                for line in result.stdout.split("\n"):
+                    if "fplaunch" in line and line.strip() and not line.strip().startswith("#"):
+                        cron_lines.append(line.strip())
+                
+                if cron_lines:
+                    self.cleanup_items["cron_entries"].extend(cron_lines)
+        except (subprocess.CalledProcessError, OSError):
+            pass
 
     # Backward-compat method used by tests
     def _identify_artifacts(self) -> list[Path]:
@@ -423,11 +476,11 @@ class WrapperCleanup:
                     )
                     if result.returncode == 0:
                         current_cron = result.stdout
-                        # Remove lines containing fplaunch-generate
+                        # Remove all lines containing fplaunch (covers all fplaunchwrapper-related entries)
                         new_cron = "\n".join(
                             line
                             for line in current_cron.split("\n")
-                            if "fplaunch-generate" not in line
+                            if "fplaunch" not in line
                         )
                         # Update crontab
                         subprocess.run(

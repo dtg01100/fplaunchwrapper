@@ -4,12 +4,10 @@ NO MOCKS - Tests actual code paths to achieve real coverage.
 """
 
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-import pytest
 
 # Import actual implementation
 from fplaunch.cleanup import WrapperCleanup, main

@@ -10,8 +10,7 @@ Tests verify:
 
 import os
 import sys
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 import pytest
 
 # Add lib to path for imports
