@@ -72,58 +72,57 @@ class AppLauncher:
     def _get_hook_scripts(self, app_name: str, hook_type: str) -> list[Path]:
         """Get pre or post-launch hook scripts for an app.
         
-        Hook scripts are stored in:
-        - ~/.config/fplaunchwrapper/hooks/{app_name}.{pre,post}.sh
-        - ~/.config/fplaunchwrapper/hooks/{app_name}/{pre,post}/*.sh
+        Hook scripts are looked for in:
+        1. Configured script path from config manager (pre_launch_script or post_launch_script fields)
+        2. Default location: ~/.config/fplaunchwrapper/scripts/{app_name}/pre-launch.sh or post-run.sh
+        
+        Returns:
+            List of executable script paths
         """
-        hooks_dir = self.config_dir / "hooks"
         scripts = []
 
-        # Single hook files
-        if hook_type in ["pre", "post"]:
-            single_hook = hooks_dir / f"{app_name}.{hook_type}.sh"
-            if single_hook.exists() and os.access(single_hook, os.X_OK):
-                scripts.append(single_hook)
+        # Try to get script from config manager
+        try:
+            from lib.config_manager import create_config_manager
+            config = create_config_manager()
+            prefs = config.get_app_preferences(app_name)
+            
+            if hook_type == "pre" and prefs.pre_launch_script:
+                script_path = Path(prefs.pre_launch_script)
+                if script_path.exists() and os.access(script_path, os.X_OK):
+                    scripts.append(script_path)
+            elif hook_type == "post" and prefs.post_launch_script:
+                script_path = Path(prefs.post_launch_script)
+                if script_path.exists() and os.access(script_path, os.X_OK):
+                    scripts.append(script_path)
+        except Exception:
+            pass
 
-        # Hook directory
-        hook_dir = hooks_dir / app_name / hook_type
-        if hook_dir.exists() and hook_dir.is_dir():
-            for script in sorted(hook_dir.glob("*.sh")):
-                if script.is_file() and os.access(script, os.X_OK):
-                    scripts.append(script)
+        # Try default script location if no configured script found
+        if not scripts:
+            scripts_dir = self.config_dir / "scripts" / app_name
+            
+            if hook_type == "pre":
+                script_path = scripts_dir / "pre-launch.sh"
+            elif hook_type == "post":
+                script_path = scripts_dir / "post-run.sh"
+            else:
+                return scripts
+
+            if script_path.exists() and os.access(script_path, os.X_OK):
+                scripts.append(script_path)
 
         return scripts
 
-    def _substitute_environment(self, script_path: Path) -> str:
-        """Substitute environment variables in hook script content."""
-        content = script_path.read_text()
 
-        # Available substitutions
-        env_vars = {
-            "APP_NAME": self.app_name or "",
-            "APP_ID": self.app_name or "",
-            "WRAPPER_PATH": str(self._get_wrapper_path()),
-            "CONFIG_DIR": str(self.config_dir),
-            "BIN_DIR": str(self.bin_dir),
-            "HOME": str(Path.home()),
-        }
 
-        # Add custom environment if provided
-        if self.env:
-            env_vars.update(self.env)
-
-        # Substitute ${VAR} patterns
-        for var_name, var_value in env_vars.items():
-            content = content.replace(f"${{{var_name}}}", str(var_value))
-            content = content.replace(f"${var_name}", str(var_value))
-
-        return content
-
-    def _run_hook_scripts(self, hook_type: str) -> bool:
+    def _run_hook_scripts(self, hook_type: str, exit_code: int = 0, source: str = "flatpak") -> bool:
         """Run pre or post-launch hook scripts.
         
         Args:
             hook_type: Either 'pre' or 'post'
+            exit_code: Exit code of the application (for post-run scripts)
+            source: Source of the application (system or flatpak)
             
         Returns:
             True if all scripts succeeded or no scripts exist, False if any failed
@@ -141,12 +140,28 @@ class AppLauncher:
                 if self.debug:
                     print(f"Executing {hook_type} hook: {script_path}", file=sys.stderr)
 
+                # Set environment variables
+                env = os.environ.copy()
+                env["FPWRAPPER_WRAPPER_NAME"] = self.app_name
+                env["FPWRAPPER_APP_ID"] = self.app_name
+                env["FPWRAPPER_SOURCE"] = source
+                
+                if hook_type == "post":
+                    env["FPWRAPPER_EXIT_CODE"] = str(exit_code)
+
+                # Prepare arguments according to documentation
+                args = [str(script_path), self.app_name, self.app_name, source]
+                if hook_type == "post":
+                    args.append(str(exit_code))
+                args.extend(self.args)
+
                 # Try running the script directly
                 result = subprocess.run(
-                    [str(script_path)],
+                    args,
                     capture_output=True,
                     text=True,
                     timeout=30,
+                    env=env,
                 )
 
                 if result.returncode != 0:
@@ -215,13 +230,17 @@ class AppLauncher:
             if safety_available and not safe_launch_check(self.app_name, self._find_wrapper()):
                 return False
 
+            # Determine source type
+            source = "flatpak"
+            wrapper_path = self._find_wrapper()
+            if wrapper_path:
+                source = "system"
+
             # Run pre-launch hooks
-            if not self._run_hook_scripts("pre"):
+            if not self._run_hook_scripts("pre", source=source):
                 if self.verbose:
                     print(f"Pre-launch hooks failed for {self.app_name}", file=sys.stderr)
                 return False
-
-            wrapper_path = self._find_wrapper()
 
             if not wrapper_path:
                 # Fallback to flatpak
@@ -240,7 +259,7 @@ class AppLauncher:
             launch_success = result.returncode == 0
 
             # Run post-launch hooks (even if launch failed)
-            if not self._run_hook_scripts("post"):
+            if not self._run_hook_scripts("post", exit_code=result.returncode, source=source):
                 if self.verbose:
                     print(f"Post-launch hooks failed for {self.app_name}", file=sys.stderr)
                 # Don't fail based on post-launch hook failure

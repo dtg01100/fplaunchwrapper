@@ -383,6 +383,30 @@ PREF_FILE="$PREF_DIR/$NAME.pref"
 HOOK_DIR="$PREF_DIR/scripts/$NAME"
 PRE_SCRIPT="$HOOK_DIR/pre-launch.sh"
 POST_SCRIPT="$HOOK_DIR/post-run.sh"
+# Load configured script paths from config file if available
+CONFIG_SCRIPT_PRE=""
+CONFIG_SCRIPT_POST=""
+if command -v python3 >/dev/null 2>&1; then
+    CONFIG_SCRIPT_PRE=$(python3 -c "
+from lib.config_manager import create_config_manager
+config = create_config_manager()
+prefs = config.get_app_preferences('{wrapper_name}')
+print(prefs.pre_launch_script or '')
+" 2>/dev/null)
+    CONFIG_SCRIPT_POST=$(python3 -c "
+from lib.config_manager import create_config_manager
+config = create_config_manager()
+prefs = config.get_app_preferences('{wrapper_name}')
+print(prefs.post_launch_script or '')
+" 2>/dev/null)
+fi
+# Use configured script path if valid
+if [ -n "$CONFIG_SCRIPT_PRE" ] && [ -x "$CONFIG_SCRIPT_PRE" ]; then
+    PRE_SCRIPT="$CONFIG_SCRIPT_PRE"
+fi
+if [ -n "$CONFIG_SCRIPT_POST" ] && [ -x "$CONFIG_SCRIPT_POST" ]; then
+    POST_SCRIPT="$CONFIG_SCRIPT_POST"
+fi
 # Load environment variables if present
 ENV_FILE="$PREF_DIR/$NAME.env"
 if [ -f "$ENV_FILE" ]; then
@@ -445,7 +469,7 @@ run_single_launch() {{
 # Pre-launch script execution
 run_pre_launch_script() {{
     if [ -x "$PRE_SCRIPT" ]; then
-        "$PRE_SCRIPT" "$@"
+        "$PRE_SCRIPT" "$NAME" "$ID" "$source" "$@"
     fi
 }}
 
@@ -460,7 +484,7 @@ run_post_launch_script() {{
             export FPWRAPPER_SOURCE="$source"
             export FPWRAPPER_WRAPPER_NAME="$NAME"
             export FPWRAPPER_APP_ID="$ID"
-            "$POST_SCRIPT"
+            "$POST_SCRIPT" "$NAME" "$ID" "$source" "$exit_code" "$@"
         ) 2>&1 || echo "[fplaunchwrapper] Warning: Post-launch script failed with exit code $?" >&2
     fi
 }}
@@ -1224,6 +1248,19 @@ fi
 
         except Exception as e:
             self.log(f"Generation failed: {e}", "error")
+            
+            # Send failure notification if notifications are enabled
+            try:
+                from lib.config_manager import create_config_manager
+                from lib.notifications import send_update_failure_notification
+                
+                config = create_config_manager()
+                if config.get_enable_notifications():
+                    send_update_failure_notification(str(e))
+            except Exception:
+                # Ignore any errors in notification system
+                pass
+                
             return 1
 
     def generate_wrappers(self, installed_apps: list[str]) -> tuple[int, int, int]:

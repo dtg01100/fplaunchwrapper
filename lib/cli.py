@@ -473,6 +473,33 @@ if CLICK_AVAILABLE:
                         print(perm)
                 else:
                     return 1
+                    
+            elif action == "cron-interval":
+                if not value:
+                    # Show current cron interval
+                    interval = config.get_cron_interval()
+                    if console:
+                        console.print(f"Current cron interval: [bold]{interval}[/bold] hours")
+                    else:
+                        print(f"Current cron interval: {interval} hours")
+                else:
+                    # Set new cron interval
+                    try:
+                        interval = int(value)
+                        if interval < 1:
+                            raise ValueError("Cron interval must be at least 1 hour")
+                        config.set_cron_interval(interval)
+                        if console:
+                            console.print(f"[green]✓[/green] Cron interval set to [bold]{interval}[/bold] hours")
+                        else:
+                            print(f"Cron interval set to {interval} hours")
+                    except ValueError as e:
+                        if console_err:
+                            console_err.print(f"[red]Error:[/red] {e}")
+                        else:
+                            import sys
+                            print(f"Error: {e}", file=sys.stderr)
+                        return 1
 
             else:
                 if console_err:
@@ -760,6 +787,7 @@ if CLICK_AVAILABLE:
 
     @cli.command()
     @click.argument("action", required=False)
+    @click.argument("value", required=False)
     @click.option(
         "--emit",
         is_flag=True,
@@ -771,10 +799,11 @@ if CLICK_AVAILABLE:
         help="Show detailed file contents in emit mode",
     )
     @click.pass_context
-    def systemd(ctx, action, emit, emit_verbose) -> int | None:
+    def systemd(ctx, action, value, emit, emit_verbose) -> int | None:
         """Manage optional systemd timer for automatic wrapper generation.
 
-        ACTION: Systemd action (enable, disable, status, test)
+        ACTION: Systemd action (enable, disable, status, test, start, stop, restart, reload, logs, list)
+        VALUE: Optional value for action (e.g., unit name for start/stop, lines for logs)
         """
         try:
             from .systemd_setup import SystemdSetup
@@ -849,14 +878,181 @@ if CLICK_AVAILABLE:
                     else:
                         console.print("  [yellow]Status:[/yellow] [bold yellow]inactive[/bold yellow]")
                     
+                    if status.get("failed"):
+                        console.print("  [red]⚠[/red] [bold red]Some units have failed[/bold red]")
+                    
+                    if status.get("load_state"):
+                        console.print(f"  [blue]Load State:[/blue] {status['load_state']}")
+                    
+                    if status.get("last_run"):
+                        console.print(f"  [blue]Last Run:[/blue] {status['last_run']}")
+                    
+                    if status.get("next_run"):
+                        console.print(f"  [blue]Next Run:[/blue] {status['next_run']}")
+                    
                     if status.get("units"):
-                        console.print("[bold]Units:[/bold]")
-                        for unit_name, unit_status in status["units"].items():
-                            status_color = "green" if unit_status else "red"
-                            console.print(f"  [{status_color}]{'✓' if unit_status else '✗'}[/{status_color}] {unit_name}")
+                        console.print("\n[bold]Units:[/bold]")
+                        for unit_name, unit_info in status["units"].items():
+                            # Determine status color
+                            if unit_info.get("result") == "fail":
+                                status_color = "red"
+                                status_icon = "✗"
+                            elif unit_info.get("active"):
+                                status_color = "green"
+                                status_icon = "✓"
+                            elif unit_info.get("enabled"):
+                                status_color = "yellow"
+                                status_icon = "⚠"
+                            else:
+                                status_color = "red"
+                                status_icon = "✗"
+                            
+                            console.print(f"  [{status_color}]{status_icon}[/{status_color}] [bold]{unit_name}[/bold]")
+                            
+                            # Show unit details
+                            if unit_info.get("exists"):
+                                console.print(f"    [dim]File exists:[/dim] Yes")
+                            else:
+                                console.print(f"    [dim]File exists:[/dim] [red]No[/red]")
+                            
+                            if unit_info.get("enabled_status"):
+                                console.print(f"    [dim]Enabled:[/dim] {unit_info['enabled_status']}")
+                            
+                            if unit_info.get("active_status"):
+                                console.print(f"    [dim]Active:[/dim] {unit_info['active_status']}")
+                            
+                            if unit_info.get("load_state"):
+                                console.print(f"    [dim]Load:[/dim] {unit_info['load_state']}")
+                            
+                            if unit_info.get("result"):
+                                result_str = unit_info['result']
+                                if result_str == "fail":
+                                    result_str = f"[red]{result_str}[/red]"
+                                console.print(f"    [dim]Result:[/dim] {result_str}")
+                            
+                            if unit_info.get("last_run"):
+                                console.print(f"    [dim]Last Run:[/dim] {unit_info['last_run']}")
+                            
+                            if unit_info.get("next_run"):
+                                console.print(f"    [dim]Next Run:[/dim] {unit_info['next_run']}")
                 else:
                     print(f"Systemd timer enabled: {status.get('enabled')}")
                     print(f"Systemd timer active: {status.get('active')}")
+                    print(f"Systemd timer failed: {status.get('failed')}")
+                    if status.get("load_state"):
+                        print(f"Load state: {status['load_state']}")
+                    if status.get("units"):
+                        print("\nUnits:")
+                        for unit_name, unit_info in status["units"].items():
+                            print(f"  {unit_name}:")
+                            print(f"    Exists: {unit_info.get('exists', False)}")
+                            print(f"    Enabled: {unit_info.get('enabled', False)}")
+                            print(f"    Active: {unit_info.get('active', False)}")
+                            if unit_info.get("last_run"):
+                                print(f"    Last Run: {unit_info['last_run']}")
+                            if unit_info.get("next_run"):
+                                print(f"    Next Run: {unit_info['next_run']}")
+                return 0
+
+            elif action == "start":
+                # Start systemd units
+                if console:
+                    console.print("[bold cyan]Starting systemd units...[/bold cyan]")
+                
+                unit_name = value if value else "flatpak-wrappers.path"
+                if setup.start_unit(unit_name):
+                    return 0
+                else:
+                    return 1
+
+            elif action == "stop":
+                # Stop systemd units
+                if console:
+                    console.print("[bold cyan]Stopping systemd units...[/bold cyan]")
+                
+                unit_name = value if value else "flatpak-wrappers.path"
+                if setup.stop_unit(unit_name):
+                    return 0
+                else:
+                    return 1
+
+            elif action == "restart":
+                # Restart systemd units
+                if console:
+                    console.print("[bold cyan]Restarting systemd units...[/bold cyan]")
+                
+                unit_name = value if value else "flatpak-wrappers.path"
+                if setup.restart_unit(unit_name):
+                    return 0
+                else:
+                    return 1
+
+            elif action == "reload":
+                # Reload systemd units or daemon
+                if console:
+                    console.print("[bold cyan]Reloading systemd...[/bold cyan]")
+                
+                if value:
+                    if setup.reload_unit(value):
+                        return 0
+                    else:
+                        return 1
+                else:
+                    if setup.reload_services():
+                        return 0
+                    else:
+                        return 1
+
+            elif action == "logs":
+                # Show systemd unit logs
+                if console:
+                    console.print("[bold cyan]Showing systemd unit logs...[/bold cyan]")
+                
+                unit_name = value if value else "flatpak-wrappers.service"
+                lines = 20
+                # Check if value contains lines count (e.g., "flatpak-wrappers.service:50")
+                if ":" in str(unit_name):
+                    unit_name, lines_str = unit_name.split(":", 1)
+                    try:
+                        lines = int(lines_str)
+                    except ValueError:
+                        pass
+                
+                logs = setup.show_unit_logs(unit_name, lines)
+                if logs:
+                    if console:
+                        console.print(f"[bold]Logs for {unit_name}:[/bold]")
+                        console.print(logs)
+                    else:
+                        print(f"Logs for {unit_name}:")
+                        print(logs)
+                else:
+                    if console_err:
+                        console_err.print(f"[red]Error:[/red] No logs found for {unit_name}")
+                    else:
+                        print(f"Error: No logs found for {unit_name}", file=sys.stderr)
+                return 0
+
+            elif action == "list":
+                # List all flatpak-related systemd units
+                if console:
+                    console.print("[bold cyan]Listing flatpak-related systemd units...[/bold cyan]")
+                
+                units = setup.list_all_units()
+                if units:
+                    if console:
+                        console.print("[bold]Flatpak Systemd Units:[/bold]")
+                        for unit in units:
+                            console.print(f"  [cyan]{unit}[/cyan]")
+                    else:
+                        print("Flatpak Systemd Units:")
+                        for unit in units:
+                            print(f"  {unit}")
+                else:
+                    if console:
+                        console.print("[yellow]No flatpak-related systemd units found[/yellow]")
+                    else:
+                        print("No flatpak-related systemd units found")
                 return 0
 
             elif action == "test":

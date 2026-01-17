@@ -65,6 +65,8 @@ class WrapperConfig:
     active_profile: str = "default"  # Current active profile
     permission_presets: dict[str, list[str]] = field(default_factory=dict)  # Custom permission presets
     schema_version: int = 1  # Schema version for migration purposes
+    cron_interval: int = 6  # Cron interval in hours (default: 6 hours)
+    enable_notifications: bool = True  # Enable desktop notifications for update failures
 
 
 class EnhancedConfigManager:
@@ -236,6 +238,8 @@ class EnhancedConfigManager:
         self.config.log_level = validated_config.log_level
         self.config.blocklist = validated_config.blocklist
         self.config.schema_version = self.CURRENT_SCHEMA_VERSION
+        self.config.cron_interval = validated_config.cron_interval
+        self.config.enable_notifications = validated_config.enable_notifications
 
         # Convert Pydantic models to dataclasses
         self.config.global_preferences = AppPreferences(
@@ -266,6 +270,8 @@ class EnhancedConfigManager:
         self.config.bin_dir = data.get("bin_dir", self.config.bin_dir)
         self.config.debug_mode = data.get("debug_mode", self.config.debug_mode)
         self.config.log_level = data.get("log_level", self.config.log_level)
+        self.config.cron_interval = data.get("cron_interval", self.config.cron_interval)
+        self.config.enable_notifications = data.get("enable_notifications", self.config.enable_notifications)
 
         # Blocklist
         if "blocklist" in data:
@@ -312,6 +318,8 @@ class EnhancedConfigManager:
             "debug_mode": self.config.debug_mode,
             "log_level": self.config.log_level,
             "blocklist": self.config.blocklist,
+            "cron_interval": self.config.cron_interval,
+            "enable_notifications": self.config.enable_notifications,
         }
 
         # Global preferences
@@ -523,6 +531,34 @@ class EnhancedConfigManager:
     def get_active_profile(self) -> str:
         """Get the currently active profile name."""
         return self.config.active_profile
+    
+    def get_cron_interval(self) -> int:
+        """Get the cron interval in hours."""
+        return self.config.cron_interval
+    
+    def set_cron_interval(self, interval: int) -> None:
+        """Set the cron interval in hours.
+        
+        Args:
+            interval: Cron interval in hours (must be at least 1 hour)
+        """
+        if interval < 1:
+            raise ValueError("Cron interval must be at least 1 hour")
+        self.config.cron_interval = interval
+        self.save_config()
+    
+    def get_enable_notifications(self) -> bool:
+        """Get whether desktop notifications are enabled."""
+        return self.config.enable_notifications
+    
+    def set_enable_notifications(self, enabled: bool) -> None:
+        """Set whether desktop notifications are enabled.
+        
+        Args:
+            enabled: True to enable notifications, False to disable
+        """
+        self.config.enable_notifications = enabled
+        self.save_config()
 
     def export_profile(self, profile_name: str, export_path: Path) -> bool:
         """Export a profile to a file.
@@ -621,6 +657,8 @@ if PYDANTIC_AVAILABLE:
         active_profile: str = Field(default="default")
         permission_presets: dict[str, list[str]] = Field(default_factory=dict)
         schema_version: int = Field(default=1, ge=0)
+        cron_interval: int = Field(default=6, ge=1)  # Minimum 1 hour interval
+        enable_notifications: bool = Field(default=True)  # Enable desktop notifications for update failures
 
         class Config:
             """Configuration for Pydantic model."""

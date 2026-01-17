@@ -122,8 +122,25 @@ class TestSystemdSetupMethods:
         
         with patch('shutil.which', return_value='/bin/systemctl'):
             with patch('subprocess.run') as mock_run:
-                # Set up mock to return success (0) for all calls
-                mock_run.return_value.returncode = 0
+                # Create a mock that returns appropriate responses based on arguments
+                def mock_response(args, **kwargs):
+                    class MockResult:
+                        def __init__(self, returncode, stdout="", stderr=""):
+                            self.returncode = returncode
+                            self.stdout = stdout
+                            self.stderr = stderr
+                    
+                    # Check which command is being run
+                    if args[0] == 'systemctl' and args[1] == '--user' and args[2] == 'is-enabled':
+                        return MockResult(0, stdout="enabled")
+                    elif args[0] == 'systemctl' and args[1] == '--user' and args[2] == 'is-active':
+                        return MockResult(0, stdout="active")
+                    elif args[0] == 'systemctl' and args[1] == '--user' and args[2] == 'show':
+                        return MockResult(0, stdout="ActiveState=active")
+                    else:
+                        return MockResult(0, stdout="")
+                
+                mock_run.side_effect = mock_response
                 
                 setup = SystemdSetup()
                 status = setup.check_systemd_status()
@@ -131,6 +148,8 @@ class TestSystemdSetupMethods:
                 assert status["enabled"] is True
                 assert status["active"] is True
                 assert len(status["units"]) == 3  # service, path, timer
+                for unit in ["flatpak-wrappers.service", "flatpak-wrappers.path", "flatpak-wrappers.timer"]:
+                    assert status["units"].get(unit, {}).get("enabled") is True
 
     def test_check_systemd_status_with_disabled_units(self):
         """Test check_systemd_status with disabled units."""
@@ -140,6 +159,8 @@ class TestSystemdSetupMethods:
             with patch('subprocess.run') as mock_run:
                 # Set up mock to return failure (1) for all calls
                 mock_run.return_value.returncode = 1
+                mock_run.return_value.stdout = b""
+                mock_run.return_value.stderr = b""
                 
                 setup = SystemdSetup()
                 status = setup.check_systemd_status()
@@ -147,7 +168,7 @@ class TestSystemdSetupMethods:
                 assert status["enabled"] is False
                 assert status["active"] is False
                 all_disabled = all(
-                    status["units"].get(unit) is False 
+                    status["units"].get(unit, {}).get("enabled") is False 
                     for unit in ["flatpak-wrappers.service", "flatpak-wrappers.path", "flatpak-wrappers.timer"]
                 )
                 assert all_disabled is True
