@@ -35,11 +35,9 @@ cp packaging/debian/* "$BUILD_DIR/${PACKAGE_NAME}_${VERSION}/debian/"
 sed -i "s/@VERSION@/$VERSION/g" "$BUILD_DIR/${PACKAGE_NAME}_${VERSION}/debian/changelog"
 sed -i "s/@DATE@/$(date -R)/g" "$BUILD_DIR/${PACKAGE_NAME}_${VERSION}/debian/changelog"
 
-# Build the package
 cd "$BUILD_DIR/${PACKAGE_NAME}_${VERSION}"
 dpkg-buildpackage -us -uc -b
 
-# Move package to root
 cd ../../..
 mv "$BUILD_DIR"/*.deb .
 

@@ -11,7 +11,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Add lib to path
-# Import the module to test
 try:
     from fplaunch.flatpak_monitor import FlatpakMonitor, start_flatpak_monitoring
 except ImportError:

@@ -58,14 +58,25 @@ case "$1" in
 		fi
 		exit 1
 		;;
-	run)
-		# Simulate flatpak run - don't actually launch anything
-		if [ -n "$2" ]; then
-			echo "Mock flatpak run: $@" >> "{flatpak_log}"
-			exit 0
-		fi
-		exit 1
-		;;
+ 	run)
+ 		# Simulate flatpak run - don't actually launch anything
+ 		if [ -n "$2" ]; then
+ 			# Simulate failure for unknown apps (make mock more realistic)
+ 			case "$2" in
+ 				org.mozilla.Firefox|org.mozilla.firefox|com.google.Chrome|org.gimp.GIMP)
+ 					# Known test apps - simulate successful run
+ 					echo "Mock flatpak run: $@" >> "{flatpak_log}"
+ 					exit 0
+ 					;;
+ 				*)
+ 					# Unknown apps - simulate "not installed" error
+ 					echo "error: app/$2/x86_64/master not installed" >&2
+ 					exit 1
+ 					;;
+ 			esac
+ 		fi
+ 		exit 1
+ 		;;
 	override)
 		# Simulate flatpak override command
 		echo "Mock flatpak override: $@" >> "{flatpak_log}"

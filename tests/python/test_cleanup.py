@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 import pytest
 
-# Import the module to test
 try:
     from fplaunch.cleanup import WrapperCleanup, main
 except ImportError:

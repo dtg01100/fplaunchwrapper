@@ -1,8 +1,8 @@
 # Adversarial Test Suite
 
-This directory contains **DANGEROUS** adversarial tests designed to attack fplaunchwrapper code and test its robustness against unusual system setups.
+This directory contains dangerous adversarial tests designed to attack fplaunchwrapper code and test its robustness against unusual system setups.
 
-## ⚠️  CRITICAL WARNINGS ⚠️
+## ⚠️ CRITICAL WARNINGS ⚠️
 
 ### These tests are **UNSAFE** and should ONLY be run in:
 - **Isolated development environments** (VMs/containers recommended)
@@ -26,7 +26,7 @@ This directory contains **DANGEROUS** adversarial tests designed to attack fplau
 ## Test Files
 
 ### `test_fplaunchwrapper_adversarial.sh`
-**Purpose**: Attack fplaunchwrapper security functions and input validation
+Attack fplaunchwrapper security functions and input validation
 
 **Attack Vectors Tested**:
 - Command injection through wrapper options
@@ -39,7 +39,7 @@ This directory contains **DANGEROUS** adversarial tests designed to attack fplau
 - Memory and process attacks
 
 ### `test_robustness_adversarial.sh`
-**Purpose**: Test fplaunchwrapper robustness against weird user setups
+Test fplaunchwrapper robustness against weird user setups
 
 **Weird Setups Tested**:
 - No HOME directory
@@ -64,7 +64,7 @@ This directory contains **DANGEROUS** adversarial tests designed to attack fplau
 - Timezone and locale issues
 
 ### `test_wrapper_options_adversarial.sh`
-**Purpose**: Attack wrapper --fpwrapper-* options functionality
+Attack wrapper --fpwrapper-* options functionality
 
 **Attack Vectors Tested**:
 - Command injection through wrapper options
@@ -77,7 +77,7 @@ This directory contains **DANGEROUS** adversarial tests designed to attack fplau
 - Input validation bypasses
 
 ### `test_systemd_adversarial.sh`
-**Purpose**: Attack systemd integration points
+Attack systemd integration points
 
 **Attack Vectors Tested**:
 - Malicious systemd service creation
@@ -88,7 +88,7 @@ This directory contains **DANGEROUS** adversarial tests designed to attack fplau
 - Network-based attacks
 
 ### `test_package_adversarial.sh`
-**Purpose**: Attack package manager integration
+Attack package manager integration
 
 **Attack Vectors Tested**:
 - Malicious package installation
@@ -228,15 +228,6 @@ When adding new adversarial tests:
 - Clean up all test artifacts
 - Don't modify real system files
 - Use mock commands instead of real system tools
-
-## Security Considerations
-
-These tests themselves are secure because they:
-- Never run as root
-- Use isolated test environments
-- Clean up all artifacts
-- Require explicit user confirmation
-- Focus on testing our code, not attacking systems
 
 ## License
 

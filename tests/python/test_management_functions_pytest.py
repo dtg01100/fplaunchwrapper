@@ -10,7 +10,6 @@ from pathlib import Path
 import pytest
 
 # Add lib to path
-# Import the module to test
 try:
     from fplaunch.manage import WrapperManager
 

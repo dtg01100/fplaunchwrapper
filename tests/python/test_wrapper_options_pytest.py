@@ -12,7 +12,6 @@ from unittest.mock import patch
 import pytest
 
 # Add lib to path
-# Import the module to test
 try:
     from fplaunch.generate import WrapperGenerator
 

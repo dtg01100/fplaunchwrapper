@@ -21,7 +21,6 @@ python_utils_mock.sanitize_id_to_name = lambda x: x.split(".")[-1].lower()
 python_utils_mock.find_executable = lambda x: f"/usr/bin/{x}"
 python_utils_mock.safe_mktemp = lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
 
-# Import the module to test
 try:
     from fplaunch.generate import WrapperGenerator
 

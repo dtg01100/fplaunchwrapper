@@ -59,8 +59,6 @@ fplaunch regenerate
 fplaunch systemd enable
 ```
 
-To enable automatic updates, run `fplaunch systemd enable`. Systemd units are not enabled by default; running this command is a user-initiated action and signals intent.
-
 ### Fedora/RHEL/openSUSE
 
 ```bash
@@ -75,8 +73,6 @@ fplaunch regenerate
 fplaunch systemd enable
 ```
 
-To enable automatic updates, run `fplaunch systemd enable`. Systemd units are not enabled by default; running this command is a user-initiated action and signals intent.
-
 ## Package Contents
 
 Both packages install to:
@@ -90,9 +86,9 @@ After package installation, each user should:
 - Optionally enable automatic updates with `fplaunch systemd enable`
 - Configure user preferences using `fplaunch` commands
 
-### Pre-uninstall Cleanup (Recommended)
+### Pre-uninstall Cleanup
 
-Before uninstalling the system package, each user can clean their home directory by running:
+Before uninstalling system package, users can clean their home directory:
 
 ```bash
 fplaunch cleanup

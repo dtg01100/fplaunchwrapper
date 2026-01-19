@@ -8,7 +8,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Add lib to path
-# Import the module to test
 try:
     import fplaunch
 except ImportError:

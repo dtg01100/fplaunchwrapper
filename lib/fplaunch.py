@@ -15,8 +15,7 @@ def main():
     try:
         from . import cli
 
-        # Call main if it exists (it should)
-        if hasattr(cli, 'main'):
+        if hasattr(cli, "main"):
             return cli.main()
         else:
             # Fallback - shouldn't happen
@@ -26,7 +25,7 @@ def main():
             # Fallback for when running as installed package
             from fplaunch import cli
 
-            if hasattr(cli, 'main'):
+            if hasattr(cli, "main"):
                 return cli.main()
             else:
                 return 1

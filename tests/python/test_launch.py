@@ -11,7 +11,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Add lib to path
-# Import the module to test
 try:
     from fplaunch.launch import AppLauncher, main
 except ImportError:

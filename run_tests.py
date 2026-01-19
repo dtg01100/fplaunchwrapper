@@ -15,7 +15,6 @@ def run_test_file(test_file_path):
     print(f"\n🔍 Testing {test_file_path}...")
 
     try:
-        # Load the test module
         spec = importlib.util.spec_from_file_location("test_module", test_file_path)
         if spec is None or spec.loader is None:
             print(f"❌ Could not load spec for {test_file_path}")
@@ -23,7 +22,6 @@ def run_test_file(test_file_path):
         test_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(test_module)
 
-        # Find all test classes
         test_classes = []
         for name in dir(test_module):
             obj = getattr(test_module, name)
@@ -40,7 +38,6 @@ def run_test_file(test_file_path):
         for class_name, test_class in test_classes:
             print(f"  📋 Running {class_name}...")
 
-            # Find all test methods
             test_methods = []
             for method_name in dir(test_class):
                 if method_name.startswith("test_"):
@@ -52,7 +49,6 @@ def run_test_file(test_file_path):
                 print(f"    ⚠️  No test methods found in {class_name}")
                 continue
 
-            # Run each test method
             for method_name, method in test_methods:
                 try:
                     # Create instance and run method

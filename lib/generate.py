@@ -2,6 +2,7 @@
 """Wrapper generation functionality for fplaunchwrapper
 Replaces fplaunch-generate bash script with Python implementation.
 """
+
 from __future__ import annotations
 
 import os
@@ -58,7 +59,9 @@ class WrapperGenerator:
         # Validate inputs to avoid creating unexpected artifact paths (e.g., MagicMock reprs)
         if not isinstance(bin_dir, (str, os.PathLike)):
             raise TypeError("bin_dir must be a string or path-like object")
-        if config_dir is not None and not isinstance(config_dir, (str, os.PathLike, bool)):
+        if config_dir is not None and not isinstance(
+            config_dir, (str, os.PathLike, bool)
+        ):
             raise TypeError("config_dir must be a string or path-like object or None")
 
         self.bin_dir = Path(bin_dir).expanduser().resolve()
@@ -66,7 +69,11 @@ class WrapperGenerator:
         self.emit_mode = emit_mode
         self.emit_verbose = emit_verbose
         self.lock_name = "generate"
-        self.config_dir = Path(config_dir) if config_dir else (Path.home() / ".config" / "fplaunchwrapper")
+        self.config_dir = (
+            Path(config_dir)
+            if config_dir
+            else (Path.home() / ".config" / "fplaunchwrapper")
+        )
 
         # Ensure directories exist (unless in emit mode)
         if not emit_mode:
@@ -101,12 +108,16 @@ class WrapperGenerator:
                 print(message)
 
     def run_command(
-        self, cmd: list[str], description: str = "",
+        self,
+        cmd: list[str],
+        description: str = "",
     ) -> subprocess.CompletedProcess:
         """Run a command with optional progress display."""
         if description and console and not self.verbose:
             with console.status(f"[bold green]{description}..."):
-                result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+                result = subprocess.run(
+                    cmd, check=False, capture_output=True, text=True
+                )
         else:
             if self.verbose:
                 self.log(f"Running: {' '.join(cmd)}")
@@ -297,7 +308,9 @@ class WrapperGenerator:
                     _ = wrapper_path.read_text()
                 except Exception as e:
                     # Can't read file (possibly mocked); allow creation
-                    self.log(f"Note: Could not verify existing wrapper file: {e}", "info")
+                    self.log(
+                        f"Note: Could not verify existing wrapper file: {e}", "info"
+                    )
                 else:
                     self.log(
                         f"Name collision for '{wrapper_name}': existing file not a wrapper",
@@ -311,7 +324,6 @@ class WrapperGenerator:
                 )
                 return False
 
-        # Create the wrapper script
         wrapper_content = self.create_wrapper_script(wrapper_name, target_flatpak_id)
 
         if self.emit_mode:
@@ -1043,7 +1055,7 @@ if ! is_interactive; then
         [ -z "$dir" ] && continue
         if [ -x "$dir/$NAME" ] && [ "$dir/$NAME" != "$SCRIPT_BIN_DIR/$NAME" ]; then
             "$dir/$NAME" "$@"
-            local exit_code=$?
+            exit_code=$?
             run_post_launch_script "$exit_code" "system"
             exit "$exit_code"
         fi
@@ -1052,7 +1064,7 @@ if ! is_interactive; then
     # Run flatpak
     run_pre_launch_script "$@"
     flatpak run "$ID" "$@"
-    local exit_code=$?
+    exit_code=$?
     run_post_launch_script "$exit_code" "flatpak"
     exit "$exit_code"
 fi
@@ -1079,7 +1091,7 @@ if [ "$PREF" = "system" ]; then
     if [ "$SYSTEM_EXISTS" = true ]; then
         run_pre_launch_script "$@"
         "$NAME" "$@"
-        local exit_code=$?
+        exit_code=$?
         run_post_launch_script "$exit_code" "system"
         exit "$exit_code"
     else
@@ -1087,14 +1099,14 @@ if [ "$PREF" = "system" ]; then
         echo "flatpak" > "$PREF_FILE"
         run_pre_launch_script "$@"
         flatpak run "$ID" "$@"
-        local exit_code=$?
+        exit_code=$?
         run_post_launch_script "$exit_code" "flatpak"
         exit "$exit_code"
     fi
 elif [ "$PREF" = "flatpak" ]; then
     run_pre_launch_script "$@"
     flatpak run "$ID" "$@"
-    local exit_code=$?
+    exit_code=$?
     run_post_launch_script "$exit_code" "flatpak"
     exit "$exit_code"
 else
@@ -1123,7 +1135,7 @@ else
         else
             flatpak run "$ID" "$@"
         fi
-        local exit_code=$?
+        exit_code=$?
         run_post_launch_script "$exit_code" "$PREF"
         exit "$exit_code"
     else
@@ -1133,7 +1145,7 @@ else
             echo "$PREF" > "$PREF_FILE"
             run_pre_launch_script "$@"
             "$NAME" "$@"
-            local exit_code=$?
+            exit_code=$?
             run_post_launch_script "$exit_code" "system"
             exit "$exit_code"
         else
@@ -1141,14 +1153,13 @@ else
             echo "$PREF" > "$PREF_FILE"
             run_pre_launch_script "$@"
             flatpak run "$ID" "$@"
-            local exit_code=$?
+            exit_code=$?
             run_post_launch_script "$exit_code" "flatpak"
             exit "$exit_code"
         fi
     fi
 fi
 """
-
 
     def generate_all_wrappers(self, installed_apps: list[str]) -> tuple[int, int, int]:
         """Generate wrappers for all installed applications."""
@@ -1168,7 +1179,8 @@ fi
                 console=console,
             ) as progress:
                 task = progress.add_task(
-                    "Generating wrappers...", total=len(installed_apps),
+                    "Generating wrappers...",
+                    total=len(installed_apps),
                 )
 
                 for app_id in installed_apps:
@@ -1248,19 +1260,19 @@ fi
 
         except Exception as e:
             self.log(f"Generation failed: {e}", "error")
-            
+
             # Send failure notification if notifications are enabled
             try:
                 from lib.config_manager import create_config_manager
                 from lib.notifications import send_update_failure_notification
-                
+
                 config = create_config_manager()
                 if config.get_enable_notifications():
                     send_update_failure_notification(str(e))
             except Exception:
                 # Ignore any errors in notification system
                 pass
-                
+
             return 1
 
     def generate_wrappers(self, installed_apps: list[str]) -> tuple[int, int, int]:
@@ -1292,11 +1304,16 @@ Examples:
     )
 
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output",
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output",
     )
 
     parser.add_argument(
-        "--force", action="store_true", help="Force regeneration of all wrappers",
+        "--force",
+        action="store_true",
+        help="Force regeneration of all wrappers",
     )
 
     parser.add_argument(
