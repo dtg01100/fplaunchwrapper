@@ -1,0 +1,13 @@
+schema_version = 1
+bin_dir = "/var/home/dlafreniere/bin"
+debug_mode = false
+log_level = "INFO"
+blocklist = []
+cron_interval = 6
+enable_notifications = true
+
+[global_preferences]
+launch_method = "auto"
+custom_args = []
+
+[global_preferences.env_vars]

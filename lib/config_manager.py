@@ -3,6 +3,7 @@
 Provides type-safe configuration handling with platform-specific paths,
 schema validation, migration, and templating.
 """
+
 from __future__ import annotations
 
 import os
@@ -63,10 +64,14 @@ class WrapperConfig:
     debug_mode: bool = False
     log_level: str = "INFO"
     active_profile: str = "default"  # Current active profile
-    permission_presets: dict[str, list[str]] = field(default_factory=dict)  # Custom permission presets
+    permission_presets: dict[str, list[str]] = field(
+        default_factory=dict
+    )  # Custom permission presets
     schema_version: int = 1  # Schema version for migration purposes
     cron_interval: int = 6  # Cron interval in hours (default: 6 hours)
-    enable_notifications: bool = True  # Enable desktop notifications for update failures
+    enable_notifications: bool = (
+        True  # Enable desktop notifications for update failures
+    )
 
 
 class EnhancedConfigManager:
@@ -79,8 +84,12 @@ class EnhancedConfigManager:
     def __init__(self, app_name="fplaunchwrapper") -> None:
         self.app_name = app_name
         # Resolve config/data directories using XDG variables with Path.home fallback
-        xdg_config_home = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
-        xdg_data_home = os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
+        xdg_config_home = os.environ.get(
+            "XDG_CONFIG_HOME", str(Path.home() / ".config")
+        )
+        xdg_data_home = os.environ.get(
+            "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+        )
         self.config_dir = Path(xdg_config_home) / app_name
         self.data_dir = Path(xdg_data_home) / app_name
         self.config_file = self.config_dir / "config.toml"
@@ -90,9 +99,15 @@ class EnhancedConfigManager:
         # Template variables for substitution
         self.template_variables = {
             "HOME": str(Path.home()),
-            "XDG_CONFIG_HOME": os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
-            "XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share")),
-            "XDG_CACHE_HOME": os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")),
+            "XDG_CONFIG_HOME": os.environ.get(
+                "XDG_CONFIG_HOME", str(Path.home() / ".config")
+            ),
+            "XDG_DATA_HOME": os.environ.get(
+                "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+            ),
+            "XDG_CACHE_HOME": os.environ.get(
+                "XDG_CACHE_HOME", str(Path.home() / ".cache")
+            ),
             "CONFIG_DIR": str(self.config_dir),
             "DATA_DIR": str(self.data_dir),
         }
@@ -112,33 +127,34 @@ class EnhancedConfigManager:
 
     def _substitute_variables(self, value: str) -> str:
         """Substitute template variables in a string.
-        
+
         Variables are in the format ${VARIABLE_NAME} or $VARIABLE_NAME.
-        
+
         Args:
             value: String containing variables to substitute
-            
+
         Returns:
             String with variables substituted
         """
+
         def replace_variable(match):
             var_name = match.group(1) if match.group(1) else match.group(2)
             return self.template_variables.get(var_name, match.group(0))
 
         # Handle ${VARIABLE} format
-        value = re.sub(r'\$\{([A-Za-z0-9_]+)\}', replace_variable, value)
+        value = re.sub(r"\$\{([A-Za-z0-9_]+)\}", replace_variable, value)
         # Handle $VARIABLE format
-        value = re.sub(r'\$([A-Za-z0-9_]+)', replace_variable, value)
+        value = re.sub(r"\$([A-Za-z0-9_]+)", replace_variable, value)
         return value
 
     def _process_config_value(self, value: Any) -> Any:
         """Process configuration value with variable substitution.
-        
+
         Handles nested structures (lists, dictionaries) recursively.
-        
+
         Args:
             value: Value to process
-            
+
         Returns:
             Processed value with variables substituted
         """
@@ -183,10 +199,10 @@ class EnhancedConfigManager:
 
     def _migrate_config(self, data: dict[str, Any]) -> dict[str, Any]:
         """Migrate configuration from older versions to current schema.
-        
+
         Args:
             data: Raw configuration data to migrate
-            
+
         Returns:
             Migrated configuration data
         """
@@ -200,11 +216,11 @@ class EnhancedConfigManager:
             if "legacy_blocklist" in data:
                 data["blocklist"] = data.get("legacy_blocklist", [])
                 del data["legacy_blocklist"]
-            
+
             # Ensure all required fields exist
             if "permission_presets" not in data:
                 data["permission_presets"] = {}
-            
+
             if "active_profile" not in data:
                 data["active_profile"] = "default"
 
@@ -231,7 +247,9 @@ class EnhancedConfigManager:
             # Fallback validation without Pydantic
             self._apply_unvalidated_config(processed_data)
 
-    def _apply_validated_config(self, validated_config: "PydanticWrapperConfig") -> None:
+    def _apply_validated_config(
+        self, validated_config: "PydanticWrapperConfig"
+    ) -> None:
         """Apply validated configuration from Pydantic model."""
         self.config.bin_dir = validated_config.bin_dir
         self.config.debug_mode = validated_config.debug_mode
@@ -271,19 +289,23 @@ class EnhancedConfigManager:
         self.config.debug_mode = data.get("debug_mode", self.config.debug_mode)
         self.config.log_level = data.get("log_level", self.config.log_level)
         self.config.cron_interval = data.get("cron_interval", self.config.cron_interval)
-        self.config.enable_notifications = data.get("enable_notifications", self.config.enable_notifications)
+        self.config.enable_notifications = data.get(
+            "enable_notifications", self.config.enable_notifications
+        )
 
         # Blocklist
         if "blocklist" in data:
             self.config.blocklist = list(data["blocklist"])
-        
+
         # Permission presets
         if "permission_presets" in data:
             presets_data = data["permission_presets"]
             if isinstance(presets_data, dict):
                 for preset_name, preset_data in presets_data.items():
                     if isinstance(preset_data, dict) and "permissions" in preset_data:
-                        self.config.permission_presets[preset_name] = list(preset_data["permissions"])
+                        self.config.permission_presets[preset_name] = list(
+                            preset_data["permissions"]
+                        )
                     elif isinstance(preset_data, list):
                         # Support direct list format
                         self.config.permission_presets[preset_name] = list(preset_data)
@@ -348,7 +370,7 @@ class EnhancedConfigManager:
                 if prefs.post_launch_script:
                     app_data["post_launch_script"] = prefs.post_launch_script
                 data["app_preferences"][app_id] = app_data
-        
+
         # Permission presets
         if self.config.permission_presets:
             data["permission_presets"] = {}
@@ -407,38 +429,38 @@ class EnhancedConfigManager:
     def is_blocked(self, app_id: str) -> bool:
         """Check if app is blocked."""
         return app_id in self.config.blocklist
-    
+
     def list_permission_presets(self) -> list[str]:
         """List available permission preset names."""
         return sorted(self.config.permission_presets.keys())
-    
+
     def get_permission_preset(self, preset_name: str) -> list[str] | None:
         """Get permissions for a specific preset.
-        
+
         Args:
             preset_name: Name of the preset to retrieve
-        
+
         Returns:
             List of permission strings, or None if preset not found
         """
         return self.config.permission_presets.get(preset_name)
-    
+
     def add_permission_preset(self, preset_name: str, permissions: list[str]) -> None:
         """Add or update a permission preset.
-        
+
         Args:
             preset_name: Name for the preset
             permissions: List of permission strings (e.g., ['--filesystem=home', '--device=dri'])
         """
         self.config.permission_presets[preset_name] = list(permissions)
         self.save_config()
-    
+
     def remove_permission_preset(self, preset_name: str) -> bool:
         """Remove a permission preset.
-        
+
         Args:
             preset_name: Name of the preset to remove
-        
+
         Returns:
             True if preset was removed, False if it didn't exist
         """
@@ -453,7 +475,7 @@ class EnhancedConfigManager:
         profiles_dir = self.config_dir / "profiles"
         if not profiles_dir.exists():
             return ["default"]
-        
+
         profiles = ["default"]
         for profile_file in profiles_dir.glob("*.toml"):
             profile_name = profile_file.stem
@@ -463,11 +485,11 @@ class EnhancedConfigManager:
 
     def create_profile(self, profile_name: str, copy_from: str | None = None) -> bool:
         """Create a new configuration profile.
-        
+
         Args:
             profile_name: Name of the new profile
             copy_from: Profile name to copy configuration from (optional)
-        
+
         Returns:
             True if successful, False otherwise
         """
@@ -478,7 +500,7 @@ class EnhancedConfigManager:
         try:
             profiles_dir.mkdir(parents=True, exist_ok=True)
             profile_file = profiles_dir / f"{profile_name}.toml"
-            
+
             if profile_file.exists():
                 return False
 
@@ -500,10 +522,10 @@ class EnhancedConfigManager:
 
     def switch_profile(self, profile_name: str) -> bool:
         """Switch to a different configuration profile.
-        
+
         Args:
             profile_name: Name of the profile to switch to
-        
+
         Returns:
             True if successful, False otherwise
         """
@@ -512,7 +534,7 @@ class EnhancedConfigManager:
 
         self.config.active_profile = profile_name
         self.save_config()
-        
+
         # Reload configuration from the new profile
         if profile_name != "default":
             profiles_dir = self.config_dir / "profiles"
@@ -531,14 +553,14 @@ class EnhancedConfigManager:
     def get_active_profile(self) -> str:
         """Get the currently active profile name."""
         return self.config.active_profile
-    
+
     def get_cron_interval(self) -> int:
         """Get the cron interval in hours."""
         return self.config.cron_interval
-    
+
     def set_cron_interval(self, interval: int) -> None:
         """Set the cron interval in hours.
-        
+
         Args:
             interval: Cron interval in hours (must be at least 1 hour)
         """
@@ -546,14 +568,14 @@ class EnhancedConfigManager:
             raise ValueError("Cron interval must be at least 1 hour")
         self.config.cron_interval = interval
         self.save_config()
-    
+
     def get_enable_notifications(self) -> bool:
         """Get whether desktop notifications are enabled."""
         return self.config.enable_notifications
-    
+
     def set_enable_notifications(self, enabled: bool) -> None:
         """Set whether desktop notifications are enabled.
-        
+
         Args:
             enabled: True to enable notifications, False to disable
         """
@@ -562,11 +584,11 @@ class EnhancedConfigManager:
 
     def export_profile(self, profile_name: str, export_path: Path) -> bool:
         """Export a profile to a file.
-        
+
         Args:
             profile_name: Name of the profile to export
             export_path: Path where to save the exported profile
-        
+
         Returns:
             True if successful, False otherwise
         """
@@ -592,11 +614,11 @@ class EnhancedConfigManager:
 
     def import_profile(self, profile_name: str, import_path: Path) -> bool:
         """Import a profile from a file.
-        
+
         Args:
             profile_name: Name for the imported profile
             import_path: Path to the file to import from
-        
+
         Returns:
             True if successful, False otherwise
         """
@@ -606,7 +628,7 @@ class EnhancedConfigManager:
         try:
             profiles_dir = self.config_dir / "profiles"
             profiles_dir.mkdir(parents=True, exist_ok=True)
-            
+
             if profile_name == "default":
                 return False  # Can't overwrite default profile
 
@@ -658,10 +680,13 @@ if PYDANTIC_AVAILABLE:
         permission_presets: dict[str, list[str]] = Field(default_factory=dict)
         schema_version: int = Field(default=1, ge=0)
         cron_interval: int = Field(default=6, ge=1)  # Minimum 1 hour interval
-        enable_notifications: bool = Field(default=True)  # Enable desktop notifications for update failures
+        enable_notifications: bool = Field(
+            default=True
+        )  # Enable desktop notifications for update failures
 
         class Config:
             """Configuration for Pydantic model."""
+
             extra = "forbid"  # Forbid extra fields to maintain schema integrity
 
 
@@ -672,82 +697,90 @@ def create_config_manager():
 
 def main() -> None:
     """Command-line interface for configuration management."""
-    if len(sys.argv) > 1:
-        cmd = sys.argv[1]
+    import argparse
 
-        if cmd == "init":
-            # Initialize configuration
-            config = create_config_manager()
-            config.save_config()
+    parser = argparse.ArgumentParser(
+        description="Manage fplaunchwrapper configuration",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  fplaunch-config init                   # Initialize configuration
+  fplaunch-config block firefox          # Block Firefox from being wrapped
+  fplaunch-config unblock firefox        # Unblock Firefox
+  fplaunch-config list-presets           # List permission presets
+  fplaunch-config get-preset gaming      # Get permissions for 'gaming' preset
 
-        elif cmd == "show":
-            # Show current configuration
-            config = create_config_manager()
+Commands:
+  init          Initialize default configuration
+  show          Show current configuration
+  block APP     Block application from being wrapped
+  unblock APP   Unblock application
+  list-presets  List all permission presets
+  get-preset NAME Get permissions for a specific preset
+        """,
+    )
 
-        elif cmd == "block":
-            if len(sys.argv) < 3:
-                sys.exit(1)
-            config = create_config_manager()
-            config.add_to_blocklist(sys.argv[2])
+    parser.add_argument(
+        "command",
+        choices=["init", "show", "block", "unblock", "list-presets", "get-preset"],
+        help="Configuration command to execute",
+    )
 
-        elif cmd == "unblock":
-            if len(sys.argv) < 3:
-                sys.exit(1)
-            config = create_config_manager()
-            config.remove_from_blocklist(sys.argv[2])
-        
-        elif cmd == "list-presets":
-            # List available permission presets
-            config = create_config_manager()
-            presets = config.list_permission_presets()
+    parser.add_argument(
+        "value",
+        nargs="?",
+        help="Value for the command (app name for block/unblock, preset name for get-preset)",
+    )
+
+    args = parser.parse_args()
+
+    if args.command == "init":
+        config = create_config_manager()
+        config.save_config()
+        print("Configuration initialized successfully")
+
+    elif args.command == "show":
+        config = create_config_manager()
+        config.save_config()  # This will show the config
+
+    elif args.command == "block":
+        if not args.value:
+            parser.error("block command requires an app name")
+        config = create_config_manager()
+        config.add_to_blocklist(args.value)
+        print(f"Blocked {args.value}")
+
+    elif args.command == "unblock":
+        if not args.value:
+            parser.error("unblock command requires an app name")
+        config = create_config_manager()
+        config.remove_from_blocklist(args.value)
+        print(f"Unblocked {args.value}")
+
+    elif args.command == "list-presets":
+        config = create_config_manager()
+        presets = config.list_permission_presets()
+        if presets:
+            print("Available permission presets:")
             for preset in presets:
-                print(preset)
-        
-        elif cmd == "get-preset":
-            # Get permissions for a specific preset
-            if len(sys.argv) < 3:
-                sys.exit(1)
-            config = create_config_manager()
-            permissions = config.get_permission_preset(sys.argv[2])
-            if permissions:
-                for perm in permissions:
-                    print(perm)
-            else:
-                sys.exit(1)
-
+                print(f"  {preset}")
         else:
+            print("No permission presets defined")
+
+    elif args.command == "get-preset":
+        if not args.value:
+            parser.error("get-preset command requires a preset name")
+        config = create_config_manager()
+        permissions = config.get_permission_preset(args.value)
+        if permissions:
+            print(f"Permissions for preset '{args.value}':")
+            for perm in permissions:
+                print(f"  {perm}")
+        else:
+            print(f"Preset '{args.value}' not found", file=sys.stderr)
             sys.exit(1)
-    else:
-        pass
 
 
 # CLI interface for testing
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        cmd = sys.argv[1]
-
-        if cmd == "init":
-            # Initialize configuration
-            config = create_config_manager()
-            config.save_config()
-
-        elif cmd == "show":
-            # Show current configuration
-            config = create_config_manager()
-
-        elif cmd == "block":
-            if len(sys.argv) < 3:
-                sys.exit(1)
-            config = create_config_manager()
-            config.add_to_blocklist(sys.argv[2])
-
-        elif cmd == "unblock":
-            if len(sys.argv) < 3:
-                sys.exit(1)
-            config = create_config_manager()
-            config.remove_from_blocklist(sys.argv[2])
-
-        else:
-            sys.exit(1)
-    else:
-        pass
+    main()

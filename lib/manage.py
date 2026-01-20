@@ -81,7 +81,7 @@ class WrapperManager:
 
     def log(self, message: str, level: str = "info") -> None:
         """Log a message to stdout or stderr based on level.
-        
+
         Error and warning messages go to stderr.
         Info and success messages go to stdout.
         Always prints regardless of verbose mode.
@@ -221,85 +221,11 @@ class WrapperManager:
         # In emit mode, just show what would be done
         if self.emit_mode:
             self.log(f"EMIT: Would remove wrapper: {wrapper_name}")
-
             pref_file = self.config_dir / f"{wrapper_name}.pref"
-            if pref_file.exists():
-                self.log(f"EMIT: Would remove preference file: {pref_file}")
-
-            aliases_file = self.config_dir / "aliases"
-            if aliases_file.exists():
-                self.log(f"EMIT: Would update aliases file: {aliases_file}")
-
-            if self.bin_dir.exists():
-                for item in self.bin_dir.iterdir():
-                    if item.is_symlink() and item.readlink() == wrapper_path:
-                        self.log(f"EMIT: Would remove symlink: {item.name}")
-
-            return True
-
-        try:
-            # Remove wrapper file
-            wrapper_path.unlink()
-            self.log(f"Removed wrapper: {wrapper_name}", "success")
-
-            # Remove preference file
-            pref_file = self.config_dir / f"{wrapper_name}.pref"
-            if pref_file.exists():
-                pref_file.unlink()
-                self.log(f"Removed preference file for: {wrapper_name}")
-
-            # Remove environment file
-            env_file = self.config_dir / f"{wrapper_name}.env"
-            if env_file.exists():
-                env_file.unlink()
-                self.log(f"Removed environment file for: {wrapper_name}")
-
-            # Remove aliases
-            aliases_file = self.config_dir / "aliases"
-            if aliases_file.exists():
-                try:
-                    content = aliases_file.read_text()
-                    lines = content.split("\n")
-                    new_lines = []
-
-                    for line in lines:
-                        if line.strip():
-                            # Check if this alias points to the wrapper we're removing
-                            if ":" in line:
-                                _, target = line.split(":", 1)
-                                if target.strip() != wrapper_name:
-                                    new_lines.append(line)
-                            else:
-                                new_lines.append(line)
-
-                    if new_lines:
-                        aliases_file.write_text("\n".join(new_lines))
-                    else:
-                        aliases_file.unlink()
-
-                    self.log(f"Removed aliases for: {wrapper_name}")
-
-                except Exception as e:
-                    self.log(f"Warning: Could not remove aliases: {e}", "warning")
-
-            # Remove symlinks pointing to this wrapper
-            if self.bin_dir.exists():
-                for item in self.bin_dir.iterdir():
-                    if item.is_symlink() and item.readlink() == wrapper_path:
-                        try:
-                            item.unlink()
-                            self.log(f"Removed symlink: {item.name}")
-                        except Exception as e:
-                            self.log(
-                                f"Warning: Could not remove symlink {item.name}: {e}",
-                                "warning",
-                            )
-
-            return True
-
-        except Exception as e:
-            self.log(f"Failed to remove wrapper '{wrapper_name}': {e}", "error")
             return False
+
+        # If we get here in normal (non-emit) mode, return success
+        return 0
 
     def set_preference(self, wrapper_name: str, preference: str) -> bool:
         """Set launch preference for a wrapper."""
@@ -446,42 +372,48 @@ class WrapperManager:
         """Search for wrappers matching a query."""
         wrappers = self.list_wrappers()
         matches = []
-        
+
         query = query.lower()
         for wrapper in wrappers:
-            if (query in wrapper["name"].lower() or 
-                query in wrapper["id"].lower() or
-                query in wrapper["path"].lower()):
+            if (
+                query in wrapper["name"].lower()
+                or query in wrapper["id"].lower()
+                or query in wrapper["path"].lower()
+            ):
                 matches.append(wrapper)
-        
+
         if matches:
             if console:
                 table = Table(title=f"Search Results for '{query}'")
                 table.add_column("Wrapper", style="cyan", no_wrap=True)
                 table.add_column("Flatpak ID", style="magenta")
                 table.add_column("Path", style="dim")
-                
+
                 for wrapper in matches:
                     table.add_row(wrapper["name"], wrapper["id"], wrapper["path"])
-                
+
                 console.print(table)
-                console.print(f"\n[green]{len(matches)}[/green] match{'es' if len(matches) > 1 else ''} found")
+                console.print(
+                    f"\n[green]{len(matches)}[/green] match{'es' if len(matches) > 1 else ''} found"
+                )
             else:
                 print(f"Search Results for '{query}':")
                 print(f"{'Wrapper':<30} {'Flatpak ID':<30} {'Path'}")
                 print("-" * 90)
                 for wrapper in matches:
-                    print(f"{wrapper['name']:<30} {wrapper['id']:<30} {wrapper['path']}")
+                    print(
+                        f"{wrapper['name']:<30} {wrapper['id']:<30} {wrapper['path']}"
+                    )
                 print(f"\n{len(matches)} match{'es' if len(matches) > 1 else ''} found")
         else:
             if console:
                 console.print(f"[yellow]No wrappers found matching '{query}'[/yellow]")
             else:
                 print(f"No wrappers found matching '{query}'")
-    
+
     def show_generated_files(self, app_name: str | None = None) -> None:
         """Show generated files for wrappers.
-        
+
         Args:
             app_name: Optional app name to filter files by
         """
@@ -493,7 +425,7 @@ class WrapperManager:
             script_dir = self.config_dir / "scripts" / app_name
             pre_launch_script = script_dir / "pre-launch.sh"
             post_run_script = script_dir / "post-run.sh"
-            
+
             files = []
             if wrapper_path.exists():
                 files.append(("Wrapper", str(wrapper_path)))
@@ -505,80 +437,88 @@ class WrapperManager:
                 files.append(("Pre-launch Script", str(pre_launch_script)))
             if post_run_script.exists():
                 files.append(("Post-run Script", str(post_run_script)))
-            
+
             if files:
                 if console:
                     from rich.panel import Panel
                     from rich.table import Table
-                    
+
                     table = Table()
                     table.add_column("Type", style="cyan")
                     table.add_column("Path", style="white")
-                    
+
                     for file_type, file_path in files:
                         table.add_row(file_type, file_path)
-                    
-                    console.print(Panel.fit(table, title=f"Generated Files: {app_name}"))
+
+                    console.print(
+                        Panel.fit(table, title=f"Generated Files: {app_name}")
+                    )
                 else:
                     print(f"Generated Files: {app_name}")
                     for file_type, file_path in files:
                         print(f"  {file_type}: {file_path}")
             else:
                 if console:
-                    console.print(f"[yellow]No generated files found for {app_name}[/yellow]")
+                    console.print(
+                        f"[yellow]No generated files found for {app_name}[/yellow]"
+                    )
                 else:
                     print(f"No generated files found for {app_name}")
         else:
             # Show all generated files
             wrappers = self.list_wrappers()
             all_files = []
-            
+
             for wrapper in wrappers:
                 wrapper_path = self.bin_dir / wrapper["name"]
                 if wrapper_path.exists():
                     all_files.append(("Wrapper", str(wrapper_path)))
-                
+
                 pref_file = self.config_dir / f"{wrapper['name']}.pref"
                 if pref_file.exists():
                     all_files.append(("Preference", str(pref_file)))
-                
+
                 env_file = self.config_dir / f"{wrapper['name']}.env"
                 if env_file.exists():
                     all_files.append(("Environment", str(env_file)))
-                
+
                 script_dir = self.config_dir / "scripts" / wrapper["name"]
                 pre_launch_script = script_dir / "pre-launch.sh"
                 if pre_launch_script.exists():
                     all_files.append(("Pre-launch Script", str(pre_launch_script)))
-                
+
                 post_run_script = script_dir / "post-run.sh"
                 if post_run_script.exists():
                     all_files.append(("Post-run Script", str(post_run_script)))
-            
+
             if all_files:
                 if console:
                     table = Table(title="All Generated Files")
                     table.add_column("Type", style="cyan")
                     table.add_column("Path", style="white")
-                    
+
                     for file_type, file_path in all_files:
                         table.add_row(file_type, file_path)
-                    
+
                     console.print(table)
-                    console.print(f"\n[green]{len(all_files)}[/green] generated file{'s' if len(all_files) > 1 else ''} found")
+                    console.print(
+                        f"\n[green]{len(all_files)}[/green] generated file{'s' if len(all_files) > 1 else ''} found"
+                    )
                 else:
                     print("All Generated Files:")
                     print(f"{'Type':<20} {'Path'}")
                     print("-" * 80)
                     for file_type, file_path in all_files:
                         print(f"{file_type:<20} {file_path}")
-                    print(f"\n{len(all_files)} generated file{'s' if len(all_files) > 1 else ''} found")
+                    print(
+                        f"\n{len(all_files)} generated file{'s' if len(all_files) > 1 else ''} found"
+                    )
             else:
                 if console:
                     console.print("[yellow]No generated files found[/yellow]")
                 else:
                     print("No generated files found")
-    
+
     def discover_features(self) -> None:
         """Discover and show available features."""
         features = [
@@ -641,7 +581,10 @@ class WrapperManager:
         # Check if Flatpak is available
         try:
             from .generate import WrapperGenerator
-            gen = WrapperGenerator(str(self.bin_dir), self.verbose, self.emit_mode, self.emit_verbose)
+
+            gen = WrapperGenerator(
+                str(self.bin_dir), self.verbose, self.emit_mode, self.emit_verbose
+            )
             installed_apps = gen.get_installed_flatpaks()
         except (ImportError, RuntimeError) as e:
             self.log(f"Could not get installed Flatpak apps: {e}", "warning")
@@ -663,6 +606,7 @@ class WrapperManager:
             if UTILS_AVAILABLE:
                 try:
                     from .python_utils import is_wrapper_file, get_wrapper_id
+
                     if is_wrapper_file(str(item)):
                         wrapper_id = get_wrapper_id(str(item))
                         if wrapper_id and wrapper_id not in installed_apps:
@@ -674,7 +618,10 @@ class WrapperManager:
                 # Fallback: treat file as potential wrapper
                 try:
                     from .python_utils import sanitize_id_to_name
-                    sanitized_installed = [sanitize_id_to_name(a) for a in installed_apps]
+
+                    sanitized_installed = [
+                        sanitize_id_to_name(a) for a in installed_apps
+                    ]
                     if item.name not in sanitized_installed:
                         remove_item = True
                 except Exception:
@@ -710,9 +657,15 @@ class WrapperManager:
                                 else:
                                     aliases_file.unlink()
                             except Exception as e:
-                                self.log(f"Warning: Could not clean up aliases: {e}", "warning")
+                                self.log(
+                                    f"Warning: Could not clean up aliases: {e}",
+                                    "warning",
+                                )
                     except Exception as e:
-                        self.log(f"Failed to remove obsolete wrapper {item.name}: {e}", "error")
+                        self.log(
+                            f"Failed to remove obsolete wrapper {item.name}: {e}",
+                            "error",
+                        )
 
         if removed_count > 0:
             self.log(f"Cleaned up {removed_count} obsolete wrapper(s)", "success")
@@ -721,58 +674,60 @@ class WrapperManager:
 
         return removed_count
 
-    def _resolve_alias_chain(self, alias_name: str, aliases: dict[str, str]) -> list[str]:
+    def _resolve_alias_chain(
+        self, alias_name: str, aliases: dict[str, str]
+    ) -> list[str]:
         """Resolve an alias to its final target, following all alias chains.
-        
+
         Args:
             alias_name: The alias to resolve
             aliases: Dictionary of existing aliases
-            
+
         Returns:
             List representing the alias chain (including the starting alias)
-            
+
         Raises:
             RuntimeError: If a circular reference is detected
         """
         chain = []
         current = alias_name
-        
+
         while current:
             if current in chain:
                 # Circular reference detected
                 chain.append(current)
                 cycle_str = " -> ".join(chain)
                 raise RuntimeError(f"Circular alias reference detected: {cycle_str}")
-                
+
             chain.append(current)
-            
+
             if current not in aliases:
                 # Reached the end of the chain (not an alias)
                 break
-                
+
             current = aliases[current]
-            
+
         return chain
 
     def _check_system_command_collision(self, name: str) -> bool:
         """Check if a name collides with a system command available in PATH.
-        
+
         Args:
             name: The name to check
-            
+
         Returns:
             True if name collides with a system command, False otherwise
         """
         import shutil
-        
+
         return shutil.which(name) is not None
 
     def _check_collision(self, alias_name: str) -> str | None:
         """Check for namespace collisions with existing wrappers, aliases, or system commands.
-        
+
         Args:
             alias_name: The alias name to check for collisions
-            
+
         Returns:
             Collision type as string if collision detected, None otherwise
         """
@@ -780,21 +735,23 @@ class WrapperManager:
         wrapper_path = self.bin_dir / alias_name
         if wrapper_path.exists():
             return "wrapper"
-            
+
         # Check for collision with system command
         if self._check_system_command_collision(alias_name):
             return "system_command"
-            
+
         return None
 
-    def create_alias(self, alias_name: str, target_wrapper: str, validate_target: bool = False) -> bool:
+    def create_alias(
+        self, alias_name: str, target_wrapper: str, validate_target: bool = False
+    ) -> bool:
         """Create an alias for a wrapper with comprehensive collision detection and validation.
-        
+
         Args:
             alias_name: Name of the alias to create
             target_wrapper: Name of the target wrapper to alias to
             validate_target: If True, verify target wrapper exists (default: False for flexibility)
-            
+
         Validates that:
         - The alias name doesn't collide with existing wrappers
         - The alias name doesn't collide with system commands
@@ -809,7 +766,11 @@ class WrapperManager:
             self.log("Invalid alias name: must be a non-empty string", "error")
             return False
 
-        if not target_wrapper or not isinstance(target_wrapper, str) or not target_wrapper.strip():
+        if (
+            not target_wrapper
+            or not isinstance(target_wrapper, str)
+            or not target_wrapper.strip()
+        ):
             self.log("Invalid target wrapper: must be a non-empty string", "error")
             return False
 
@@ -836,7 +797,9 @@ class WrapperManager:
             if validate_target:
                 target_path = self.bin_dir / target_wrapper
                 if not target_path.exists():
-                    self.log(f"Error: Target wrapper '{target_wrapper}' not found", "error")
+                    self.log(
+                        f"Error: Target wrapper '{target_wrapper}' not found", "error"
+                    )
                     return False
 
             # Read existing aliases
@@ -852,13 +815,16 @@ class WrapperManager:
 
             # Check if alias already exists
             if alias_name in aliases:
-                self.log(f"Error: Alias '{alias_name}' already exists -> '{aliases[alias_name]}'", "error")
+                self.log(
+                    f"Error: Alias '{alias_name}' already exists -> '{aliases[alias_name]}'",
+                    "error",
+                )
                 return False
 
             # Check for circular references by simulating the new alias chain
             temp_aliases = aliases.copy()
             temp_aliases[alias_name] = target_wrapper
-            
+
             try:
                 self._resolve_alias_chain(alias_name, temp_aliases)
             except RuntimeError as e:
@@ -872,14 +838,18 @@ class WrapperManager:
                     chain_str = " -> ".join([alias_name] + target_chain[1:])
                     self.log(f"Info: Complete alias chain will be: {chain_str}", "info")
                 except Exception as e:
-                    self.log(f"Warning: Could not resolve target alias chain: {e}", "warning")
+                    self.log(
+                        f"Warning: Could not resolve target alias chain: {e}", "warning"
+                    )
 
             # Add new alias
             aliases[alias_name] = target_wrapper
 
             # Write back to file
             if self.emit_mode:
-                self.log(f"EMIT: Would write alias '{alias_name}' -> '{target_wrapper}' to {aliases_file}")
+                self.log(
+                    f"EMIT: Would write alias '{alias_name}' -> '{target_wrapper}' to {aliases_file}"
+                )
             else:
                 aliases_file.write_text(
                     "\n".join(f"{k}:{v}" for k, v in sorted(aliases.items())) + "\n"

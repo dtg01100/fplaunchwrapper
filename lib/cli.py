@@ -182,7 +182,7 @@ if CLICK_AVAILABLE:
                 print(
                     f"Error: Failed to import wrapper generator: {e}", file=sys.stderr
                 )
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.argument("app_name", required=False)
@@ -215,7 +215,7 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print(f"Error: Failed to import wrapper manager: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.argument("app_name")
@@ -248,7 +248,7 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print(f"Error: Failed to import wrapper manager: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.argument("app_name")
@@ -271,7 +271,7 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print(f"Error: Failed to import launcher: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.argument("app_name")
@@ -291,7 +291,7 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print("Error: fplaunch-manage script not found", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
         cmd = [str(script_path), "remove", app_name]
         result = run_command(
@@ -342,7 +342,7 @@ if CLICK_AVAILABLE:
                 console_err.print(
                     f"[red]Error:[/red] Failed to import systemd setup: {e}"
                 )
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.option(
@@ -379,7 +379,7 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print(f"Error: Failed to import cleanup: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.option(
@@ -422,7 +422,7 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print(f"Error: Failed to import monitor: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.argument("action", required=False)
@@ -460,7 +460,7 @@ if CLICK_AVAILABLE:
                         print(
                             "Error: App name required for block action", file=sys.stderr
                         )
-                    return 1
+                    raise SystemExit(1)
                 config.add_to_blocklist(value)
 
             elif action == "unblock":
@@ -476,7 +476,7 @@ if CLICK_AVAILABLE:
                             "Error: App name required for unblock action",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
                 config.remove_from_blocklist(value)
 
             elif action == "list-presets":
@@ -497,13 +497,13 @@ if CLICK_AVAILABLE:
                             "Error: Preset name required for get-preset action",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
                 permissions = config.get_permission_preset(value)
                 if permissions:
                     for perm in permissions:
                         print(perm)
                 else:
-                    return 1
+                    raise SystemExit(1)
 
             elif action == "cron-interval":
                 if not value:
@@ -535,7 +535,7 @@ if CLICK_AVAILABLE:
                             import sys
 
                             print(f"Error: {e}", file=sys.stderr)
-                        return 1
+                        raise SystemExit(1)
 
             else:
                 if console_err:
@@ -544,7 +544,7 @@ if CLICK_AVAILABLE:
                     import sys
 
                     print(f"Error: Unknown action: {action}", file=sys.stderr)
-                return 1
+                raise SystemExit(1)
 
             return 0
 
@@ -557,7 +557,7 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print(f"Error: Failed to import config manager: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     # (duplicate setup_systemd/monitor/config variants removed)
 
@@ -604,7 +604,7 @@ if CLICK_AVAILABLE:
                             "Error: Profile name required for create action",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
 
                 success = manager.create_profile(name, copy_from=copy_from)
                 if success:
@@ -622,7 +622,7 @@ if CLICK_AVAILABLE:
                         print(
                             f"Error: Failed to create profile: {name}", file=sys.stderr
                         )
-                    return 1
+                    raise SystemExit(1)
 
             elif action == "switch":
                 if not name:
@@ -635,7 +635,7 @@ if CLICK_AVAILABLE:
                             "Error: Profile name required for switch action",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
 
                 success = manager.switch_profile(name)
                 if success:
@@ -654,7 +654,7 @@ if CLICK_AVAILABLE:
                             f"Error: Failed to switch to profile: {name}",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
 
             elif action == "current":
                 current = manager.get_active_profile()
@@ -675,7 +675,7 @@ if CLICK_AVAILABLE:
                             "Error: Profile name required for export action",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
 
                 export_path = Path(name).with_suffix(".toml")
                 success = manager.export_profile(name, export_path)
@@ -696,7 +696,7 @@ if CLICK_AVAILABLE:
                         print(
                             f"Error: Failed to export profile: {name}", file=sys.stderr
                         )
-                    return 1
+                    raise SystemExit(1)
 
             elif action == "import":
                 if not name:
@@ -709,7 +709,7 @@ if CLICK_AVAILABLE:
                             "Error: Profile name and path required for import action",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
 
                 import_path = Path(name)
                 if not import_path.exists():
@@ -719,7 +719,7 @@ if CLICK_AVAILABLE:
                         )
                     else:
                         print(f"Error: File not found: {import_path}", file=sys.stderr)
-                    return 1
+                    raise SystemExit(1)
 
                 profile_name = import_path.stem
                 success = manager.import_profile(profile_name, import_path)
@@ -741,14 +741,14 @@ if CLICK_AVAILABLE:
                             f"Error: Failed to import profile from: {import_path}",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
 
             else:
                 if console_err:
                     console_err.print(f"[red]Error:[/red] Unknown action: {action}")
                 else:
                     print(f"Error: Unknown action: {action}", file=sys.stderr)
-                return 1
+                raise SystemExit(1)
 
         except ImportError as e:
             if console_err:
@@ -757,18 +757,19 @@ if CLICK_AVAILABLE:
                 )
             else:
                 print(f"Error: Failed to import config manager: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.argument("action", required=False)
     @click.argument("name", required=False)
     @click.option(
-        "--permissions",
+        "--permission",
+        "-p",
         multiple=True,
-        help="Flatpak permissions (e.g., --filesystem=home)",
+        help="Flatpak permissions (e.g., --permission=--filesystem=home --permission=--socket=pulseaudio)",
     )
     @click.pass_context
-    def presets(ctx, action, name, permissions) -> int:
+    def presets(ctx, action, name, permission) -> int:
         """Manage permission presets for sandbox editing.
 
         ACTION: Preset action (list, get, add, remove)
@@ -810,7 +811,7 @@ if CLICK_AVAILABLE:
                             "Error: Preset name required for get action",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
 
                 perms = manager.get_permission_preset(name)
                 if perms:
@@ -828,10 +829,10 @@ if CLICK_AVAILABLE:
                         console_err.print(f"[red]Error:[/red] Preset not found: {name}")
                     else:
                         print(f"Error: Preset not found: {name}", file=sys.stderr)
-                    return 1
+                    raise SystemExit(1)
 
             elif action == "add":
-                if not name or not permissions:
+                if not name or not permission:
                     if console_err:
                         console_err.print(
                             "[red]Error:[/red] Preset name and permissions required for add action"
@@ -841,9 +842,9 @@ if CLICK_AVAILABLE:
                             "Error: Preset name and permissions required for add action",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
 
-                manager.add_permission_preset(name, list(permissions))
+                manager.add_permission_preset(name, list(permission))
                 if console:
                     console.print(f"[green]✓[/green] Added preset: {name}")
                 else:
@@ -861,7 +862,7 @@ if CLICK_AVAILABLE:
                             "Error: Preset name required for remove action",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
 
                 success = manager.remove_permission_preset(name)
                 if success:
@@ -875,14 +876,14 @@ if CLICK_AVAILABLE:
                         console_err.print(f"[red]Error:[/red] Preset not found: {name}")
                     else:
                         print(f"Error: Preset not found: {name}", file=sys.stderr)
-                    return 1
+                    raise SystemExit(1)
 
             else:
                 if console_err:
                     console_err.print(f"[red]Error:[/red] Unknown action: {action}")
                 else:
                     print(f"Error: Unknown action: {action}", file=sys.stderr)
-                return 1
+                raise SystemExit(1)
 
         except ImportError as e:
             if console_err:
@@ -891,7 +892,7 @@ if CLICK_AVAILABLE:
                 )
             else:
                 print(f"Error: Failed to import config manager: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.argument("action", required=False)
@@ -939,7 +940,7 @@ if CLICK_AVAILABLE:
                             "Error: Prerequisites not met for systemd setup",
                             file=sys.stderr,
                         )
-                    return 1
+                    raise SystemExit(1)
 
                 # Install units
                 if setup.install_systemd_units():
@@ -962,7 +963,7 @@ if CLICK_AVAILABLE:
                         )
                     else:
                         print("Error: Failed to enable systemd timer", file=sys.stderr)
-                    return 1
+                    raise SystemExit(1)
 
             elif action == "disable":
                 # Disable systemd timer/path units
@@ -984,7 +985,7 @@ if CLICK_AVAILABLE:
                         )
                     else:
                         print("Error: Failed to disable systemd timer", file=sys.stderr)
-                    return 1
+                    raise SystemExit(1)
 
             elif action == "status":
                 # Check systemd timer status
@@ -1116,7 +1117,7 @@ if CLICK_AVAILABLE:
                 if setup.start_unit(unit_name):
                     return 0
                 else:
-                    return 1
+                    raise SystemExit(1)
 
             elif action == "stop":
                 # Stop systemd units
@@ -1127,7 +1128,7 @@ if CLICK_AVAILABLE:
                 if setup.stop_unit(unit_name):
                     return 0
                 else:
-                    return 1
+                    raise SystemExit(1)
 
             elif action == "restart":
                 # Restart systemd units
@@ -1138,7 +1139,7 @@ if CLICK_AVAILABLE:
                 if setup.restart_unit(unit_name):
                     return 0
                 else:
-                    return 1
+                    raise SystemExit(1)
 
             elif action == "reload":
                 # Reload systemd units or daemon
@@ -1149,12 +1150,12 @@ if CLICK_AVAILABLE:
                     if setup.reload_unit(value):
                         return 0
                     else:
-                        return 1
+                        raise SystemExit(1)
                 else:
                     if setup.reload_services():
                         return 0
                     else:
-                        return 1
+                        raise SystemExit(1)
 
             elif action == "logs":
                 # Show systemd unit logs
@@ -1237,14 +1238,14 @@ if CLICK_AVAILABLE:
                         console_err.print("[red]Error:[/red] Prerequisites not met")
                     else:
                         print("Error: Prerequisites not met", file=sys.stderr)
-                    return 1
+                    raise SystemExit(1)
 
             else:
                 if console_err:
                     console_err.print(f"[red]Error:[/red] Unknown action: {action}")
                 else:
                     print(f"Error: Unknown action: {action}", file=sys.stderr)
-                return 1
+                raise SystemExit(1)
 
         except ImportError as e:
             if console_err:
@@ -1253,7 +1254,7 @@ if CLICK_AVAILABLE:
                 )
             else:
                 print(f"Error: Failed to import systemd setup: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.argument("app_name", required=False)
@@ -1292,7 +1293,7 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print(f"Error: Failed to import wrapper manager: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
     @click.argument("query")
@@ -1319,17 +1320,31 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print(f"Error: Failed to import wrapper manager: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
     @cli.command()
-    @click.argument("app_name")
+    @click.argument(
+        "app_name",
+        type=click.UNPROCESSED,
+    )
+    @click.option(
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
+    )
+    @click.option(
+        "--emit-verbose",
+        is_flag=True,
+        help="Show detailed file contents in emit mode",
+    )
     @click.pass_context
-    def install(ctx, app_name):
+    def install(ctx, app_name, emit, emit_verbose):
         """Install Flatpak application and create wrapper.
 
         APP_NAME: Flatpak application ID to install
         """
-        emit_mode = ctx.obj["emit"]
+        emit_mode = emit or ctx.obj.get("emit", False)
+        emit_verbose_mode = emit_verbose or ctx.obj.get("emit_verbose", False)
 
         if emit_mode:
             if console:
@@ -1364,18 +1379,36 @@ if CLICK_AVAILABLE:
 
         bin_dir = os.path.expanduser("~/bin")
         generator = WrapperGenerator(
-            bin_dir, ctx.obj["verbose"], ctx.obj["emit"], ctx.obj["emit_verbose"]
+            bin_dir,
+            ctx.obj.get("verbose", False),
+            ctx.obj.get("emit", False),
+            emit_verbose_mode,
         )
         return generator.run()
 
-    @cli.command()
-    @click.argument("app_name", required=False)
+    @click.argument(
+        "app_name",
+        type=click.UNPROCESSED,
+    )
+    @click.option(
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
+    )
+    @click.option(
+        "--emit-verbose",
+        is_flag=True,
+        help="Show detailed file contents in emit mode",
+    )
     @click.pass_context
-    def manifest(ctx, app_name):
+    def manifest(ctx, app_name, emit, emit_verbose):
         """Show or manipulate Flatpak manifests.
 
         APP_NAME: Application name to show manifest for
         """
+        emit_mode = emit or ctx.obj.get("emit", False)
+        emit_verbose_mode = emit_verbose or ctx.obj.get("emit_verbose", False)
+
         if not app_name:
             if console_err:
                 console_err.print(
@@ -1388,7 +1421,7 @@ if CLICK_AVAILABLE:
                     "Error: Application name required for manifest command",
                     file=sys.stderr,
                 )
-            return 1
+            raise SystemExit(1)
 
         emit_mode = ctx.obj["emit"]
 
@@ -1405,7 +1438,7 @@ if CLICK_AVAILABLE:
                 print(f"Manifest for {app_name}:")
                 print(result.stdout)
             return 0
-        elif not emit_mode:
+        elif result.returncode != 0:
             if console_err:
                 console_err.print(
                     f"[red]Error:[/red] Failed to get manifest: {result.stderr}"
@@ -1417,21 +1450,49 @@ if CLICK_AVAILABLE:
                     f"Error: Failed to get manifest: {result.stderr}", file=sys.stderr
                 )
             return result.returncode
-
-        return 0
+        else:
+            if console:
+                console.print(
+                    f"[cyan]📋 EMIT:[/cyan] Would show manifest for {app_name}"
+                )
+                console.print("[dim]   Purpose: Show Flatpak manifest[/dim]")
+            else:
+                print(f"Emit: Would show manifest for {app_name}")
+            return 0
 
     @cli.command()
-    @click.argument("app_name", required=False)
+    @click.argument(
+        "app_name",
+        type=click.UNPROCESSED,
+    )
+    @click.option(
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
+    )
+    @click.option(
+        "--emit-verbose",
+        is_flag=True,
+        help="Show detailed file contents in emit mode",
+    )
     @click.pass_context
-    def files(ctx, app_name):
+    def files(ctx, app_name, emit, emit_verbose):
         """Show generated wrapper files.
 
         APP_NAME: Show files for specific application
         """
+        emit_mode = emit or ctx.obj.get("emit", False)
+        emit_verbose_mode = emit_verbose or ctx.obj.get("emit_verbose", False)
+
         try:
             from .manage import WrapperManager
 
-            manager = WrapperManager(ctx.obj["config_dir"], ctx.obj["verbose"])
+            manager = WrapperManager(
+                ctx.obj.get("config_dir", None),
+                ctx.obj.get("verbose", False),
+                emit_mode,
+                emit_verbose_mode,
+            )
             manager.show_generated_files(app_name)
             return 0
 
@@ -1444,18 +1505,31 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print(f"Error: Failed to import wrapper manager: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
-    @cli.command()
-    @click.argument("app_name")
+    @click.argument(
+        "app_name",
+        type=click.UNPROCESSED,
+    )
     @click.option("--remove-data", is_flag=True, help="Remove application data")
+    @click.option(
+        "--emit",
+        is_flag=True,
+        help="Emit commands instead of executing (dry run)",
+    )
+    @click.option(
+        "--emit-verbose",
+        is_flag=True,
+        help="Show detailed file contents in emit mode",
+    )
     @click.pass_context
-    def uninstall(ctx, app_name, remove_data):
+    def uninstall(ctx, app_name, remove_data, emit, emit_verbose):
         """Uninstall Flatpak application and remove wrapper.
 
         APP_NAME: Flatpak application ID to uninstall
         """
-        emit_mode = ctx.obj["emit"]
+        emit_mode = emit or ctx.obj.get("emit", False)
+        emit_verbose_mode = emit_verbose or ctx.obj.get("emit_verbose", False)
 
         if emit_mode:
             if console:
@@ -1471,10 +1545,10 @@ if CLICK_AVAILABLE:
         from .manage import WrapperManager
 
         manager = WrapperManager(
-            ctx.obj["config_dir"],
-            ctx.obj["verbose"],
-            ctx.obj["emit"],
-            ctx.obj["emit_verbose"],
+            ctx.obj.get("config_dir", None),
+            ctx.obj.get("verbose", False),
+            emit_mode,
+            emit_verbose_mode,
         )
         manager.remove_wrapper(app_name)
 
@@ -1500,8 +1574,6 @@ if CLICK_AVAILABLE:
                     f"[red]Error:[/red] Failed to uninstall Flatpak app: {result.stderr}"
                 )
             else:
-                import sys
-
                 print(
                     f"Error: Failed to uninstall Flatpak app: {result.stderr}",
                     file=sys.stderr,
@@ -1546,14 +1618,14 @@ if CLICK_AVAILABLE:
                 import sys
 
                 print(f"Error: {e}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
 
 else:
     # Fallback CLI without Click
     def main() -> int:
         """Fallback CLI without Click."""
         if len(sys.argv) < 2:
-            return 1
+            raise SystemExit(1)
 
         command = sys.argv[1]
 
@@ -1566,7 +1638,7 @@ else:
                     f"Generating wrappers in {bin_dir}",
                 ).returncode
             else:
-                return 1
+                raise SystemExit(1)
 
         elif command == "list":
             script_path = find_fplaunch_script("fplaunch-manage")
@@ -1575,10 +1647,10 @@ else:
                     [str(script_path), "list"], "Listing wrappers"
                 ).returncode
             else:
-                return 1
+                raise SystemExit(1)
 
         else:
-            return 1
+            raise SystemExit(1)
 
     if __name__ == "__main__":
         sys.exit(main())

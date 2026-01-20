@@ -61,6 +61,7 @@ class AppLauncher:
         if self._safety_check is None:
             try:
                 from fplaunch.safety import safe_launch_check
+
                 self._safety_check = safe_launch_check
                 return True, self._safety_check
             except ImportError:
@@ -71,11 +72,11 @@ class AppLauncher:
 
     def _get_hook_scripts(self, app_name: str, hook_type: str) -> list[Path]:
         """Get pre or post-launch hook scripts for an app.
-        
+
         Hook scripts are looked for in:
         1. Configured script path from config manager (pre_launch_script or post_launch_script fields)
         2. Default location: ~/.config/fplaunchwrapper/scripts/{app_name}/pre-launch.sh or post-run.sh
-        
+
         Returns:
             List of executable script paths
         """
@@ -84,9 +85,10 @@ class AppLauncher:
         # Try to get script from config manager
         try:
             from lib.config_manager import create_config_manager
+
             config = create_config_manager()
             prefs = config.get_app_preferences(app_name)
-            
+
             if hook_type == "pre" and prefs.pre_launch_script:
                 script_path = Path(prefs.pre_launch_script)
                 if script_path.exists() and os.access(script_path, os.X_OK):
@@ -101,7 +103,7 @@ class AppLauncher:
         # Try default script location if no configured script found
         if not scripts:
             scripts_dir = self.config_dir / "scripts" / app_name
-            
+
             if hook_type == "pre":
                 script_path = scripts_dir / "pre-launch.sh"
             elif hook_type == "post":
@@ -114,16 +116,16 @@ class AppLauncher:
 
         return scripts
 
-
-
-    def _run_hook_scripts(self, hook_type: str, exit_code: int = 0, source: str = "flatpak") -> bool:
+    def _run_hook_scripts(
+        self, hook_type: str, exit_code: int = 0, source: str = "flatpak"
+    ) -> bool:
         """Run pre or post-launch hook scripts.
-        
+
         Args:
             hook_type: Either 'pre' or 'post'
             exit_code: Exit code of the application (for post-run scripts)
             source: Source of the application (system or flatpak)
-            
+
         Returns:
             True if all scripts succeeded or no scripts exist, False if any failed
         """
@@ -133,7 +135,10 @@ class AppLauncher:
             return True
 
         if self.verbose:
-            print(f"Running {hook_type}-launch scripts for {self.app_name}", file=sys.stderr)
+            print(
+                f"Running {hook_type}-launch scripts for {self.app_name}",
+                file=sys.stderr,
+            )
 
         for script_path in scripts:
             try:
@@ -145,7 +150,7 @@ class AppLauncher:
                 env["FPWRAPPER_WRAPPER_NAME"] = self.app_name
                 env["FPWRAPPER_APP_ID"] = self.app_name
                 env["FPWRAPPER_SOURCE"] = source
-                
+
                 if hook_type == "post":
                     env["FPWRAPPER_EXIT_CODE"] = str(exit_code)
 
@@ -227,7 +232,9 @@ class AppLauncher:
         try:
             # Safety check using lazy-loaded safety module
             safety_available, safe_launch_check = self._get_safety_check()
-            if safety_available and not safe_launch_check(self.app_name, self._find_wrapper()):
+            if safety_available and not safe_launch_check(
+                self.app_name, self._find_wrapper()
+            ):
                 return False
 
             # Determine source type
@@ -239,7 +246,9 @@ class AppLauncher:
             # Run pre-launch hooks
             if not self._run_hook_scripts("pre", source=source):
                 if self.verbose:
-                    print(f"Pre-launch hooks failed for {self.app_name}", file=sys.stderr)
+                    print(
+                        f"Pre-launch hooks failed for {self.app_name}", file=sys.stderr
+                    )
                 return False
 
             if not wrapper_path:
@@ -259,9 +268,13 @@ class AppLauncher:
             launch_success = result.returncode == 0
 
             # Run post-launch hooks (even if launch failed)
-            if not self._run_hook_scripts("post", exit_code=result.returncode, source=source):
+            if not self._run_hook_scripts(
+                "post", exit_code=result.returncode, source=source
+            ):
                 if self.verbose:
-                    print(f"Post-launch hooks failed for {self.app_name}", file=sys.stderr)
+                    print(
+                        f"Post-launch hooks failed for {self.app_name}", file=sys.stderr
+                    )
                 # Don't fail based on post-launch hook failure
                 # (app already launched)
 
@@ -279,13 +292,70 @@ class AppLauncher:
 
 def main():
     """Command-line interface for launching applications."""
-    if len(sys.argv) < 2:
-        return 1
+    import argparse
 
-    app_name = sys.argv[1]
-    args = sys.argv[2:] if len(sys.argv) > 2 else []
+    parser = argparse.ArgumentParser(
+        description="Launch Flatpak applications with preference handling",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  fplaunch-launch firefox              # Launch Firefox using saved preference
+  fplaunch-launch --verbose firefox     # Launch with verbose output
+  fplaunch-launch firefox --new-window  # Launch Firefox with additional arguments
 
-    launcher = AppLauncher(app_name, args=args)
+This command launches applications using:
+- Saved preference (system or flatpak) if available
+- Flatpak run as fallback
+- Wrapper scripts in configured bin directory
+
+Pre and post-launch hooks are executed automatically if configured.
+        """,
+    )
+
+    parser.add_argument(
+        "app_name",
+        help="Application name to launch",
+    )
+
+    parser.add_argument(
+        "args",
+        nargs=argparse.REMAINDER,
+        help="Additional arguments to pass to the application",
+    )
+
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output",
+    )
+
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug mode",
+    )
+
+    parser.add_argument(
+        "--config-dir",
+        help="Custom configuration directory",
+    )
+
+    parser.add_argument(
+        "--bin-dir",
+        help="Custom bin directory for wrapper scripts",
+    )
+
+    args = parser.parse_args()
+
+    launcher = AppLauncher(
+        app_name=args.app_name,
+        args=args.args,
+        verbose=args.verbose,
+        debug=args.debug,
+        config_dir=args.config_dir,
+        bin_dir=args.bin_dir,
+    )
     return 0 if launcher.launch() else 1
 
 
