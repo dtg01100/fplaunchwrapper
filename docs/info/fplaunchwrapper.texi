@@ -99,14 +99,18 @@ fplaunch-manage regenerate
 fplaunch-setup-systemd  # Optional: enable auto-updates
 @end example
 
-@section Manual Installation
+@section Installation
+
+@subsubsection Using uv (Recommended)
 
 @example
-git clone https://github.com/dtg01100/fplaunchwrapper.git
-cd fplaunchwrapper
-bash install.sh
-source ~/.bashrc.d/fplaunch_completion.bash
-fplaunch-setup-systemd  # Optional: enable auto-updates
+uv tool install fplaunchwrapper
+@end example
+
+@subsubsection Using pip
+
+@example
+pip install fplaunchwrapper
 @end example
 
 @node Commands

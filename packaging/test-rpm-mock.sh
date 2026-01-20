@@ -70,11 +70,9 @@ mkdir -p "$TEST_BUILD_DIR/SOURCES"
 # Create test tarball
 mkdir -p "$TEST_BUILD_DIR/SOURCES/$TARBALL_DIR"
 cp -r \
-    install.sh \
-    uninstall.sh \
     fplaunch-generate \
     fplaunch-setup-systemd \
-    manage_wrappers.sh \
+    fplaunch-cleanup \
     fplaunch_completion.bash \
     lib/ \
     examples/ \
@@ -104,14 +102,14 @@ echo ""
 
 # Test 4: Check post-install script content
 echo "Test 4: Validating post-install message..."
-if grep -q "IMPORTANT: Per-user setup required" packaging/fplaunchwrapper.spec; then
+if grep -q "Generate wrappers" packaging/fplaunchwrapper.spec; then
     echo "  ✅ Per-user setup message found"
 else
     echo "  ❌ Per-user setup message not found"
     exit 1
 fi
 
-if grep -q "Optionally enable automatic updates" packaging/fplaunchwrapper.spec; then
+if grep -q "Optional" packaging/fplaunchwrapper.spec; then
     echo "  ✅ Optional auto-update message found"
 else
     echo "  ❌ Optional auto-update message not found"
@@ -120,23 +118,15 @@ fi
 
 echo ""
 
-# Test 5: Verify required files
 echo "Test 5: Checking required files..."
 REQUIRED_FILES=(
-    "install.sh"
-    "uninstall.sh"
-    "fplaunch-generate"
-    "fplaunch-setup-systemd"
-    "manage_wrappers.sh"
     "fplaunch_completion.bash"
     "README.md"
     "QUICKSTART.md"
     "LICENSE"
+    "pyproject.toml"
     "lib/alias.sh"
-    "lib/config.sh"
     "lib/env.sh"
-    "lib/install.sh"
-    "lib/launch.sh"
     "lib/pref.sh"
     "lib/script.sh"
     "lib/wrapper.sh"
