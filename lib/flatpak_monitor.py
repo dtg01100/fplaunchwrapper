@@ -360,7 +360,7 @@ class FlatpakMonitor:
                     )
 
                     if result.returncode == 0:
-                        logger.debug("Wrapper regeneration stdout: %s", result.stdout.strip())
+                        logger.debug("Wrapper regeneration stdout: %s", str(result.stdout).strip())
                         return True
                     else:
                         logger.error("Wrapper regeneration failed with code %d: %s", 

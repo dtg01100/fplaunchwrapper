@@ -1,0 +1,37 @@
+  #!/usr/bin/env python3
+> """fplaunchwrapper - Modern Flatpak wrapper management system
+> Main entry point for all operations.
+> """
+  
+> import os
+> import sys
+  
+  # Add lib directory to path for development
+> sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
+  
+  
+> def main():
+>     """Main entry point."""
+>     try:
+>         from . import cli
+  
+>         if hasattr(cli, "main"):
+>             return cli.main()
+!         else:
+              # Fallback - shouldn't happen
+!             return 1
+>     except (ImportError, AttributeError):
+>         try:
+              # Fallback for when running as installed package
+>             from fplaunch import cli
+  
+>             if hasattr(cli, "main"):
+>                 return cli.main()
+!             else:
+!                 return 1
+>         except (ImportError, AttributeError):
+>             return 1
+  
+  
+> if __name__ == "__main__":
+!     sys.exit(main())

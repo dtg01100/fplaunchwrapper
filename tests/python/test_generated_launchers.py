@@ -657,12 +657,15 @@ class TestFPWrapperForce:
         """Test FPWRAPPER_FORCE=interactive forces interactive mode."""
         wrapper_path = self.bin_dir / self.app_name
 
+        import os
+        env = os.environ.copy()
+        env["FPWRAPPER_FORCE"] = "interactive"
         result = subprocess.run(
             [str(wrapper_path)],
             capture_output=True,
             text=True,
             stdin=subprocess.PIPE,
-            env={"FPWRAPPER_FORCE": "interactive"},
+            env=env,
         )
 
     def test_fpwrapper_force_desktop(self) -> None:
@@ -672,12 +675,15 @@ class TestFPWrapperForce:
 
         pref_file.write_text("flatpak")
 
+        import os
+        env = os.environ.copy()
+        env["FPWRAPPER_FORCE"] = "desktop"
         result = subprocess.run(
             [str(wrapper_path)],
             capture_output=True,
             text=True,
             stdin=subprocess.DEVNULL,
-            env={"FPWRAPPER_FORCE": "desktop"},
+            env=env,
         )
 
         assert result.returncode != 0

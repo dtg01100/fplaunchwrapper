@@ -151,7 +151,7 @@ class TestSecurity:
 
         # Attempt to launch with an adversarial app name
         adversarial_launcher = AppLauncher(app_name="../../../etc/passwd")
-        with patch("subprocess.run") as mock_run:
+        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
             mock_run.return_value = Mock(returncode=0)
             launch_result = adversarial_launcher.launch()
 

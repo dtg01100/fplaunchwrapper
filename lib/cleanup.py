@@ -231,7 +231,7 @@ class WrapperCleanup:
             if result.returncode == 0:
                 # Look for any cron entries related to fplaunchwrapper
                 cron_lines = []
-                for line in result.stdout.split("\n"):
+                for line in str(result.stdout).split("\n"):
                     if "fplaunch" in line and line.strip() and not line.strip().startswith("#"):
                         cron_lines.append(line.strip())
                 
@@ -280,7 +280,7 @@ class WrapperCleanup:
                 text=True,
             )
             if result.returncode == 0:
-                return "fplaunch-generate" in result.stdout
+                return "fplaunch-generate" in str(result.stdout)
         except (subprocess.CalledProcessError, OSError):
             pass
         return False

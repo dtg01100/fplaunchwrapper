@@ -221,11 +221,80 @@ class WrapperManager:
         # In emit mode, just show what would be done
         if self.emit_mode:
             self.log(f"EMIT: Would remove wrapper: {wrapper_name}")
-            pref_file = self.config_dir / f"{wrapper_name}.pref"
-            return False
+            # Do not actually delete in emit mode
+            return True
 
-        # If we get here in normal (non-emit) mode, return success
-        return 0
+        # Perform actual removal of wrapper and associated files
+        try:
+            removed_any = False
+            # Remove wrapper file if it exists
+            if wrapper_path.exists():
+                try:
+                    wrapper_path.unlink()
+                    removed_any = True
+                except Exception as e:
+                    self.log(f"Failed to remove wrapper file: {e}", "warning")
+            # Remove preference file
+            pref_file = self.config_dir / f"{wrapper_name}.pref"
+            if pref_file.exists():
+                try:
+                    pref_file.unlink()
+                    removed_any = True
+                except Exception as e:
+                    self.log(f"Failed to remove preference file: {e}", "warning")
+            # Remove environment file
+            env_file = self.config_dir / f"{wrapper_name}.env"
+            if env_file.exists():
+                try:
+                    env_file.unlink()
+                    removed_any = True
+                except Exception as e:
+                    self.log(f"Failed to remove environment file: {e}", "warning")
+            # Remove hook scripts directory if present
+            hooks_dir = self.config_dir / "scripts" / wrapper_name
+            if hooks_dir.exists():
+                import shutil
+
+                try:
+                    shutil.rmtree(hooks_dir)
+                    removed_any = True
+                except Exception as e:
+                    self.log(f"Failed to remove hook scripts: {e}", "warning")
+
+            # Remove aliases referencing this wrapper
+            aliases_file = self.config_dir / "aliases"
+            if aliases_file.exists():
+                try:
+                    content = aliases_file.read_text()
+                    new_lines = []
+                    for line in content.splitlines():
+                        line = line.strip()
+                        if not line:
+                            continue
+                        # Expect alias format 'alias:target' or 'name other'
+                        if line.endswith(f":{wrapper_name}") or line.split()[0] == wrapper_name:
+                            # Skip alias referencing removed wrapper
+                            continue
+                        new_lines.append(line)
+                    if new_lines:
+                        aliases_file.write_text("\n".join(new_lines) + "\n")
+                    else:
+                        aliases_file.unlink()
+                    removed_any = True
+                except Exception as e:
+                    self.log(f"Failed to update aliases file: {e}", "warning")
+
+            # Log success if anything removed
+            if removed_any:
+                self.log(f"Removed wrapper and associated files: {wrapper_name}", "success")
+            else:
+                # Nothing to remove
+                self.log(f"No files removed for wrapper: {wrapper_name}", "info")
+
+            return True
+        except Exception as e:
+            self.log(f"Failed to remove wrapper {wrapper_name}: {e}", "error")
+            return False
 
     def set_preference(self, wrapper_name: str, preference: str) -> bool:
         """Set launch preference for a wrapper."""
