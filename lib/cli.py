@@ -869,7 +869,7 @@ if CLICK_AVAILABLE:
         "--permission",
         "-p",
         multiple=True,
-        help="Flatpak permissions (e.g., --permission=--filesystem=home --permission=--socket=pulseaudio)",
+        help="Flatpak permissions (e.g., --filesystem=home or --socket=pulseaudio)",
     )
     @click.pass_context
     def presets(ctx, action, name, permission) -> int:
@@ -1022,8 +1022,11 @@ if CLICK_AVAILABLE:
     def systemd(ctx, action, value, emit, emit_verbose) -> int | None:
         """Manage optional systemd timer for automatic wrapper generation.
 
-        ACTION: Systemd action (enable, disable, status, test, start, stop, restart, reload, logs, list)
-        VALUE: Optional value for action (e.g., unit name for start/stop, lines for logs)
+        ACTION: Systemd action (enable, disable, status, test, start, stop,
+                restart, reload, logs, list)
+
+        VALUE: Optional value for action (e.g., unit name for start/stop,
+        lines for logs)
         """
         try:
             from .systemd_setup import SystemdSetup
