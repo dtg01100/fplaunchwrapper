@@ -862,7 +862,7 @@ if CLICK_AVAILABLE:
                 print(f"Error: Failed to import config manager: {e}", file=sys.stderr)
             raise SystemExit(1)
 
-    @cli.command()
+    @cli.command(context_settings={"ignore_unknown_options": True})
     @click.argument("action", required=False)
     @click.argument("name", required=False)
     @click.option(
@@ -947,7 +947,15 @@ if CLICK_AVAILABLE:
                         )
                     raise SystemExit(1)
 
-                manager.add_permission_preset(name, list(permission))
+                # Ensure permissions have leading -- if missing
+                formatted_permissions = []
+                for perm in permission:
+                    if not perm.startswith("--"):
+                        formatted_permissions.append(f"--{perm}")
+                    else:
+                        formatted_permissions.append(perm)
+                
+                manager.add_permission_preset(name, formatted_permissions)
                 if console:
                     console.print(f"[green]✓[/green] Added preset: {name}")
                 else:
