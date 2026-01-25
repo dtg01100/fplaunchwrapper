@@ -1,5 +1,5 @@
 schema_version = 1
-bin_dir = "/home/vscode/bin"
+bin_dir = "/var/home/dlafreniere/bin"
 debug_mode = false
 log_level = "INFO"
 blocklist = []

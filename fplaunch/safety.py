@@ -5,7 +5,11 @@ Keeping this file ensures ``from fplaunch.safety import ...`` works
 consistently in tests and runtime.
 """
 
-from lib.safety import *  # type: ignore  # re-export
+from lib.safety import (
+    is_test_environment,
+    is_dangerous_wrapper,
+    safe_launch_check,
+)  # re-export
 
 __all__ = [
     "is_test_environment",

@@ -20,6 +20,23 @@ except ImportError:
 # SAFETY_AVAILABLE = False  # Will be set lazily
 
 
+# Test environment detection for launch module
+def is_test_environment_launch():
+    """Check if we're running in test environment for launch module."""
+    import sys
+    import os
+
+    # Check for pytest/unittest
+    if "pytest" in sys.modules or "unittest" in sys.modules:
+        return True
+
+    # Check for pytest environment variables
+    if any(key.startswith("PYTEST_") for key in os.environ):
+        return True
+
+    return False
+
+
 class AppLauncher:
     """Launch Flatpak applications with preference handling."""
 
@@ -275,9 +292,16 @@ class AppLauncher:
                 except Exception:
                     escaped = False
 
-                if not escaped and candidate_wrapper.exists() and not os.access(candidate_wrapper, os.X_OK):
+                if (
+                    not escaped
+                    and candidate_wrapper.exists()
+                    and not os.access(candidate_wrapper, os.X_OK)
+                ):
                     if self.verbose:
-                        print(f"Warning: Wrapper {candidate_wrapper} exists but is not executable", file=sys.stderr)
+                        print(
+                            f"Warning: Wrapper {candidate_wrapper} exists but is not executable",
+                            file=sys.stderr,
+                        )
                     return False
             except Exception:
                 # If any filesystem error, continue with normal logic
@@ -334,7 +358,12 @@ class AppLauncher:
 
                         if not is_mocked:
                             res = subprocess.run(
-                                [flatpak_path, "list", "--app", "--columns=application"],
+                                [
+                                    flatpak_path,
+                                    "list",
+                                    "--app",
+                                    "--columns=application",
+                                ],
                                 capture_output=True,
                                 text=True,
                             )

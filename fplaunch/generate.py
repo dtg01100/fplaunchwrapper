@@ -1,1 +1,1 @@
-from lib.generate import *
+from lib.generate import WrapperGenerator, main

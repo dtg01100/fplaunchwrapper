@@ -83,7 +83,7 @@ class TestWrapperCleanup:
         assert any("firefox" in str(artifact) for artifact in artifacts)
         assert any("chrome" in str(artifact) for artifact in artifacts)
         assert any("cache_file" in str(artifact) for artifact in artifacts)
-        
+
         # Verify they're Path objects pointing to real locations
         for artifact in artifacts:
             assert isinstance(artifact, Path)
@@ -193,13 +193,15 @@ class TestWrapperCleanup:
         # Should handle gracefully
         assert result is True
 
+    @patch("pathlib.Path.unlink")
     @patch("shutil.rmtree")
-    def test_cleanup_error_handling(self, mock_rmtree) -> None:
+    def test_cleanup_error_handling(self, mock_unlink, mock_rmtree) -> None:
         """Test error handling during cleanup."""
         if not WrapperCleanup:
             pytest.skip("WrapperCleanup class not available")
 
-        # Mock rmtree to raise exception
+        # Mock file operations to raise exception
+        mock_unlink.side_effect = PermissionError("Permission denied")
         mock_rmtree.side_effect = PermissionError("Permission denied")
 
         manager = WrapperCleanup(

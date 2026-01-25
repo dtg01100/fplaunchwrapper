@@ -9,6 +9,7 @@ package-dir mapping in pyproject.toml.
 from __future__ import annotations
 
 import importlib
+from pathlib import Path
 import os
 import sys
 from pathlib import Path
@@ -16,9 +17,7 @@ from pathlib import Path
 
 # Capture initial pytest modules so we can restore them if tests remove entries
 _PYTEST_MODULE_SNAPSHOT = {
-    name: module
-    for name, module in sys.modules.items()
-    if "pytest" in name
+    name: module for name, module in sys.modules.items() if "pytest" in name
 }
 
 
@@ -107,17 +106,35 @@ def is_dangerous_wrapper(wrapper_path: Path) -> bool:
     return False
 
 
-def safe_launch_check(app_name: str, wrapper_path=None) -> bool:
+def _is_direct_browser_launch(app_name: str) -> bool:
+    """Check if this is a direct browser launch that should be allowed in tests."""
+    browser_names = ["firefox", "chrome", "chromium", "google-chrome"]
+    return app_name.lower() in browser_names
+
+
+def safe_launch_check(app_name: str, wrapper_path: str | Path | None = None) -> bool:
     """Perform safety checks before launching an application."""
     if is_test_environment():
         # In test environment, be extra cautious with browser launches
-        if app_name and any(browser in app_name.lower() for browser in ["firefox", "chrome", "chromium"]):
-            print(f"🛡️  Safety: Blocked {app_name} launch in test environment", file=sys.stderr)
+        if app_name and any(
+            browser in app_name.lower() for browser in ["firefox", "chrome", "chromium"]
+        ):
+            print(
+                f"🛡️  Safety: Blocked {app_name} launch in test environment",
+                file=sys.stderr,
+            )
             return False
 
         # Check wrapper content if provided
-        if wrapper_path and is_dangerous_wrapper(wrapper_path):
-            print(f"🛡️  Safety: Blocked dangerous wrapper {wrapper_path}", file=sys.stderr)
-            return False
+        if wrapper_path:
+            wrapper_path_obj = (
+                Path(wrapper_path) if isinstance(wrapper_path, str) else wrapper_path
+            )
+            if is_dangerous_wrapper(wrapper_path_obj):
+                print(
+                    f"🛡️  Safety: Blocked dangerous wrapper {wrapper_path}",
+                    file=sys.stderr,
+                )
+                return False
 
     return True

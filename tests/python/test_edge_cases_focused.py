@@ -2,6 +2,7 @@
 """Focused edge case tests that work in the test environment
 Tests input validation, error handling, and boundary conditions.
 """
+
 from __future__ import annotations
 
 import os
@@ -99,7 +100,7 @@ class TestInputValidationEdgeCases:
         for injection in injection_paths:
             # Test canonicalize_path_no_resolve
             result = canonicalize_path_no_resolve(injection)
-            assert isinstance(result, (str, type(None)))
+            assert isinstance(result, (str, type(None), Path))
 
             # Test validate_home_dir (should reject non-home paths)
             result = validate_home_dir(injection)
@@ -138,7 +139,7 @@ class TestSystemResourceEdgeCases:
 
             test_file = test_dir / "test.txt"
             permission_error_caught = False
-            
+
             try:
                 # Try to write to read-only directory
                 with open(test_file, "w") as f:
@@ -151,12 +152,14 @@ class TestSystemResourceEdgeCases:
             finally:
                 # Restore permissions for cleanup
                 test_dir.chmod(0o755)
-            
+
             # Verify we actually tested the permission error path
             # (some systems may allow the write despite chmod)
             if not permission_error_caught:
                 # File was created, verify it exists
-                assert test_file.exists(), "Expected either PermissionError or file creation"
+                assert test_file.exists(), (
+                    "Expected either PermissionError or file creation"
+                )
 
     def test_extreme_file_sizes(self) -> None:
         """Test handling of extreme file sizes."""
@@ -421,7 +424,9 @@ class TestBoundaryConditionEdgeCases:
         for value, expected_type in boundary_types:
             # Should handle unexpected types gracefully
             # Verify each value has the correct type
-            assert isinstance(value, expected_type), f"Expected {expected_type}, got {type(value)}"
+            assert isinstance(value, expected_type), (
+                f"Expected {expected_type}, got {type(value)}"
+            )
             # Verify truthiness behavior is consistent
             if value is None or value is False:
                 assert not value

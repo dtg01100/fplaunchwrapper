@@ -12,6 +12,7 @@ import os
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 try:
@@ -33,58 +34,89 @@ except ImportError:
 console = Console() if RICH_AVAILABLE else None
 
 
+@dataclass
+class CleanupConfig:
+    """Configuration for WrapperCleanup operations."""
+
+    bin_dir: str | None = None
+    config_dir: str | None = None
+    data_dir: str | None = None
+    dry_run: bool = False
+    assume_yes: bool = False
+    verbose: bool | None = None
+    remove_wrappers: bool | None = None
+    remove_prefs: bool | None = None
+    remove_data: bool | None = None
+    remove_systemd: bool | None = None
+    create_backup: bool = False
+    backup_dir: str | None = None
+    force: bool = False
+    interactive: bool = False
+
+    def __post_init__(self):
+        """Set derived values after initialization."""
+        self.bin_dir_path = Path(self.bin_dir or (Path.home() / "bin"))
+        self.config_dir_path = Path(
+            self.config_dir or (Path.home() / ".config" / "fplaunchwrapper"),
+        )
+        self.data_dir_path = Path(
+            self.data_dir or (Path.home() / ".local" / "share" / "fplaunchwrapper")
+        )
+        self.assume_yes_effective = (
+            self.assume_yes
+            or self.force
+            or (os.environ.get("FPWRAPPER_FORCE") is not None)
+        )
+        self.verbose_effective = (
+            bool(self.verbose) if self.verbose is not None else False
+        )
+
+
 class WrapperCleanup:
     """Clean up Flatpak wrapper artifacts.
 
     Extended to support additional testing flags used by the test suite.
     """
 
-    def __init__(
-        self,
-        bin_dir: str | None = None,
-        config_dir: str | None = None,
-        data_dir: str | None = None,
-        dry_run: bool = False,
-        assume_yes: bool = False,
-        verbose: bool | None = None,
-        # Extended flags for tests
-        remove_wrappers: bool | None = None,
-        remove_prefs: bool | None = None,
-        remove_data: bool | None = None,
-        remove_systemd: bool | None = None,
-        create_backup: bool = False,
-        backup_dir: str | None = None,
-        force: bool = False,
-        interactive: bool = False,
-    ) -> None:
+    def __init__(self, config: CleanupConfig | None = None, **kwargs) -> None:
         """Initialize the cleanup utility.
 
         Args:
-            bin_dir: Directory containing wrappers
-            config_dir: Directory containing configuration
-            dry_run: Show what would be done without doing it
-            assume_yes: Don't prompt for confirmation
-
+            config: Configuration object containing all cleanup parameters.
+                   If None, default configuration is used.
         """
-        self.dry_run = dry_run
-        self.assume_yes = (
-            assume_yes or force or (os.environ.get("FPWRAPPER_FORCE") is not None)
-        )
-        self.force = force
-        self.interactive = interactive
-        self.verbose = bool(verbose) if verbose is not None else False
+        # Handle backward compatibility: if individual params are passed, create config from them
+        if kwargs:
+            config = CleanupConfig(**kwargs)
+        else:
+            config = config
 
-        # Set up directories
-        self.bin_dir = Path(bin_dir or (Path.home() / "bin"))
-        self.config_dir = Path(
-            config_dir or (Path.home() / ".config" / "fplaunchwrapper"),
-        )
-        self.data_dir = Path(
-            data_dir or (Path.home() / ".local" / "share" / "fplaunchwrapper")
-        )
+        self.config = config or CleanupConfig()
+
+        # Legacy compatibility properties (computed from config)
+        self.dry_run = self.config.dry_run
+        self.assume_yes = self.config.assume_yes_effective
+        self.force = self.config.force
+        self.interactive = self.config.interactive
+        self.verbose = self.config.verbose_effective
+
+        # Set up directories from config
+        self.bin_dir = self.config.bin_dir_path
+        self.config_dir = self.config.config_dir_path
+        self.data_dir = self.config.data_dir_path
         self.systemd_unit_dir = self._get_systemd_unit_dir()
 
-        # Summary of what will be cleaned
+        # Optional selective removal flags from config
+        self.remove_wrappers = self.config.remove_wrappers
+        self.remove_prefs = self.config.remove_prefs
+        self.remove_data = self.config.remove_data
+        self.remove_systemd = self.config.remove_systemd
+        self.create_backup = self.config.create_backup
+        self.backup_dir = (
+            Path(self.config.backup_dir) if self.config.backup_dir else None
+        )
+
+        # Initialize cleanup items
         self.cleanup_items = {
             "wrappers": [],
             "symlinks": [],
@@ -93,18 +125,10 @@ class WrapperCleanup:
             "cron_entries": [],
             "completion_files": [],
             "man_pages": [],
-            "config_dir": [self.config_dir] if self.config_dir.exists() else [],
+            "config_dir": [],
             "preferences": [],
             "data_files": [],
         }
-
-        # Optional selective removal flags
-        self.remove_wrappers = remove_wrappers
-        self.remove_prefs = remove_prefs
-        self.remove_data = remove_data
-        self.remove_systemd = remove_systemd
-        self.create_backup = create_backup
-        self.backup_dir = Path(backup_dir) if backup_dir else None
 
     def _get_systemd_unit_dir(self) -> Path:
         """Get systemd user unit directory."""
@@ -118,62 +142,82 @@ class WrapperCleanup:
         """Scan for items that can be cleaned up."""
         self.log("Scanning for cleanup items...")
 
-        # 1. Scan wrapper directory
-        if self.bin_dir.exists():
-            try:
-                for item in self.bin_dir.iterdir():
-                    if item.is_file():
-                        # Treat regular files in bin_dir as wrappers for test compatibility
-                        self.cleanup_items["wrappers"].append(item)
-                        if item.name in [
-                            "fplaunch-manage",
-                            "fplaunch-generate",
-                            "fplaunch-setup-systemd",
-                            "fplaunch-cleanup",
-                        ]:
-                            self.cleanup_items["scripts"].append(item)
-                    elif item.is_symlink():
-                        # Check if symlink points to a wrapper
-                        try:
-                            target = item.readlink()
-                            if target.is_absolute():
-                                target_path = target
-                            else:
-                                target_path = self.bin_dir / target
-
-                            if UTILS_AVAILABLE and is_wrapper_file(str(target_path)):
-                                self.cleanup_items["symlinks"].append(item)
-                        except (OSError, RuntimeError):
-                            pass
-            except FileNotFoundError:
-                pass
-
-        # 2. Scan for all fplaunchwrapper-related systemd units
+        self._scan_wrapper_directory()
         self._scan_systemd_units()
-
-        # 3. Check for shell completion files for various shells
         self._scan_completion_files()
-
-        # 4. Check man pages
-        man_dir = Path.home() / ".local" / "share" / "man"
-        if man_dir.exists():
-            for manpage in man_dir.glob("man1/fplaunch-*.1"):
-                self.cleanup_items["man_pages"].append(manpage)
-            for manpage in man_dir.glob("man7/fplaunchwrapper.*"):
-                self.cleanup_items["man_pages"].append(manpage)
-
-        # 5. Check for all fplaunchwrapper-related cron entries
+        self._scan_man_pages()
         self._scan_cron_entries()
+        self._scan_config_and_data_files()
 
-        # 6. Preferences and data files
-        if self.config_dir.exists():
-            for item in self.config_dir.glob("*.pref"):
+    def _scan_wrapper_directory(self) -> None:
+        """Scan wrapper directory for wrappers, scripts, and symlinks."""
+        if not self.bin_dir.exists():
+            return
+
+        try:
+            for item in self.bin_dir.iterdir():
                 if item.is_file():
-                    self.cleanup_items["preferences"].append(item)
-        if self.data_dir.exists():
-            for item in self.data_dir.rglob("*"):
-                if item.is_file():
-                    self.cleanup_items["data_files"].append(item)
+                    self._handle_wrapper_file(item)
+                elif item.is_symlink():
+                    self._handle_wrapper_symlink(item)
+        except FileNotFoundError:
+            pass
+
+    def _handle_wrapper_file(self, item: Path) -> None:
+        """Handle a regular file in the wrapper directory."""
+        self.cleanup_items["wrappers"].append(item)
+        script_names = [
+            "fplaunch-manage",
+            "fplaunch-generate",
+            "fplaunch-setup-systemd",
+            "fplaunch-cleanup",
+        ]
+        if item.name in script_names:
+            self.cleanup_items["scripts"].append(item)
+
+    def _handle_wrapper_symlink(self, item: Path) -> None:
+        """Handle a symlink in the wrapper directory."""
+        try:
+            target = item.readlink()
+            target_path = target if target.is_absolute() else self.bin_dir / target
+            if UTILS_AVAILABLE and is_wrapper_file(str(target_path)):
+                self.cleanup_items["symlinks"].append(item)
+        except (OSError, RuntimeError):
+            pass
+
+    def _scan_man_pages(self) -> None:
+        """Scan for man pages in standard locations."""
+        man_dir = Path.home() / ".local" / "share" / "man"
+        if not man_dir.exists():
+            return
+
+        for manpage in man_dir.glob("man1/fplaunch-*.1"):
+            self.cleanup_items["man_pages"].append(manpage)
+        for manpage in man_dir.glob("man7/fplaunchwrapper.*"):
+            self.cleanup_items["man_pages"].append(manpage)
+
+    def _scan_config_and_data_files(self) -> None:
+        """Scan for configuration preferences and data files."""
+        self._scan_preferences()
+        self._scan_data_files()
+
+    def _scan_preferences(self) -> None:
+        """Scan for preference files in config directory."""
+        if not self.config_dir.exists():
+            return
+
+        for item in self.config_dir.glob("*.pref"):
+            if item.is_file():
+                self.cleanup_items["preferences"].append(item)
+
+    def _scan_data_files(self) -> None:
+        """Scan for data files in data directory."""
+        if not self.data_dir.exists():
+            return
+
+        for item in self.data_dir.rglob("*"):
+            if item.is_file():
+                self.cleanup_items["data_files"].append(item)
 
     def _scan_systemd_units(self) -> None:
         """Scan for all fplaunchwrapper-related systemd units."""
@@ -181,7 +225,11 @@ class WrapperCleanup:
             # Find all systemd units related to fplaunchwrapper
             # This includes the main flatpak-wrappers units and any app-specific units
             for unit_path in self.systemd_unit_dir.glob("*flatpak*"):
-                if unit_path.is_file() and unit_path.suffix in [".service", ".path", ".timer"]:
+                if unit_path.is_file() and unit_path.suffix in [
+                    ".service",
+                    ".path",
+                    ".timer",
+                ]:
                     self.cleanup_items["systemd_units"].append(unit_path)
 
     def _scan_completion_files(self) -> None:
@@ -190,26 +238,26 @@ class WrapperCleanup:
         bash_completion = Path.home() / ".bashrc.d" / "fplaunch_completion.bash"
         if bash_completion.exists():
             self.cleanup_items["completion_files"].append(bash_completion)
-        
+
         # Zsh completion
         zsh_completion_dir = Path.home() / ".zsh" / "completions"
         if zsh_completion_dir.exists():
             for comp_file in zsh_completion_dir.glob("*fplaunch*"):
                 self.cleanup_items["completion_files"].append(comp_file)
-        
+
         # Fish completion
         fish_completion_dir = Path.home() / ".config" / "fish" / "completions"
         if fish_completion_dir.exists():
             for comp_file in fish_completion_dir.glob("*fplaunch*"):
                 self.cleanup_items["completion_files"].append(comp_file)
-        
+
         # System-wide completion directories (for user-installed completions)
         system_completion_dirs = [
             Path("/usr/local/share/bash-completion/completions"),
             Path("/usr/local/share/zsh/site-functions"),
             Path("/usr/local/share/fish/vendor_completions.d"),
         ]
-        
+
         for comp_dir in system_completion_dirs:
             if comp_dir.exists():
                 for comp_file in comp_dir.glob("*fplaunch*"):
@@ -220,7 +268,7 @@ class WrapperCleanup:
         crontab_path = shutil.which("crontab")
         if not crontab_path:
             return
-        
+
         try:
             result = subprocess.run(
                 [crontab_path, "-l"],
@@ -232,9 +280,13 @@ class WrapperCleanup:
                 # Look for any cron entries related to fplaunchwrapper
                 cron_lines = []
                 for line in str(result.stdout).split("\n"):
-                    if "fplaunch" in line and line.strip() and not line.strip().startswith("#"):
+                    if (
+                        "fplaunch" in line
+                        and line.strip()
+                        and not line.strip().startswith("#")
+                    ):
                         cron_lines.append(line.strip())
-                
+
                 if cron_lines:
                     self.cleanup_items["cron_entries"].extend(cron_lines)
         except (subprocess.CalledProcessError, OSError):
@@ -606,16 +658,20 @@ class WrapperCleanup:
 
         Mirrors the behavior of run() but returns True/False instead of exit codes.
         """
-        # Discover items
-        self.scan_for_cleanup_items()
-        # Confirmation (respect interactive/force flags)
-        if not self.confirm_cleanup():
-            return True
-        # Dry run means success without changes
-        if self.dry_run:
-            return True
-        # Perform actual cleanup
-        return bool(self.perform_cleanup())
+        try:
+            # Discover items
+            self.scan_for_cleanup_items()
+            # Confirmation (respect interactive/force flags)
+            if not self.confirm_cleanup():
+                return False  # Cancelled should return False
+            # Dry run means success without changes
+            if self.dry_run:
+                return True
+            # Perform actual cleanup
+            return bool(self.perform_cleanup())
+        except (OSError, subprocess.CalledProcessError, ValueError, KeyboardInterrupt):
+            # Any exception means cleanup failed
+            return False
 
     # Safe integration test methods
     def cleanup_all(self) -> bool:
@@ -634,7 +690,7 @@ class WrapperCleanup:
                 wrapper_path.unlink()
                 self.log(f"Removed wrapper: {app_id}")
                 return True
-            except Exception as e:
+            except (OSError, PermissionError) as e:
                 self.log(f"Failed to remove wrapper {app_id}: {e}")
                 return False
         else:
@@ -693,14 +749,14 @@ This removes:
         # Return exit code instead of raising for tests
         return int(getattr(e, "code", 0) or 0)
 
-    cleanup = WrapperCleanup(
+    config = CleanupConfig(
         bin_dir=args.bin_dir,
         config_dir=args.config_dir,
-        data_dir=None,
         dry_run=args.dry_run,
         assume_yes=args.yes,
         force=args.force,
     )
+    cleanup = WrapperCleanup(config)
 
     return cleanup.run()
 

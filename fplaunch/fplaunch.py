@@ -1,1 +1,1 @@
-from lib.fplaunch import *
+from lib.fplaunch import main

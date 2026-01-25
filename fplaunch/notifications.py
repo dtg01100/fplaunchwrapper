@@ -4,5 +4,8 @@ import importlib, sys
 _mod = importlib.import_module("lib.notifications")
 sys.modules["fplaunch.notifications"] = _mod
 
-from lib.notifications import *
-
+from lib.notifications import (
+    notify_send_available,
+    send_notification,
+    send_update_failure_notification,
+)

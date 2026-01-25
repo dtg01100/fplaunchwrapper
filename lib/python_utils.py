@@ -2,6 +2,7 @@
 """Robust Python utilities for fplaunchwrapper
 This script provides secure implementations of critical operations.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -12,19 +13,20 @@ import sys
 import tempfile
 import unicodedata
 from pathlib import Path
+from typing import Any
 
 try:
     from platformdirs import user_config_dir, user_data_dir
 except ImportError:
-    # Fallback implementation
-    def user_config_dir(appname):
+    # Fallback implementation with simplified signatures
+    def user_config_dir(appname: str, *args: Any, **kwargs: Any) -> str:
         return os.path.expanduser(f"~/.config/{appname}")
 
-    def user_data_dir(appname):
+    def user_data_dir(appname: str, *args: Any, **kwargs: Any) -> str:
         return os.path.expanduser(f"~/.local/share/{appname}")
 
 
-def sanitize_string(input_str):
+def sanitize_string(input_str: str) -> str:
     """Safely sanitize a string for use in Python code."""
     if not input_str:
         return ""
@@ -47,27 +49,29 @@ def sanitize_string(input_str):
     return sanitized.replace("\t", "\\t")
 
 
-
-def canonicalize_path_no_resolve(path):
+def canonicalize_path_no_resolve(path: str | Path) -> Path | None:
     """Normalize a path without resolving symlinks."""
     try:
+        # Convert to string for path operations
+        path_str = str(path)
+
         # Expand tilde
-        if path.startswith("~"):
-            path = os.path.expanduser(path)
+        if path_str.startswith("~"):
+            path_str = os.path.expanduser(path_str)
 
         # Make absolute if relative
-        if not os.path.isabs(path):
-            path = os.path.abspath(path)
+        if not os.path.isabs(path_str):
+            path_str = os.path.abspath(path_str)
 
         # Collapse '.' and '..' without resolving symlinks
-        return os.path.normpath(path)
+        return Path(os.path.normpath(path_str))
 
     except (TypeError, ValueError, OSError):
         # Handle specific path-related exceptions
         return None
 
 
-def validate_home_dir(dir_path):
+def validate_home_dir(dir_path: str | Path) -> bool:
     """Validate that a directory is within HOME."""
     try:
         # Expand tilde
@@ -92,7 +96,7 @@ def validate_home_dir(dir_path):
         return None
 
 
-def is_wrapper_file(file_path) -> bool | None:
+def is_wrapper_file(file_path: str | Path) -> bool | None:
     """Check if a file is a valid wrapper script."""
     try:
         # Basic validation
@@ -133,13 +137,15 @@ def is_wrapper_file(file_path) -> bool | None:
 
         # Validate ID format
         id_value = re.search(r'ID="([^"]*)"', id_match.group())
-        return not (not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1)))
+        return not (
+            not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1))
+        )
     except (IOError, OSError, UnicodeDecodeError, re.error):
         # Handle specific file and regex exceptions
         return False
 
 
-def get_wrapper_id(file_path):
+def get_wrapper_id(file_path: str | Path) -> str:
     """Extract the wrapper ID from a wrapper script."""
     try:
         # Read file content with proper encoding
@@ -162,7 +168,7 @@ def get_wrapper_id(file_path):
         return None
 
 
-def sanitize_id_to_name(id_str):
+def sanitize_id_to_name(id_str: str) -> str:
     """Sanitize a Flatpak ID to a safe name."""
     try:
         # Extract last component after dots
@@ -204,7 +210,7 @@ def sanitize_id_to_name(id_str):
             return "app-fallback"
 
 
-def find_executable(cmd):
+def find_executable(cmd: str) -> str | None:
     """Find an executable in PATH with security checks."""
     try:
         # Check if absolute or relative path
@@ -227,7 +233,7 @@ def find_executable(cmd):
         return None
 
 
-def safe_mktemp(template="tmp.XXXXXX", dir_param=None):
+def safe_mktemp(template: str = "tmp.XXXXXX", dir_param: str | None = None) -> str:
     """Create a secure temporary file."""
     try:
         # Determine directory
@@ -330,7 +336,7 @@ def release_lock(lock_name="fplaunch") -> bool | None:
         return False
 
 
-def get_temp_dir():
+def get_temp_dir() -> str:
     """Get the best available temporary directory."""
     for temp_dir in [
         os.getenv("TMPDIR"),
