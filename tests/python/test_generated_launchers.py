@@ -292,7 +292,7 @@ class TestGeneratedLauncherIntegration:
 
         # Create a safety check failure scenario
         with patch("subprocess.run") as mock_run, patch(
-            "fplaunch.safety.safe_launch_check", return_value=False
+            "lib.safety.safe_launch_check", return_value=False
         ):
             mock_result = Mock()
             mock_result.returncode = 1
