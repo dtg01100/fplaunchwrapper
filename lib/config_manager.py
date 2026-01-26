@@ -7,8 +7,8 @@ schema validation, migration, and templating.
 from __future__ import annotations
 
 import os
-import sys
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -25,18 +25,43 @@ except ImportError:
 
 
 try:
-    from pydantic import BaseModel, Field, field_validator, ValidationError
+    from pydantic import BaseModel, Field, ValidationError, field_validator
 
     PYDANTIC_AVAILABLE = True
-except ImportError:
+except Exception:
+    # Pydantic is optional. Provide minimal shims so the module can still be
+    # imported and basic fallback behavior is possible when Pydantic is absent.
     PYDANTIC_AVAILABLE = False
+
+    class BaseModel:  # minimal placeholder for type-checking and imports
+        def __init__(self, *args, **kwargs):  # no-op
+            pass
+
+    def Field(*args, **kwargs):  # compatibility stub
+        return None
+
+    def field_validator(*args, **kwargs):  # decorator stub
+        def _decorator(fn):
+            return fn
+
+        return _decorator
+
+    class ValidationError(Exception):
+        """Placeholder ValidationError when pydantic is not installed."""
+
+        pass
+
 
 try:
     import tomli
     import tomli_w
 
     TOML_AVAILABLE = True
-except ImportError:
+except Exception:
+    # TOML support is optional. Ensure the names exist so static analysis
+    # and runtime code that tests TOML_AVAILABLE can reference them safely.
+    tomli = None
+    tomli_w = None
     TOML_AVAILABLE = False
 
 
@@ -681,6 +706,10 @@ class EnhancedConfigManager:
             if TOML_AVAILABLE and isinstance(content, dict):
                 with open(export_path, "wb") as f:
                     tomli_w.dump(content, f)
+            elif isinstance(content, dict):
+                # TOML library not available - write a safe string representation
+                # so write_text receives a string (avoids type errors and preserves data).
+                export_path.write_text(str(content))
             else:
                 export_path.write_text(content)
 

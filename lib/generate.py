@@ -9,13 +9,30 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any, Optional
 
 try:
-    from rich.console import Console
-    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
+    from rich.console import Console as _Console
+    from rich.progress import (
+        BarColumn as _BarColumn,
+    )
+    from rich.progress import (
+        Progress as _Progress,
+    )
+    from rich.progress import (
+        SpinnerColumn as _SpinnerColumn,
+    )
+    from rich.progress import (
+        TextColumn as _TextColumn,
+    )
 
     RICH_AVAILABLE = True
-except ImportError:
+except Exception:
+    _Console = None
+    _BarColumn = None
+    _Progress = None
+    _SpinnerColumn = None
+    _TextColumn = None
     RICH_AVAILABLE = False
 
 # Import our utilities
@@ -31,11 +48,30 @@ try:
     )
 
     UTILS_AVAILABLE = True
-except ImportError:
+except Exception:
     UTILS_AVAILABLE = False
 
-console = Console() if RICH_AVAILABLE else None
-console_err = Console(stderr=True) if RICH_AVAILABLE else None
+    # Provide Any-typed fallbacks so the rest of the module can call them safely
+    acquire_lock: Any = lambda *args, **kwargs: False
+    find_executable: Any = lambda *args, **kwargs: None
+    get_wrapper_id: Any = lambda *args, **kwargs: None
+    is_wrapper_file: Any = lambda *args, **kwargs: False
+    release_lock: Any = lambda *args, **kwargs: False
+    sanitize_id_to_name: Any = lambda *args, **kwargs: ""
+    validate_home_dir: Any = lambda *args, **kwargs: False
+
+
+console: Optional[Any] = None
+console_err: Optional[Any] = None
+if RICH_AVAILABLE and _Console is not None:
+    try:
+        console = _Console()
+    except Exception:
+        console = None
+    try:
+        console_err = _Console(stderr=True)
+    except Exception:
+        console_err = None
 
 
 class WrapperGenerator:
@@ -206,7 +242,7 @@ class WrapperGenerator:
     def __init__(
         self,
         bin_dir: str,
-        config_dir: str | None = None,
+        config_dir: str | None | bool = None,
         verbose: bool = False,
         emit_mode: bool = False,
         emit_verbose: bool = False,
@@ -540,13 +576,6 @@ class WrapperGenerator:
                 self.log(f"Created wrapper: {wrapper_name}")
 
             return True
-
-        except Exception as e:
-            self.log(f"Failed to create wrapper {wrapper_name}: {e}", "error")
-            return False
-
-            return True
-
         except Exception as e:
             self.log(f"Failed to create wrapper {wrapper_name}: {e}", "error")
             return False
@@ -583,13 +612,20 @@ class WrapperGenerator:
         updated_count = 0
         skipped_count = 0
 
-        # Use progress bar if rich is available
-        if console and not self.verbose:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        # Use progress bar if rich is available and progress components are present
+        if (
+            console
+            and not self.verbose
+            and _Progress is not None
+            and _SpinnerColumn is not None
+            and _TextColumn is not None
+            and _BarColumn is not None
+        ):
+            with _Progress(
+                _SpinnerColumn(),
+                _TextColumn("[progress.description]{task.description}"),
+                _BarColumn(),
+                _TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
                 console=console,
             ) as progress:
                 task = progress.add_task(
@@ -599,14 +635,6 @@ class WrapperGenerator:
 
                 for app_id in installed_apps:
                     if self.generate_wrapper(app_id):
-                        # Check if it was an update or create
-                        wrapper_name = (
-                            sanitize_id_to_name(app_id)
-                            if UTILS_AVAILABLE
-                            else app_id.split(".")[-1]
-                        )
-                        self.bin_dir / wrapper_name
-                        # For now, assume it's a create (we'd need to track this)
                         created_count += 1
                     else:
                         skipped_count += 1

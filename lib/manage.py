@@ -8,18 +8,30 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from typing import Any, Optional
 
 try:
-    from rich.console import Console
-    from rich.table import Table
+    from rich.console import Console as _Console
+    from rich.table import Table as _Table
 
     RICH_AVAILABLE = True
-except ImportError:
+except Exception:
+    _Console = None
+    _Table = None
     RICH_AVAILABLE = False
 
-# Initialize Rich consoles for stdout and stderr
-console = Console() if RICH_AVAILABLE else None
-console_err = Console(stderr=True) if RICH_AVAILABLE else None
+# Initialize Rich consoles for stdout and stderr in a safe way
+console: Optional[Any] = None
+console_err: Optional[Any] = None
+if RICH_AVAILABLE and _Console is not None:
+    try:
+        console = _Console()
+    except Exception:
+        console = None
+    try:
+        console_err = _Console(stderr=True)
+    except Exception:
+        console_err = None
 
 # Import our utilities
 try:
@@ -29,8 +41,15 @@ try:
     )
 
     UTILS_AVAILABLE = True
-except ImportError:
+except Exception:
     UTILS_AVAILABLE = False
+
+    # Provide Any-typed callables so static type-checkers do not attempt to
+    # compare signatures against python_utils when it isn't available.
+    # These are safe fallbacks for environments (or tests) where the real
+    # implementations aren't present.
+    get_wrapper_id: Any = lambda *args, **kwargs: None
+    is_wrapper_file: Any = lambda *args, **kwargs: False
 
 
 class WrapperManager:
@@ -39,7 +58,7 @@ class WrapperManager:
     def __init__(
         self,
         config_dir: str | None = None,
-        bin_dir: str | None = None,
+        bin_dir: str | bool | None = None,
         verbose: bool = False,
         emit_mode: bool = False,
         emit_verbose: bool = False,
@@ -173,8 +192,8 @@ class WrapperManager:
                 print(f"Run 'fplaunch generate {self.bin_dir}' to create wrappers")
             return
 
-        if console:
-            table = Table(title="Flatpak Wrappers")
+        if console and _Table is not None:
+            table = _Table(title="Flatpak Wrappers")
             table.add_column("Wrapper", style="cyan", no_wrap=True)
             table.add_column("Flatpak ID", style="magenta")
             table.add_column("Path", style="dim")
@@ -457,8 +476,8 @@ class WrapperManager:
                 matches.append(wrapper)
 
         if matches:
-            if console:
-                table = Table(title=f"Search Results for '{query}'")
+            if console and _Table is not None:
+                table = _Table(title=f"Search Results for '{query}'")
                 table.add_column("Wrapper", style="cyan", no_wrap=True)
                 table.add_column("Flatpak ID", style="magenta")
                 table.add_column("Path", style="dim")
@@ -566,8 +585,8 @@ class WrapperManager:
                     all_files.append(("Post-run Script", str(post_run_script)))
 
             if all_files:
-                if console:
-                    table = Table(title="All Generated Files")
+                if console and _Table is not None:
+                    table = _Table(title="All Generated Files")
                     table.add_column("Type", style="cyan")
                     table.add_column("Path", style="white")
 
@@ -575,6 +594,13 @@ class WrapperManager:
                         table.add_row(file_type, file_path)
 
                     console.print(table)
+                    console.print(
+                        f"\n[green]{len(all_files)}[/green] generated file{'s' if len(all_files) > 1 else ''} found"
+                    )
+                elif console:
+                    console.print("All Generated Files:")
+                    for file_type, file_path in all_files:
+                        console.print(f"  {file_type}: {file_path}")
                     console.print(
                         f"\n[green]{len(all_files)}[/green] generated file{'s' if len(all_files) > 1 else ''} found"
                     )
@@ -608,8 +634,8 @@ class WrapperManager:
             ("Configuration", "TOML-based configuration with validation"),
         ]
 
-        if console:
-            table = Table(title="fplaunchwrapper Features")
+        if console and _Table is not None:
+            table = _Table(title="fplaunchwrapper Features")
             table.add_column("Feature", style="cyan", no_wrap=True)
             table.add_column("Description", style="white")
 
@@ -617,6 +643,10 @@ class WrapperManager:
                 table.add_row(feature, description)
 
             console.print(table)
+        elif console:
+            console.print("[bold]fplaunchwrapper Features[/bold]")
+            for feature, description in features:
+                console.print(f"  {feature}: {description}")
 
             # Show usage examples
             console.print("\n[bold]Usage Examples:[/bold]")
@@ -679,7 +709,7 @@ class WrapperManager:
             # Check if it's a wrapper
             if UTILS_AVAILABLE:
                 try:
-                    from .python_utils import is_wrapper_file, get_wrapper_id
+                    from .python_utils import get_wrapper_id, is_wrapper_file
 
                     if is_wrapper_file(str(item)):
                         wrapper_id = get_wrapper_id(str(item))

@@ -23,8 +23,8 @@ except ImportError:
 # Test environment detection for launch module
 def is_test_environment_launch():
     """Check if we're running in test environment for launch module."""
-    import sys
     import os
+    import sys
 
     # Check for pytest/unittest
     if "pytest" in sys.modules or "unittest" in sys.modules:
@@ -74,14 +74,36 @@ class AppLauncher:
         self._safety_check = None  # Lazy-loaded safety check function
 
     def _get_safety_check(self):
-        """Lazy load safety module to avoid circular imports."""
+        """Lazy load safety module to avoid circular imports.
+
+        Prefer importing the safety module from the `fplaunch` package so that
+        test harnesses can patch `fplaunch.safety` (e.g., with unittest.mock).
+        If that is not available, fall back to the local `lib.safety`
+        implementation. If neither is present, allow launches but report a
+        warning when verbose.
+        """
         if self._safety_check is None:
             try:
-                from lib.safety import safe_launch_check
+                import sys
+
+                # If tests have patched the module in sys.modules (patch() may
+                # add/modify the module), prefer that to ensure the mocked
+                # function is used.
+                mod = sys.modules.get("fplaunch.safety")
+                if mod is not None and hasattr(mod, "safe_launch_check"):
+                    self._safety_check = getattr(mod, "safe_launch_check")
+                    return True, self._safety_check
+
+                # Prefer package-level safety so tests can patch fplaunch.safety.
+                # Fall back to the local implementation if package import fails.
+                try:
+                    from fplaunch.safety import safe_launch_check  # type: ignore
+                except Exception:
+                    from lib.safety import safe_launch_check  # type: ignore
 
                 self._safety_check = safe_launch_check
                 return True, self._safety_check
-            except ImportError:
+            except Exception:
                 # Safety module not available, allow all launches
                 self._safety_check = lambda *args, **kwargs: True
                 if self.verbose:

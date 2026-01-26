@@ -6,13 +6,13 @@ Automatically detects new Flatpak installations and updates wrappers.
 from __future__ import annotations
 
 import contextlib
+import logging
 import os
 import signal
 import subprocess
 import sys
 import time
-import logging
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 # Configure logging
 logging.basicConfig(
@@ -23,30 +23,45 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 try:
-    from watchdog.events import FileSystemEventHandler
-    from watchdog.observers import Observer
+    from watchdog.events import (
+        FileSystemEventHandler as _WatchdogFileSystemEventHandler,
+    )
+    from watchdog.observers import Observer as _WatchdogObserver
 
     WATCHDOG_AVAILABLE = True
-except ImportError:
+except Exception:
+    _WatchdogFileSystemEventHandler = None
+    _WatchdogObserver = None
     WATCHDOG_AVAILABLE = False
 
-    # Create a dummy base class when watchdog is not available
-    class FileSystemEventHandler:
-        """Dummy base class when watchdog is not available."""
+# For runtime we select a base handler that is the watchdog class when present,
+# otherwise a neutral fallback (object). We intentionally do NOT define a
+# module-level `FileSystemEventHandler` class here to avoid static type
+# mismatches with watchdog's own type.
+_BaseFSHandler: Any = (
+    _WatchdogFileSystemEventHandler
+    if _WatchdogFileSystemEventHandler is not None
+    else object
+)
 
-        pass
+# Make Observer available at module scope (None when watchdog not present)
+Observer = _WatchdogObserver
 
 
-# Systemd notify support
+# Systemd notify support (optional) - import at runtime via importlib to avoid
+# static import resolution errors in environments where systemd Python
+# bindings aren't installed.
+import importlib
+
 try:
-    import systemd.daemon
-
+    _systemd_daemon = importlib.import_module("systemd.daemon")
     SYSTEMD_NOTIFY_AVAILABLE = True
-except ImportError:
+except Exception:
+    _systemd_daemon = None
     SYSTEMD_NOTIFY_AVAILABLE = False
 
 
-class FlatpakEventHandler(FileSystemEventHandler):
+class FlatpakEventHandler(_BaseFSHandler):
     """Handler for Flatpak installation/removal events with event batching."""
 
     def __init__(self, callback=None, config: Optional[Dict[str, Any]] = None) -> None:
@@ -227,9 +242,9 @@ class FlatpakMonitor:
 
     def _send_systemd_notify(self, status: str = "READY=1"):
         """Send notification to systemd."""
-        if SYSTEMD_NOTIFY_AVAILABLE:
+        if SYSTEMD_NOTIFY_AVAILABLE and _systemd_daemon is not None:
             try:
-                systemd.daemon.notify(status)
+                _systemd_daemon.notify(status)
                 logger.debug("Systemd notify sent: %s", status)
                 if status == "READY=1":
                     self._systemd_notify_sent = True
@@ -238,12 +253,13 @@ class FlatpakMonitor:
 
     def start_monitoring(self) -> bool:
         """Start monitoring for Flatpak changes."""
-        if not WATCHDOG_AVAILABLE:
+        if not WATCHDOG_AVAILABLE or Observer is None:
             logger.error("Watchdog library not available")
             return False
 
         try:
-            self.observer = Observer()
+            # Instantiate the observer only when the class is available
+            self.observer = Observer() if Observer is not None else None
 
             # Set up event handler
             event_handler = FlatpakEventHandler(
@@ -252,11 +268,13 @@ class FlatpakMonitor:
 
             # Watch all relevant paths
             for path in self.watch_paths:
-                if os.path.exists(path):
+                if os.path.exists(path) and self.observer is not None:
+                    # Schedule the handler for this path
                     self.observer.schedule(event_handler, path, recursive=True)
                     logger.info("Watching path: %s", path)
 
-            self.observer.start()
+            if self.observer is not None:
+                self.observer.start()
             self.running = True
 
             # Set up signal handlers for graceful shutdown
@@ -436,8 +454,21 @@ def main(
     daemon: bool = False,
     callback: Optional[str] = None,
     config: Optional[Dict[str, Any]] = None,
+    skip_parse: bool = False,
 ) -> None:
-    """Command-line interface for flatpak monitoring."""
+    """Command-line interface for flatpak monitoring.
+
+    When called programmatically with `skip_parse=True`, this function will
+    honor the provided ``daemon``, ``callback`` and ``config`` parameters and
+    will NOT attempt to parse sys.argv using argparse. This enables safe,
+    non-CLI invocations from other modules (for example from the Click-based
+    wrapper) without argparse trying to parse unrelated arguments.
+    """
+    if skip_parse:
+        # Programmatic invocation: use provided args directly and do not parse argv.
+        start_flatpak_monitoring(callback=callback, daemon=daemon, config=config)
+        return
+
     import argparse
 
     # Parse command line arguments

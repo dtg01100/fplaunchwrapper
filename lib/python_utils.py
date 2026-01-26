@@ -71,15 +71,22 @@ def canonicalize_path_no_resolve(path: str | Path) -> Path | None:
         return None
 
 
-def validate_home_dir(dir_path: str | Path) -> bool:
-    """Validate that a directory is within HOME."""
+def validate_home_dir(dir_path: str | Path) -> str | None:
+    """Validate that a directory is within HOME.
+
+    Returns the normalized absolute path string if the directory is within the user's HOME,
+    otherwise returns None. Accepts string or Path-like input.
+    """
     try:
+        # Normalize to a string early so we can use string APIs safely
+        dir_str = str(dir_path)
+
         # Expand tilde
-        if dir_path.startswith("~"):
-            dir_path = os.path.expanduser(dir_path)
+        if dir_str.startswith("~"):
+            dir_str = os.path.expanduser(dir_str)
 
         # Get absolute path
-        abs_dir = os.path.abspath(dir_path)
+        abs_dir = os.path.abspath(dir_str)
 
         # Resolve symlinks safely
         if os.path.islink(abs_dir):
@@ -92,7 +99,6 @@ def validate_home_dir(dir_path: str | Path) -> bool:
 
         return None
     except (TypeError, ValueError, OSError):
-        # Handle specific path-related exceptions
         return None
 
 
@@ -145,8 +151,11 @@ def is_wrapper_file(file_path: str | Path) -> bool | None:
         return False
 
 
-def get_wrapper_id(file_path: str | Path) -> str:
-    """Extract the wrapper ID from a wrapper script."""
+def get_wrapper_id(file_path: str | Path) -> str | None:
+    """Extract the wrapper ID from a wrapper script.
+
+    Returns the ID string when found, otherwise returns None.
+    """
     try:
         # Read file content with proper encoding
         with open(file_path, encoding="utf-8", errors="ignore") as f:
@@ -233,8 +242,13 @@ def find_executable(cmd: str) -> str | None:
         return None
 
 
-def safe_mktemp(template: str = "tmp.XXXXXX", dir_param: str | None = None) -> str:
-    """Create a secure temporary file."""
+def safe_mktemp(
+    template: str = "tmp.XXXXXX", dir_param: str | None = None
+) -> str | None:
+    """Create a secure temporary file.
+
+    Returns the created temporary file path, or None on failure.
+    """
     try:
         # Determine directory
         if dir_param and os.path.isdir(dir_param):
