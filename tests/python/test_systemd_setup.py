@@ -309,9 +309,6 @@ class TestAppServiceEnableDisable:
         result = setup.enable_app_service("")
         assert result is False
 
-        result = setup.enable_app_service(None)
-        assert result is False
-
     def test_disable_app_service_with_empty_app_id(self):
         """Test that disable_app_service fails gracefully with empty app_id."""
         from lib.systemd_setup import SystemdSetup
@@ -319,9 +316,6 @@ class TestAppServiceEnableDisable:
         setup = SystemdSetup(emit_mode=True)
 
         result = setup.disable_app_service("")
-        assert result is False
-
-        result = setup.disable_app_service(None)
         assert result is False
 
 

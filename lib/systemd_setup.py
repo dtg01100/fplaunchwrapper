@@ -137,22 +137,30 @@ class SystemdSetup:
             return False
 
         # Check if wrapper script exists
-        script_path = self.wrapper_script.split()[0]
-        if not os.path.exists(script_path):
-            self.log(
-                f"Error: Wrapper script not found at {script_path}",
-                "error",
-            )
-            return False
-
-        # Check if wrapper script is executable
-        if not os.access(script_path, os.X_OK) and not self.wrapper_script.startswith(
-            f"{sys.executable} -m"
-        ):
-            self.log(
-                f"Warning: Wrapper script at {script_path} is not executable",
-                "warning",
-            )
+        if self.wrapper_script.startswith(f"{sys.executable} -m"):
+            module_name = self.wrapper_script.split()[-1]
+            self.log(f"Using Python module: {module_name}")
+        else:
+            script_path = self.wrapper_script.split()[0]
+            if script_path.startswith("/") or script_path.startswith("."):
+                if not os.path.exists(script_path):
+                    self.log(
+                        f"Error: Wrapper script not found at {script_path}",
+                        "error",
+                    )
+                    return False
+                if not os.access(script_path, os.X_OK):
+                    self.log(
+                        f"Warning: Wrapper script at {script_path} is not executable",
+                        "warning",
+                    )
+            else:
+                if not shutil.which(script_path):
+                    self.log(
+                        f"Error: Wrapper script '{script_path}' not found in PATH",
+                        "error",
+                    )
+                    return False
 
         # Check if systemd is available
         if not self._systemd_available():
@@ -227,19 +235,13 @@ WantedBy=default.target
 
     def create_timer_unit(self) -> str:
         """Create the timer unit content."""
-        # Include a minimal [Service] section to satisfy basic validation checks
-        # that expect both [Unit] and [Service] sections when systemd-analyze
-        # is not available in the test environment.
-        return f"""[Unit]
+        return """[Unit]
 Description=Timer for Flatpak wrapper generation
-
-[Service]
-Type=oneshot
-ExecStart={self.wrapper_script} {self.bin_dir}
 
 [Timer]
 OnCalendar=daily
 Persistent=true
+Unit=flatpak-wrappers.service
 
 [Install]
 WantedBy=timers.target
@@ -554,13 +556,18 @@ WantedBy=timers.target
                 self.log(f"EMIT: Would enable {timer_name}")
                 return True
 
-            # Create service unit
+            import shlex
+
+            safe_wrapper_script = shlex.quote(str(self.wrapper_script))
+            safe_bin_dir = shlex.quote(str(self.bin_dir))
+            safe_app_id = shlex.quote(str(app_id))
+
             service_content = f"""[Unit]
 Description=Generate wrapper for {app_id}
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'test -x {self.wrapper_script} && {self.wrapper_script} {self.bin_dir} {app_id}'
+ExecStart=/bin/sh -c 'test -x {safe_wrapper_script} && {safe_wrapper_script} {safe_bin_dir} {safe_app_id}'
 """
 
             service_file = self.systemd_unit_dir / service_name
@@ -858,10 +865,10 @@ WantedBy=timers.target
         """List all flatpak-related systemd units."""
         try:
             units = []
-            for unit_file in self.systemd_unit_dir.glob(
-                "flatpak-*.{service,path,timer}"
-            ):
-                units.append(unit_file.name)
+            # Glob doesn't support brace expansion, need separate patterns
+            for pattern in ["flatpak-*.service", "flatpak-*.path", "flatpak-*.timer"]:
+                for unit_file in self.systemd_unit_dir.glob(pattern):
+                    units.append(unit_file.name)
             return sorted(units)
         except Exception as e:
             self.log(f"Error listing units: {e}", "error")
@@ -886,18 +893,17 @@ WantedBy=timers.target
                 self.log("EMIT: Would disable systemd units")
                 return True
 
-            # Check if units exist
             if not self.systemd_unit_dir.exists():
-                self.log("Systemd unit directory does not exist", "warning")
-                return False
+                self.log("No systemd units to disable", "info")
+                return True
 
-            # Disable and remove units
             unit_names = [
                 "flatpak-wrappers.service",
                 "flatpak-wrappers.path",
                 "flatpak-wrappers.timer",
             ]
 
+            success = True
             for unit_name in unit_names:
                 unit_path = self.systemd_unit_dir / unit_name
                 if unit_path.exists():
@@ -913,8 +919,10 @@ WantedBy=timers.target
                             capture_output=True,
                         )
                         unit_path.unlink()
-                    except Exception:
-                        pass
+                        self.log(f"Disabled and removed {unit_name}", "success")
+                    except Exception as e:
+                        self.log(f"Failed to remove {unit_name}: {e}", "error")
+                        success = False
 
             subprocess.run(
                 ["systemctl", "--user", "daemon-reload"],
@@ -922,9 +930,10 @@ WantedBy=timers.target
                 capture_output=True,
             )
 
-            return True
+            return success
 
-        except Exception:
+        except Exception as e:
+            self.log(f"Error disabling systemd units: {e}", "error")
             return False
 
     def check_systemd_status(self) -> dict:
@@ -993,7 +1002,9 @@ WantedBy=timers.target
                     text=True,
                 )
                 if result.returncode == 0:
-                    unit_info["load_state"] = str(result.stdout).strip().split("=")[1]
+                    parts = str(result.stdout).strip().split("=", 1)
+                    if len(parts) == 2:
+                        unit_info["load_state"] = parts[1]
 
                 # Check active state details
                 result = subprocess.run(
@@ -1009,7 +1020,9 @@ WantedBy=timers.target
                     text=True,
                 )
                 if result.returncode == 0:
-                    unit_info["active_state"] = str(result.stdout).strip().split("=")[1]
+                    parts = str(result.stdout).strip().split("=", 1)
+                    if len(parts) == 2:
+                        unit_info["active_state"] = parts[1]
 
                 # Check for failures
                 result = subprocess.run(
@@ -1019,9 +1032,11 @@ WantedBy=timers.target
                     text=True,
                 )
                 if result.returncode == 0:
-                    unit_info["result"] = str(result.stdout).strip().split("=")[1]
-                    if unit_info["result"] == "fail":
-                        status["failed"] = True
+                    parts = str(result.stdout).strip().split("=", 1)
+                    if len(parts) == 2:
+                        unit_info["result"] = parts[1]
+                        if unit_info["result"] == "fail":
+                            status["failed"] = True
 
                 # Get last run time for services/timers
                 if unit_name.endswith(".service") or unit_name.endswith(".timer"):
@@ -1038,9 +1053,11 @@ WantedBy=timers.target
                         text=True,
                     )
                     if result.returncode == 0:
-                        timestamp = str(result.stdout).strip().split("=")[1]
-                        if timestamp:
-                            unit_info["last_run"] = timestamp
+                        parts = str(result.stdout).strip().split("=", 1)
+                        if len(parts) == 2:
+                            timestamp = parts[1]
+                            if timestamp:
+                                unit_info["last_run"] = timestamp
 
                 # Get next run time for timers
                 if unit_name.endswith(".timer"):
