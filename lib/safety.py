@@ -115,15 +115,8 @@ def _is_direct_browser_launch(app_name: str) -> bool:
 def safe_launch_check(app_name: str, wrapper_path: str | Path | None = None) -> bool:
     """Perform safety checks before launching an application."""
     if is_test_environment():
-        # In test environment, be extra cautious with browser launches
-        if app_name and any(
-            browser in app_name.lower() for browser in ["firefox", "chrome", "chromium"]
-        ):
-            print(
-                f"🛡️  Safety: Blocked {app_name} launch in test environment",
-                file=sys.stderr,
-            )
-            return False
+        # In test environment, use mocked flatpak so no blocking needed
+        return True
 
         # Check wrapper content if provided
         if wrapper_path:

@@ -43,6 +43,168 @@ console_err = Console(stderr=True) if RICH_AVAILABLE else None
 class WrapperGenerator:
     """Generates Flatpak application wrappers."""
 
+    FORBIDDEN_WRAPPER_NAMES = {
+        "bash",
+        "sh",
+        "zsh",
+        "fish",
+        "csh",
+        "tcsh",
+        "ksh",
+        "dash",
+        "ash",
+        "ssh",
+        "scp",
+        "sftp",
+        "rsync",
+        "wget",
+        "curl",
+        "git",
+        "hg",
+        "svn",
+        "make",
+        "gcc",
+        "g++",
+        "clang",
+        "python",
+        "python3",
+        "pip",
+        "pip3",
+        "node",
+        "npm",
+        "yarn",
+        "java",
+        "javac",
+        "ruby",
+        "gem",
+        "perl",
+        "php",
+        "go",
+        "cargo",
+        "rustc",
+        "docker",
+        "podman",
+        "flatpak",
+        "systemctl",
+        "journalctl",
+        "dmesg",
+        "ls",
+        "cat",
+        "grep",
+        "find",
+        "ps",
+        "top",
+        "htop",
+        "kill",
+        "killall",
+        "pkill",
+        "pgrep",
+        "mkdir",
+        "rmdir",
+        "rm",
+        "cp",
+        "mv",
+        "ln",
+        "chmod",
+        "chown",
+        "chgrp",
+        "df",
+        "du",
+        "free",
+        "uptime",
+        "uname",
+        "whoami",
+        "id",
+        "passwd",
+        "su",
+        "sudo",
+        "visudo",
+        "useradd",
+        "userdel",
+        "groupadd",
+        "groupdel",
+        "mount",
+        "umount",
+        "fdisk",
+        "mkfs",
+        "fsck",
+        "dd",
+        "tar",
+        "gzip",
+        "gunzip",
+        "bzip2",
+        "xz",
+        "zip",
+        "unzip",
+        "7z",
+        "rar",
+        "unrar",
+        "less",
+        "more",
+        "head",
+        "tail",
+        "sort",
+        "uniq",
+        "wc",
+        "cut",
+        "paste",
+        "tr",
+        "sed",
+        "awk",
+        "vim",
+        "vi",
+        "nano",
+        "emacs",
+        "joe",
+        "screen",
+        "tmux",
+        "sshd",
+        "httpd",
+        "nginx",
+        "apache2",
+        "mysql",
+        "postgresql",
+        "redis",
+        "mongodb",
+        "sqlite3",
+        "ftp",
+        "telnet",
+        "ping",
+        "traceroute",
+        "nslookup",
+        "dig",
+        "host",
+        "whois",
+        "ifconfig",
+        "ip",
+        "route",
+        "netstat",
+        "ss",
+        "iptables",
+        "firewall-cmd",
+        "ufw",
+        "nmap",
+        "tcpdump",
+        "wireshark",
+        "strace",
+        "ltrace",
+        "gdb",
+        "valgrind",
+        "perf",
+        "sar",
+        "iostat",
+        "vmstat",
+        "mpstat",
+        "atop",
+        "iotop",
+        "glances",
+        "nc",
+        "socat",
+        "openssl",
+        "gpg",
+        "ssh-keygen",
+    }
+
     def __init__(
         self,
         bin_dir: str,
@@ -82,6 +244,10 @@ class WrapperGenerator:
 
             # Save bin_dir to config
             (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
+
+    def is_forbidden_wrapper_name(self, name: str) -> bool:
+        """Check if a wrapper name collides with basic system commands."""
+        return name.lower() in self.FORBIDDEN_WRAPPER_NAMES
 
     def log(self, message: str, level: str = "info") -> None:
         """Log a message to appropriate stream."""
@@ -270,6 +436,11 @@ class WrapperGenerator:
             self.log(f"Skipping invalid app ID: {app_id}", "warning")
             return False
 
+        # Check for forbidden wrapper names to avoid colliding with system commands
+        if self.is_forbidden_wrapper_name(wrapper_name):
+            self.log(f"Skipping forbidden wrapper name: {wrapper_name}", "warning")
+            return False
+
         target_flatpak_id = flatpak_id or app_id
 
         # Basic flatpak ID validation: allow alnum, dot, dash, underscore
@@ -388,19 +559,19 @@ class WrapperGenerator:
         script_dir = Path(__file__).parent
         # Template file path in templates directory
         template_path = script_dir.parent / "templates" / "wrapper.template.sh"
-        
+
         try:
             with open(template_path, "r") as file:
                 template_content = file.read()
-            
+
             # Replace template variables
             return template_content.format(
                 wrapper_name=wrapper_name,
                 app_id=app_id,
                 config_dir=str(self.config_dir),
-                bin_dir=str(self.bin_dir)
+                bin_dir=str(self.bin_dir),
             )
-        
+
         except FileNotFoundError:
             raise RuntimeError(f"Wrapper template file not found: {template_path}")
         except Exception as e:
