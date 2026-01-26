@@ -16,9 +16,7 @@ from pathlib import Path
 
 
 # Capture initial pytest modules so we can restore them if tests remove entries
-_PYTEST_MODULE_SNAPSHOT = {
-    name: module for name, module in sys.modules.items() if "pytest" in name
-}
+_PYTEST_MODULE_SNAPSHOT = {name: module for name, module in sys.modules.items() if "pytest" in name}
 
 
 def _restore_pytest_if_missing() -> None:
@@ -114,20 +112,18 @@ def _is_direct_browser_launch(app_name: str) -> bool:
 
 def safe_launch_check(app_name: str, wrapper_path: str | Path | None = None) -> bool:
     """Perform safety checks before launching an application."""
-    if is_test_environment():
-        # In test environment, use mocked flatpak so no blocking needed
-        return True
-
-        # Check wrapper content if provided
-        if wrapper_path:
-            wrapper_path_obj = (
-                Path(wrapper_path) if isinstance(wrapper_path, str) else wrapper_path
+    # Check wrapper content if provided (always perform this check)
+    if wrapper_path:
+        wrapper_path_obj = Path(wrapper_path) if isinstance(wrapper_path, str) else wrapper_path
+        if is_dangerous_wrapper(wrapper_path_obj):
+            print(
+                f"🛡️  Safety: Blocked dangerous wrapper {wrapper_path}",
+                file=sys.stderr,
             )
-            if is_dangerous_wrapper(wrapper_path_obj):
-                print(
-                    f"🛡️  Safety: Blocked dangerous wrapper {wrapper_path}",
-                    file=sys.stderr,
-                )
-                return False
+            return False
+
+    # In test environment, allow all launches after wrapper safety check
+    if is_test_environment():
+        return True
 
     return True

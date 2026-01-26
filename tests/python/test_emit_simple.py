@@ -18,14 +18,12 @@ sys.modules["python_utils"].is_wrapper_file = lambda x: True
 sys.modules["python_utils"].get_wrapper_id = lambda x: "org.test.app"
 sys.modules["python_utils"].sanitize_id_to_name = lambda x: x.split(".")[-1].lower()
 sys.modules["python_utils"].find_executable = lambda x: f"/usr/bin/{x}"
-sys.modules["python_utils"].safe_mktemp = (
-    lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
-)
+sys.modules["python_utils"].safe_mktemp = lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
 
 try:
-    from fplaunch.generate import WrapperGenerator
-    from fplaunch.manage import WrapperManager
-    from fplaunch.systemd_setup import SystemdSetup
+    from lib.generate import WrapperGenerator
+    from lib.manage import WrapperManager
+    from lib.systemd_setup import SystemdSetup
 
     MODULES_AVAILABLE = True
 except ImportError:
@@ -53,13 +51,17 @@ class TestEmitSimple:
     def test_generate_emit_mode(self, temp_env) -> None:
         """Test generate emit mode."""
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True,
+            bin_dir=str(temp_env["bin_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         from unittest.mock import patch
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -71,7 +73,9 @@ class TestEmitSimple:
     def test_manage_emit_mode(self, temp_env) -> None:
         """Test manage emit mode."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         result = manager.set_preference("firefox", "flatpak")

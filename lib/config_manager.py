@@ -40,6 +40,43 @@ except ImportError:
     TOML_AVAILABLE = False
 
 
+# Custom exceptions for configuration errors
+class ConfigError(Exception):
+    """Base exception for configuration-related errors."""
+
+    pass
+
+
+class ConfigFileNotFoundError(ConfigError):
+    """Raised when configuration file is not found."""
+
+    pass
+
+
+class ConfigParseError(ConfigError):
+    """Raised when configuration file cannot be parsed."""
+
+    pass
+
+
+class ConfigValidationError(ConfigError):
+    """Raised when configuration data fails validation."""
+
+    pass
+
+
+class ConfigMigrationError(ConfigError):
+    """Raised when configuration migration fails."""
+
+    pass
+
+
+class ConfigPermissionError(ConfigError):
+    """Raised when configuration file cannot be accessed due to permissions."""
+
+    pass
+
+
 @dataclass
 class AppPreferences:
     """Preferences for a specific Flatpak application."""
@@ -69,9 +106,7 @@ class WrapperConfig:
     )  # Custom permission presets
     schema_version: int = 1  # Schema version for migration purposes
     cron_interval: int = 6  # Cron interval in hours (default: 6 hours)
-    enable_notifications: bool = (
-        True  # Enable desktop notifications for update failures
-    )
+    enable_notifications: bool = True  # Enable desktop notifications for update failures
 
 
 class EnhancedConfigManager:
@@ -84,12 +119,8 @@ class EnhancedConfigManager:
     def __init__(self, app_name="fplaunchwrapper") -> None:
         self.app_name = app_name
         # Resolve config/data directories using XDG variables with Path.home fallback
-        xdg_config_home = os.environ.get(
-            "XDG_CONFIG_HOME", str(Path.home() / ".config")
-        )
-        xdg_data_home = os.environ.get(
-            "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
-        )
+        xdg_config_home = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
+        xdg_data_home = os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
         self.config_dir = Path(xdg_config_home) / app_name
         self.data_dir = Path(xdg_data_home) / app_name
         self.config_file = self.config_dir / "config.toml"
@@ -99,15 +130,9 @@ class EnhancedConfigManager:
         # Template variables for substitution
         self.template_variables = {
             "HOME": str(Path.home()),
-            "XDG_CONFIG_HOME": os.environ.get(
-                "XDG_CONFIG_HOME", str(Path.home() / ".config")
-            ),
-            "XDG_DATA_HOME": os.environ.get(
-                "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
-            ),
-            "XDG_CACHE_HOME": os.environ.get(
-                "XDG_CACHE_HOME", str(Path.home() / ".cache")
-            ),
+            "XDG_CONFIG_HOME": os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
+            "XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share")),
+            "XDG_CACHE_HOME": os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")),
             "CONFIG_DIR": str(self.config_dir),
             "DATA_DIR": str(self.data_dir),
         }
@@ -123,7 +148,20 @@ class EnhancedConfigManager:
             pass
 
         # Load configuration
-        self.load_config()
+        try:
+            self.load_config()
+        except ConfigPermissionError as e:
+            print(f"Warning: {e}", file=sys.stderr)
+            print("Falling back to default configuration", file=sys.stderr)
+            self._create_default_config()
+        except (ConfigParseError, ConfigValidationError, ConfigMigrationError) as e:
+            print(f"Warning: {e}", file=sys.stderr)
+            print("Falling back to default configuration", file=sys.stderr)
+            self._create_default_config()
+        except ConfigError as e:
+            print(f"Warning: Unexpected configuration error: {e}", file=sys.stderr)
+            print("Falling back to default configuration", file=sys.stderr)
+            self._create_default_config()
 
     def _substitute_variables(self, value: str) -> str:
         """Substitute template variables in a string.
@@ -137,9 +175,10 @@ class EnhancedConfigManager:
             String with variables substituted
         """
 
-        def replace_variable(match):
-            var_name = match.group(1) if match.group(1) else match.group(2)
-            return self.template_variables.get(var_name, match.group(0))
+        def replace_variable(match) -> str:
+            var_name = match.group(1) or match.group(2) or ""
+            replacement = self.template_variables.get(var_name, match.group(0))
+            return str(replacement) if replacement is not None else match.group(0)
 
         # Handle ${VARIABLE} format
         value = re.sub(r"\$\{([A-Za-z0-9_]+)\}", replace_variable, value)
@@ -179,10 +218,20 @@ class EnhancedConfigManager:
                     self._parse_config_data(data)
                 else:
                     self._load_fallback_config()
-            except (OSError, ValueError, KeyError, ValidationError) as e:
-                print(f"Configuration error: {e}", file=sys.stderr)
-                self._create_default_config()
+            except OSError as e:
+                raise ConfigPermissionError(
+                    f"Cannot read configuration file {self.config_file}: {e}"
+                ) from e
+            except (ValueError, KeyError) as e:
+                raise ConfigParseError(
+                    f"Invalid configuration format in {self.config_file}: {e}"
+                ) from e
+            except ValidationError as e:
+                raise ConfigValidationError(
+                    f"Configuration validation failed for {self.config_file}: {e}"
+                ) from e
         else:
+            # File doesn't exist - this is not an error, just create defaults
             self._create_default_config()
 
     def save_config(self) -> None:
@@ -194,8 +243,12 @@ class EnhancedConfigManager:
                     tomli_w.dump(data, f)
             else:
                 self._save_fallback_config()
-        except (OSError, ValueError):
-            pass
+        except OSError as e:
+            raise ConfigPermissionError(
+                f"Cannot write configuration file {self.config_file}: {e}"
+            ) from e
+        except (ValueError, TypeError) as e:
+            raise ConfigParseError(f"Failed to serialize configuration: {e}") from e
 
     def _migrate_config(self, data: dict[str, Any]) -> dict[str, Any]:
         """Migrate configuration from older versions to current schema.
@@ -205,28 +258,34 @@ class EnhancedConfigManager:
 
         Returns:
             Migrated configuration data
+
+        Raises:
+            ConfigMigrationError: If migration fails
         """
-        # Get current version from data or assume 0 if not specified
-        version = data.get("schema_version", 0)
+        try:
+            # Get current version from data or assume 0 if not specified
+            version = data.get("schema_version", 0)
 
-        # Migration from version 0 to 1
-        if version < 1:
-            # Example migration: Rename old fields, restructure data, etc.
-            # For demonstration purposes, we'll handle potential legacy fields
-            if "legacy_blocklist" in data:
-                data["blocklist"] = data.get("legacy_blocklist", [])
-                del data["legacy_blocklist"]
+            # Migration from version 0 to 1
+            if version < 1:
+                # Example migration: Rename old fields, restructure data, etc.
+                # For demonstration purposes, we'll handle potential legacy fields
+                if "legacy_blocklist" in data:
+                    data["blocklist"] = data.get("legacy_blocklist", [])
+                    del data["legacy_blocklist"]
 
-            # Ensure all required fields exist
-            if "permission_presets" not in data:
-                data["permission_presets"] = {}
+                # Ensure all required fields exist
+                if "permission_presets" not in data:
+                    data["permission_presets"] = {}
 
-            if "active_profile" not in data:
-                data["active_profile"] = "default"
+                if "active_profile" not in data:
+                    data["active_profile"] = "default"
 
-        # Update to current version
-        data["schema_version"] = self.CURRENT_SCHEMA_VERSION
-        return data
+            # Update to current version
+            data["schema_version"] = self.CURRENT_SCHEMA_VERSION
+            return data
+        except Exception as e:
+            raise ConfigMigrationError(f"Failed to migrate configuration: {e}") from e
 
     def _parse_config_data(self, data: dict[str, Any]) -> None:
         """Parse configuration data with validation and variable substitution."""
@@ -240,16 +299,12 @@ class EnhancedConfigManager:
                 validated_config = PydanticWrapperConfig(**processed_data)
                 self._apply_validated_config(validated_config)
             except ValidationError as e:
-                print(f"Configuration validation error: {e}", file=sys.stderr)
-                self._create_default_config()
-                return
+                raise ConfigValidationError(f"Configuration validation failed: {e}") from e
         else:
             # Fallback validation without Pydantic
             self._apply_unvalidated_config(processed_data)
 
-    def _apply_validated_config(
-        self, validated_config: "PydanticWrapperConfig"
-    ) -> None:
+    def _apply_validated_config(self, validated_config: "PydanticWrapperConfig") -> None:
         """Apply validated configuration from Pydantic model."""
         self.config.bin_dir = validated_config.bin_dir
         self.config.debug_mode = validated_config.debug_mode
@@ -375,9 +430,7 @@ class EnhancedConfigManager:
         if self.config.permission_presets:
             data["permission_presets"] = {}
             for preset_name, permissions in self.config.permission_presets.items():
-                data["permission_presets"][preset_name] = {
-                    "permissions": list(permissions)
-                }
+                data["permission_presets"][preset_name] = {"permissions": list(permissions)}
 
         return data
 
@@ -412,19 +465,28 @@ class EnhancedConfigManager:
     def set_app_preferences(self, app_id: str, prefs: AppPreferences) -> None:
         """Set preferences for a specific app."""
         self.config.app_preferences[app_id] = prefs
-        self.save_config()
+        try:
+            self.save_config()
+        except ConfigError as e:
+            print(f"Warning: Failed to save app preferences: {e}", file=sys.stderr)
 
     def add_to_blocklist(self, app_id: str) -> None:
         """Add app to blocklist."""
         if app_id not in self.config.blocklist:
             self.config.blocklist.append(app_id)
-            self.save_config()
+            try:
+                self.save_config()
+            except ConfigError as e:
+                print(f"Warning: Failed to save blocklist: {e}", file=sys.stderr)
 
     def remove_from_blocklist(self, app_id: str) -> None:
         """Remove app from blocklist."""
         if app_id in self.config.blocklist:
             self.config.blocklist.remove(app_id)
-            self.save_config()
+            try:
+                self.save_config()
+            except ConfigError as e:
+                print(f"Warning: Failed to save blocklist: {e}", file=sys.stderr)
 
     def is_blocked(self, app_id: str) -> bool:
         """Check if app is blocked."""
@@ -649,20 +711,76 @@ if PYDANTIC_AVAILABLE:
         post_launch_script: str | None = None
         custom_args: list[str] = Field(default_factory=list)
 
-        @field_validator("launch_method")
+        @field_validator("custom_args")
         @classmethod
-        def validate_launch_method(cls, v):
-            if v not in ["auto", "system", "flatpak"]:
-                msg = "launch_method must be auto, system, or flatpak"
-                raise ValueError(msg)
+        def validate_custom_args(cls, v):
+            """Validate custom arguments for security."""
+            if v:
+                for arg in v:
+                    if isinstance(arg, str):
+                        # Check for dangerous shell metacharacters that could be used for injection
+                        dangerous_chars = [
+                            ";",
+                            "&",
+                            "|",
+                            "`",
+                            "$",
+                            "(",
+                            ")",
+                            "<",
+                            ">",
+                            '"',
+                            "'",
+                            "\\",
+                        ]
+                        for char in dangerous_chars:
+                            if char in arg and not arg.startswith(
+                                "--"
+                            ):  # Allow in flags like --filesystem
+                                msg = f"Custom argument contains potentially dangerous character '{char}': {arg}"
+                                raise ValueError(msg)
             return v
 
         @field_validator("pre_launch_script", "post_launch_script")
         @classmethod
         def validate_script_path(cls, v):
-            if v and not os.path.isfile(v):
-                msg = f"Script file does not exist: {v}"
-                raise ValueError(msg)
+            if v:
+                # Check if script file exists after template substitution
+                if not os.path.isfile(v):
+                    msg = f"Script file does not exist: {v}"
+                    raise ValueError(msg)
+
+                # Security check: ensure script path doesn't access sensitive locations
+                script_path = Path(v).resolve()
+
+                # Define sensitive directories that scripts should not access
+                sensitive_dirs = [
+                    Path("/etc"),
+                    Path("/usr"),
+                    Path("/bin"),
+                    Path("/sbin"),
+                    Path("/boot"),
+                    Path("/sys"),
+                    Path("/proc"),
+                    Path("/dev"),
+                    Path("/root"),
+                ]
+
+                # Check if script is in a sensitive directory
+                for sensitive_dir in sensitive_dirs:
+                    try:
+                        script_path.relative_to(sensitive_dir)
+                        msg = f"Script path is in a sensitive system directory: {v}"
+                        raise ValueError(msg)
+                    except ValueError:
+                        # Not in sensitive directory, continue checking
+                        pass
+
+                # Additional check: ensure script is executable
+                if not os.access(v, os.X_OK):
+                    msg = f"Script file is not executable: {v}"
+                    raise ValueError(msg)
+
             return v
 
     class PydanticWrapperConfig(BaseModel):

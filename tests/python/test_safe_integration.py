@@ -15,12 +15,12 @@ import pytest
 
 # Import modules safely
 try:
-    from fplaunch.cleanup import WrapperCleanup
-    from fplaunch.cli import main as cli_main
-    from fplaunch.generate import WrapperGenerator
-    from fplaunch.launch import AppLauncher
-    from fplaunch.manage import WrapperManager
-    from fplaunch.systemd_setup import SystemdSetup
+    from lib.cleanup import WrapperCleanup
+    from lib.cli import main as cli_main
+    from lib.generate import WrapperGenerator
+    from lib.launch import AppLauncher
+    from lib.manage import WrapperManager
+    from lib.systemd_setup import SystemdSetup
 
     MODULES_AVAILABLE = True
 except ImportError:
@@ -81,7 +81,9 @@ class TestSafeIntegrationWorkflows:
         ), patch("os.makedirs"), patch(
             "shutil.which",
             return_value="/usr/bin/flatpak",
-        ), patch("pathlib.Path.home", return_value=isolated_env["home_dir"]):
+        ), patch(
+            "pathlib.Path.home", return_value=isolated_env["home_dir"]
+        ):
             # Configure mocks to simulate successful operations
             mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
 
@@ -110,12 +112,8 @@ class TestSafeIntegrationWorkflows:
             assert success is not None, "Manager operations should be callable"
 
             # Verify no real system changes occurred
-            assert isolated_env["temp_base"].exists(), (
-                "Temp directory should still exist"
-            )
-            assert len(list(isolated_env["temp_base"].iterdir())) >= 4, (
-                "All subdirs should remain"
-            )
+            assert isolated_env["temp_base"].exists(), "Temp directory should still exist"
+            assert len(list(isolated_env["temp_base"].iterdir())) >= 4, "All subdirs should remain"
 
     def test_app_management_workflow(self, isolated_env) -> None:
         """Test app management operations: enable/disable/update/remove.
@@ -188,9 +186,7 @@ class TestSafeIntegrationWorkflows:
             assert result is not None, "Selective cleanup should be callable"
 
             # Verify isolation - no real filesystem operations
-            assert isolated_env["temp_base"].exists(), (
-                "Temp environment should be untouched"
-            )
+            assert isolated_env["temp_base"].exists(), "Temp environment should be untouched"
 
     def test_launcher_workflow(self, isolated_env) -> None:
         """Test app launching workflow with environment setup.
@@ -204,7 +200,9 @@ class TestSafeIntegrationWorkflows:
         ) as mock_popen, patch("os.path.exists", return_value=True), patch(
             "os.environ.copy",
             return_value={},
-        ), patch("pathlib.Path.home", return_value=isolated_env["home_dir"]):
+        ), patch(
+            "pathlib.Path.home", return_value=isolated_env["home_dir"]
+        ):
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
             mock_popen.return_value = Mock()
 
@@ -256,9 +254,9 @@ class TestSafeIntegrationWorkflows:
             assert result is not None, "Systemd reload should be callable"
 
             # Verify complete isolation
-            assert not any(isolated_env["systemd_dir"].iterdir()), (
-                "No real systemd files should be created"
-            )
+            assert not any(
+                isolated_env["systemd_dir"].iterdir()
+            ), "No real systemd files should be created"
 
     def test_cross_component_integration(self, isolated_env) -> None:
         """Test components working together: generate -> manage -> launch -> cleanup.
@@ -269,9 +267,9 @@ class TestSafeIntegrationWorkflows:
 
         with patch("subprocess.run") as mock_run, patch(
             "subprocess.Popen",
-        ) as mock_popen, patch("os.path.exists", return_value=True), patch(
-            "os.makedirs",
-        ), patch("os.remove"), patch("shutil.rmtree"), patch(
+        ) as mock_popen, patch(
+            "os.path.exists", return_value=True
+        ), patch("os.makedirs",), patch("os.remove"), patch("shutil.rmtree"), patch(
             "pathlib.Path.home",
             return_value=isolated_env["home_dir"],
         ):
@@ -420,7 +418,9 @@ class TestSafeIntegrationWorkflows:
 
         # Filesystem should be unchanged (all operations mocked)
         # Note: Some internal config files may be created but no external operations
-        assert len(after_files - before_files) <= 2, f"Only minimal files should be created, got {after_files - before_files}"
+        assert (
+            len(after_files - before_files) <= 2
+        ), f"Only minimal files should be created, got {after_files - before_files}"
 
         # Verify temp directory structure remains clean
         assert isolated_env["temp_base"].exists()
@@ -439,14 +439,16 @@ class TestCLISafeIntegration:
         ) as mock_run, patch("os.path.exists", return_value=True), patch(
             "pathlib.Path.home",
             return_value=tmp_path / "home",
-        ), patch("sys.stdout"):
+        ), patch(
+            "sys.stdout"
+        ):
             mock_run.return_value = Mock(returncode=0, stdout="generated", stderr="")
 
             # This would normally call cli_main() but we can't import it safely
             # Instead, verify that our mocking approach works for CLI testing
 
             # Simulate CLI workflow with mocking
-            from fplaunch.generate import WrapperGenerator
+            from lib.generate import WrapperGenerator
 
             generator = WrapperGenerator(
                 bin_dir=str(tmp_path / "bin"),
@@ -457,6 +459,4 @@ class TestCLISafeIntegration:
             assert result is not None, "CLI workflow should be testable"
 
             # Verify no real commands were executed
-            assert mock_run.call_count == 0, (
-                "No real commands should be executed in safe tests"
-            )
+            assert mock_run.call_count == 0, "No real commands should be executed in safe tests"

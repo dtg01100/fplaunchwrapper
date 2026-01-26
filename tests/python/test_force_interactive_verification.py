@@ -14,7 +14,7 @@ import tempfile
 import pytest
 
 # Add lib to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
 
 from generate import WrapperGenerator
 
@@ -30,7 +30,7 @@ class TestForceInteractiveFlag:
                 wrapper_name="test-app",
                 app_id="org.test.App",
             )
-        
+
         # Check that the flag handling code is present
         assert "--fpwrapper-force-interactive" in wrapper_code
         assert 'FPWRAPPER_FORCE="interactive"' in wrapper_code
@@ -44,7 +44,7 @@ class TestForceInteractiveFlag:
                 wrapper_name="test-app",
                 app_id="org.test.App",
             )
-        
+
         # FPWRAPPER_FORCE should be set to interactive when flag is used
         assert 'FPWRAPPER_FORCE="interactive"' in wrapper_code
 
@@ -56,7 +56,7 @@ class TestForceInteractiveFlag:
                 wrapper_name="test-app",
                 app_id="org.test.App",
             )
-        
+
         # Variable should be used in the interactive detection logic
         # Count occurrences - should be used multiple times
         count = wrapper_code.count("FPWRAPPER_FORCE")
@@ -70,7 +70,7 @@ class TestForceInteractiveFlag:
                 wrapper_name="gnome-calculator",
                 app_id="org.gnome.Calculator",
             )
-        
+
         # Should support force-interactive
         assert "--fpwrapper-force-interactive" in wrapper_code
         assert "FPWRAPPER_FORCE" in wrapper_code
@@ -79,19 +79,19 @@ class TestForceInteractiveFlag:
         """Test force-interactive with various app IDs."""
         with tempfile.TemporaryDirectory() as tmpdir:
             generator = WrapperGenerator(bin_dir=tmpdir)
-            
+
             test_apps = [
                 ("test1", "org.example.App1"),
                 ("test2", "com.github.App2"),
                 ("test3", "org.kde.App3"),
             ]
-            
+
             for name, app_id in test_apps:
                 wrapper = generator.create_wrapper_script(
                     wrapper_name=name,
                     app_id=app_id,
                 )
-                
+
                 # All should have force-interactive support
                 assert "--fpwrapper-force-interactive" in wrapper
                 assert "FPWRAPPER_FORCE" in wrapper
@@ -108,11 +108,11 @@ class TestForceInteractiveEnvironment:
                 wrapper_name="test-app",
                 app_id="org.test.App",
             )
-        
+
         # Should set variable before using it
         force_set = wrapper.find('FPWRAPPER_FORCE="interactive"')
-        force_ref = wrapper.find('FPWRAPPER_FORCE')
-        
+        force_ref = wrapper.find("FPWRAPPER_FORCE")
+
         # Variable should be set
         assert force_set >= 0
         # And should be referenced somewhere
@@ -126,7 +126,7 @@ class TestForceInteractiveEnvironment:
                 wrapper_name="test-app",
                 app_id="org.test.App",
             )
-        
+
         # Variable should be defined
         assert "FPWRAPPER_FORCE=" in wrapper
         # Should not be unset
@@ -140,16 +140,16 @@ class TestForceInteractiveIntegration:
         """Test all wrappers have force-interactive support."""
         with tempfile.TemporaryDirectory() as tmpdir:
             generator = WrapperGenerator(bin_dir=tmpdir)
-            
+
             # Generate a few wrappers
             app_ids = ["org.example.App1", "org.test.TestApp", "com.github.MyApp"]
-            
+
             for app_id in app_ids:
                 wrapper = generator.create_wrapper_script(
                     wrapper_name="test",
                     app_id=app_id,
                 )
-                
+
                 # All should support force-interactive
                 assert "--fpwrapper-force-interactive" in wrapper
                 assert "FPWRAPPER_FORCE" in wrapper
@@ -162,11 +162,11 @@ class TestForceInteractiveIntegration:
                 wrapper_name="test-app",
                 app_id="org.test.App",
             )
-        
+
         # After detecting the flag, should shift arguments
-        flag_check = wrapper.find('--fpwrapper-force-interactive')
-        shift_found = wrapper.find('shift', flag_check) if flag_check >= 0 else -1
-        
+        flag_check = wrapper.find("--fpwrapper-force-interactive")
+        shift_found = wrapper.find("shift", flag_check) if flag_check >= 0 else -1
+
         # shift should come after flag check
         if flag_check >= 0:
             assert shift_found > flag_check, "shift should come after flag detection"
@@ -179,19 +179,19 @@ class TestForceInteractiveEdgeCases:
         """Test force-interactive with special characters in app ID."""
         with tempfile.TemporaryDirectory() as tmpdir:
             generator = WrapperGenerator(bin_dir=tmpdir)
-            
+
             special_apps = [
                 ("app-dash", "org.example.app-with-dash"),
                 ("app-under", "org.example.app_under_score"),
                 ("app-num", "org.example.App123"),
             ]
-            
+
             for name, app_id in special_apps:
                 wrapper = generator.create_wrapper_script(
                     wrapper_name=name,
                     app_id=app_id,
                 )
-                
+
                 # All should work
                 assert "FPWRAPPER_FORCE" in wrapper
 
@@ -199,21 +199,21 @@ class TestForceInteractiveEdgeCases:
         """Test force-interactive in different wrapper configurations."""
         with tempfile.TemporaryDirectory() as tmpdir:
             generator = WrapperGenerator(bin_dir=tmpdir)
-            
+
             # Create various wrapper types
             configs = [
                 {"wrapper_name": "basic", "app_id": "org.test.Basic"},
                 {"wrapper_name": "with-dash", "app_id": "org.test.With-Dash"},
                 {"wrapper_name": "caps", "app_id": "org.test.ALLCAPS"},
             ]
-            
+
             for config in configs:
                 wrapper = generator.create_wrapper_script(**config)
-                
+
                 # All should have force-interactive
                 assert "FPWRAPPER_FORCE" in wrapper
                 assert "--fpwrapper-force-interactive" in wrapper
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

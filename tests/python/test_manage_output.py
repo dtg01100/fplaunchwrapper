@@ -19,7 +19,8 @@ from unittest.mock import patch
 import pytest
 
 try:
-    from fplaunch.manage import WrapperManager
+    from lib.manage import WrapperManager
+
     MANAGE_AVAILABLE = True
 except ImportError:
     MANAGE_AVAILABLE = False
@@ -34,10 +35,10 @@ class TestManageOutputStreams:
         self.temp_dir = Path(tempfile.mkdtemp(prefix="fpwrapper_output_test_"))
         self.bin_dir = self.temp_dir / "bin"
         self.config_dir = self.temp_dir / "config"
-        
+
         self.bin_dir.mkdir(parents=True)
         self.config_dir.mkdir(parents=True)
-        
+
         self._create_test_wrapper("firefox", "org.mozilla.firefox")
         self._create_test_wrapper("chrome", "com.google.Chrome")
 
@@ -64,10 +65,10 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         manager.display_wrappers()
         captured = capsys.readouterr()
-        
+
         # Should output to stdout, not stderr
         assert "firefox" in captured.out or "Flatpak" in captured.out
         assert captured.err == ""
@@ -78,10 +79,10 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         manager.display_wrappers()
         captured = capsys.readouterr()
-        
+
         # Should indicate 2 wrappers found
         assert "2" in captured.out or "wrappers" in captured.out.lower()
 
@@ -89,15 +90,15 @@ ID="{app_id}"
         """Test that 'no wrappers' message goes to stdout, not stderr."""
         empty_bin = self.temp_dir / "empty_bin"
         empty_bin.mkdir()
-        
+
         manager = WrapperManager(
             config_dir=str(self.config_dir),
             bin_dir=str(empty_bin),
         )
-        
+
         manager.display_wrappers()
         captured = capsys.readouterr()
-        
+
         # "No wrappers found" message should be on stdout
         assert "No" in captured.out or "wrappers" in captured.out.lower()
         assert captured.err == ""
@@ -110,10 +111,10 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         result = manager.show_info("firefox")
         captured = capsys.readouterr()
-        
+
         assert result is True
         # Output should be on stdout
         assert "firefox" in captured.out or "Wrapper" in captured.out
@@ -125,10 +126,10 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         result = manager.show_info("nonexistent")
         captured = capsys.readouterr()
-        
+
         assert result is False
         # Error should be on stderr
         assert "ERROR" in captured.err or "not found" in captured.err.lower()
@@ -141,10 +142,10 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         result = manager.set_preference("firefox", "system")
         captured = capsys.readouterr()
-        
+
         assert result is True
         # Success message should be on stdout
         assert "firefox" in captured.out or "preference" in captured.out.lower()
@@ -156,11 +157,11 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         # Invalid preference (contains space which is not allowed)
         result = manager.set_preference("firefox", "invalid pref")
         captured = capsys.readouterr()
-        
+
         assert result is False
         # Error should be on stderr
         assert "ERROR" in captured.err or "Invalid" in captured.err
@@ -171,9 +172,9 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         result = manager.set_preference("firefox", "flatpak")
-        
+
         assert result is True
         pref_file = self.config_dir / "firefox.pref"
         assert pref_file.exists()
@@ -187,10 +188,10 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         manager.discover_features()
         captured = capsys.readouterr()
-        
+
         # Should output feature table to stdout
         assert "Feature" in captured.out or "Generation" in captured.out
         assert captured.err == ""
@@ -201,10 +202,10 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         manager.discover_features()
         captured = capsys.readouterr()
-        
+
         # Should include examples like 'fplaunch generate'
         assert "generate" in captured.out.lower() or "fplaunch" in captured.out
 
@@ -217,10 +218,10 @@ ID="{app_id}"
             bin_dir=str(self.bin_dir),
             verbose=True,  # Enable output
         )
-        
+
         result = manager.remove_wrapper("firefox", force=True)
         captured = capsys.readouterr()
-        
+
         assert result is True
         # Success message should be on stdout
         assert "Removed" in captured.out or "firefox" in captured.out
@@ -232,10 +233,10 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         result = manager.remove_wrapper("nonexistent", force=True)
         captured = capsys.readouterr()
-        
+
         assert result is False
         # Error should be on stderr
         assert "ERROR" in captured.err or "not found" in captured.err.lower()
@@ -246,12 +247,12 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         wrapper_path = self.bin_dir / "firefox"
         assert wrapper_path.exists()
-        
+
         result = manager.remove_wrapper("firefox", force=True)
-        
+
         assert result is True
         assert not wrapper_path.exists()
 
@@ -265,10 +266,10 @@ ID="{app_id}"
             emit_mode=True,
             verbose=True,
         )
-        
+
         result = manager.set_preference("firefox", "flatpak")
         captured = capsys.readouterr()
-        
+
         assert result is True
         # EMIT message should be on stdout
         assert "EMIT" in captured.out or "firefox" in captured.out
@@ -284,10 +285,10 @@ ID="{app_id}"
             emit_mode=True,
             verbose=True,
         )
-        
+
         result = manager.remove_wrapper("firefox")
         captured = capsys.readouterr()
-        
+
         assert result is True
         # EMIT message should be on stdout
         assert "EMIT" in captured.out or "firefox" in captured.out
@@ -304,10 +305,10 @@ ID="{app_id}"
             emit_verbose=True,
             verbose=True,
         )
-        
+
         result = manager.set_preference("firefox", "system")
         captured = capsys.readouterr()
-        
+
         assert result is True
         # Should show the preference value in verbose emit mode
         assert "system" in captured.out or "EMIT" in captured.out
@@ -321,10 +322,10 @@ ID="{app_id}"
             bin_dir=str(self.bin_dir),
             verbose=False,  # Not verbose
         )
-        
+
         manager.log("Test error message", level="error")
         captured = capsys.readouterr()
-        
+
         # Error should print even without verbose
         assert "error" in captured.err.lower() or "Test error" in captured.err
 
@@ -335,10 +336,10 @@ ID="{app_id}"
             bin_dir=str(self.bin_dir),
             verbose=False,  # Not verbose
         )
-        
+
         manager.log("Test warning message", level="warning")
         captured = capsys.readouterr()
-        
+
         # Warning should print even without verbose
         assert "warn" in captured.err.lower() or "Test warning" in captured.err
 
@@ -349,10 +350,10 @@ ID="{app_id}"
             bin_dir=str(self.bin_dir),
             verbose=False,  # Not verbose
         )
-        
+
         manager.log("Test success message", level="success")
         captured = capsys.readouterr()
-        
+
         # Success should print even without verbose
         assert "success" in captured.out.lower() or "Test success" in captured.out
 
@@ -363,16 +364,16 @@ ID="{app_id}"
             bin_dir=str(self.bin_dir),
             verbose=False,  # Not verbose
         )
-        
+
         manager.log("Test info message", level="info")
         captured = capsys.readouterr()
-        
+
         # Info should print to stdout
         assert "Test info" in captured.out or "info" in captured.out.lower()
 
     # ========== Rich Unavailable Tests ==========
 
-    @patch("fplaunch.manage.RICH_AVAILABLE", False)
+    @patch("lib.manage.RICH_AVAILABLE", False)
     def test_display_wrappers_fallback_no_rich(self, capsys) -> None:
         """Test that display_wrappers works without Rich library."""
         # Create a new manager with mocked Rich unavailable
@@ -381,15 +382,17 @@ ID="{app_id}"
                 config_dir=str(self.config_dir),
                 bin_dir=str(self.bin_dir),
             )
-            
+
             manager.display_wrappers()
             captured = capsys.readouterr()
-            
+
             # Should still output something to stdout (plain text fallback)
-            assert "firefox" in captured.out or "chrome" in captured.out or "Wrapper" in captured.out
+            assert (
+                "firefox" in captured.out or "chrome" in captured.out or "Wrapper" in captured.out
+            )
             assert captured.err == ""
 
-    @patch("fplaunch.manage.RICH_AVAILABLE", False)
+    @patch("lib.manage.RICH_AVAILABLE", False)
     def test_show_info_fallback_no_rich(self, capsys) -> None:
         """Test that show_info works without Rich library."""
         with patch("fplaunch.manage.console", None):
@@ -397,16 +400,16 @@ ID="{app_id}"
                 config_dir=str(self.config_dir),
                 bin_dir=str(self.bin_dir),
             )
-            
+
             result = manager.show_info("firefox")
             captured = capsys.readouterr()
-            
+
             assert result is True
             # Should still output something to stdout (plain text fallback)
             assert "firefox" in captured.out or "Wrapper" in captured.out
             assert captured.err == ""
 
-    @patch("fplaunch.manage.RICH_AVAILABLE", False)
+    @patch("lib.manage.RICH_AVAILABLE", False)
     def test_discover_features_fallback_no_rich(self, capsys) -> None:
         """Test that discover_features works without Rich library."""
         with patch("fplaunch.manage.console", None):
@@ -414,15 +417,15 @@ ID="{app_id}"
                 config_dir=str(self.config_dir),
                 bin_dir=str(self.bin_dir),
             )
-            
+
             manager.discover_features()
             captured = capsys.readouterr()
-            
+
             # Should still output something to stdout (plain text fallback)
             assert "Feature" in captured.out or "generate" in captured.out.lower()
             assert captured.err == ""
 
-    @patch("fplaunch.manage.RICH_AVAILABLE", False)
+    @patch("lib.manage.RICH_AVAILABLE", False)
     def test_log_fallback_no_rich(self, capsys) -> None:
         """Test that log works without Rich library."""
         with patch("fplaunch.manage.console", None):
@@ -430,16 +433,16 @@ ID="{app_id}"
                 config_dir=str(self.config_dir),
                 bin_dir=str(self.bin_dir),
             )
-            
+
             manager.log("Test message", level="info")
             captured = capsys.readouterr()
-            
+
             # Should still output to stdout
             assert "Test message" in captured.out
-            
+
             manager.log("Test error", level="error")
             captured = capsys.readouterr()
-            
+
             # Error should go to stderr
             assert "Test error" in captured.err
 
@@ -452,10 +455,10 @@ ID="{app_id}"
             bin_dir=str(self.bin_dir),
             verbose=True,
         )
-        
+
         count = manager.set_preference_all("flatpak")
         captured = capsys.readouterr()
-        
+
         assert count == 2
         # Should output summary to stdout
         assert "Set preference" in captured.out or "flatpak" in captured.out
@@ -466,10 +469,10 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         result = manager.block_app("org.mozilla.firefox")
         captured = capsys.readouterr()
-        
+
         assert result is True
         # Success message should be on stdout
         assert "Blocked" in captured.out or "firefox" in captured.out
@@ -480,15 +483,15 @@ ID="{app_id}"
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
         )
-        
+
         # First block the app
         manager.block_app("org.mozilla.firefox")
         capsys.readouterr()  # Clear previous output
-        
+
         # Then unblock it
         result = manager.unblock_app("org.mozilla.firefox")
         captured = capsys.readouterr()
-        
+
         assert result is True
         # Success message should be on stdout
         assert "Unblocked" in captured.out or "firefox" in captured.out

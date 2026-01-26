@@ -17,11 +17,11 @@ from unittest.mock import Mock, patch
 import pytest
 
 try:
-    from fplaunch.cleanup import WrapperCleanup
-    from fplaunch.generate import WrapperGenerator
-    from fplaunch.launch import AppLauncher
-    from fplaunch.manage import WrapperManager
-    from fplaunch.systemd_setup import SystemdSetup
+    from lib.cleanup import WrapperCleanup
+    from lib.generate import WrapperGenerator
+    from lib.launch import AppLauncher
+    from lib.manage import WrapperManager
+    from lib.systemd_setup import SystemdSetup
 
     MODULES_AVAILABLE = True
 except ImportError:
@@ -49,7 +49,9 @@ class TestInputValidationEdgeCases:
     def test_empty_and_none_inputs(self, temp_env) -> None:
         """Test handling of empty and None inputs."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # Test empty app name
@@ -70,7 +72,9 @@ class TestInputValidationEdgeCases:
     def test_extremely_long_inputs(self, temp_env) -> None:
         """Test handling of extremely long inputs."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # Very long app name
@@ -86,7 +90,9 @@ class TestInputValidationEdgeCases:
     def test_unicode_and_special_characters(self, temp_env) -> None:
         """Test handling of Unicode and special characters."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # Unicode app names
@@ -112,7 +118,9 @@ class TestInputValidationEdgeCases:
             pytest.skip("WrapperGenerator not available")
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True,
+            bin_dir=str(temp_env["bin_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         malformed_ids = [
@@ -124,8 +132,7 @@ class TestInputValidationEdgeCases:
             "space in.id",  # Space
             "special@char.id",  # Special chars
             "a" * 200,  # Very long
-            "id.with.100.dots."
-            + ".".join([str(i) for i in range(100)]),  # Too many components
+            "id.with.100.dots." + ".".join([str(i) for i in range(100)]),  # Too many components
         ]
 
         for malformed_id in malformed_ids:
@@ -138,7 +145,9 @@ class TestInputValidationEdgeCases:
     def test_path_injection_attempts(self, temp_env) -> None:
         """Test path injection and traversal attempts."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # Path traversal attempts
@@ -188,7 +197,9 @@ class TestSystemResourceEdgeCases:
             pass  # May fail on some systems
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # Should handle disk space issues gracefully
@@ -203,7 +214,9 @@ class TestSystemResourceEdgeCases:
 
         try:
             manager = WrapperManager(
-                config_dir=str(config_dir), verbose=True, emit_mode=True,
+                config_dir=str(config_dir),
+                verbose=True,
+                emit_mode=True,
             )
 
             result = manager.set_preference("test", "flatpak")
@@ -215,7 +228,9 @@ class TestSystemResourceEdgeCases:
     def test_file_descriptor_exhaustion(self, temp_env) -> None:
         """Test file descriptor exhaustion handling."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # Open many file descriptors to simulate exhaustion
@@ -244,7 +259,9 @@ class TestSystemResourceEdgeCases:
         mock_exists.return_value = False
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         result = manager.set_preference("test", "flatpak")
@@ -279,7 +296,9 @@ class TestExternalDependencyFailures:
         mock_subprocess.side_effect = FileNotFoundError("flatpak not found")
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True,
+            bin_dir=str(temp_env["bin_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         result = generator.generate_wrapper("org.test.app")
@@ -299,7 +318,9 @@ class TestExternalDependencyFailures:
         mock_subprocess.return_value = mock_result
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True,
+            bin_dir=str(temp_env["bin_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         result = generator.generate_wrapper("org.test.app")
@@ -309,7 +330,9 @@ class TestExternalDependencyFailures:
     def test_missing_system_commands(self, temp_env) -> None:
         """Test missing system commands."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         result = manager.set_preference("test", "flatpak")
@@ -325,7 +348,9 @@ class TestExternalDependencyFailures:
         pref_file.write_text("corrupted\x00\x01\x02data")
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         result = manager.set_preference("firefox", "flatpak")
@@ -338,7 +363,9 @@ class TestExternalDependencyFailures:
         mock_access.return_value = False
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         result = manager.set_preference("test", "flatpak")
@@ -431,7 +458,9 @@ class TestConcurrencyAndRaceConditions:
         """Test lock contention scenarios."""
         # This would test file locking mechanisms if implemented
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # Simulate lock contention
@@ -470,7 +499,9 @@ class TestTimeoutAndInterruptHandling:
         mock_subprocess.side_effect = TimeoutExpired("command", 30)
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         result = manager.set_preference("test", "flatpak")
@@ -479,7 +510,9 @@ class TestTimeoutAndInterruptHandling:
     def test_signal_interrupt_handling(self, temp_env) -> None:
         """Test signal interrupt handling."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # Simulate interrupt
@@ -507,7 +540,9 @@ class TestTimeoutAndInterruptHandling:
         mock_sleep.side_effect = lambda x: time.sleep(0.01)  # Short sleep
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         start_time = time.time()
@@ -573,7 +608,9 @@ class TestMemoryAndResourceLimits:
     def test_extreme_unicode_content(self, temp_env) -> None:
         """Test extreme Unicode content handling."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # Test with extremely long Unicode strings
@@ -581,9 +618,7 @@ class TestMemoryAndResourceLimits:
         assert isinstance(result, bool)  # Should handle Unicode gracefully
 
         # Test with mixed encodings and special Unicode
-        "".join(
-            chr(i) for i in range(0x100, 0x200)
-        )  # Various Unicode chars
+        "".join(chr(i) for i in range(0x100, 0x200))  # Various Unicode chars
         try:
             result = manager.set_preference("special_unicode", "flatpak")
             assert isinstance(result, bool)

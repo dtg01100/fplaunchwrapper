@@ -10,12 +10,13 @@ from unittest.mock import Mock, patch
 
 # Add the project root to the path
 import sys
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from fplaunch.generate import WrapperGenerator
-from fplaunch.launch import AppLauncher
-from fplaunch.manage import WrapperManager
-from fplaunch.cleanup import WrapperCleanup
+from lib.generate import WrapperGenerator
+from lib.launch import AppLauncher
+from lib.manage import WrapperManager
+from lib.cleanup import WrapperCleanup
 
 
 class TestIntegrationWorkflows:
@@ -32,15 +33,14 @@ class TestIntegrationWorkflows:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_wrapper_generation_and_launch(self) -> None:
         """Test generating a wrapper and launching it."""
         # Generate a wrapper
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         app_name = "test_app"
         flatpak_id = "org.test.App"
@@ -63,28 +63,21 @@ class TestIntegrationWorkflows:
         # Generate a wrapper
         flatpak_id = "org.test.App"
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         app_name = "test_app"
         result = generator.generate_wrapper(app_name, flatpak_id=flatpak_id)
         assert result is True
 
         # Set a preference
-        manager = WrapperManager(
-            config_dir=str(self.config_dir),
-            verbose=True
-        )
+        manager = WrapperManager(config_dir=str(self.config_dir), verbose=True)
         # Use standard preference value instead of flatpak_id
         pref_result = manager.set_preference(app_name, "flatpak")
         assert pref_result is True
 
         # Clean up the wrapper
         cleanup = WrapperCleanup(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         cleanup_result = cleanup.cleanup_app(app_name)
         assert cleanup_result is True
@@ -97,24 +90,15 @@ class TestIntegrationWorkflows:
         """Test a complete end-to-end workflow."""
         # Generate multiple wrappers
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
-        apps = [
-            ("app1", "org.test.App1"),
-            ("app2", "org.test.App2"),
-            ("app3", "org.test.App3")
-        ]
+        apps = [("app1", "org.test.App1"), ("app2", "org.test.App2"), ("app3", "org.test.App3")]
         for app_name, flatpak_id in apps:
             result = generator.generate_wrapper(app_name, flatpak_id=flatpak_id)
             assert result is True
 
         # Set preferences for the apps
-        manager = WrapperManager(
-            config_dir=str(self.config_dir),
-            verbose=True
-        )
+        manager = WrapperManager(config_dir=str(self.config_dir), verbose=True)
         for app_name, flatpak_id in apps:
             pref_result = manager.set_preference(app_name, flatpak_id)
             assert pref_result is True
@@ -122,16 +106,16 @@ class TestIntegrationWorkflows:
         # Launch each app
         for app_name, flatpak_id in apps:
             launcher = AppLauncher(app_name=app_name)
-            with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+            with patch("subprocess.run") as mock_run, patch(
+                "fplaunch.safety.safe_launch_check", return_value=True
+            ):
                 mock_run.return_value = Mock(returncode=0)
                 launch_result = launcher.launch()
                 assert launch_result is True
 
         # Clean up all wrappers
         cleanup = WrapperCleanup(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         for app_name, _ in apps:
             cleanup_result = cleanup.cleanup_app(app_name)
@@ -147,19 +131,14 @@ class TestIntegrationWorkflows:
         # Generate a wrapper
         flatpak_id = "org.test.App"
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         app_name = "test_app"
         result = generator.generate_wrapper(app_name, flatpak_id=flatpak_id)
         assert result is True
 
         # Use WrapperManager to set a preference
-        manager = WrapperManager(
-            config_dir=str(self.config_dir),
-            verbose=True
-        )
+        manager = WrapperManager(config_dir=str(self.config_dir), verbose=True)
         pref_result = manager.set_preference(app_name, flatpak_id)
         assert pref_result is True
 
@@ -174,10 +153,7 @@ class TestIntegrationWorkflows:
     def test_wrapper_generation_with_preferences(self) -> None:
         """Test generating wrappers with preferences."""
         # Set a preference first
-        manager = WrapperManager(
-            config_dir=str(self.config_dir),
-            verbose=True
-        )
+        manager = WrapperManager(config_dir=str(self.config_dir), verbose=True)
         app_name = "test_app"
         flatpak_id = "org.test.App"
         pref_result = manager.set_preference(app_name, flatpak_id)
@@ -185,9 +161,7 @@ class TestIntegrationWorkflows:
 
         # Generate a wrapper
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         result = generator.generate_wrapper(app_name, flatpak_id=flatpak_id)
         assert result is True

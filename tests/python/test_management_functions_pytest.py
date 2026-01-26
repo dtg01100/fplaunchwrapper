@@ -11,7 +11,7 @@ import pytest
 
 # Add lib to path
 try:
-    from fplaunch.manage import WrapperManager
+    from lib.manage import WrapperManager
 
     MANAGE_AVAILABLE = True
 except ImportError:
@@ -42,7 +42,9 @@ class TestManagementFunctions:
     def test_preference_setting(self, temp_env) -> None:
         """Test preference setting - replaces Test 1."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Test valid preference
@@ -103,7 +105,9 @@ class TestManagementFunctions:
     def test_environment_variable_management(self, temp_env) -> None:
         """Test environment variable management - replaces Test 3."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Set environment variable
@@ -118,7 +122,9 @@ class TestManagementFunctions:
 
         # Set another variable
         result = manager.set_environment_variable(
-            "firefox", "ANOTHER_VAR", "another_value",
+            "firefox",
+            "ANOTHER_VAR",
+            "another_value",
         )
         assert result is True
 
@@ -130,7 +136,9 @@ class TestManagementFunctions:
     def test_blocklist_management(self, temp_env) -> None:
         """Test blocklist management - replaces Test 4."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Block an app
@@ -159,7 +167,9 @@ class TestManagementFunctions:
     def test_unblock_functionality(self, temp_env) -> None:
         """Test unblock functionality - replaces Test 5."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # First block some apps
@@ -184,7 +194,9 @@ class TestManagementFunctions:
     def test_export_import_preferences(self, temp_env) -> None:
         """Test export/import preferences - replaces Test 6."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Create some preferences
@@ -222,9 +234,7 @@ class TestManagementFunctions:
         assert (temp_env["config_dir"] / "aliases").exists()
 
         # Check preference values
-        assert (
-            temp_env["config_dir"] / "firefox.pref"
-        ).read_text().strip() == "flatpak"
+        assert (temp_env["config_dir"] / "firefox.pref").read_text().strip() == "flatpak"
         assert (temp_env["config_dir"] / "chrome.pref").read_text().strip() == "system"
         assert (temp_env["config_dir"] / "vlc.pref").read_text().strip() == "flatpak"
 
@@ -232,7 +242,9 @@ class TestManagementFunctions:
     def test_script_management(self, temp_env) -> None:
         """Test script management - replaces Test 7."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Create pre-launch script
@@ -332,7 +344,9 @@ echo {wrapper}
     def test_edge_cases_and_security(self, temp_env) -> None:
         """Test edge cases and security - replaces aggressive testing in shell script."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Test empty preference values
@@ -400,7 +414,9 @@ echo {wrapper}
         import threading
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=False, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=False,
+            emit_mode=False,
         )
 
         results = []
@@ -433,7 +449,9 @@ echo {wrapper}
     def test_data_integrity_validation(self, temp_env) -> None:
         """Test data integrity and error recovery."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Test corrupted preference file recovery

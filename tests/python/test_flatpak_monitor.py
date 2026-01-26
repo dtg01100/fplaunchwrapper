@@ -12,7 +12,7 @@ import pytest
 
 # Add lib to path
 try:
-    from fplaunch.flatpak_monitor import FlatpakMonitor, start_flatpak_monitoring
+    from lib.flatpak_monitor import FlatpakMonitor, start_flatpak_monitoring
 except ImportError:
     # Mock it if not available
     FlatpakMonitor = None
@@ -203,12 +203,12 @@ class TestFlatpakMonitor:
         callback = Mock()
 
         try:
-            start_flatpak_monitoring(callback=callback, daemon=True)
+            monitor = start_flatpak_monitoring(callback=callback, daemon=True)
+            # In daemon mode, it returns the monitor immediately
+            assert monitor is not None
+            assert monitor.callback == callback
         except KeyboardInterrupt:
             pass  # Expected
-
-        # Should have started observer
-        mock_observer.start.assert_called_once()
 
     @patch("lib.flatpak_monitor.Observer")
     def test_monitor_error_handling(self, mock_observer_class) -> None:
@@ -226,7 +226,7 @@ class TestFlatpakMonitor:
 
         # Should handle errors gracefully by returning False, not raising exception
         result = monitor.start()
-        
+
         # Verify error was handled: start() returns False on error
         assert result is False
         # Verify observer was attempted to be created and started
@@ -438,7 +438,7 @@ class TestFlatpakMonitorIntegration:
             monitor = FlatpakMonitor(**config)
             assert monitor is not None
 
-    @patch("fplaunch.flatpak_monitor.os.path.exists")
+    @patch("lib.flatpak_monitor.os.path.exists")
     def test_monitor_directory_discovery(self, mock_exists) -> None:
         """Test automatic discovery of Flatpak directories."""
         if not FlatpakMonitor:
@@ -453,7 +453,7 @@ class TestFlatpakMonitorIntegration:
         # Should discover available Flatpak directories
         # (This is internal implementation detail)
 
-    @patch("fplaunch.flatpak_monitor.time.sleep")
+    @patch("lib.flatpak_monitor.time.sleep")
     def test_monitor_performance_under_load(self, mock_sleep) -> None:
         """Test monitor performance with many events."""
         if not FlatpakMonitor:

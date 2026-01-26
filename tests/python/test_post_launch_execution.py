@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from fplaunch.generate import WrapperGenerator
+from lib.generate import WrapperGenerator
 
 
 class TestPostLaunchScriptExecution:
@@ -83,13 +83,14 @@ class TestPostLaunchScriptExecution:
         # Verify the wrapper contains post-launch execution for successful exit
         assert "run_post_launch_script" in wrapper_content
         assert "FPWRAPPER_EXIT_CODE" in wrapper_content
-        
+
         # The wrapper should not use 'exec' for the main launch anymore
         # to allow post-script execution
-        lines = wrapper_content.split('\n')
+        lines = wrapper_content.split("\n")
         has_non_exec_launch = any(
-            'flatpak run' in line and 'exec flatpak run' not in line
-            for line in lines if 'flatpak run' in line
+            "flatpak run" in line and "exec flatpak run" not in line
+            for line in lines
+            if "flatpak run" in line
         )
         # Note: The current wrapper still uses 'exec' in some paths, but we're adding
         # support for post-launch via wrapper refactoring
@@ -102,7 +103,7 @@ class TestPostLaunchScriptExecution:
         # Create a wrapper using the generator
         wrapper_name = "test-app"
         app_id = "com.test.App"
-        
+
         generator = WrapperGenerator(str(bin_dir), config_dir=str(config_dir))
         wrapper_content = generator.create_wrapper_script(wrapper_name, app_id)
 
@@ -118,12 +119,15 @@ class TestPostLaunchScriptExecution:
         # Create a wrapper using the generator
         wrapper_name = "test-app"
         app_id = "com.test.App"
-        
+
         generator = WrapperGenerator(str(bin_dir), config_dir=str(config_dir))
         wrapper_content = generator.create_wrapper_script(wrapper_name, app_id)
 
         # Verify the wrapper includes source environment variable passing
-        assert 'export FPWRAPPER_SOURCE="$source"' in wrapper_content or "FPWRAPPER_SOURCE" in wrapper_content
+        assert (
+            'export FPWRAPPER_SOURCE="$source"' in wrapper_content
+            or "FPWRAPPER_SOURCE" in wrapper_content
+        )
         assert "run_post_launch_script" in wrapper_content
 
     def test_post_launch_script_error_handling(self, temp_dirs):
@@ -164,7 +168,7 @@ class TestPostLaunchScriptExecution:
         # Verify force-interactive flag handling code is in wrapper
         assert "--fpwrapper-force-interactive" in wrapper_content
         assert 'FPWRAPPER_FORCE="interactive"' in wrapper_content
-        assert 'shift' in wrapper_content  # Should shift args after flag
+        assert "shift" in wrapper_content  # Should shift args after flag
 
     def test_wrapper_script_generation_includes_post_launch_function(self, temp_dirs):
         """Test that generated wrappers include post-launch function."""

@@ -13,11 +13,11 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from fplaunch.generate import WrapperGenerator
-from fplaunch.launch import AppLauncher
-from fplaunch.manage import WrapperManager
-from fplaunch.cleanup import WrapperCleanup
-from fplaunch.safety import is_dangerous_wrapper, safe_launch_check
+from lib.generate import WrapperGenerator
+from lib.launch import AppLauncher
+from lib.manage import WrapperManager
+from lib.cleanup import WrapperCleanup
+from lib.safety import is_dangerous_wrapper, safe_launch_check
 
 
 class TestSecurity:
@@ -225,9 +225,7 @@ class TestSecurity:
         assert result is True
 
         # Clean up with a sanitized app name
-        cleanup = WrapperCleanup(
-            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir)
-        )
+        cleanup = WrapperCleanup(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
         cleanup_result = cleanup.cleanup_app(app_name)
 
         # Verify the result (should succeed with sanitized app name)
@@ -259,7 +257,7 @@ class TestSecurity:
         os.environ["FPWRAPPER_TEST_ENV"] = "true"
 
         # Verify the environment is detected as a test environment
-        from fplaunch.safety import is_test_environment
+        from lib.safety import is_test_environment
 
         assert is_test_environment() is True
 
@@ -271,7 +269,7 @@ class TestSecurity:
         os.environ["FPWRAPPER_TEST_ENV"] = "false"
 
         # Verify the environment is not detected as a test environment
-        from fplaunch.safety import is_test_environment
+        from lib.safety import is_test_environment
 
         assert is_test_environment() is False
 

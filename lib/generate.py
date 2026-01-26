@@ -221,9 +221,7 @@ class WrapperGenerator:
         # Validate inputs to avoid creating unexpected artifact paths (e.g., MagicMock reprs)
         if not isinstance(bin_dir, (str, os.PathLike)):
             raise TypeError("bin_dir must be a string or path-like object")
-        if config_dir is not None and not isinstance(
-            config_dir, (str, os.PathLike, bool)
-        ):
+        if config_dir is not None and not isinstance(config_dir, (str, os.PathLike, bool)):
             raise TypeError("config_dir must be a string or path-like object or None")
 
         self.bin_dir = Path(bin_dir).expanduser().resolve()
@@ -232,9 +230,7 @@ class WrapperGenerator:
         self.emit_verbose = emit_verbose
         self.lock_name = "generate"
         self.config_dir = (
-            Path(config_dir)
-            if config_dir
-            else (Path.home() / ".config" / "fplaunchwrapper")
+            Path(config_dir) if config_dir else (Path.home() / ".config" / "fplaunchwrapper")
         )
 
         # Ensure directories exist (unless in emit mode)
@@ -281,9 +277,7 @@ class WrapperGenerator:
         """Run a command with optional progress display."""
         if description and console and not self.verbose:
             with console.status(f"[bold green]{description}..."):
-                result = subprocess.run(
-                    cmd, check=False, capture_output=True, text=True
-                )
+                result = subprocess.run(cmd, check=False, capture_output=True, text=True)
         else:
             if self.verbose:
                 self.log(f"Running: {' '.join(cmd)}")
@@ -479,9 +473,7 @@ class WrapperGenerator:
                     _ = wrapper_path.read_text()
                 except Exception as e:
                     # Can't read file (possibly mocked); allow creation
-                    self.log(
-                        f"Note: Could not verify existing wrapper file: {e}", "info"
-                    )
+                    self.log(f"Note: Could not verify existing wrapper file: {e}", "info")
                 else:
                     self.log(
                         f"Name collision for '{wrapper_name}': existing file not a wrapper",

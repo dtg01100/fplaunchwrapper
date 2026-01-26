@@ -49,13 +49,16 @@ class TestComprehensiveSuite:
     def test_cli_help_command(self) -> None:
         """Test CLI help command."""
         import sys
+
         self.run_command_test([sys.executable, "-m", "fplaunch.cli", "--help"], "CLI help command")
 
     def test_cli_config_command(self) -> None:
         """Test CLI config command."""
         import sys
+
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "config"], "CLI config command",
+            [sys.executable, "-m", "fplaunch.cli", "config"],
+            "CLI config command",
         )
 
     def test_emit_mode_no_side_effects(self, temp_env) -> None:
@@ -65,6 +68,7 @@ class TestComprehensiveSuite:
 
         # Run emit commands
         import sys
+
         self.run_command_test(
             [sys.executable, "-m", "fplaunch.cli", "generate", "--emit", str(temp_env["bin_dir"])],
             "Generate emit mode",
@@ -91,18 +95,22 @@ class TestComprehensiveSuite:
         # Test that emit verbose commands produce output with content markers
         # This is a basic smoke test - full validation would require more setup
         import sys
+
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "config", "--emit"], "Config emit mode",
+            [sys.executable, "-m", "fplaunch.cli", "config", "--emit"],
+            "Config emit mode",
         )
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "monitor", "--emit"], "Monitor emit mode",
+            [sys.executable, "-m", "fplaunch.cli", "monitor", "--emit"],
+            "Monitor emit mode",
         )
 
     def test_cli_emit_flags_integration(self) -> None:
         """Test CLI emit flags work properly."""
         # Test individual emit flags
         import sys
+
         commands = [
             (
                 [sys.executable, "-m", "fplaunch.cli", "generate", "--emit", "/tmp/test"],
@@ -132,6 +140,7 @@ class TestComprehensiveSuite:
         # Test invalid command
         # Test invalid command - ensure CLI returns non-zero for unknown command
         import sys
+
         # Call main() directly with manipulated argv to ensure exit code reflects error
         cmd = [
             sys.executable,
@@ -141,15 +150,19 @@ class TestComprehensiveSuite:
             ),
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)
-        assert result.returncode != 0, f"Expected non-zero exit code for unknown command, got {result.returncode}\nstdout:{result.stdout}\nstderr:{result.stderr}"
+        assert (
+            result.returncode != 0
+        ), f"Expected non-zero exit code for unknown command, got {result.returncode}\nstdout:{result.stdout}\nstderr:{result.stderr}"
 
     def test_integration_workflow(self) -> None:
         """Test basic integration workflow."""
         # This is a smoke test for the overall system
         # In a real scenario, this would test a complete workflow
         import sys
+
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "--help"], "Basic CLI integration",
+            [sys.executable, "-m", "fplaunch.cli", "--help"],
+            "Basic CLI integration",
         )
 
 

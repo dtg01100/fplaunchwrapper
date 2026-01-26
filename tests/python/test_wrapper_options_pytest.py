@@ -13,7 +13,7 @@ import pytest
 
 # Add lib to path
 try:
-    from fplaunch.generate import WrapperGenerator
+    from lib.generate import WrapperGenerator
 
     GENERATE_AVAILABLE = True
 except ImportError:
@@ -82,7 +82,10 @@ exit 0
         flatpak.chmod(0o755)
 
         generator = WrapperGenerator(
-            bin_dir=str(bin_dir), config_dir=str(config_dir), verbose=True, emit_mode=False,
+            bin_dir=str(bin_dir),
+            config_dir=str(config_dir),
+            verbose=True,
+            emit_mode=False,
         )
         assert generator.generate_wrapper("org.mozilla.firefox") is True
 
@@ -117,7 +120,9 @@ exit 0
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -127,16 +132,21 @@ exit 0
 
         # Test --fpwrapper-help option
         from subprocess import CompletedProcess
+
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = CompletedProcess(
                 args=[str(wrapper_path), "--fpwrapper-help"],
                 returncode=0,
                 stdout="Wrapper for firefox\nFlatpak ID: org.mozilla.firefox\nAvailable options:\n--fpwrapper-help\n--fpwrapper-info\n",
-                stderr=""
+                stderr="",
             )
             cmd = [str(wrapper_path), "--fpwrapper-help"]
             result = subprocess.run(
-                cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=temp_env["temp_dir"],
             )
 
             # Should show help information
@@ -163,7 +173,9 @@ exit 0
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -173,7 +185,11 @@ exit 0
         # Test --fpwrapper-info option
         cmd = [str(wrapper_path), "--fpwrapper-info"]
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -194,7 +210,9 @@ exit 0
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -204,16 +222,18 @@ exit 0
         # Test --fpwrapper-config-dir option
         cmd = [str(wrapper_path), "--fpwrapper-config-dir"]
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
         output = result.stdout.strip()
 
         # Should show the XDG config directory path
-        expected_path = (
-            f"{os.path.expanduser('~')}/.local/share/applications/org.mozilla.firefox"
-        )
+        expected_path = f"{os.path.expanduser('~')}/.local/share/applications/org.mozilla.firefox"
         assert output == expected_path
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
@@ -225,7 +245,10 @@ exit 0
         def mock_run(cmd, **kwargs):
             if cmd[:2] == ["flatpak", "info"]:
                 return subprocess.CompletedProcess(
-                    args=cmd, returncode=0, stdout="Application: org.mozilla.firefox\nRuntime: org.fedoraproject.Platform/x86_64/f40\n", stderr=""
+                    args=cmd,
+                    returncode=0,
+                    stdout="Application: org.mozilla.firefox\nRuntime: org.fedoraproject.Platform/x86_64/f40\n",
+                    stderr="",
                 )
             return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
@@ -240,7 +263,9 @@ exit 0
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -250,7 +275,11 @@ exit 0
         # Test --fpwrapper-sandbox-info option
         cmd = [str(wrapper_path), "--fpwrapper-sandbox-info"]
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -284,7 +313,9 @@ exit 0
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -293,12 +324,18 @@ exit 0
 
         # Mock stdin for interactive choice
         import io
+
         with patch(
-            "sys.stdin", io.StringIO("5\n"),
+            "sys.stdin",
+            io.StringIO("5\n"),
         ):  # Choose "Show current overrides"
             cmd = [str(wrapper_path), "--fpwrapper-edit-sandbox"]
             result = subprocess.run(
-                cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=temp_env["temp_dir"],
             )
 
             # Should work (exact behavior depends on interactive choices)
@@ -329,7 +366,9 @@ exit 0
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -338,10 +377,15 @@ exit 0
 
         # Mock stdin for "yes" confirmation
         import io
+
         with patch("sys.stdin", io.StringIO("yes\n")):
             cmd = [str(wrapper_path), "--fpwrapper-sandbox-yolo"]
             result = subprocess.run(
-                cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=temp_env["temp_dir"],
             )
 
             # Should succeed (flatpak availability is checked)
@@ -373,7 +417,9 @@ exit 0
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -383,7 +429,11 @@ exit 0
         # Test --fpwrapper-sandbox-reset option
         cmd = [str(wrapper_path), "--fpwrapper-sandbox-reset"]
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -414,7 +464,9 @@ exit 0
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -424,7 +476,11 @@ exit 0
         # Test --fpwrapper-run-unrestricted option
         cmd = [str(wrapper_path), "--fpwrapper-run-unrestricted", "--version"]
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -443,7 +499,9 @@ exit 0
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -453,7 +511,11 @@ exit 0
         # Test --fpwrapper-set-override system
         cmd = [str(wrapper_path), "--fpwrapper-set-override", "system"]
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_env["temp_dir"],
         )
 
         assert result.returncode == 0
@@ -474,26 +536,31 @@ exit 0
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             assert generator.generate_wrapper("org.mozilla.firefox") is True
 
         wrapper_path = temp_env["bin_dir"] / "firefox"
         pref_file = temp_env["config_dir"] / "firefox.pref"
-        
+
         # Verify the wrapper script contains the alias implementation
         wrapper_content = wrapper_path.read_text()
-        
+
         # Check that both flags are mentioned in help
         assert "--fpwrapper-set-preference" in wrapper_content
         assert "--fpwrapper-set-override" in wrapper_content
-        
+
         # Check that the alias is implemented in the conditional
-        assert 'if [ "$1" = "--fpwrapper-set-override" ] || [ "$1" = "--fpwrapper-set-preference' in wrapper_content
-        
+        assert (
+            'if [ "$1" = "--fpwrapper-set-override" ] || [ "$1" = "--fpwrapper-set-preference'
+            in wrapper_content
+        )
+
         # Verify the help text mentions it as an alias
         assert "Alias for --fpwrapper-set-override" in wrapper_content
-        
+
         # Test that executing both produces identical behavior (write same preference)
         # by checking the wrapper has proper preference file handling
         assert 'echo "$2" > "$PREF_FILE"' in wrapper_content
@@ -552,14 +619,22 @@ echo "testapp executed"
         # Test --fpwrapper-set-pre-script
         cmd = [str(wrapper_path), "--fpwrapper-set-pre-script", str(pre_script)]
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_env["temp_dir"],
         )
         assert result.returncode == 0
 
         # Test --fpwrapper-set-post-script
         cmd = [str(wrapper_path), "--fpwrapper-set-post-script", str(post_script)]
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"],
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_env["temp_dir"],
         )
         assert result.returncode == 0
 
@@ -576,7 +651,7 @@ echo "testapp executed"
         mock_subprocess.return_value = subprocess.CompletedProcess(
             args=[], returncode=0, stdout="Interactive mode forced", stderr=""
         )
-        
+
         # Generate wrapper
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -586,7 +661,9 @@ echo "testapp executed"
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -596,7 +673,12 @@ echo "testapp executed"
         # Test --fpwrapper-force-interactive
         cmd = [str(wrapper_path), "--fpwrapper-force-interactive"]
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"], input="1\n",
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_env["temp_dir"],
+            input="1\n",
         )  # Choose system
 
         # Should work in non-interactive mode when forced
@@ -631,7 +713,9 @@ echo "testapp executed"
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -645,7 +729,12 @@ echo "testapp executed"
         env["FPWRAPPER_FORCE"] = "non-interactive"  # Force non-interactive mode
 
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, cwd=temp_env["temp_dir"], env=env,
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_env["temp_dir"],
+            env=env,
         )
 
         # Should bypass interactive prompts and use system binary if available
@@ -703,7 +792,9 @@ echo "testapp executed"
         hook_dir = config_dir / "scripts" / "firefox"
 
         set_pre = self._run_wrapper(
-            generated_wrapper, "--fpwrapper-set-pre-script", str(pre_script),
+            generated_wrapper,
+            "--fpwrapper-set-pre-script",
+            str(pre_script),
         )
         # In non-interactive mode, wrapper options like --fpwrapper-set-pre-script
         # are processed but the wrapper does not run management commands interactively.
@@ -713,7 +804,9 @@ echo "testapp executed"
         assert isinstance(set_pre.returncode, int)
 
         set_post = self._run_wrapper(
-            generated_wrapper, "--fpwrapper-set-post-script", str(post_script),
+            generated_wrapper,
+            "--fpwrapper-set-post-script",
+            str(post_script),
         )
         assert isinstance(set_post.returncode, int)
 
@@ -729,7 +822,10 @@ echo "testapp executed"
         system_binary.chmod(0o755)
 
         result = self._run_wrapper(
-            generated_wrapper, "--fpwrapper-launch", "system", "--version",
+            generated_wrapper,
+            "--fpwrapper-launch",
+            "system",
+            "--version",
         )
 
         assert result.returncode == 0
@@ -737,7 +833,10 @@ echo "testapp executed"
 
     def test_one_shot_launch_flatpak_path(self, generated_wrapper) -> None:
         result = self._run_wrapper(
-            generated_wrapper, "--fpwrapper-launch", "flatpak", "--arg",
+            generated_wrapper,
+            "--fpwrapper-launch",
+            "flatpak",
+            "--arg",
         )
 
         assert result.returncode == 0
@@ -766,7 +865,9 @@ echo "testapp executed"
         assert isinstance(set_pref.returncode, int)
 
         set_alias = self._run_wrapper(
-            generated_wrapper, "--fpwrapper-set-preference", "flatpak",
+            generated_wrapper,
+            "--fpwrapper-set-preference",
+            "flatpak",
         )
         assert isinstance(set_alias.returncode, int)
 
@@ -780,7 +881,9 @@ echo "testapp executed"
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             assert generator.generate_wrapper("org.mozilla.firefox") is True
 
@@ -789,15 +892,17 @@ echo "testapp executed"
 
         # Extract the preference setting code block
         # Both flags should execute the exact same code path
-        pref_line_1 = wrapper_content.find('if [ "$1" = "--fpwrapper-set-override" ] || [ "$1" = "--fpwrapper-set-preference')
-        pref_line_2 = wrapper_content.find("echo \"$2\" > \"$PREF_FILE\"", pref_line_1)
-        
+        pref_line_1 = wrapper_content.find(
+            'if [ "$1" = "--fpwrapper-set-override" ] || [ "$1" = "--fpwrapper-set-preference'
+        )
+        pref_line_2 = wrapper_content.find('echo "$2" > "$PREF_FILE"', pref_line_1)
+
         # Verify the two flags are in the same conditional
         assert pref_line_1 > 0, "Preference handling code not found"
         assert pref_line_2 > pref_line_1, "Preference file write not found after conditional"
-        
+
         # Extract the actual block to verify both flags are handled together
-        block = wrapper_content[pref_line_1:pref_line_2 + 50]
+        block = wrapper_content[pref_line_1 : pref_line_2 + 50]
         assert "--fpwrapper-set-preference" in block
         assert "--fpwrapper-set-override" in block
 
@@ -811,9 +916,9 @@ echo "testapp executed"
         assert "--fpwrapper-set-preference" in help_output, "Alias flag not in help"
 
         # Preference should be labeled as an alias
-        assert "Alias for" in help_output or "alias" in help_output.lower(), (
-            "Help text should indicate alias relationship"
-        )
+        assert (
+            "Alias for" in help_output or "alias" in help_output.lower()
+        ), "Help text should indicate alias relationship"
 
     def test_alias_flag_persistence(self, generated_wrapper) -> None:
         """Test that both alias and original flag store preference identically."""

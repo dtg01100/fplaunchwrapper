@@ -40,7 +40,7 @@ class TestMainEntryPoint:
         mock_cli_main.return_value = 0
 
         # Import and call main
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -49,23 +49,25 @@ class TestMainEntryPoint:
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "generate", "/home/vscode/bin"])
-    @patch("fplaunch.generate.WrapperGenerator.run")
-    def test_main_entry_generate(self, mock_run) -> None:
+    @patch("lib.generate.WrapperGenerator")
+    def test_main_entry_generate(self, mock_wrapper_generator) -> None:
         """Test main entry point routes to generate."""
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        mock_run.return_value = 0
+        mock_instance = Mock()
+        mock_instance.run.return_value = 0
+        mock_wrapper_generator.return_value = mock_instance
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
-        mock_run.assert_called_once()
+        mock_wrapper_generator.assert_called_once()
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "set-pref", "firefox", "flatpak"])
-    @patch("fplaunch.manage.WrapperManager.set_preference")
+    @patch("lib.manage.WrapperManager.set_preference")
     def test_main_entry_set_pref(self, mock_set_preference) -> None:
         """Test main entry point routes to manage."""
         if not fplaunch:
@@ -73,7 +75,7 @@ class TestMainEntryPoint:
 
         mock_set_preference.return_value = True
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -81,7 +83,7 @@ class TestMainEntryPoint:
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "launch", "firefox"])
-    @patch("fplaunch.launch.AppLauncher.launch")
+    @patch("lib.launch.AppLauncher.launch")
     def test_main_entry_launch(self, mock_launch) -> None:
         """Test main entry point routes to launch."""
         if not fplaunch:
@@ -89,7 +91,7 @@ class TestMainEntryPoint:
 
         mock_launch.return_value = True
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -97,7 +99,7 @@ class TestMainEntryPoint:
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "cleanup"])
-    @patch("fplaunch.cleanup.WrapperCleanup.run")
+    @patch("lib.cleanup.WrapperCleanup.run")
     def test_main_entry_cleanup(self, mock_run) -> None:
         """Test main entry point routes to cleanup."""
         if not fplaunch:
@@ -105,7 +107,7 @@ class TestMainEntryPoint:
 
         mock_run.return_value = 0
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -113,7 +115,7 @@ class TestMainEntryPoint:
         assert result == 0
 
     @patch("sys.argv", ["fplaunch", "systemd-setup"])
-    @patch("fplaunch.systemd_setup.SystemdSetup.run")
+    @patch("lib.systemd_setup.SystemdSetup.run")
     def test_main_entry_systemd_setup(self, mock_setup_service) -> None:
         """Test main entry point routes to systemd setup."""
         if not fplaunch:
@@ -121,7 +123,7 @@ class TestMainEntryPoint:
 
         mock_setup_service.return_value = 0
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -139,7 +141,7 @@ class TestMainEntryPoint:
         mock_config = Mock()
         mock_create_config.return_value = mock_config
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -155,7 +157,7 @@ class TestMainEntryPoint:
 
         mock_monitor_main.return_value = 0
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -168,7 +170,7 @@ class TestMainEntryPoint:
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -181,7 +183,7 @@ class TestMainEntryPoint:
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -195,7 +197,7 @@ class TestMainEntryPoint:
             pytest.skip("fplaunch module not available")
 
         # Mock version handling if it exists
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -204,7 +206,7 @@ class TestMainEntryPoint:
 
     @patch.dict("os.environ", {"FPWRAPPER_DEBUG": "1"})
     @patch("sys.argv", ["fplaunch", "generate", "/tmp/bin"])
-    @patch("fplaunch.generate.WrapperGenerator.run")
+    @patch("lib.generate.WrapperGenerator.run")
     def test_main_entry_debug_mode(self, mock_run) -> None:
         """Test main entry point respects debug environment."""
         if not fplaunch:
@@ -212,7 +214,7 @@ class TestMainEntryPoint:
 
         mock_run.return_value = 0
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -226,7 +228,7 @@ class TestMainEntryPoint:
             pytest.skip("fplaunch module not available")
 
         # Help is handled by Click, should exit with 0
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -275,7 +277,7 @@ class TestCommandRouting:
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 
@@ -293,7 +295,7 @@ class TestCommandRouting:
         # Mock import error
         mock_import.side_effect = ImportError("Module not found")
 
-        from fplaunch.fplaunch import main
+        from lib.fplaunch import main
 
         result = main()
 

@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 # Import actual implementation
-from fplaunch.cleanup import WrapperCleanup, main
+from lib.cleanup import WrapperCleanup, main
 
 
 class TestWrapperCleanupReal:
@@ -29,20 +29,24 @@ class TestWrapperCleanupReal:
         self.data_dir.mkdir()
 
         # Create REAL test files (safe echo commands instead of actual launches)
-        (self.bin_dir / "firefox").write_text("#!/usr/bin/env bash\necho 'Firefox launched'\nexit 0\n")
-        (self.bin_dir / "chrome").write_text("#!/usr/bin/env bash\necho 'Chrome launched'\nexit 0\n")
+        (self.bin_dir / "firefox").write_text(
+            "#!/usr/bin/env bash\necho 'Firefox launched'\nexit 0\n"
+        )
+        (self.bin_dir / "chrome").write_text(
+            "#!/usr/bin/env bash\necho 'Chrome launched'\nexit 0\n"
+        )
         (self.bin_dir / "gimp").write_text("#!/usr/bin/env bash\necho 'GIMP launched'\nexit 0\n")
-        
+
         # Make them executable
         (self.bin_dir / "firefox").chmod(0o755)
         (self.bin_dir / "chrome").chmod(0o755)
         (self.bin_dir / "gimp").chmod(0o755)
-        
+
         # Create config files
         (self.config_dir / "firefox.pref").write_text("flatpak")
         (self.config_dir / "chrome.pref").write_text("system")
         (self.config_dir / "gimp.pref").write_text("flatpak")
-        
+
         # Create data files
         (self.data_dir / "cache_file").write_text("cache data")
         (self.data_dir / "log_file.log").write_text("log content")
@@ -82,7 +86,7 @@ class TestWrapperCleanupReal:
 
         # Verify REAL results
         assert len(artifacts) >= 7  # 3 wrappers + 3 prefs + 2 data files
-        
+
         # Verify specific files found
         artifact_names = [a.name for a in artifacts]
         assert "firefox" in artifact_names
@@ -124,7 +128,7 @@ class TestWrapperCleanupReal:
 
         # Run REAL cleanup in dry-run
         cleanup.scan_for_cleanup_items()
-        
+
         # Verify files still exist
         files_after = list(self.bin_dir.glob("*"))
         assert len(files_after) == count_before
@@ -217,7 +221,7 @@ class TestWrapperCleanupReal:
     def test_fpwrapper_force_env_sets_assume_yes(self) -> None:
         """Test FPWRAPPER_FORCE environment variable sets assume_yes."""
         import os
-        
+
         old_env = os.environ.get("FPWRAPPER_FORCE")
         try:
             os.environ["FPWRAPPER_FORCE"] = "1"
@@ -242,7 +246,7 @@ class TestWrapperCleanupReal:
 
         # Should not raise exception
         cleanup.scan_for_cleanup_items()
-        
+
         # Should have empty results
         assert len(cleanup.cleanup_items["wrappers"]) == 0
         assert len(cleanup.cleanup_items["preferences"]) == 0
@@ -251,9 +255,9 @@ class TestWrapperCleanupReal:
     def test_get_systemd_unit_dir(self) -> None:
         """Test _get_systemd_unit_dir returns correct path."""
         cleanup = WrapperCleanup(bin_dir=str(self.bin_dir))
-        
+
         systemd_dir = cleanup._get_systemd_unit_dir()
-        
+
         assert isinstance(systemd_dir, Path)
         assert "systemd" in str(systemd_dir)
         assert "user" in str(systemd_dir)
@@ -275,10 +279,7 @@ class TestWrapperCleanupReal:
 
         # Should find the symlink
         # (Implementation may or may not track symlinks separately)
-        all_items = (
-            cleanup.cleanup_items["wrappers"]
-            + cleanup.cleanup_items["symlinks"]
-        )
+        all_items = cleanup.cleanup_items["wrappers"] + cleanup.cleanup_items["symlinks"]
         assert any("firefox-link" in str(item) for item in all_items)
 
 
@@ -373,11 +374,11 @@ class TestCleanupIntegration:
     def test_cleanup_with_permission_errors(self) -> None:
         """Test cleanup handles permission errors gracefully."""
         import os
-        
+
         # Create a file
         readonly_file = self.bin_dir / "readonly-wrapper"
         readonly_file.write_text("#!/bin/bash\necho test\n")
-        
+
         # Make directory read-only to prevent deletion
         os.chmod(self.bin_dir, 0o555)
 
@@ -389,14 +390,14 @@ class TestCleanupIntegration:
             )
 
             cleanup.scan_for_cleanup_items()
-            
+
             # Should handle permission error gracefully
             try:
                 cleanup.perform_cleanup()
             except PermissionError:
                 # Expected - that's fine
                 pass
-            
+
         finally:
             # Restore permissions for cleanup
             os.chmod(self.bin_dir, 0o755)
@@ -407,10 +408,10 @@ class TestCleanupIntegration:
         wrapper = self.bin_dir / "myapp"
         wrapper.write_text("#!/usr/bin/env bash\necho 'MyApp launched'\nexit 0\n")
         wrapper.chmod(0o755)
-        
+
         pref = self.config_dir / "myapp.pref"
         pref.write_text("flatpak")
-        
+
         # Run full cleanup
         cleanup = WrapperCleanup(
             bin_dir=str(self.bin_dir),
@@ -418,13 +419,13 @@ class TestCleanupIntegration:
             dry_run=False,
             assume_yes=True,
         )
-        
+
         # Step 1: Scan
         cleanup.scan_for_cleanup_items()
         assert len(cleanup.cleanup_items["wrappers"]) > 0
-        
+
         # Step 2: Clean
         cleanup.perform_cleanup()
-        
+
         # Step 3: Verify
         assert not wrapper.exists()

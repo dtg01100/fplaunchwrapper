@@ -13,7 +13,7 @@ import pytest
 
 # Add lib to path
 try:
-    from fplaunch.generate import WrapperGenerator
+    from lib.generate import WrapperGenerator
 
     # Mock python_utils if needed
     try:
@@ -28,13 +28,9 @@ try:
             python_utils_mock.validate_home_dir = lambda x: x
             python_utils_mock.is_wrapper_file = lambda x: False
             python_utils_mock.get_wrapper_id = lambda x: None
-            python_utils_mock.sanitize_id_to_name = (
-                lambda x: x.split(".")[-1] if "." in x else x
-            )
+            python_utils_mock.sanitize_id_to_name = lambda x: x.split(".")[-1] if "." in x else x
             python_utils_mock.find_executable = lambda x: f"/usr/bin/{x}"
-            python_utils_mock.safe_mktemp = (
-                lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
-            )
+            python_utils_mock.safe_mktemp = lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
     except:
         pass
 
@@ -132,7 +128,9 @@ class TestWrapperGeneration:
 
         # Try to generate wrapper for app with same name but different ID
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["com.visualstudio.code"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["com.visualstudio.code"],
         ):
             result = generator.generate_wrapper("com.visualstudio.code")
 
@@ -166,7 +164,9 @@ class TestWrapperGeneration:
 
         # Try to generate blocked app
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is False  # Should be blocked
@@ -177,7 +177,9 @@ class TestWrapperGeneration:
 
         # Try to generate non-blocked app
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["com.google.chrome"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["com.google.chrome"],
         ):
             result = generator.generate_wrapper("com.google.chrome")
             assert result is True
@@ -284,7 +286,9 @@ class TestWrapperGeneration:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -312,7 +316,9 @@ class TestWrapperGeneration:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -335,7 +341,9 @@ class TestWrapperGeneration:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -379,9 +387,7 @@ class TestWrapperGeneration:
         for wrapper in [old_wrapper1, old_wrapper2]:
             if wrapper.exists():
                 wrapper_id = (
-                    "com.example.oldapp1"
-                    if "oldapp1" in str(wrapper)
-                    else "com.example.oldapp2"
+                    "com.example.oldapp1" if "oldapp1" in str(wrapper) else "com.example.oldapp2"
                 )
                 if wrapper_id not in current_apps:
                     wrapper.unlink()

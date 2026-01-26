@@ -681,7 +681,7 @@ class WrapperCleanup:
 
     def cleanup_app(self, app_id: str) -> bool:
         """Clean up a specific app wrapper."""
-        from fplaunch.python_utils import sanitize_id_to_name
+        from lib.python_utils import sanitize_id_to_name
 
         safe_name = sanitize_id_to_name(app_id)
         wrapper_path = self.bin_dir / safe_name

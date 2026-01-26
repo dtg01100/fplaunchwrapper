@@ -62,13 +62,9 @@ def run_command(
     # Normal execution
     if description and console:
         with console.status(f"[bold green]{description}..."):
-            result = subprocess.run(
-                cmd, check=False, capture_output=not show_output, text=True
-            )
+            result = subprocess.run(cmd, check=False, capture_output=not show_output, text=True)
     else:
-        result = subprocess.run(
-            cmd, check=False, capture_output=not show_output, text=True
-        )
+        result = subprocess.run(cmd, check=False, capture_output=not show_output, text=True)
 
     return result
 
@@ -179,9 +175,7 @@ if CLICK_AVAILABLE:
             else:
                 import sys
 
-                print(
-                    f"Error: Failed to import wrapper generator: {e}", file=sys.stderr
-                )
+                print(f"Error: Failed to import wrapper generator: {e}", file=sys.stderr)
             raise SystemExit(1)
 
     @cli.command()
@@ -297,6 +291,7 @@ if CLICK_AVAILABLE:
             # If subprocess.run has been patched by the test harness, prefer the
             # external script flow so the test's subprocess mock is observed.
             import subprocess as _subp
+
             # Detect if subprocess.run has been patched by the test harness (MagicMock/Mock)
             if hasattr(_subp.run, "assert_called") or hasattr(_subp.run, "assert_called_once"):
                 raise ImportError
@@ -319,7 +314,9 @@ if CLICK_AVAILABLE:
             result = manager.remove_wrapper(app_name, force=True)
             if result:
                 if console:
-                    console.print(f"[green]✓[/green] Uninstalled Flatpak app: [bold]{app_name}[/bold]")
+                    console.print(
+                        f"[green]✓[/green] Uninstalled Flatpak app: [bold]{app_name}[/bold]"
+                    )
                 else:
                     print(f"Uninstalled Flatpak app: {app_name}")
                 return 0
@@ -358,9 +355,7 @@ if CLICK_AVAILABLE:
                 else:
                     import sys
 
-                    print(
-                        f"Error: Failed to remove wrapper: {result.stderr}", file=sys.stderr
-                    )
+                    print(f"Error: Failed to remove wrapper: {result.stderr}", file=sys.stderr)
                 raise SystemExit(result.returncode)
 
             return 0
@@ -373,7 +368,9 @@ if CLICK_AVAILABLE:
         type=click.Path(exists=False, file_okay=False),
         help="Custom configuration directory",
     )
-    @click.option("--remove-data", is_flag=True, help="Also remove application data when uninstalling")
+    @click.option(
+        "--remove-data", is_flag=True, help="Also remove application data when uninstalling"
+    )
     @click.pass_context
     def uninstall(ctx, app_name, emit, config_dir, remove_data):
         """Alias for remove: uninstall a Flatpak wrapper."""
@@ -409,9 +406,7 @@ if CLICK_AVAILABLE:
             return setup.run()
         except ImportError as e:
             if console_err:
-                console_err.print(
-                    f"[red]Error:[/red] Failed to import systemd setup: {e}"
-                )
+                console_err.print(f"[red]Error:[/red] Failed to import systemd setup: {e}")
             raise SystemExit(1)
 
     @cli.command()
@@ -429,7 +424,9 @@ if CLICK_AVAILABLE:
                 print(f"EMIT: flatpak info --show-manifest {app_name}")
             return 0
         try:
-            result = run_command(["flatpak", "info", "--show-manifest", app_name], f"Getting manifest for {app_name}")
+            result = run_command(
+                ["flatpak", "info", "--show-manifest", app_name], f"Getting manifest for {app_name}"
+            )
             if result.returncode == 0:
                 # Include label so tests see the word 'manifest' in output
                 print(f"Manifest: {str(result.stdout)}")
@@ -554,24 +551,18 @@ if CLICK_AVAILABLE:
             elif action == "block":
                 if not value:
                     if console_err:
-                        console_err.print(
-                            "[red]Error:[/red] App name required for block action"
-                        )
+                        console_err.print("[red]Error:[/red] App name required for block action")
                     else:
                         import sys
 
-                        print(
-                            "Error: App name required for block action", file=sys.stderr
-                        )
+                        print("Error: App name required for block action", file=sys.stderr)
                     raise SystemExit(1)
                 config.add_to_blocklist(value)
 
             elif action == "unblock":
                 if not value:
                     if console_err:
-                        console_err.print(
-                            "[red]Error:[/red] App name required for unblock action"
-                        )
+                        console_err.print("[red]Error:[/red] App name required for unblock action")
                     else:
                         import sys
 
@@ -613,9 +604,7 @@ if CLICK_AVAILABLE:
                     # Show current cron interval
                     interval = config.get_cron_interval()
                     if console:
-                        console.print(
-                            f"Current cron interval: [bold]{interval}[/bold] hours"
-                        )
+                        console.print(f"Current cron interval: [bold]{interval}[/bold] hours")
                     else:
                         print(f"Current cron interval: {interval} hours")
                 else:
@@ -653,9 +642,7 @@ if CLICK_AVAILABLE:
 
         except ImportError as e:
             if console_err:
-                console_err.print(
-                    f"[red]Error:[/red] Failed to import config manager: {e}"
-                )
+                console_err.print(f"[red]Error:[/red] Failed to import config manager: {e}")
             else:
                 import sys
 
@@ -718,13 +705,9 @@ if CLICK_AVAILABLE:
                     return 0
                 else:
                     if console_err:
-                        console_err.print(
-                            f"[red]Error:[/red] Failed to create profile: {name}"
-                        )
+                        console_err.print(f"[red]Error:[/red] Failed to create profile: {name}")
                     else:
-                        print(
-                            f"Error: Failed to create profile: {name}", file=sys.stderr
-                        )
+                        print(f"Error: Failed to create profile: {name}", file=sys.stderr)
                     raise SystemExit(1)
 
             elif action == "switch":
@@ -749,9 +732,7 @@ if CLICK_AVAILABLE:
                     return 0
                 else:
                     if console_err:
-                        console_err.print(
-                            f"[red]Error:[/red] Failed to switch to profile: {name}"
-                        )
+                        console_err.print(f"[red]Error:[/red] Failed to switch to profile: {name}")
                     else:
                         print(
                             f"Error: Failed to switch to profile: {name}",
@@ -784,21 +765,15 @@ if CLICK_AVAILABLE:
                 success = manager.export_profile(name, export_path)
                 if success:
                     if console:
-                        console.print(
-                            f"[green]✓[/green] Exported profile to: {export_path}"
-                        )
+                        console.print(f"[green]✓[/green] Exported profile to: {export_path}")
                     else:
                         print(f"Exported profile to: {export_path}")
                     return 0
                 else:
                     if console_err:
-                        console_err.print(
-                            f"[red]Error:[/red] Failed to export profile: {name}"
-                        )
+                        console_err.print(f"[red]Error:[/red] Failed to export profile: {name}")
                     else:
-                        print(
-                            f"Error: Failed to export profile: {name}", file=sys.stderr
-                        )
+                        print(f"Error: Failed to export profile: {name}", file=sys.stderr)
                     raise SystemExit(1)
 
             elif action == "import":
@@ -817,9 +792,7 @@ if CLICK_AVAILABLE:
                 import_path = Path(name)
                 if not import_path.exists():
                     if console_err:
-                        console_err.print(
-                            f"[red]Error:[/red] File not found: {import_path}"
-                        )
+                        console_err.print(f"[red]Error:[/red] File not found: {import_path}")
                     else:
                         print(f"Error: File not found: {import_path}", file=sys.stderr)
                     raise SystemExit(1)
@@ -828,9 +801,7 @@ if CLICK_AVAILABLE:
                 success = manager.import_profile(profile_name, import_path)
                 if success:
                     if console:
-                        console.print(
-                            f"[green]✓[/green] Imported profile: {profile_name}"
-                        )
+                        console.print(f"[green]✓[/green] Imported profile: {profile_name}")
                     else:
                         print(f"Imported profile: {profile_name}")
                     return 0
@@ -855,9 +826,7 @@ if CLICK_AVAILABLE:
 
         except ImportError as e:
             if console_err:
-                console_err.print(
-                    f"[red]Error:[/red] Failed to import config manager: {e}"
-                )
+                console_err.print(f"[red]Error:[/red] Failed to import config manager: {e}")
             else:
                 print(f"Error: Failed to import config manager: {e}", file=sys.stderr)
             raise SystemExit(1)
@@ -906,9 +875,7 @@ if CLICK_AVAILABLE:
             elif action == "get":
                 if not name:
                     if console_err:
-                        console_err.print(
-                            "[red]Error:[/red] Preset name required for get action"
-                        )
+                        console_err.print("[red]Error:[/red] Preset name required for get action")
                     else:
                         print(
                             "Error: Preset name required for get action",
@@ -954,7 +921,7 @@ if CLICK_AVAILABLE:
                         formatted_permissions.append(f"--{perm}")
                     else:
                         formatted_permissions.append(perm)
-                
+
                 manager.add_permission_preset(name, formatted_permissions)
                 if console:
                     console.print(f"[green]✓[/green] Added preset: {name}")
@@ -998,9 +965,7 @@ if CLICK_AVAILABLE:
 
         except ImportError as e:
             if console_err:
-                console_err.print(
-                    f"[red]Error:[/red] Failed to import config manager: {e}"
-                )
+                console_err.print(f"[red]Error:[/red] Failed to import config manager: {e}")
             else:
                 print(f"Error: Failed to import config manager: {e}", file=sys.stderr)
             raise SystemExit(1)
@@ -1059,9 +1024,7 @@ if CLICK_AVAILABLE:
                 # Install units
                 if setup.install_systemd_units():
                     if console:
-                        console.print(
-                            "[green]✓[/green] Systemd timer enabled successfully"
-                        )
+                        console.print("[green]✓[/green] Systemd timer enabled successfully")
                     else:
                         print("Systemd timer enabled successfully")
 
@@ -1072,9 +1035,7 @@ if CLICK_AVAILABLE:
                     return 0
                 else:
                     if console_err:
-                        console_err.print(
-                            "[red]Error:[/red] Failed to enable systemd timer"
-                        )
+                        console_err.print("[red]Error:[/red] Failed to enable systemd timer")
                     else:
                         print("Error: Failed to enable systemd timer", file=sys.stderr)
                     raise SystemExit(1)
@@ -1086,17 +1047,13 @@ if CLICK_AVAILABLE:
 
                 if setup.disable_systemd_units():
                     if console:
-                        console.print(
-                            "[green]✓[/green] Systemd timer disabled successfully"
-                        )
+                        console.print("[green]✓[/green] Systemd timer disabled successfully")
                     else:
                         print("Systemd timer disabled successfully")
                     return 0
                 else:
                     if console_err:
-                        console_err.print(
-                            "[red]Error:[/red] Failed to disable systemd timer"
-                        )
+                        console_err.print("[red]Error:[/red] Failed to disable systemd timer")
                     else:
                         print("Error: Failed to disable systemd timer", file=sys.stderr)
                     raise SystemExit(1)
@@ -1104,9 +1061,7 @@ if CLICK_AVAILABLE:
             elif action == "status":
                 # Check systemd timer status
                 if console:
-                    console.print(
-                        "[bold cyan]Checking systemd timer status...[/bold cyan]"
-                    )
+                    console.print("[bold cyan]Checking systemd timer status...[/bold cyan]")
 
                 status = setup.check_systemd_status()
                 if console:
@@ -1120,23 +1075,17 @@ if CLICK_AVAILABLE:
                         )
 
                     if status.get("active"):
-                        console.print(
-                            "  [green]Status:[/green] [bold green]active[/bold green]"
-                        )
+                        console.print("  [green]Status:[/green] [bold green]active[/bold green]")
                     else:
                         console.print(
                             "  [yellow]Status:[/yellow] [bold yellow]inactive[/bold yellow]"
                         )
 
                     if status.get("failed"):
-                        console.print(
-                            "  [red]⚠[/red] [bold red]Some units have failed[/bold red]"
-                        )
+                        console.print("  [red]⚠[/red] [bold red]Some units have failed[/bold red]")
 
                     if status.get("load_state"):
-                        console.print(
-                            f"  [blue]Load State:[/blue] {status['load_state']}"
-                        )
+                        console.print(f"  [blue]Load State:[/blue] {status['load_state']}")
 
                     if status.get("last_run"):
                         console.print(f"  [blue]Last Run:[/blue] {status['last_run']}")
@@ -1169,9 +1118,7 @@ if CLICK_AVAILABLE:
                             if unit_info.get("exists"):
                                 console.print(f"    [dim]File exists:[/dim] Yes")
                             else:
-                                console.print(
-                                    f"    [dim]File exists:[/dim] [red]No[/red]"
-                                )
+                                console.print(f"    [dim]File exists:[/dim] [red]No[/red]")
 
                             if unit_info.get("enabled_status"):
                                 console.print(
@@ -1184,9 +1131,7 @@ if CLICK_AVAILABLE:
                                 )
 
                             if unit_info.get("load_state"):
-                                console.print(
-                                    f"    [dim]Load:[/dim] {unit_info['load_state']}"
-                                )
+                                console.print(f"    [dim]Load:[/dim] {unit_info['load_state']}")
 
                             if unit_info.get("result"):
                                 result_str = unit_info["result"]
@@ -1195,14 +1140,10 @@ if CLICK_AVAILABLE:
                                 console.print(f"    [dim]Result:[/dim] {result_str}")
 
                             if unit_info.get("last_run"):
-                                console.print(
-                                    f"    [dim]Last Run:[/dim] {unit_info['last_run']}"
-                                )
+                                console.print(f"    [dim]Last Run:[/dim] {unit_info['last_run']}")
 
                             if unit_info.get("next_run"):
-                                console.print(
-                                    f"    [dim]Next Run:[/dim] {unit_info['next_run']}"
-                                )
+                                console.print(f"    [dim]Next Run:[/dim] {unit_info['next_run']}")
                 else:
                     print(f"Systemd timer enabled: {status.get('enabled')}")
                     print(f"Systemd timer active: {status.get('active')}")
@@ -1296,9 +1237,7 @@ if CLICK_AVAILABLE:
                         print(logs)
                 else:
                     if console_err:
-                        console_err.print(
-                            f"[red]Error:[/red] No logs found for {unit_name}"
-                        )
+                        console_err.print(f"[red]Error:[/red] No logs found for {unit_name}")
                     else:
                         print(f"Error: No logs found for {unit_name}", file=sys.stderr)
                 return 0
@@ -1306,9 +1245,7 @@ if CLICK_AVAILABLE:
             elif action == "list":
                 # List all flatpak-related systemd units
                 if console:
-                    console.print(
-                        "[bold cyan]Listing flatpak-related systemd units...[/bold cyan]"
-                    )
+                    console.print("[bold cyan]Listing flatpak-related systemd units...[/bold cyan]")
 
                 units = setup.list_all_units()
                 if units:
@@ -1322,9 +1259,7 @@ if CLICK_AVAILABLE:
                             print(f"  {unit}")
                 else:
                     if console:
-                        console.print(
-                            "[yellow]No flatpak-related systemd units found[/yellow]"
-                        )
+                        console.print("[yellow]No flatpak-related systemd units found[/yellow]")
                     else:
                         print("No flatpak-related systemd units found")
                 return 0
@@ -1332,9 +1267,7 @@ if CLICK_AVAILABLE:
             elif action == "test":
                 # Test systemd timer installation
                 if console:
-                    console.print(
-                        "[bold cyan]Testing systemd timer installation...[/bold cyan]"
-                    )
+                    console.print("[bold cyan]Testing systemd timer installation...[/bold cyan]")
 
                 # Run in emit mode to show what would be installed
                 setup_test = SystemdSetup(emit_mode=True, emit_verbose=True)
@@ -1363,9 +1296,7 @@ if CLICK_AVAILABLE:
 
         except ImportError as e:
             if console_err:
-                console_err.print(
-                    f"[red]Error:[/red] Failed to import systemd setup: {e}"
-                )
+                console_err.print(f"[red]Error:[/red] Failed to import systemd setup: {e}")
             else:
                 print(f"Error: Failed to import systemd setup: {e}", file=sys.stderr)
             raise SystemExit(1)
@@ -1400,9 +1331,7 @@ if CLICK_AVAILABLE:
 
         except ImportError as e:
             if console_err:
-                console_err.print(
-                    f"[red]Error:[/red] Failed to import wrapper manager: {e}"
-                )
+                console_err.print(f"[red]Error:[/red] Failed to import wrapper manager: {e}")
             else:
                 import sys
 
@@ -1427,9 +1356,7 @@ if CLICK_AVAILABLE:
 
         except ImportError as e:
             if console_err:
-                console_err.print(
-                    f"[red]Error:[/red] Failed to import wrapper manager: {e}"
-                )
+                console_err.print(f"[red]Error:[/red] Failed to import wrapper manager: {e}")
             else:
                 import sys
 
@@ -1462,9 +1389,7 @@ if CLICK_AVAILABLE:
 
         if emit_mode:
             if console:
-                console.print(
-                    f"[cyan]📋 EMIT:[/cyan] Would install Flatpak app: {app_name}"
-                )
+                console.print(f"[cyan]📋 EMIT:[/cyan] Would install Flatpak app: {app_name}")
                 console.print(
                     "[dim]   Purpose: Install Flatpak application and create wrapper[/dim]"
                 )
@@ -1540,9 +1465,7 @@ if CLICK_AVAILABLE:
         emit_mode = ctx.obj["emit"]
 
         cmd = ["flatpak", "info", "--show-manifest", app_name]
-        result = run_command(
-            cmd, f"Showing manifest for: {app_name}", emit_mode=emit_mode
-        )
+        result = run_command(cmd, f"Showing manifest for: {app_name}", emit_mode=emit_mode)
 
         if result.returncode == 0:
             if console:
@@ -1554,21 +1477,15 @@ if CLICK_AVAILABLE:
             return 0
         elif result.returncode != 0:
             if console_err:
-                console_err.print(
-                    f"[red]Error:[/red] Failed to get manifest: {result.stderr}"
-                )
+                console_err.print(f"[red]Error:[/red] Failed to get manifest: {result.stderr}")
             else:
                 import sys
 
-                print(
-                    f"Error: Failed to get manifest: {result.stderr}", file=sys.stderr
-                )
+                print(f"Error: Failed to get manifest: {result.stderr}", file=sys.stderr)
             return result.returncode
         else:
             if console:
-                console.print(
-                    f"[cyan]📋 EMIT:[/cyan] Would show manifest for {app_name}"
-                )
+                console.print(f"[cyan]📋 EMIT:[/cyan] Would show manifest for {app_name}")
                 console.print("[dim]   Purpose: Show Flatpak manifest[/dim]")
             else:
                 print(f"Emit: Would show manifest for {app_name}")
@@ -1612,9 +1529,7 @@ if CLICK_AVAILABLE:
 
         except ImportError as e:
             if console_err:
-                console_err.print(
-                    f"[red]Error:[/red] Failed to import wrapper manager: {e}"
-                )
+                console_err.print(f"[red]Error:[/red] Failed to import wrapper manager: {e}")
             else:
                 import sys
 
@@ -1647,9 +1562,7 @@ if CLICK_AVAILABLE:
 
         if emit_mode:
             if console:
-                console.print(
-                    f"[cyan]📋 EMIT:[/cyan] Would uninstall Flatpak app: {app_name}"
-                )
+                console.print(f"[cyan]📋 EMIT:[/cyan] Would uninstall Flatpak app: {app_name}")
                 console.print(
                     "[dim]   Purpose: Uninstall Flatpak application and remove wrapper[/dim]"
                 )
@@ -1676,9 +1589,7 @@ if CLICK_AVAILABLE:
 
         if result.returncode == 0:
             if console:
-                console.print(
-                    f"[green]✓[/green] Uninstalled Flatpak app: [bold]{app_name}[/bold]"
-                )
+                console.print(f"[green]✓[/green] Uninstalled Flatpak app: [bold]{app_name}[/bold]")
             else:
                 print(f"Uninstalled Flatpak app: {app_name}")
             return 0
@@ -1757,9 +1668,7 @@ else:
         elif command == "list":
             script_path = find_fplaunch_script("fplaunch-manage")
             if script_path:
-                return run_command(
-                    [str(script_path), "list"], "Listing wrappers"
-                ).returncode
+                return run_command([str(script_path), "list"], "Listing wrappers").returncode
             else:
                 raise SystemExit(1)
 

@@ -92,11 +92,7 @@ class SystemdSetup:
                             path_value = line.split("=", 1)[1]
                             paths = path_value.split(":")
                             for path in paths:
-                                if (
-                                    "flatpak" in path
-                                    and "exports" in path
-                                    and "bin" in path
-                                ):
+                                if "flatpak" in path and "exports" in path and "bin" in path:
                                     return path
             except (subprocess.CalledProcessError, OSError):
                 pass
@@ -131,9 +127,7 @@ class SystemdSetup:
         """Check if prerequisites are met with detailed error reporting."""
         # Check if Flatpak is installed
         if not self._command_available("flatpak"):
-            self.log(
-                "Error: Flatpak not installed. Please install Flatpak first.", "error"
-            )
+            self.log("Error: Flatpak not installed. Please install Flatpak first.", "error")
             return False
 
         # Check if wrapper script exists
@@ -364,9 +358,7 @@ WantedBy=timers.target
                     text=True,
                 )
                 if result.returncode != 0:
-                    self.log(
-                        f"Failed to reload systemd daemon: {result.stderr}", "error"
-                    )
+                    self.log(f"Failed to reload systemd daemon: {result.stderr}", "error")
                     return False
             except Exception as e:
                 self.log(f"Failed to reload systemd daemon: {e}", "error")
@@ -686,9 +678,7 @@ WantedBy=timers.target
                 self.log("Reloaded systemd user daemon", "success")
                 return True
             else:
-                self.log(
-                    f"Failed to reload systemd user daemon: {result.stderr}", "error"
-                )
+                self.log(f"Failed to reload systemd user daemon: {result.stderr}", "error")
                 return False
 
         except Exception as e:
@@ -845,9 +835,7 @@ WantedBy=timers.target
             if result.returncode == 0:
                 return str(result.stdout)
             else:
-                self.log(
-                    f"Failed to get logs for {unit_name}: {result.stderr}", "error"
-                )
+                self.log(f"Failed to get logs for {unit_name}: {result.stderr}", "error")
                 return ""
 
         except Exception as e:
@@ -858,9 +846,7 @@ WantedBy=timers.target
         """List all flatpak-related systemd units."""
         try:
             units = []
-            for unit_file in self.systemd_unit_dir.glob(
-                "flatpak-*.{service,path,timer}"
-            ):
+            for unit_file in self.systemd_unit_dir.glob("flatpak-*.{service,path,timer}"):
                 units.append(unit_file.name)
             return sorted(units)
         except Exception as e:

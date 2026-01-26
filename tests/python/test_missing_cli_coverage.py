@@ -129,9 +129,7 @@ class TestProfilesCLI:
             profile_file = tmp_path / "import_profile.toml"
             profile_file.write_text("[app_preferences]\n")
 
-            result = runner.invoke(
-                cli_module.cli, ["profiles", "import", str(profile_file)]
-            )
+            result = runner.invoke(cli_module.cli, ["profiles", "import", str(profile_file)])
 
             assert result.exit_code == 0 or "not found" in result.output.lower()
 
@@ -243,7 +241,15 @@ class TestPresetsCLI:
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             result = runner.invoke(
                 cli_module.cli,
-                ["presets", "add", "test_preset", "-p", "filesystem=home", "-p", "socket=pulseaudio"],
+                [
+                    "presets",
+                    "add",
+                    "test_preset",
+                    "-p",
+                    "filesystem=home",
+                    "-p",
+                    "socket=pulseaudio",
+                ],
             )
 
             assert result.exit_code == 0 or "added" in result.output.lower()
@@ -294,9 +300,7 @@ class TestInstallCLI:
     )
     @patch("subprocess.run")
     @patch("lib.generate.WrapperGenerator")
-    def test_install_flatpak_success(
-        self, mock_generator, mock_run, runner, temp_config_dir
-    ):
+    def test_install_flatpak_success(self, mock_generator, mock_run, runner, temp_config_dir):
         """Test successful install of Flatpak app."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
         result = runner.invoke(
@@ -317,9 +321,7 @@ class TestInstallCLI:
     )
     @patch("subprocess.run")
     @patch("lib.generate.WrapperGenerator")
-    def test_install_flatpak_failure(
-        self, mock_generator, mock_run, runner, temp_config_dir
-    ):
+    def test_install_flatpak_failure(self, mock_generator, mock_run, runner, temp_config_dir):
         """Test install when flatpak install fails."""
         mock_run.return_value = Mock(returncode=1, stderr="Install failed")
         result = runner.invoke(
@@ -415,9 +417,7 @@ class TestUninstallCLI:
     )
     @patch("subprocess.run")
     @patch("lib.manage.WrapperManager")
-    def test_uninstall_with_data_removal(
-        self, mock_manager, mock_run, runner, temp_config_dir
-    ):
+    def test_uninstall_with_data_removal(self, mock_manager, mock_run, runner, temp_config_dir):
         """Test uninstall with --remove-data flag."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
         result = runner.invoke(
@@ -499,9 +499,7 @@ class TestUninstallCLI:
     )
     @patch("subprocess.run")
     @patch("lib.manage.WrapperManager")
-    def test_uninstall_with_data_removal(
-        self, mock_manager, mock_run, runner, temp_config_dir
-    ):
+    def test_uninstall_with_data_removal(self, mock_manager, mock_run, runner, temp_config_dir):
         """Test uninstall with --remove-data flag."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
         result = runner.invoke(

@@ -9,6 +9,14 @@ from types import SimpleNamespace
 
 import pytest
 
+# Add lib and project root to Python path for imports
+import sys
+
+project_root = Path(__file__).parent.parent
+lib_path = project_root / "lib"
+sys.path.insert(0, str(lib_path))
+sys.path.insert(0, str(project_root))
+
 
 @pytest.fixture(autouse=True)
 def mock_flatpak_binary(

@@ -2,7 +2,7 @@
 """Test suite for fplaunch.generate output behavior.
 
 Validates that generate module shows output to inform users about progress
-and errors, with appropriate stream routing (stdout for info/success, 
+and errors, with appropriate stream routing (stdout for info/success,
 stderr for errors/warnings).
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ class TestGenerateOutput:
         with tempfile.TemporaryDirectory() as tmpdir:
             gen = WrapperGenerator(tmpdir, emit_mode=True)
             gen.log("Test info message")
-            
+
             captured = capsys.readouterr()
             assert "Test info message" in captured.out
             assert "ERROR" not in captured.err
@@ -32,7 +32,7 @@ class TestGenerateOutput:
         with tempfile.TemporaryDirectory() as tmpdir:
             gen = WrapperGenerator(tmpdir, emit_mode=True)
             gen.log("Operation successful", "success")
-            
+
             captured = capsys.readouterr()
             assert "Operation successful" in captured.out
             assert "✓" in captured.out
@@ -42,7 +42,7 @@ class TestGenerateOutput:
         with tempfile.TemporaryDirectory() as tmpdir:
             gen = WrapperGenerator(tmpdir, emit_mode=True)
             gen.log("Test warning", "warning")
-            
+
             captured = capsys.readouterr()
             assert "Test warning" in captured.err
             assert "WARN" in captured.err
@@ -52,7 +52,7 @@ class TestGenerateOutput:
         with tempfile.TemporaryDirectory() as tmpdir:
             gen = WrapperGenerator(tmpdir, emit_mode=True)
             gen.log("Test error", "error")
-            
+
             captured = capsys.readouterr()
             assert "Test error" in captured.err
             assert "ERROR" in captured.err
@@ -62,7 +62,7 @@ class TestGenerateOutput:
         with tempfile.TemporaryDirectory() as tmpdir:
             gen = WrapperGenerator(tmpdir, emit_mode=True)
             gen.log("EMIT: Would create wrapper: firefox")
-            
+
             captured = capsys.readouterr()
             assert "EMIT: Would create wrapper: firefox" in captured.out
 
@@ -72,7 +72,7 @@ class TestGenerateOutput:
             # Create generator with verbose=False (default)
             gen = WrapperGenerator(tmpdir, verbose=False, emit_mode=True)
             gen.log("Important message")
-            
+
             captured = capsys.readouterr()
             # Should still show info messages even without verbose
             assert "Important message" in captured.out
@@ -82,7 +82,7 @@ class TestGenerateOutput:
         with tempfile.TemporaryDirectory() as tmpdir:
             gen = WrapperGenerator(tmpdir, verbose=False, emit_mode=True)
             gen.log("Critical error occurred", "error")
-            
+
             captured = capsys.readouterr()
             assert "Critical error occurred" in captured.err
             assert "ERROR" in captured.err
@@ -93,7 +93,7 @@ class TestGenerateOutput:
             gen = WrapperGenerator(tmpdir, emit_mode=True)
             gen.log("Created wrapper: com.example.app")
             gen.log("⚠️ Warning about special chars", "warning")
-            
+
             captured = capsys.readouterr()
             assert "com.example.app" in captured.out
             # Warning should be in stderr

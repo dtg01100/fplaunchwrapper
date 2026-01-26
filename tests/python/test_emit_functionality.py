@@ -22,21 +22,21 @@ python_utils_mock.find_executable = lambda x: f"/usr/bin/{x}"
 python_utils_mock.safe_mktemp = lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
 
 try:
-    from fplaunch.generate import WrapperGenerator
+    from lib.generate import WrapperGenerator
 
     GENERATE_AVAILABLE = True
 except ImportError:
     GENERATE_AVAILABLE = False
 
 try:
-    from fplaunch.manage import WrapperManager
+    from lib.manage import WrapperManager
 
     MANAGE_AVAILABLE = True
 except ImportError:
     MANAGE_AVAILABLE = False
 
 try:
-    from fplaunch.systemd_setup import SystemdSetup
+    from lib.systemd_setup import SystemdSetup
 
     SYSTEMD_AVAILABLE = True
 except ImportError:
@@ -44,7 +44,8 @@ except ImportError:
 
 
 @pytest.mark.skipif(
-    not GENERATE_AVAILABLE, reason="WrapperGenerator tests disabled when WrapperGenerator not available",
+    not GENERATE_AVAILABLE,
+    reason="WrapperGenerator tests disabled when WrapperGenerator not available",
 )
 class TestEmitFunctionality:
     """Test emit functionality."""
@@ -74,11 +75,15 @@ class TestEmitFunctionality:
         mock_subprocess.return_value = mock_result
 
         generator = WrapperGenerator(
-            bin_dir=str(temp_env["bin_dir"]), verbose=True, emit_mode=True,
+            bin_dir=str(temp_env["bin_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -102,7 +107,9 @@ class TestEmitFunctionality:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -111,7 +118,9 @@ class TestEmitFunctionality:
     def test_manage_emit_mode(self, mock_subprocess, temp_env) -> None:
         """Test preference management in emit mode."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         result = manager.set_preference("firefox", "flatpak")
@@ -150,7 +159,9 @@ class TestEmitFunctionality:
             pytest.skip("SystemdSetup not available")
 
         setup = SystemdSetup(
-            bin_dir=str(temp_env["bin_dir"]), emit_mode=True, emit_verbose=True,
+            bin_dir=str(temp_env["bin_dir"]),
+            emit_mode=True,
+            emit_verbose=True,
         )
 
         result = setup.install_systemd_units()
@@ -167,7 +178,9 @@ class TestEmitFunctionality:
         # Run emit operations
         generator = WrapperGenerator(bin_dir=str(temp_env["bin_dir"]), emit_mode=True)
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.test.app"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.test.app"],
         ):
             generator.generate_wrapper("org.test.app")
 

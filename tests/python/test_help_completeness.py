@@ -108,17 +108,13 @@ class TestHelpSupport:
             )
 
             # Should show usage in output
-            assert (
-                "usage:" in result.stdout.lower() or "options:" in result.stdout.lower()
-            ), (
-                f"{script_path} --help output doesn't contain usage/options:\n"
-                f"{result.stdout}"
+            assert "usage:" in result.stdout.lower() or "options:" in result.stdout.lower(), (
+                f"{script_path} --help output doesn't contain usage/options:\n" f"{result.stdout}"
             )
 
             # Should mention help
             assert "-h" in result.stdout or "--help" in result.stdout, (
-                f"{script_path} --help output doesn't mention help flag:\n"
-                f"{result.stdout}"
+                f"{script_path} --help output doesn't mention help flag:\n" f"{result.stdout}"
             )
 
     @pytest.mark.skipif(
@@ -149,18 +145,14 @@ class TestHelpSupport:
             )
 
             # Should show usage or command name
-            assert (
-                "usage:" in result.output.lower()
-                or command[-1] in result.output.lower()
-            ), (
-                f"Command {command} --help output doesn't contain usage info:\n"
-                f"{result.output}"
+            assert "usage:" in result.output.lower() or command[-1] in result.output.lower(), (
+                f"Command {command} --help output doesn't contain usage info:\n" f"{result.output}"
             )
 
             # Should have help flag
-            assert "-h" in result.output or "--help" in result.output, (
-                f"Command {command} --help doesn't mention help flag:\n{result.output}"
-            )
+            assert (
+                "-h" in result.output or "--help" in result.output
+            ), f"Command {command} --help doesn't mention help flag:\n{result.output}"
 
     @pytest.mark.skipif(
         not getattr(cli_module, "CLICK_AVAILABLE", False),
@@ -173,9 +165,9 @@ class TestHelpSupport:
             result = runner.invoke(cli_module.cli, ["systemd", "--help"])
 
             # Main systemd help should show available actions
-            assert action in result.output.lower(), (
-                f"systemd --help doesn't mention action '{action}':\n{result.output}"
-            )
+            assert (
+                action in result.output.lower()
+            ), f"systemd --help doesn't mention action '{action}':\n{result.output}"
 
     @pytest.mark.skipif(
         not getattr(cli_module, "CLICK_AVAILABLE", False),

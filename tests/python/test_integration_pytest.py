@@ -13,8 +13,8 @@ import pytest
 # Add lib to path
 # Import modules to test
 try:
-    from fplaunch.generate import WrapperGenerator
-    from fplaunch.manage import WrapperManager
+    from lib.generate import WrapperGenerator
+    from lib.manage import WrapperManager
 
     GENERATE_AVAILABLE = True
     MANAGE_AVAILABLE = True
@@ -65,7 +65,9 @@ class TestIntegrationWorkflows:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -92,7 +94,9 @@ class TestIntegrationWorkflows:
 
         # Step 3: Update wrapper (regenerate)
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -116,7 +120,9 @@ class TestIntegrationWorkflows:
         # Mock flatpak command returning multiple apps
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = "com.google.chrome\ncom.microsoft.edge\norg.mozilla.firefox\ncom.example.browser"
+        mock_result.stdout = (
+            "com.google.chrome\ncom.microsoft.edge\norg.mozilla.firefox\ncom.example.browser"
+        )
         mock_subprocess.return_value = mock_result
 
         generator = WrapperGenerator(
@@ -136,7 +142,9 @@ class TestIntegrationWorkflows:
         # Generate all wrappers
         for app_id, _expected_name in apps:
             with patch.object(
-                generator, "get_installed_flatpaks", return_value=[app_id],
+                generator,
+                "get_installed_flatpaks",
+                return_value=[app_id],
             ):
                 result = generator.generate_wrapper(app_id)
                 assert result is True
@@ -187,7 +195,9 @@ class TestIntegrationWorkflows:
         )
 
         with patch.object(
-            generator, "get_installed_flatpaks", return_value=["org.mozilla.firefox"],
+            generator,
+            "get_installed_flatpaks",
+            return_value=["org.mozilla.firefox"],
         ):
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
@@ -248,12 +258,16 @@ class TestIntegrationWorkflows:
     def test_environment_script_integration(self, temp_env) -> None:
         """Test environment variables + pre-launch script integration - replaces Test 5."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Set environment variables
         result = manager.set_environment_variable(
-            "firefox", "BROWSER_ENV", "test_value",
+            "firefox",
+            "BROWSER_ENV",
+            "test_value",
         )
         assert result is True
 
@@ -277,7 +291,9 @@ class TestIntegrationWorkflows:
     def test_blocklist_prevents_generation(self, temp_env) -> None:
         """Test blocklist prevents wrapper regeneration - replaces Test 6."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Block firefox
@@ -310,7 +326,9 @@ class TestIntegrationWorkflows:
     def test_configuration_workflow(self, temp_env) -> None:
         """Test export-modify-import configuration workflow - replaces Test 8."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=False,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=False,
         )
 
         # Create initial configuration
@@ -328,7 +346,9 @@ class TestIntegrationWorkflows:
         # Modify current configuration
         manager.set_preference("firefox", "system")  # Change preference
         manager.set_environment_variable(
-            "firefox", "TEST_VAR", "modified_value",
+            "firefox",
+            "TEST_VAR",
+            "modified_value",
         )  # Change env var
 
         # Import configuration (should restore original state)
@@ -336,9 +356,7 @@ class TestIntegrationWorkflows:
         assert result is True
 
         # Verify configuration was restored
-        assert (
-            temp_env["config_dir"] / "firefox.pref"
-        ).read_text().strip() == "flatpak"
+        assert (temp_env["config_dir"] / "firefox.pref").read_text().strip() == "flatpak"
         assert (temp_env["config_dir"] / "chrome.pref").read_text().strip() == "system"
 
         env_content = (temp_env["config_dir"] / "firefox.env").read_text()

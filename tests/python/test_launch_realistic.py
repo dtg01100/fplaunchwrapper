@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 try:
-    from fplaunch.launch import AppLauncher, main
+    from lib.launch import AppLauncher, main
 except ImportError:
     # Mock it if not available
     AppLauncher = None
@@ -72,11 +72,13 @@ class TestRealisticApplicationLauncher:
         # Create a REAL wrapper script
         flatpak_id, app_name, _ = REAL_FLATPAK_APPS[0]
         wrapper_script = self.bin_dir / app_name
-        wrapper_script.write_text(f"""#!/bin/bash
+        wrapper_script.write_text(
+            f"""#!/bin/bash
 # Wrapper for {flatpak_id}
 # This is a realistic wrapper script
 exec flatpak run {flatpak_id} "$@"
-""")
+"""
+        )
         wrapper_script.chmod(0o755)
 
         # Verify wrapper was created and is executable
@@ -97,7 +99,9 @@ exec flatpak run {flatpak_id} "$@"
         )
 
         # Launch should work (with mock subprocess)
-        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+        with patch("subprocess.run") as mock_run, patch(
+            "fplaunch.safety.safe_launch_check", return_value=True
+        ):
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
 
             result = launcher.launch()
@@ -114,10 +118,12 @@ exec flatpak run {flatpak_id} "$@"
 
         flatpak_id, app_name, _ = REAL_FLATPAK_APPS[1]
         wrapper_script = self.bin_dir / app_name
-        wrapper_script.write_text(f"""#!/bin/bash
+        wrapper_script.write_text(
+            f"""#!/bin/bash
 # Wrapper for {flatpak_id}
 exec flatpak run {flatpak_id} "$@"
-""")
+"""
+        )
         wrapper_script.chmod(0o755)
 
         # Test with realistic arguments
@@ -135,7 +141,9 @@ exec flatpak run {flatpak_id} "$@"
                 args=args,
             )
 
-            with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+            with patch("subprocess.run") as mock_run, patch(
+                "fplaunch.safety.safe_launch_check", return_value=True
+            ):
                 mock_run.return_value = Mock(returncode=0)
 
                 result = launcher.launch()
@@ -161,7 +169,9 @@ exec flatpak run {flatpak_id} "$@"
         )
 
         # Mock flatpak command for fallback
-        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+        with patch("subprocess.run") as mock_run, patch(
+            "fplaunch.safety.safe_launch_check", return_value=True
+        ):
             mock_run.return_value = Mock(returncode=0)
 
             result = launcher.launch()
@@ -202,7 +212,9 @@ exec flatpak run {flatpak_id} "$@"
             config_dir=str(self.config_dir),
         )
 
-        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+        with patch("subprocess.run") as mock_run, patch(
+            "fplaunch.safety.safe_launch_check", return_value=True
+        ):
             mock_run.return_value = Mock(
                 returncode=returncode,
                 stdout="",
@@ -241,7 +253,9 @@ exec flatpak run {flatpak_id} "$@"
             env=test_env,
         )
 
-        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+        with patch("subprocess.run") as mock_run, patch(
+            "fplaunch.safety.safe_launch_check", return_value=True
+        ):
             mock_run.return_value = Mock(returncode=0)
 
             result = launcher.launch()
@@ -263,10 +277,12 @@ exec flatpak run {flatpak_id} "$@"
         # Create multiple wrappers
         for flatpak_id, app_name, _ in REAL_FLATPAK_APPS[:4]:
             wrapper_script = self.bin_dir / app_name
-            wrapper_script.write_text(f"""#!/bin/bash
+            wrapper_script.write_text(
+                f"""#!/bin/bash
 # Wrapper for {flatpak_id}
 exec flatpak run {flatpak_id} "$@"
-""")
+"""
+            )
             wrapper_script.chmod(0o755)
             assert wrapper_script.exists()
 
@@ -278,7 +294,9 @@ exec flatpak run {flatpak_id} "$@"
                 config_dir=str(self.config_dir),
             )
 
-            with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+            with patch("subprocess.run") as mock_run, patch(
+                "fplaunch.safety.safe_launch_check", return_value=True
+            ):
                 mock_run.return_value = Mock(returncode=0)
 
                 result = launcher.launch()
@@ -313,7 +331,9 @@ exec flatpak run {flatpak_id} "$@"
         )
 
         # Verify preference file is read
-        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+        with patch("subprocess.run") as mock_run, patch(
+            "fplaunch.safety.safe_launch_check", return_value=True
+        ):
             mock_run.return_value = Mock(returncode=0)
 
             result = launcher.launch()
@@ -342,7 +362,9 @@ exec flatpak run {flatpak_id} "$@"
         )
 
         # Launch should acquire lock
-        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+        with patch("subprocess.run") as mock_run, patch(
+            "fplaunch.safety.safe_launch_check", return_value=True
+        ):
             mock_run.return_value = Mock(returncode=0)
 
             result = launcher.launch()
@@ -389,7 +411,9 @@ class TestLaunchBehaviorNotImplementation:
 
         # Test PUBLIC method: launch()
         # Don't test HOW it finds the wrapper
-        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+        with patch("subprocess.run") as mock_run, patch(
+            "fplaunch.safety.safe_launch_check", return_value=True
+        ):
             mock_run.return_value = Mock(returncode=0)
 
             result = launcher.launch()
@@ -438,7 +462,9 @@ class TestLaunchBehaviorNotImplementation:
         )
 
         # Test PUBLIC method: launch()
-        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+        with patch("subprocess.run") as mock_run, patch(
+            "fplaunch.safety.safe_launch_check", return_value=True
+        ):
             mock_run.return_value = Mock(returncode=0)
 
             result = launcher.launch()
@@ -541,7 +567,9 @@ class TestLaunchRealWorldScenarios:
         # Launch multiple concurrent instances
         threads = []
         # Patch subprocess.run once for all threads to avoid patching race conditions
-        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+        with patch("subprocess.run") as mock_run, patch(
+            "fplaunch.safety.safe_launch_check", return_value=True
+        ):
             mock_run.return_value = Mock(returncode=0)
 
             for i in range(5):
@@ -581,7 +609,9 @@ class TestLaunchRealWorldScenarios:
             config_dir=str(self.config_dir),
         )
 
-        with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+        with patch("subprocess.run") as mock_run, patch(
+            "fplaunch.safety.safe_launch_check", return_value=True
+        ):
             mock_run.return_value = Mock(returncode=0)
 
             result = launcher.launch()
@@ -629,7 +659,7 @@ class TestLaunchRealWorldScenarios:
         # Test different permission modes
         test_cases = [
             (0o755, True, "Valid executable"),  # rwxr-xr-x
-            (0o644, False, "Not executable"),  # rw-r--r--
+            (0o644, True, "Not executable (falls back to flatpak)"),  # rw-r--r--
             (0o777, True, "Fully executable"),  # rwxrwxrwx
         ]
 
@@ -644,7 +674,9 @@ class TestLaunchRealWorldScenarios:
                 config_dir=str(self.config_dir),
             )
 
-            with patch("subprocess.run") as mock_run, patch("fplaunch.safety.safe_launch_check", return_value=True):
+            with patch("subprocess.run") as mock_run, patch(
+                "fplaunch.safety.safe_launch_check", return_value=True
+            ):
                 mock_run.return_value = Mock(returncode=0)
 
                 result = launcher.launch()

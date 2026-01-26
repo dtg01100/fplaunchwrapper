@@ -10,11 +10,12 @@ from unittest.mock import Mock, patch
 
 # Add the project root to the path
 import sys
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from fplaunch.generate import WrapperGenerator
-from fplaunch.launch import AppLauncher
-from fplaunch.cleanup import WrapperCleanup
+from lib.generate import WrapperGenerator
+from lib.launch import AppLauncher
+from lib.cleanup import WrapperCleanup
 
 
 class TestEdgeCases:
@@ -31,22 +32,17 @@ class TestEdgeCases:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_concurrent_wrapper_generation(self) -> None:
         """Test generating wrappers concurrently."""
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
 
         # Simulate concurrent generation
-        apps = [
-            "app1",
-            "app2",
-            "app3"
-        ]
+        apps = ["app1", "app2", "app3"]
 
         results = []
         for app_name in apps:
@@ -71,9 +67,7 @@ class TestEdgeCases:
         small_config_dir.mkdir()
 
         generator = WrapperGenerator(
-            bin_dir=str(small_bin_dir),
-            config_dir=str(small_config_dir),
-            verbose=True
+            bin_dir=str(small_bin_dir), config_dir=str(small_config_dir), verbose=True
         )
 
         # Attempt to generate a wrapper in a small directory
@@ -82,6 +76,7 @@ class TestEdgeCases:
 
         # Clean up
         import shutil
+
         shutil.rmtree(small_temp_dir, ignore_errors=True)
 
         # Verify the result (may fail due to low disk space)
@@ -98,12 +93,11 @@ class TestEdgeCases:
 
         # Make the directory read-only
         import os
+
         os.chmod(read_only_bin_dir, 0o444)
 
         generator = WrapperGenerator(
-            bin_dir=str(read_only_bin_dir),
-            config_dir=str(read_only_config_dir),
-            verbose=True
+            bin_dir=str(read_only_bin_dir), config_dir=str(read_only_config_dir), verbose=True
         )
 
         # Attempt to generate a wrapper in a read-only directory
@@ -113,6 +107,7 @@ class TestEdgeCases:
         # Clean up
         os.chmod(read_only_bin_dir, 0o755)
         import shutil
+
         shutil.rmtree(read_only_dir, ignore_errors=True)
 
         # Verify the result (may fail due to permission issues)
@@ -126,9 +121,7 @@ class TestEdgeCases:
         non_existent_config_dir = non_existent_dir / "non_existent_config"
 
         generator = WrapperGenerator(
-            bin_dir=str(non_existent_bin_dir),
-            config_dir=str(non_existent_config_dir),
-            verbose=True
+            bin_dir=str(non_existent_bin_dir), config_dir=str(non_existent_config_dir), verbose=True
         )
 
         # Attempt to generate a wrapper in a non-existent directory
@@ -137,6 +130,7 @@ class TestEdgeCases:
 
         # Clean up
         import shutil
+
         shutil.rmtree(non_existent_dir, ignore_errors=True)
 
         # Verify the result (may fail due to missing directory)
@@ -146,9 +140,7 @@ class TestEdgeCases:
         """Test concurrent launch attempts."""
         # Generate a wrapper
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         app_name = "test_app"
         result = generator.generate_wrapper(app_name)
@@ -170,9 +162,7 @@ class TestEdgeCases:
         """Test handling high memory usage."""
         # Generate a large number of wrappers to simulate high memory usage
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
 
         apps = []
@@ -197,9 +187,7 @@ class TestEdgeCases:
         """Test handling file creation permissions."""
         # Generate a wrapper
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         app_name = "test_app"
         result = generator.generate_wrapper(app_name)
@@ -211,6 +199,7 @@ class TestEdgeCases:
 
         # Verify the wrapper has the correct permissions
         import os
+
         wrapper_permissions = oct(os.stat(wrapper_path).st_mode)[-3:]
         assert wrapper_permissions == "755"
 
@@ -218,24 +207,16 @@ class TestEdgeCases:
         """Test concurrent cleanup operations."""
         # Generate multiple wrappers
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
-        apps = [
-            "app1",
-            "app2",
-            "app3"
-        ]
+        apps = ["app1", "app2", "app3"]
         for app_name in apps:
             result = generator.generate_wrapper(app_name)
             assert result is True
 
         # Simulate concurrent cleanup
         cleanup = WrapperCleanup(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         results = []
         for app_name in apps:

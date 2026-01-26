@@ -10,9 +10,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fplaunch.cleanup import WrapperCleanup
-from fplaunch.generate import WrapperGenerator
-from fplaunch.systemd_setup import SystemdSetup
+from lib.cleanup import WrapperCleanup
+from lib.generate import WrapperGenerator
+from lib.systemd_setup import SystemdSetup
 
 
 class TestWrapperGenerator:
@@ -184,7 +184,7 @@ exec flatpak run com.example.App "$@"
 
         # Mock is_wrapper_file check from python_utils
         with patch("fplaunch.python_utils.is_wrapper_file", return_value=True):
-            from fplaunch.python_utils import is_wrapper_file
+            from lib.python_utils import is_wrapper_file
 
             assert is_wrapper_file(str(wrapper))
 

@@ -17,10 +17,8 @@ from typing import Optional, List, Dict, Any
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
 
@@ -38,9 +36,11 @@ except ImportError:
 
         pass
 
+
 # Systemd notify support
 try:
     import systemd.daemon
+
     SYSTEMD_NOTIFY_AVAILABLE = True
 except ImportError:
     SYSTEMD_NOTIFY_AVAILABLE = False
@@ -53,9 +53,9 @@ class FlatpakEventHandler(FileSystemEventHandler):
         self.callback = callback
         self.last_event_time = 0
         self.config = config or {}
-        self.cooldown_seconds = self.config.get('cooldown', 2)  # Prevent rapid-fire events
+        self.cooldown_seconds = self.config.get("cooldown", 2)  # Prevent rapid-fire events
         self.pending_events = []
-        self.batch_window = self.config.get('batch_window', 1.0)  # Collect events for 1 second
+        self.batch_window = self.config.get("batch_window", 1.0)  # Collect events for 1 second
         self.batch_timer = None
         self._event_lock = None
         self._init_lock()
@@ -64,6 +64,7 @@ class FlatpakEventHandler(FileSystemEventHandler):
         """Initialize thread lock for event queueing."""
         try:
             import threading
+
             self._event_lock = threading.Lock()
         except ImportError:
             self._event_lock = None
@@ -131,10 +132,8 @@ class FlatpakEventHandler(FileSystemEventHandler):
 
         # Import threading here to avoid issues if not available
         import threading
-        self.batch_timer = threading.Timer(
-            self.batch_window, 
-            self._flush_pending_events
-        )
+
+        self.batch_timer = threading.Timer(self.batch_window, self._flush_pending_events)
         self.batch_timer.daemon = True
         self.batch_timer.start()
 
@@ -156,6 +155,7 @@ class FlatpakEventHandler(FileSystemEventHandler):
         if current_time - self.last_event_time < self.cooldown_seconds:
             # Still in cooldown, reschedule
             import threading
+
             delay = self.cooldown_seconds - (current_time - self.last_event_time)
             self.batch_timer = threading.Timer(delay, self._flush_pending_events)
             self.batch_timer.daemon = True
@@ -180,7 +180,9 @@ class FlatpakEventHandler(FileSystemEventHandler):
 class FlatpakMonitor:
     """Monitor for Flatpak installation changes."""
 
-    def __init__(self, callback=None, bin_dir: Optional[str] = None, config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(
+        self, callback=None, bin_dir: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+    ) -> None:
         # bin_dir is accepted for test compatibility but not used in monitoring logic
         self.callback = callback
         self.bin_dir = bin_dir
@@ -235,7 +237,9 @@ class FlatpakMonitor:
             self.observer = Observer()
 
             # Set up event handler
-            event_handler = FlatpakEventHandler(callback=self._on_flatpak_change, config=self.config)
+            event_handler = FlatpakEventHandler(
+                callback=self._on_flatpak_change, config=self.config
+            )
 
             # Watch all relevant paths
             for path in self.watch_paths:
@@ -311,7 +315,7 @@ class FlatpakMonitor:
         logger.debug("Flatpak change detected: %s - %s", event_type, path)
 
         # Debounce rapid events
-        time.sleep(self.config.get('debounce', 1))
+        time.sleep(self.config.get("debounce", 1))
 
         # Check if we need to regenerate wrappers
         if self._should_regenerate_wrappers(path):
@@ -356,15 +360,18 @@ class FlatpakMonitor:
                         check=False,
                         capture_output=True,
                         text=True,
-                        timeout=self.config.get('regeneration_timeout', 60),
+                        timeout=self.config.get("regeneration_timeout", 60),
                     )
 
                     if result.returncode == 0:
                         logger.debug("Wrapper regeneration stdout: %s", str(result.stdout).strip())
                         return True
                     else:
-                        logger.error("Wrapper regeneration failed with code %d: %s", 
-                                    result.returncode, result.stderr.strip())
+                        logger.error(
+                            "Wrapper regeneration failed with code %d: %s",
+                            result.returncode,
+                            result.stderr.strip(),
+                        )
                         return False
 
             logger.error("fplaunch-generate script not found")
@@ -411,46 +418,53 @@ def start_flatpak_monitoring(callback=None, daemon=False, config: Optional[Dict[
     return monitor
 
 
-def main(daemon: bool = False, callback: Optional[str] = None, config: Optional[Dict[str, Any]] = None) -> None:
+def main(
+    daemon: bool = False, callback: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+) -> None:
     """Command-line interface for flatpak monitoring."""
     import argparse
 
     # Parse command line arguments
-    parser = argparse.ArgumentParser(
-        description="Flatpak installation monitoring service"
+    parser = argparse.ArgumentParser(description="Flatpak installation monitoring service")
+    parser.add_argument("-d", "--daemon", action="store_true", help="Run in background as a daemon")
+    parser.add_argument(
+        "-c",
+        "--callback",
+        type=str,
+        default=None,
+        help="Callback function to execute on events (format: module:function)",
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "--batch-window",
+        type=float,
+        default=1.0,
+        help="Event batch window in seconds (default: 1.0)",
     )
     parser.add_argument(
-        "-d", "--daemon", action="store_true",
-        help="Run in background as a daemon"
+        "--cooldown",
+        type=float,
+        default=2.0,
+        help="Cooldown period between events in seconds (default: 2.0)",
     )
     parser.add_argument(
-        "-c", "--callback", type=str, default=None,
-        help="Callback function to execute on events (format: module:function)"
+        "--debounce",
+        type=float,
+        default=1.0,
+        help="Debounce delay before processing events (default: 1.0)",
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true",
-        help="Enable verbose logging"
+        "--regeneration-timeout",
+        type=int,
+        default=60,
+        help="Wrapper regeneration timeout in seconds (default: 60)",
     )
     parser.add_argument(
-        "--batch-window", type=float, default=1.0,
-        help="Event batch window in seconds (default: 1.0)"
-    )
-    parser.add_argument(
-        "--cooldown", type=float, default=2.0,
-        help="Cooldown period between events in seconds (default: 2.0)"
-    )
-    parser.add_argument(
-        "--debounce", type=float, default=1.0,
-        help="Debounce delay before processing events (default: 1.0)"
-    )
-    parser.add_argument(
-        "--regeneration-timeout", type=int, default=60,
-        help="Wrapper regeneration timeout in seconds (default: 60)"
-    )
-    parser.add_argument(
-        "--log-level", type=str, default="INFO",
+        "--log-level",
+        type=str,
+        default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Logging level (default: INFO)"
+        help="Logging level (default: INFO)",
     )
 
     args = parser.parse_args()
@@ -475,7 +489,7 @@ def main(daemon: bool = False, callback: Optional[str] = None, config: Optional[
         "cooldown": args.cooldown,
         "debounce": args.debounce,
         "regeneration_timeout": args.regeneration_timeout,
-        "log_level": args.log_level.upper()
+        "log_level": args.log_level.upper(),
     }
 
     logger.info("Starting Flatpak monitor with configuration: %s", config)

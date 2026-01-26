@@ -18,14 +18,12 @@ sys.modules["python_utils"].is_wrapper_file = lambda x: True
 sys.modules["python_utils"].get_wrapper_id = lambda x: "org.test.app"
 sys.modules["python_utils"].sanitize_id_to_name = lambda x: x.split(".")[-1].lower()
 sys.modules["python_utils"].find_executable = lambda x: f"/usr/bin/{x}"
-sys.modules["python_utils"].safe_mktemp = (
-    lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
-)
+sys.modules["python_utils"].safe_mktemp = lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
 
 try:
-    from fplaunch.generate import WrapperGenerator
-    from fplaunch.manage import WrapperManager
-    from fplaunch.systemd_setup import SystemdSetup
+    from lib.generate import WrapperGenerator
+    from lib.manage import WrapperManager
+    from lib.systemd_setup import SystemdSetup
 
     MODULES_AVAILABLE = True
 except ImportError:
@@ -77,7 +75,9 @@ class TestFocusedFunctionality:
     def test_systemd_setup_creation(self, temp_env) -> None:
         """Test SystemdSetup creation."""
         setup = SystemdSetup(
-            bin_dir=str(temp_env["bin_dir"]), emit_mode=True, emit_verbose=True,
+            bin_dir=str(temp_env["bin_dir"]),
+            emit_mode=True,
+            emit_verbose=True,
         )
         assert setup is not None
 

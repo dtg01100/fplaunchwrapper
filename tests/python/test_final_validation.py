@@ -20,13 +20,11 @@ sys.modules["python_utils"].is_wrapper_file = lambda x: True
 sys.modules["python_utils"].get_wrapper_id = lambda x: "org.test.app"
 sys.modules["python_utils"].sanitize_id_to_name = lambda x: x.split(".")[-1].lower()
 sys.modules["python_utils"].find_executable = lambda x: f"/usr/bin/{x}"
-sys.modules["python_utils"].safe_mktemp = (
-    lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
-)
+sys.modules["python_utils"].safe_mktemp = lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
 
 try:
-    from fplaunch.manage import WrapperManager
-    from fplaunch.systemd_setup import SystemdSetup
+    from lib.manage import WrapperManager
+    from lib.systemd_setup import SystemdSetup
 
     MODULES_AVAILABLE = True
 except ImportError:
@@ -54,13 +52,15 @@ class TestFinalValidation:
     def test_core_emit_functionality(self, temp_env) -> None:
         """Test core emit functionality works."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # In emit mode, operations should succeed without modifying files
         result = manager.set_preference("firefox", "flatpak")
         assert result is True
-        
+
         # Verify no files were actually created (emit mode doesn't modify)
         pref_file = Path(temp_env["config_dir"]) / "firefox.pref"
         assert not pref_file.exists()
@@ -80,7 +80,9 @@ class TestFinalValidation:
         manager.set_preference("firefox", "flatpak")
 
         setup = SystemdSetup(
-            bin_dir=str(temp_env["bin_dir"]), emit_mode=True, emit_verbose=True,
+            bin_dir=str(temp_env["bin_dir"]),
+            emit_mode=True,
+            emit_verbose=True,
         )
         setup.install_systemd_units()
 
@@ -93,7 +95,9 @@ class TestFinalValidation:
     def test_error_handling(self, temp_env) -> None:
         """Test error handling in emit mode."""
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=True, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=True,
+            emit_mode=True,
         )
 
         # Test invalid preference
@@ -108,7 +112,9 @@ class TestFinalValidation:
         import time
 
         manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]), verbose=False, emit_mode=True,
+            config_dir=str(temp_env["config_dir"]),
+            verbose=False,
+            emit_mode=True,
         )
 
         start_time = time.time()

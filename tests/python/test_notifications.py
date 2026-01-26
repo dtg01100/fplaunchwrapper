@@ -109,9 +109,7 @@ class TestSendNotification:
         assert args[5] == "Test Title"
         assert args[6] == "Test Message"
 
-    def test_send_notification_with_urgency(
-        self, mock_subprocess_run, mock_notify_available
-    ):
+    def test_send_notification_with_urgency(self, mock_subprocess_run, mock_notify_available):
         """Test notification with custom urgency."""
         if not send_notification:
             pytest.skip("notifications module not available")
@@ -138,9 +136,7 @@ class TestSendNotification:
         args = mock_subprocess_run.call_args[0][0]
         assert args[2] == "critical"
 
-    def test_send_notification_with_timeout(
-        self, mock_subprocess_run, mock_notify_available
-    ):
+    def test_send_notification_with_timeout(self, mock_subprocess_run, mock_notify_available):
         """Test notification with custom timeout."""
         if not send_notification:
             pytest.skip("notifications module not available")
@@ -167,9 +163,7 @@ class TestSendNotification:
             # Verify subprocess.run was not called
             mock_subprocess_run.assert_not_called()
 
-    def test_send_notification_failure(
-        self, mock_subprocess_run, mock_notify_available
-    ):
+    def test_send_notification_failure(self, mock_subprocess_run, mock_notify_available):
         """Test notification when notify-send command fails."""
         if not send_notification:
             pytest.skip("notifications module not available")
@@ -182,9 +176,7 @@ class TestSendNotification:
         result = send_notification("Title", "Message")
         assert result is False
 
-    def test_send_notification_exception(
-        self, mock_subprocess_run, mock_notify_available
-    ):
+    def test_send_notification_exception(self, mock_subprocess_run, mock_notify_available):
         """Test notification when an exception occurs."""
         if not send_notification:
             pytest.skip("notifications module not available")

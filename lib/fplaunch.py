@@ -23,7 +23,7 @@ def main():
     except (ImportError, AttributeError):
         try:
             # Fallback for when running as installed package
-            from fplaunch import cli
+            from lib import cli
 
             if hasattr(cli, "main"):
                 return cli.main()

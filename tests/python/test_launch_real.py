@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 
 
 # Import actual implementation
-from fplaunch.launch import AppLauncher, main
+from lib.launch import AppLauncher, main
 
 
 class TestAppLauncherReal:
@@ -192,8 +192,8 @@ class TestAppLauncherReal:
         wrapper = launcher._find_wrapper()
 
         assert wrapper is None
-    @patch("fplaunch.safety.safe_launch_check", return_value=True)
 
+    @patch("lib.safety.safe_launch_check", return_value=True)
     @patch("subprocess.run")
     def test_launch_with_wrapper(self, mock_run, mock_safety) -> None:
         """Test launch() with existing wrapper (mocked subprocess for safety)."""
@@ -210,14 +210,14 @@ class TestAppLauncherReal:
         # Verify REAL launch was attempted
         assert result is True
         mock_run.assert_called_once()
-        
+
         # Verify correct command was built
         call_args = mock_run.call_args[0][0]
         assert str(self.bin_dir / "firefox") in str(call_args[0])
         assert "--profile" in call_args
         assert "test" in call_args
-    @patch("fplaunch.safety.safe_launch_check", return_value=True)
 
+    @patch("lib.safety.safe_launch_check", return_value=True)
     @patch("subprocess.run")
     def test_launch_without_wrapper_fallback(self, mock_run, mock_safety) -> None:
         """Test launch() falls back to flatpak when wrapper doesn't exist."""
@@ -234,14 +234,14 @@ class TestAppLauncherReal:
         # Verify flatpak fallback
         assert result is True
         mock_run.assert_called_once()
-        
+
         call_args = mock_run.call_args[0][0]
         assert "flatpak" in call_args
         assert "run" in call_args
         assert "org.mozilla.firefox" in call_args
         assert "--new-tab" in call_args
-    @patch("fplaunch.safety.safe_launch_check", return_value=True)
 
+    @patch("lib.safety.safe_launch_check", return_value=True)
     @patch("subprocess.run")
     def test_launch_with_custom_env(self, mock_run, mock_safety) -> None:
         """Test launch() passes custom environment variables."""
@@ -258,8 +258,8 @@ class TestAppLauncherReal:
 
         # Verify env was passed
         assert mock_run.call_args[1]["env"] == custom_env
-    @patch("fplaunch.safety.safe_launch_check", return_value=True)
 
+    @patch("lib.safety.safe_launch_check", return_value=True)
     @patch("subprocess.run")
     def test_launch_with_debug_mode(self, mock_run, mock_safety) -> None:
         """Test launch() with debug mode enabled."""
@@ -273,6 +273,7 @@ class TestAppLauncherReal:
 
         # Capture stderr
         import io
+
         old_stderr = sys.stderr
         sys.stderr = io.StringIO()
 
@@ -285,8 +286,8 @@ class TestAppLauncherReal:
         # Verify debug output
         assert "Launching:" in debug_output
         assert "firefox" in debug_output
-    @patch("fplaunch.safety.safe_launch_check", return_value=True)
 
+    @patch("lib.safety.safe_launch_check", return_value=True)
     @patch("subprocess.run")
     def test_launch_with_verbose_mode_on_error(self, mock_run, mock_safety) -> None:
         """Test launch() with verbose mode on error."""
@@ -300,6 +301,7 @@ class TestAppLauncherReal:
 
         # Capture stderr
         import io
+
         old_stderr = sys.stderr
         sys.stderr = io.StringIO()
 
@@ -344,7 +346,7 @@ class TestAppLauncherReal:
         # Should return False but not crash
         assert result is False
 
-    @patch("fplaunch.safety.safe_launch_check", return_value=True)
+    @patch("lib.safety.safe_launch_check", return_value=True)
     @patch("subprocess.run")
     def test_launch_app_method(self, mock_run, mock_safety) -> None:
         """Test launch_app() convenience method."""
@@ -396,8 +398,8 @@ class TestMainFunction:
             assert result == 1
         finally:
             sys.argv = old_argv
-    @patch("fplaunch.safety.safe_launch_check", return_value=True)
 
+    @patch("lib.safety.safe_launch_check", return_value=True)
     @patch("subprocess.run")
     def test_main_with_app_name(self, mock_run, mock_safety) -> None:
         """Test main() with app name."""
@@ -411,7 +413,7 @@ class TestMainFunction:
         finally:
             sys.argv = old_argv
 
-    @patch("fplaunch.safety.safe_launch_check", return_value=True)
+    @patch("lib.safety.safe_launch_check", return_value=True)
     @patch("subprocess.run")
     def test_main_with_app_name_and_args(self, mock_run, mock_safety) -> None:
         """Test main() with app name and arguments."""
@@ -419,15 +421,20 @@ class TestMainFunction:
 
         old_argv = sys.argv
         try:
-            sys.argv = ["fplaunch-launch", "org.mozilla.firefox", "--new-tab", "https://example.com"]
+            sys.argv = [
+                "fplaunch-launch",
+                "org.mozilla.firefox",
+                "--new-tab",
+                "https://example.com",
+            ]
             result = main()
-            
+
             # Verify args were passed
             call_args = mock_run.call_args[0][0]
             assert "org.mozilla.firefox" in call_args or "firefox" in str(call_args)
             assert "--new-tab" in call_args
             assert "https://example.com" in call_args
-            
+
             assert result == 0
         finally:
             sys.argv = old_argv

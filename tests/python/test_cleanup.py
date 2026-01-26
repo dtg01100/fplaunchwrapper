@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 
 try:
-    from fplaunch.cleanup import WrapperCleanup, main
+    from lib.cleanup import WrapperCleanup, main
 except ImportError:
     # Skip if not available
     WrapperCleanup = None

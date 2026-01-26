@@ -24,9 +24,7 @@ class TestOrphanedSystemdUnitsDetection:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Test that cleanup can be initialized
             assert cleanup is not None
@@ -42,9 +40,7 @@ class TestOrphanedSystemdUnitsDetection:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Verify cleanup is initialized properly
             assert cleanup.dry_run is True
@@ -77,9 +73,7 @@ class TestOrphanedSystemdUnitsDetection:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # cleanup_items should be initialized
             assert "systemd_units" in cleanup.cleanup_items
@@ -97,9 +91,7 @@ class TestUnusedCronJobDetection:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Cron entries tracking should exist
             assert "cron_entries" in cleanup.cleanup_items
@@ -113,9 +105,7 @@ class TestUnusedCronJobDetection:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # cleanup_items should be populated
             assert isinstance(cleanup.cleanup_items, dict)
@@ -153,9 +143,7 @@ class TestOrphanedCompletionFileDetection:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Completion files should be tracked
             assert "completion_files" in cleanup.cleanup_items
@@ -169,9 +157,7 @@ class TestOrphanedCompletionFileDetection:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Should have completion files list
             assert isinstance(cleanup.cleanup_items["completion_files"], list)
@@ -185,9 +171,7 @@ class TestOrphanedCompletionFileDetection:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Cleanup should be initialized with completion tracking
             assert cleanup is not None
@@ -205,9 +189,7 @@ class TestOrphanedManPageDetection:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Man pages should be tracked
             assert "man_pages" in cleanup.cleanup_items
@@ -221,9 +203,7 @@ class TestOrphanedManPageDetection:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Should have man_pages list
             assert isinstance(cleanup.cleanup_items["man_pages"], list)
@@ -241,9 +221,7 @@ class TestCleanupArtifactTracking:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # All cleanup items should be present
             expected_items = [
@@ -271,9 +249,7 @@ class TestCleanupArtifactTracking:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Items should be lists or Path objects
             for key, value in cleanup.cleanup_items.items():
@@ -288,14 +264,11 @@ class TestCleanupArtifactTracking:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Should be able to count cleanup items
             total_items = sum(
-                len(v) if isinstance(v, list) else 1
-                for v in cleanup.cleanup_items.values()
+                len(v) if isinstance(v, list) else 1 for v in cleanup.cleanup_items.values()
             )
             assert isinstance(total_items, int)
 
@@ -317,9 +290,7 @@ class TestCleanupDryRunMode:
             wrapper.write_text("#!/bin/bash\necho test\n")
             wrapper.chmod(0o755)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             # Wrapper should still exist after cleanup init
             assert wrapper.exists()
@@ -333,9 +304,7 @@ class TestCleanupDryRunMode:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             assert cleanup.dry_run is True
 
@@ -385,9 +354,7 @@ class TestCleanupVerbosityModes:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             assert cleanup.verbose is False
 
@@ -404,9 +371,7 @@ class TestCleanupDirectoryInitialization:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             assert cleanup.bin_dir == bin_dir
 
@@ -419,9 +384,7 @@ class TestCleanupDirectoryInitialization:
             bin_dir.mkdir(parents=True)
             config_dir.mkdir(parents=True)
 
-            cleanup = WrapperCleanup(
-                bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True
-            )
+            cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
             assert cleanup.config_dir == config_dir
 

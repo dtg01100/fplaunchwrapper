@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Import actual implementation
-from fplaunch.generate import WrapperGenerator, main
+from lib.generate import WrapperGenerator, main
 
 
 class TestWrapperGeneratorReal:
@@ -164,7 +164,7 @@ class TestWrapperGeneratorReal:
         """Test get_installed_flatpaks() retrieves app list."""
         # Mock find_executable to return flatpak path
         mock_find.return_value = "/usr/bin/flatpak"
-        
+
         # Mock flatpak command output
         mock_run.return_value = Mock(
             returncode=0,
@@ -191,7 +191,7 @@ class TestWrapperGeneratorReal:
     def test_get_installed_flatpaks_with_duplicates(self, mock_run, mock_find) -> None:
         """Test get_installed_flatpaks() removes duplicates."""
         mock_find.return_value = "/usr/bin/flatpak"
-        
+
         # First call (user apps)
         # Second call (system apps with duplicate)
         mock_run.side_effect = [
@@ -314,6 +314,7 @@ class TestWrapperGeneratorReal:
 
         # Capture output
         import io
+
         old_stdout = sys.stdout
         sys.stdout = io.StringIO()
 
@@ -341,6 +342,7 @@ class TestWrapperGeneratorReal:
         )
 
         import io
+
         old_stdout = sys.stdout
         sys.stdout = io.StringIO()
 
@@ -368,6 +370,7 @@ class TestWrapperGeneratorReal:
 
         # Wait a bit
         import time
+
         time.sleep(0.01)
 
         # Generate again
@@ -405,7 +408,7 @@ class TestWrapperGeneratorReal:
         # Test with app ID that has no valid name after sanitization
         # Most IDs will generate SOME name, so just verify method completes
         result = gen.generate_wrapper("....")
-        
+
         # May succeed or fail depending on sanitization, just verify no crash
         assert result is True or result is False
 
@@ -529,14 +532,14 @@ class TestMainFunction:
         old_argv = sys.argv
         try:
             sys.argv = ["fplaunch-generate", "--help"]
-            
+
             # Should complete without error
             try:
                 result = main()
             except SystemExit as e:
                 # Help may exit
                 result = e.code
-            
+
             # Either returns None/0 or exits with 0
             assert result is None or result == 0
         finally:
@@ -560,9 +563,9 @@ class TestMainFunction:
                 "--emit",
                 str(self.bin_dir),
             ]
-            
+
             result = main()
-            
+
             # Emit mode should succeed without creating files
             assert result is None or result == 0
         finally:

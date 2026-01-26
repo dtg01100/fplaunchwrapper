@@ -11,7 +11,7 @@ import pytest
 
 # Add lib to path
 try:
-    from fplaunch.config_manager import EnhancedConfigManager, create_config_manager
+    from lib.config_manager import EnhancedConfigManager, create_config_manager
 except ImportError:
     # Mock it if not available
     EnhancedConfigManager = None
@@ -285,9 +285,7 @@ class TestConfigManager:
         required_attrs = ["bin_dir", "debug_mode", "log_level", "blocklist"]
 
         for attr in required_attrs:
-            assert hasattr(config.config, attr), (
-                f"Config missing required attribute: {attr}"
-            )
+            assert hasattr(config.config, attr), f"Config missing required attribute: {attr}"
 
     @patch("pathlib.Path.home")
     def test_config_migration_handling(self, mock_home) -> None:

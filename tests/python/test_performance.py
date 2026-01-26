@@ -11,12 +11,13 @@ from unittest.mock import Mock, patch
 
 # Add the project root to the path
 import sys
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from fplaunch.generate import WrapperGenerator
-from fplaunch.launch import AppLauncher
-from fplaunch.manage import WrapperManager
-from fplaunch.cleanup import WrapperCleanup
+from lib.generate import WrapperGenerator
+from lib.launch import AppLauncher
+from lib.manage import WrapperManager
+from lib.cleanup import WrapperCleanup
 
 
 class TestPerformance:
@@ -33,14 +34,13 @@ class TestPerformance:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_scalability_large_number_of_wrappers(self) -> None:
         """Test generating a large number of wrappers."""
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
 
         # Generate a large number of wrappers
@@ -73,9 +73,7 @@ class TestPerformance:
     def test_memory_usage_during_wrapper_generation(self) -> None:
         """Test memory usage during wrapper generation."""
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
 
         # Generate wrappers and monitor memory usage
@@ -104,9 +102,7 @@ class TestPerformance:
         """Test launching multiple apps."""
         # Generate multiple wrappers
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         num_apps = 20
         apps = []
@@ -138,9 +134,7 @@ class TestPerformance:
         """Test cleanup operations for a large number of wrappers."""
         # Generate a large number of wrappers
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         num_wrappers = 50
         apps = []
@@ -151,10 +145,7 @@ class TestPerformance:
             apps.append(app_name)
 
         # Clean up all wrappers and measure performance
-        cleanup = WrapperCleanup(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir)
-        )
+        cleanup = WrapperCleanup(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
         start_time = time.time()
         results = []
         for app_name in apps:
@@ -178,9 +169,7 @@ class TestPerformance:
         """Test memory usage during app launch."""
         # Generate a wrapper
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         app_name = "test_app"
         result = generator.generate_wrapper(app_name)
@@ -209,9 +198,7 @@ class TestPerformance:
         """Test performance of wrapper management operations."""
         # Generate multiple wrappers
         generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
         num_apps = 30
         apps = []
@@ -223,9 +210,7 @@ class TestPerformance:
 
         # Set preferences for all apps and measure performance
         manager = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-            verbose=True
+            config_dir=str(self.config_dir), bin_dir=str(self.bin_dir), verbose=True
         )
         start_time = time.time()
         results = []
@@ -243,14 +228,8 @@ class TestPerformance:
 
     def test_scalability_mixed_operations(self) -> None:
         """Test mixed operations (generate, launch, cleanup)."""
-        generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir)
-        )
-        cleanup = WrapperCleanup(
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir)
-        )
+        generator = WrapperGenerator(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
+        cleanup = WrapperCleanup(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
 
         # Perform mixed operations
         num_operations = 20

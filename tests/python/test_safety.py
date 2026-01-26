@@ -12,7 +12,7 @@ from unittest.mock import patch
 # Add the project root to the path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from fplaunch.safety import is_test_environment, is_dangerous_wrapper, safe_launch_check
+from lib.safety import is_test_environment, is_dangerous_wrapper, safe_launch_check
 
 
 class TestSafety:
@@ -43,15 +43,17 @@ class TestSafety:
         with patch.object(sys, "argv", ["script"]):
             with patch.dict(os.environ, {"FPWRAPPER_TEST_ENV": "false"}):
                 # Temporarily remove unittest modules to simulate non-test environment
-                unittest_modules = [mod for mod in sys.modules if mod.startswith('unittest')]
+                unittest_modules = [mod for mod in sys.modules if mod.startswith("unittest")]
                 for mod in unittest_modules:
                     del sys.modules[mod]
-                
+
                 # Also remove pytest modules
-                pytest_modules = [mod for mod in sys.modules if mod.startswith('pytest') or 'pytest' in mod]
+                pytest_modules = [
+                    mod for mod in sys.modules if mod.startswith("pytest") or "pytest" in mod
+                ]
                 for mod in pytest_modules:
                     del sys.modules[mod]
-                
+
                 try:
                     assert is_test_environment() is False
                 finally:

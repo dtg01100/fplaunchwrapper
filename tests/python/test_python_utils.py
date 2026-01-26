@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 
 try:
-    from fplaunch.python_utils import (
+    from lib.python_utils import (
         canonicalize_path_no_resolve,
         find_executable,
         get_wrapper_id,
@@ -235,10 +235,12 @@ class TestBashIntegration:
     def test_bash_script_execution(self, temp_bin_dir) -> None:
         """Test basic bash script execution."""
         script_path = temp_bin_dir / "test_script.sh"
-        script_path.write_text("""#!/bin/bash
+        script_path.write_text(
+            """#!/bin/bash
 echo "Hello from bash script"
 exit 0
-""")
+"""
+        )
         script_path.chmod(0o755)
 
         result = subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
@@ -393,7 +395,7 @@ class TestConfiguration:
     def test_config_manager_creation(self) -> None:
         """Test configuration manager creation."""
         try:
-            from fplaunch.config_manager import create_config_manager
+            from lib.config_manager import create_config_manager
         except ImportError:
             pytest.skip("config_manager not available")
 
@@ -405,7 +407,7 @@ class TestConfiguration:
     def test_config_file_operations(self) -> None:
         """Test configuration file read/write."""
         try:
-            from fplaunch.config_manager import create_config_manager
+            from lib.config_manager import create_config_manager
         except ImportError:
             pytest.skip("config_manager not available")
 

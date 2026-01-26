@@ -14,7 +14,7 @@ import pytest
 # Add lib to path
 # Import what we can
 try:
-    from fplaunch.python_utils import (
+    from lib.python_utils import (
         canonicalize_path_no_resolve,
         find_executable,
         sanitize_id_to_name,
@@ -157,9 +157,7 @@ class TestSystemResourceEdgeCases:
             # (some systems may allow the write despite chmod)
             if not permission_error_caught:
                 # File was created, verify it exists
-                assert test_file.exists(), (
-                    "Expected either PermissionError or file creation"
-                )
+                assert test_file.exists(), "Expected either PermissionError or file creation"
 
     def test_extreme_file_sizes(self) -> None:
         """Test handling of extreme file sizes."""
@@ -424,9 +422,7 @@ class TestBoundaryConditionEdgeCases:
         for value, expected_type in boundary_types:
             # Should handle unexpected types gracefully
             # Verify each value has the correct type
-            assert isinstance(value, expected_type), (
-                f"Expected {expected_type}, got {type(value)}"
-            )
+            assert isinstance(value, expected_type), f"Expected {expected_type}, got {type(value)}"
             # Verify truthiness behavior is consistent
             if value is None or value is False:
                 assert not value

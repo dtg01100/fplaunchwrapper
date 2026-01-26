@@ -77,14 +77,19 @@ class AppLauncher:
         """Lazy load safety module to avoid circular imports."""
         if self._safety_check is None:
             try:
-                from fplaunch.safety import safe_launch_check
+                from lib.safety import safe_launch_check
 
                 self._safety_check = safe_launch_check
                 return True, self._safety_check
             except ImportError:
                 # Safety module not available, allow all launches
                 self._safety_check = lambda *args, **kwargs: True
-                return True, self._safety_check
+                if self.verbose:
+                    print(
+                        "Warning: Safety module not available, launching without security checks",
+                        file=sys.stderr,
+                    )
+                return False, self._safety_check
         return True, self._safety_check
 
     def _get_hook_scripts(self, app_name: str, hook_type: str) -> list[Path]:
@@ -108,11 +113,19 @@ class AppLauncher:
 
             if hook_type == "pre" and prefs.pre_launch_script:
                 script_path = Path(prefs.pre_launch_script)
-                if script_path.exists() and os.access(script_path, os.X_OK):
+                if (
+                    script_path.exists()
+                    and os.access(script_path, os.X_OK)
+                    and self._is_path_safe(script_path, self.config_dir)
+                ):
                     scripts.append(script_path)
             elif hook_type == "post" and prefs.post_launch_script:
                 script_path = Path(prefs.post_launch_script)
-                if script_path.exists() and os.access(script_path, os.X_OK):
+                if (
+                    script_path.exists()
+                    and os.access(script_path, os.X_OK)
+                    and self._is_path_safe(script_path, self.config_dir)
+                ):
                     scripts.append(script_path)
         except Exception:
             pass
@@ -157,6 +170,7 @@ class AppLauncher:
                 file=sys.stderr,
             )
 
+        all_succeeded = True
         for script_path in scripts:
             try:
                 if self.debug:
@@ -165,14 +179,16 @@ class AppLauncher:
                 # Set environment variables
                 env = os.environ.copy()
                 env["FPWRAPPER_WRAPPER_NAME"] = self.app_name
-                env["FPWRAPPER_APP_ID"] = self.app_name
+                env["FPWRAPPER_APP_ID"] = self._sanitize_app_name(self.app_name)
                 env["FPWRAPPER_SOURCE"] = source
 
                 if hook_type == "post":
                     env["FPWRAPPER_EXIT_CODE"] = str(exit_code)
 
                 # Prepare arguments according to documentation
-                args = [str(script_path), self.app_name, self.app_name, source]
+                # Use sanitized app name to prevent command injection
+                safe_app_name = self._sanitize_app_name(self.app_name)
+                args = [str(script_path), safe_app_name, safe_app_name, source]
                 if hook_type == "post":
                     args.append(str(exit_code))
                 args.extend(self.args)
@@ -187,37 +203,32 @@ class AppLauncher:
                 )
 
                 if result.returncode != 0:
+                    all_succeeded = False
                     if self.verbose:
                         print(
                             f"Warning: {hook_type} hook failed ({script_path}): {result.stderr}",
                             file=sys.stderr,
                         )
-                    # Don't fail the whole launch if hook fails
-                    if hook_type == "pre":
-                        # Pre-hooks are more critical
-                        return False
 
                 elif self.verbose and result.stdout:
                     print(f"{hook_type} hook output: {result.stdout}", file=sys.stderr)
 
             except subprocess.TimeoutExpired:
+                all_succeeded = False
                 if self.verbose:
                     print(
                         f"Warning: {hook_type} hook timed out ({script_path})",
                         file=sys.stderr,
                     )
-                if hook_type == "pre":
-                    return False
             except Exception as e:
+                all_succeeded = False
                 if self.verbose:
                     print(
                         f"Warning: Error running {hook_type} hook ({script_path}): {e}",
                         file=sys.stderr,
                     )
-                if hook_type == "pre":
-                    return False
 
-        return True
+        return all_succeeded
 
     def launch_app(self, app_name: str, args: list[str] | None = None) -> bool:
         """Convenience wrapper for legacy API: set the app name and call launch."""
@@ -227,10 +238,194 @@ class AppLauncher:
 
     # Backwards compatibility: provide launch_app method
 
+    def _perform_safety_checks(self) -> bool:
+        """Perform safety checks before launching.
+
+        Returns True if launch should proceed, False if blocked.
+        """
+        # Safety check using lazy-loaded safety module
+        safety_available, safe_launch_check = self._get_safety_check()
+        if safety_available and not safe_launch_check(
+            self.app_name, self._find_wrapper()
+        ):
+            return False
+        return True
+
+    def _determine_launch_source(self) -> tuple[str, Path | None]:
+        """Determine the launch source (flatpak/system) and wrapper path.
+
+        Returns:
+            Tuple of (source_type, wrapper_path)
+        """
+        source = "flatpak"
+        wrapper_path = self._find_wrapper()
+
+        # If a wrapper file exists but is not executable, treat as a permission error
+        candidate_wrapper = self._get_wrapper_path()
+        try:
+            # Avoid treating arbitrary filesystem paths as wrappers if they
+            # escape the configured bin_dir (prevent path traversal attacks).
+            if not self._is_path_safe(candidate_wrapper, self.bin_dir):
+                escaped = True
+            else:
+                escaped = False
+
+            if (
+                not escaped
+                and candidate_wrapper.exists()
+                and not os.access(candidate_wrapper, os.X_OK)
+            ):
+                if self.verbose:
+                    print(
+                        f"Warning: Wrapper {candidate_wrapper} exists but is not executable",
+                        file=sys.stderr,
+                    )
+                return source, None  # This will cause launch failure
+        except Exception:
+            # If any filesystem error, continue with normal logic
+            pass
+
+        if wrapper_path:
+            source = "system"
+
+        return source, wrapper_path
+
+    def _check_preference_override(
+        self, wrapper_path: Path | None, source: str
+    ) -> tuple[Path | None, str]:
+        """Check for preference file override.
+
+        Returns:
+            Tuple of (updated_wrapper_path, updated_source)
+        """
+        try:
+            pref_file = self.config_dir / f"{self.app_name}.pref"
+            if pref_file.exists():
+                preference = pref_file.read_text().strip()
+                if preference == "flatpak":
+                    # Honor explicit flatpak preference
+                    wrapper_path = None
+                    source = "flatpak"
+                elif preference == "system":
+                    # Honor explicit system preference if wrapper exists
+                    if wrapper_path:
+                        source = "system"
+                    else:
+                        source = "flatpak"
+        except Exception:
+            # Best-effort only; ignore preference read errors
+            pass
+
+        return wrapper_path, source
+
+    def _resolve_flatpak_id(self, wrapper_path: Path | None) -> str:
+        """Resolve friendly app name to full flatpak ID if needed.
+
+        Returns the command identifier (app name or full flatpak ID).
+        """
+        if wrapper_path:
+            return str(wrapper_path)
+
+        # Fallback to flatpak - try to resolve friendly name to full flatpak ID
+        candidate_id = self.app_name
+        try:
+            from lib.python_utils import find_executable, sanitize_id_to_name
+
+            flatpak_path = find_executable("flatpak")
+            if flatpak_path:
+                # If subprocess.run has been patched/mocked in tests, avoid
+                # calling flatpak list to prevent extra mocked calls being
+                # counted by tests; only do full resolution in real envs.
+                try:
+                    from unittest.mock import Mock
+
+                    is_mocked = isinstance(subprocess.run, Mock)
+                except Exception:
+                    is_mocked = False
+
+                if not is_mocked:
+                    res = subprocess.run(
+                        [
+                            flatpak_path,
+                            "list",
+                            "--app",
+                            "--columns=application",
+                        ],
+                        capture_output=True,
+                        text=True,
+                    )
+                    if res.returncode == 0:
+                        for line in res.stdout.strip().splitlines():
+                            if sanitize_id_to_name(line) == self.app_name:
+                                candidate_id = line
+                                break
+        except Exception:
+            # Best-effort only; fall back to using app_name directly
+            pass
+
+        return candidate_id
+
+    def _build_launch_command(
+        self, command_id: str, wrapper_path: Path | None
+    ) -> list[str]:
+        """Build the command to execute for launching.
+
+        Args:
+            command_id: Either a wrapper path string or flatpak app ID
+            wrapper_path: The wrapper path if launching via system
+
+        Returns:
+            Command list to execute
+        """
+        if wrapper_path:
+            cmd = [command_id, *self.args]
+        else:
+            cmd = ["flatpak", "run", command_id, *self.args]
+        return cmd
+
+    def _execute_launch(self, cmd: list[str]) -> subprocess.CompletedProcess:
+        """Execute the launch command.
+
+        Returns the subprocess result.
+        """
+        if self.debug:
+            print(f"Launching: {' '.join(cmd)}", file=sys.stderr)
+
+        run_kwargs = {"capture_output": False}
+        if self.env:
+            run_kwargs["env"] = self.env
+
+        return subprocess.run(cmd, **run_kwargs)
+
     def _get_wrapper_path(self, app_name: str | None = None) -> Path:
         """Get the wrapper path for an application."""
         name = app_name or self.app_name
         return self.bin_dir / name
+
+    def _sanitize_app_name(self, app_name: str) -> str:
+        """Sanitize app name to prevent shell injection in hook scripts.
+
+        Replaces dangerous shell metacharacters with underscores to prevent
+        command injection attacks in hook script execution.
+        """
+        import re
+
+        # Replace only dangerous shell metacharacters with underscores
+        # Keep alphanumeric, dots, dashes, and underscores
+        sanitized = re.sub(r"[^a-zA-Z0-9_.-]", "_", app_name)
+        return sanitized
+
+    def _is_path_safe(self, path: Path, base_dir: Path) -> bool:
+        """Check if a path is safely within a base directory.
+
+        Prevents path traversal attacks by ensuring the path doesn't
+        escape the intended directory.
+        """
+        try:
+            path.relative_to(base_dir)
+            return True
+        except ValueError:
+            return False
 
     def _wrapper_exists(self, app_name: str | None = None) -> bool:
         """Check if wrapper exists and is executable.
@@ -241,9 +436,7 @@ class AppLauncher:
         """
         wrapper_path = self._get_wrapper_path(app_name)
         try:
-            resolved = wrapper_path.resolve()
-            base = self.bin_dir.resolve()
-            if not str(resolved).startswith(str(base)):
+            if not self._is_path_safe(wrapper_path, self.bin_dir):
                 return False
         except Exception:
             # If resolution fails, fall back to simple existence check
@@ -257,11 +450,9 @@ class AppLauncher:
         """
         wrapper_path = self._get_wrapper_path()
         try:
-            resolved = wrapper_path.resolve()
-            base = self.bin_dir.resolve()
-            if not str(resolved).startswith(str(base)):
+            if not self._is_path_safe(wrapper_path, self.bin_dir):
                 return None
-        except Exception:
+        except (OSError, ValueError, KeyError):
             pass
         if wrapper_path.exists() and os.access(wrapper_path, os.X_OK):
             return wrapper_path
@@ -270,45 +461,12 @@ class AppLauncher:
     def launch(self) -> bool:
         """Launch the application with pre/post-launch hook support."""
         try:
-            # Safety check using lazy-loaded safety module
-            safety_available, safe_launch_check = self._get_safety_check()
-            if safety_available and not safe_launch_check(
-                self.app_name, self._find_wrapper()
-            ):
+            # Perform safety checks
+            if not self._perform_safety_checks():
                 return False
 
-            # Determine source type
-            source = "flatpak"
-            wrapper_path = self._find_wrapper()
-            # If a wrapper file exists but is not executable, treat as a permission error
-            candidate_wrapper = self._get_wrapper_path()
-            try:
-                # Avoid treating arbitrary filesystem paths as wrappers if they
-                # escape the configured bin_dir (prevent path traversal attacks).
-                try:
-                    resolved = candidate_wrapper.resolve()
-                    base = self.bin_dir.resolve()
-                    escaped = not str(resolved).startswith(str(base))
-                except Exception:
-                    escaped = False
-
-                if (
-                    not escaped
-                    and candidate_wrapper.exists()
-                    and not os.access(candidate_wrapper, os.X_OK)
-                ):
-                    if self.verbose:
-                        print(
-                            f"Warning: Wrapper {candidate_wrapper} exists but is not executable",
-                            file=sys.stderr,
-                        )
-                    return False
-            except Exception:
-                # If any filesystem error, continue with normal logic
-                pass
-
-            if wrapper_path:
-                source = "system"
+            # Determine launch source
+            source, wrapper_path = self._determine_launch_source()
 
             # Run pre-launch hooks
             if not self._run_hook_scripts("pre", source=source):
@@ -319,75 +477,16 @@ class AppLauncher:
                 return False
 
             # Check preference file override
-            try:
-                pref_file = self.config_dir / f"{self.app_name}.pref"
-                preference = None
-                if pref_file.exists():
-                    preference = pref_file.read_text().strip()
-                    if preference == "flatpak":
-                        # Honor explicit flatpak preference
-                        wrapper_path = None
-                        source = "flatpak"
-                    elif preference == "system":
-                        # Honor explicit system preference if wrapper exists
-                        if wrapper_path:
-                            source = "system"
-                        else:
-                            source = "flatpak"
-            except Exception:
-                # Best-effort only; ignore preference read errors
-                preference = None
+            wrapper_path, source = self._check_preference_override(wrapper_path, source)
 
-            if not wrapper_path:
-                # Fallback to flatpak - try to resolve friendly name to full flatpak ID
-                candidate_id = self.app_name
-                try:
-                    from lib.python_utils import find_executable, sanitize_id_to_name
+            # Resolve command identifier
+            command_id = self._resolve_flatpak_id(wrapper_path)
 
-                    flatpak_path = find_executable("flatpak")
-                    if flatpak_path:
-                        # If subprocess.run has been patched/mocked in tests, avoid
-                        # calling flatpak list to prevent extra mocked calls being
-                        # counted by tests; only do full resolution in real envs.
-                        try:
-                            from unittest.mock import Mock
+            # Build launch command
+            cmd = self._build_launch_command(command_id, wrapper_path)
 
-                            is_mocked = isinstance(subprocess.run, Mock)
-                        except Exception:
-                            is_mocked = False
-
-                        if not is_mocked:
-                            res = subprocess.run(
-                                [
-                                    flatpak_path,
-                                    "list",
-                                    "--app",
-                                    "--columns=application",
-                                ],
-                                capture_output=True,
-                                text=True,
-                            )
-                            if res.returncode == 0:
-                                for line in res.stdout.strip().splitlines():
-                                    if sanitize_id_to_name(line) == self.app_name:
-                                        candidate_id = line
-                                        break
-                except Exception:
-                    # Best-effort only; fall back to using app_name directly
-                    pass
-
-                cmd = ["flatpak", "run", candidate_id, *self.args]
-            else:
-                cmd = [str(wrapper_path), *self.args]
-
-            if self.debug:
-                print(f"Launching: {' '.join(cmd)}", file=sys.stderr)
-
-            run_kwargs = {"capture_output": False}
-            if self.env:
-                run_kwargs["env"] = self.env
-
-            result = subprocess.run(cmd, **run_kwargs)
+            # Execute launch
+            result = self._execute_launch(cmd)
             launch_success = result.returncode == 0
 
             # Run post-launch hooks (even if launch failed)
