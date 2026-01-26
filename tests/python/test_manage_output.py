@@ -377,7 +377,7 @@ ID="{app_id}"
     def test_display_wrappers_fallback_no_rich(self, capsys) -> None:
         """Test that display_wrappers works without Rich library."""
         # Create a new manager with mocked Rich unavailable
-        with patch("fplaunch.manage.console", None):
+        with patch("lib.manage.console", None):
             manager = WrapperManager(
                 config_dir=str(self.config_dir),
                 bin_dir=str(self.bin_dir),
@@ -388,14 +388,16 @@ ID="{app_id}"
 
             # Should still output something to stdout (plain text fallback)
             assert (
-                "firefox" in captured.out or "chrome" in captured.out or "Wrapper" in captured.out
+                "firefox" in captured.out
+                or "chrome" in captured.out
+                or "Wrapper" in captured.out
             )
             assert captured.err == ""
 
     @patch("lib.manage.RICH_AVAILABLE", False)
     def test_show_info_fallback_no_rich(self, capsys) -> None:
         """Test that show_info works without Rich library."""
-        with patch("fplaunch.manage.console", None):
+        with patch("lib.manage.console", None):
             manager = WrapperManager(
                 config_dir=str(self.config_dir),
                 bin_dir=str(self.bin_dir),
@@ -412,7 +414,7 @@ ID="{app_id}"
     @patch("lib.manage.RICH_AVAILABLE", False)
     def test_discover_features_fallback_no_rich(self, capsys) -> None:
         """Test that discover_features works without Rich library."""
-        with patch("fplaunch.manage.console", None):
+        with patch("lib.manage.console", None):
             manager = WrapperManager(
                 config_dir=str(self.config_dir),
                 bin_dir=str(self.bin_dir),
@@ -428,7 +430,7 @@ ID="{app_id}"
     @patch("lib.manage.RICH_AVAILABLE", False)
     def test_log_fallback_no_rich(self, capsys) -> None:
         """Test that log works without Rich library."""
-        with patch("fplaunch.manage.console", None):
+        with patch("lib.manage.console", None):
             manager = WrapperManager(
                 config_dir=str(self.config_dir),
                 bin_dir=str(self.bin_dir),

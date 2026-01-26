@@ -4,10 +4,10 @@ Tests application launching functionality with proper mocking.
 """
 
 import os
+import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
-import subprocess
 
 import pytest
 
@@ -20,12 +20,6 @@ except ImportError:
     main = None
 
 from lib.config_manager import (
-    ConfigError,
-    ConfigFileNotFoundError,
-    ConfigParseError,
-    ConfigValidationError,
-    ConfigMigrationError,
-    ConfigPermissionError,
     create_config_manager,
 )
 
@@ -156,7 +150,9 @@ class TestLaunchEdgeCases:
 
     @patch("subprocess.run")
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_launch_flatpak_with_architectures(self, mock_safety, mock_subprocess) -> None:
+    def test_launch_flatpak_with_architectures(
+        self, mock_safety, mock_subprocess
+    ) -> None:
         """Test launch with different Flatpak architectures."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
@@ -182,7 +178,9 @@ class TestLaunchEdgeCases:
 
     @patch("subprocess.run")
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_launch_environment_variable_injection(self, mock_safety, mock_subprocess) -> None:
+    def test_launch_environment_variable_injection(
+        self, mock_safety, mock_subprocess
+    ) -> None:
         """Test environment variable injection attempts are blocked."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
@@ -416,7 +414,7 @@ class TestLaunchEdgeCases:
         mock_subprocess.return_value = mock_result
 
         # Test with various resource limits
-        limits = {
+        _ = {
             "cpu_limit": "50%",  # CPU limit
             "memory_limit": "500M",  # Memory limit
             "time_limit": "60",  # Time limit in seconds
@@ -648,7 +646,7 @@ echo "This wrapper contains dangerous content"
         )
         dangerous_wrapper.chmod(0o755)
 
-        launcher = AppLauncher(
+        AppLauncher(
             app_name="dangerous_app",
             bin_dir=str(self.bin_dir),
             config_dir=str(self.config_dir),
@@ -737,9 +735,9 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            assert (
-                False
-            ), f"Config manager should handle permission errors gracefully, not raise: {e}"
+            assert False, (
+                f"Config manager should handle permission errors gracefully, not raise: {e}"
+            )
         finally:
             # Restore permissions for cleanup
             try:
@@ -776,7 +774,9 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            assert False, f"Config manager should handle parse errors gracefully, not raise: {e}"
+            assert False, (
+                f"Config manager should handle parse errors gracefully, not raise: {e}"
+            )
 
     def test_config_validation_error_on_invalid_data(self) -> None:
         """Test config manager handles validation errors gracefully with fallback."""
@@ -807,9 +807,9 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            assert (
-                False
-            ), f"Config manager should handle validation errors gracefully, not raise: {e}"
+            assert False, (
+                f"Config manager should handle validation errors gracefully, not raise: {e}"
+            )
 
     def test_config_save_permission_error(self) -> None:
         """Test config manager handles save permission errors gracefully."""
@@ -817,7 +817,6 @@ class TestConfigExceptionHandling:
             pytest.skip("Config manager not available")
 
         # Set XDG_CONFIG_HOME to use our test directory
-        import os
 
         old_xdg = os.environ.get("XDG_CONFIG_HOME")
         os.environ["XDG_CONFIG_HOME"] = str(self.temp_dir)
@@ -835,9 +834,9 @@ class TestConfigExceptionHandling:
                 # The operation should complete without crashing
                 assert True
             except Exception as e:
-                assert (
-                    False
-                ), f"Config save should handle permission errors gracefully, not raise: {e}"
+                assert False, (
+                    f"Config save should handle permission errors gracefully, not raise: {e}"
+                )
             finally:
                 # Restore permissions for cleanup
                 try:
@@ -850,7 +849,7 @@ class TestConfigExceptionHandling:
             else:
                 del os.environ["XDG_CONFIG_HOME"]
 
-    def test_config_validation_error_on_invalid_data(self) -> None:
+    def test_config_validation_error_on_invalid_data_fallback(self) -> None:
         """Test that invalid configuration data falls back to defaults gracefully."""
         if not create_config_manager:
             pytest.skip("Config manager not available")
@@ -860,7 +859,6 @@ class TestConfigExceptionHandling:
         config_file.write_text('log_level = "INVALID_LEVEL"\n')
 
         # Set XDG_CONFIG_HOME to use our test directory
-        import os
 
         old_xdg = os.environ.get("XDG_CONFIG_HOME")
         os.environ["XDG_CONFIG_HOME"] = str(self.temp_dir)
@@ -872,20 +870,19 @@ class TestConfigExceptionHandling:
 
             # Verify it fell back to default log_level
             assert config_manager.config.log_level == "INFO"
-            assert config_manager.config.debug_mode == False
+            assert not config_manager.config.debug_mode
         finally:
             if old_xdg is not None:
                 os.environ["XDG_CONFIG_HOME"] = old_xdg
             else:
                 del os.environ["XDG_CONFIG_HOME"]
 
-    def test_config_save_permission_error(self) -> None:
+    def test_config_save_permission_error_handling(self) -> None:
         """Test that config save handles permission errors gracefully."""
         if not create_config_manager:
             pytest.skip("Config manager not available")
 
         # Set XDG_CONFIG_HOME to use our test directory
-        import os
 
         old_xdg = os.environ.get("XDG_CONFIG_HOME")
         os.environ["XDG_CONFIG_HOME"] = str(self.temp_dir)
@@ -903,9 +900,9 @@ class TestConfigExceptionHandling:
                 # The operation should complete without crashing
                 assert True
             except Exception as e:
-                assert (
-                    False
-                ), f"Config save should handle permission errors gracefully, not raise: {e}"
+                assert False, (
+                    f"Config save should handle permission errors gracefully, not raise: {e}"
+                )
             finally:
                 # Restore permissions for cleanup
                 try:

@@ -5,6 +5,7 @@ Validates that generate module shows output to inform users about progress
 and errors, with appropriate stream routing (stdout for info/success,
 stderr for errors/warnings).
 """
+
 from __future__ import annotations
 
 import tempfile

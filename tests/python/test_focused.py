@@ -18,7 +18,9 @@ sys.modules["python_utils"].is_wrapper_file = lambda x: True
 sys.modules["python_utils"].get_wrapper_id = lambda x: "org.test.app"
 sys.modules["python_utils"].sanitize_id_to_name = lambda x: x.split(".")[-1].lower()
 sys.modules["python_utils"].find_executable = lambda x: f"/usr/bin/{x}"
-sys.modules["python_utils"].safe_mktemp = lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
+sys.modules["python_utils"].safe_mktemp = (
+    lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
+)
 
 try:
     from lib.generate import WrapperGenerator

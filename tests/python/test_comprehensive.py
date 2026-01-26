@@ -28,7 +28,7 @@ class TestComprehensiveSuite:
 
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def run_command_test(self, cmd, description, expect_success=True) -> None:
+    def run_command_test(self, cmd, description, expect_success=True, env=None) -> None:
         """Run a command and test result."""
         try:
             result = subprocess.run(
@@ -38,6 +38,7 @@ class TestComprehensiveSuite:
                 capture_output=True,
                 text=True,
                 timeout=30,
+                env=env,
             )
             success = (result.returncode == 0) == expect_success
             assert success, f"{description} failed: {result.stderr}"
@@ -50,7 +51,9 @@ class TestComprehensiveSuite:
         """Test CLI help command."""
         import sys
 
-        self.run_command_test([sys.executable, "-m", "fplaunch.cli", "--help"], "CLI help command")
+        self.run_command_test(
+            [sys.executable, "-m", "fplaunch.cli", "--help"], "CLI help command"
+        )
 
     def test_cli_config_command(self) -> None:
         """Test CLI config command."""
@@ -70,17 +73,32 @@ class TestComprehensiveSuite:
         import sys
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "generate", "--emit", str(temp_env["bin_dir"])],
+            [
+                sys.executable,
+                "-m",
+                "fplaunch.cli",
+                "--emit",
+                "generate",
+                str(temp_env["bin_dir"]),
+            ],
             "Generate emit mode",
         )
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "set-pref", "firefox", "flatpak", "--emit"],
+            [
+                sys.executable,
+                "-m",
+                "fplaunch.cli",
+                "--emit",
+                "set-pref",
+                "firefox",
+                "flatpak",
+            ],
             "Set-pref emit mode",
         )
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "setup-systemd", "--emit"],
+            [sys.executable, "-m", "fplaunch.cli", "--emit", "systemd"],
             "Setup-systemd emit mode",
         )
 
@@ -97,12 +115,12 @@ class TestComprehensiveSuite:
         import sys
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "config", "--emit"],
+            [sys.executable, "-m", "fplaunch.cli", "--emit", "config"],
             "Config emit mode",
         )
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "monitor", "--emit"],
+            [sys.executable, "-m", "fplaunch.cli", "--emit", "monitor"],
             "Monitor emit mode",
         )
 
@@ -113,21 +131,49 @@ class TestComprehensiveSuite:
 
         commands = [
             (
-                [sys.executable, "-m", "fplaunch.cli", "generate", "--emit", "/tmp/test"],
+                [
+                    sys.executable,
+                    "-m",
+                    "fplaunch.cli",
+                    "--emit",
+                    "generate",
+                    "/tmp/test",
+                ],
                 "generate --emit",
             ),
             (
-                [sys.executable, "-m", "fplaunch.cli", "set-pref", "test", "flatpak", "--emit"],
+                [
+                    sys.executable,
+                    "-m",
+                    "fplaunch.cli",
+                    "--emit",
+                    "set-pref",
+                    "test",
+                    "flatpak",
+                ],
                 "set-pref --emit",
             ),
             (
-                [sys.executable, "-m", "fplaunch.cli", "setup-systemd", "--emit"],
+                [sys.executable, "-m", "fplaunch.cli", "--emit", "systemd"],
                 "setup-systemd --emit",
             ),
-            ([sys.executable, "-m", "fplaunch.cli", "config", "--emit"], "config --emit"),
-            ([sys.executable, "-m", "fplaunch.cli", "monitor", "--emit"], "monitor --emit"),
             (
-                [sys.executable, "-m", "fplaunch.cli", "--emit", "generate", "/tmp/test"],
+                [sys.executable, "-m", "fplaunch.cli", "--emit", "config"],
+                "config --emit",
+            ),
+            (
+                [sys.executable, "-m", "fplaunch.cli", "--emit", "monitor"],
+                "monitor --emit",
+            ),
+            (
+                [
+                    sys.executable,
+                    "-m",
+                    "fplaunch.cli",
+                    "--emit",
+                    "generate",
+                    "/tmp/test",
+                ],
                 "global --emit flag",
             ),
         ]
@@ -150,9 +196,9 @@ class TestComprehensiveSuite:
             ),
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)
-        assert (
-            result.returncode != 0
-        ), f"Expected non-zero exit code for unknown command, got {result.returncode}\nstdout:{result.stdout}\nstderr:{result.stderr}"
+        assert result.returncode != 0, (
+            f"Expected non-zero exit code for unknown command, got {result.returncode}\nstdout:{result.stdout}\nstderr:{result.stderr}"
+        )
 
     def test_integration_workflow(self) -> None:
         """Test basic integration workflow."""

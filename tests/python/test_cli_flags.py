@@ -80,7 +80,9 @@ def test_systemd_setup_alias(cli_mod, runner, monkeypatch):
     calls = {}
 
     class FakeSystemdSetup:
-        def __init__(self, bin_dir=None, wrapper_script=None, emit_mode=False, emit_verbose=False):
+        def __init__(
+            self, bin_dir=None, wrapper_script=None, emit_mode=False, emit_verbose=False
+        ):
             calls["init"] = (emit_mode, emit_verbose)
 
         def run(self):
@@ -118,7 +120,9 @@ def test_config_defaults_to_show(cli_mod, runner, monkeypatch):
             calls.append(f"get-preset {preset}")
             return []
 
-    monkeypatch.setattr("lib.config_manager.create_config_manager", lambda: FakeConfigManager())
+    monkeypatch.setattr(
+        "lib.config_manager.create_config_manager", lambda: FakeConfigManager()
+    )
 
     result = runner.invoke(cli_mod.cli, ["config"], catch_exceptions=False)
     assert result.exit_code == 0
@@ -196,7 +200,9 @@ def test_no_magicmock_artifacts_created(tmp_path, monkeypatch):
     from lib.generate import WrapperGenerator
 
     # Use normal paths
-    gen = WrapperGenerator(bin_dir=str(tmp_path / "bin"), config_dir=str(tmp_path / "cfg"))
+    gen = WrapperGenerator(
+        bin_dir=str(tmp_path / "bin"), config_dir=str(tmp_path / "cfg")
+    )
     assert gen.bin_dir.exists()
 
     # Ensure still no MagicMock dirs

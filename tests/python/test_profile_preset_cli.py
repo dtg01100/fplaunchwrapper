@@ -236,7 +236,9 @@ class TestPresetCLICommands:
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             # Create first instance and add preset
             manager1 = EnhancedConfigManager()
-            manager1.add_permission_preset("media", ["--device=dri", "--socket=pulseaudio"])
+            manager1.add_permission_preset(
+                "media", ["--device=dri", "--socket=pulseaudio"]
+            )
 
             # Create second instance and verify preset exists
             manager2 = EnhancedConfigManager()

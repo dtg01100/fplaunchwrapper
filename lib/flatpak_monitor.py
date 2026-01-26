@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 
 # Configure logging
 logging.basicConfig(
@@ -53,9 +53,13 @@ class FlatpakEventHandler(FileSystemEventHandler):
         self.callback = callback
         self.last_event_time = 0
         self.config = config or {}
-        self.cooldown_seconds = self.config.get("cooldown", 2)  # Prevent rapid-fire events
+        self.cooldown_seconds = self.config.get(
+            "cooldown", 2
+        )  # Prevent rapid-fire events
         self.pending_events = []
-        self.batch_window = self.config.get("batch_window", 1.0)  # Collect events for 1 second
+        self.batch_window = self.config.get(
+            "batch_window", 1.0
+        )  # Collect events for 1 second
         self.batch_timer = None
         self._event_lock = None
         self._init_lock()
@@ -133,7 +137,9 @@ class FlatpakEventHandler(FileSystemEventHandler):
         # Import threading here to avoid issues if not available
         import threading
 
-        self.batch_timer = threading.Timer(self.batch_window, self._flush_pending_events)
+        self.batch_timer = threading.Timer(
+            self.batch_window, self._flush_pending_events
+        )
         self.batch_timer.daemon = True
         self.batch_timer.start()
 
@@ -181,7 +187,10 @@ class FlatpakMonitor:
     """Monitor for Flatpak installation changes."""
 
     def __init__(
-        self, callback=None, bin_dir: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+        self,
+        callback=None,
+        bin_dir: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
     ) -> None:
         # bin_dir is accepted for test compatibility but not used in monitoring logic
         self.callback = callback
@@ -364,7 +373,10 @@ class FlatpakMonitor:
                     )
 
                     if result.returncode == 0:
-                        logger.debug("Wrapper regeneration stdout: %s", str(result.stdout).strip())
+                        logger.debug(
+                            "Wrapper regeneration stdout: %s",
+                            str(result.stdout).strip(),
+                        )
                         return True
                     else:
                         logger.error(
@@ -401,7 +413,9 @@ class FlatpakMonitor:
                 self.stop_monitoring()
 
 
-def start_flatpak_monitoring(callback=None, daemon=False, config: Optional[Dict[str, Any]] = None):
+def start_flatpak_monitoring(
+    callback=None, daemon=False, config: Optional[Dict[str, Any]] = None
+):
     """Start Flatpak monitoring (convenience function)."""
     monitor = FlatpakMonitor(callback=callback, config=config)
 
@@ -419,14 +433,20 @@ def start_flatpak_monitoring(callback=None, daemon=False, config: Optional[Dict[
 
 
 def main(
-    daemon: bool = False, callback: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+    daemon: bool = False,
+    callback: Optional[str] = None,
+    config: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Command-line interface for flatpak monitoring."""
     import argparse
 
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Flatpak installation monitoring service")
-    parser.add_argument("-d", "--daemon", action="store_true", help="Run in background as a daemon")
+    parser = argparse.ArgumentParser(
+        description="Flatpak installation monitoring service"
+    )
+    parser.add_argument(
+        "-d", "--daemon", action="store_true", help="Run in background as a daemon"
+    )
     parser.add_argument(
         "-c",
         "--callback",
@@ -434,7 +454,9 @@ def main(
         default=None,
         help="Callback function to execute on events (format: module:function)",
     )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable verbose logging"
+    )
     parser.add_argument(
         "--batch-window",
         type=float,

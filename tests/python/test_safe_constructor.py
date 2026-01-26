@@ -140,11 +140,7 @@ class TestSafeConstructorValidation:
                 "subprocess.Popen",
             ) as mock_popen, patch("os.path.exists", return_value=True), patch(
                 "os.makedirs",
-            ), patch(
-                "shutil.rmtree"
-            ), patch(
-                "os.remove"
-            ):
+            ), patch("shutil.rmtree"), patch("os.remove"):
                 mock_run.return_value = Mock(returncode=0, stdout="safe", stderr="")
                 mock_popen.return_value = Mock()
 
@@ -183,11 +179,17 @@ class TestSafeConstructorValidation:
                 assert mock_run.call_count > 0, "External commands should be mocked"
 
                 # Verify working directory unchanged
-                assert os.getcwd() == original_cwd, "Working directory should not change"
+                assert os.getcwd() == original_cwd, (
+                    "Working directory should not change"
+                )
 
                 # Verify environment unchanged
-                assert os.environ.get("PATH", "") == original_path, "PATH should not change"
-                assert os.environ.get("HOME", "") == original_home, "HOME should not change"
+                assert os.environ.get("PATH", "") == original_path, (
+                    "PATH should not change"
+                )
+                assert os.environ.get("HOME", "") == original_home, (
+                    "HOME should not change"
+                )
 
         finally:
             # Restore if anything went wrong (defensive)

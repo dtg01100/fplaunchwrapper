@@ -30,7 +30,14 @@ class TestEmitSafety:
         """Test that generate --emit doesn't create files."""
         import sys
 
-        command = [sys.executable, "-m", "fplaunch.cli", "generate", "--emit", "/tmp/test-bin"]
+        command = [
+            sys.executable,
+            "-m",
+            "fplaunch.cli",
+            "--emit",
+            "generate",
+            "/tmp/test-bin",
+        ]
         success = self.run_emit_test(command, "generate emit safety")
         assert success
 
@@ -42,10 +49,10 @@ class TestEmitSafety:
             sys.executable,
             "-m",
             "fplaunch.cli",
+            "--emit",
             "set-pref",
             "firefox",
             "flatpak",
-            "--emit",
         ]
         success = self.run_emit_test(command, "set-pref emit safety")
         assert success
@@ -54,7 +61,7 @@ class TestEmitSafety:
         """Test that setup-systemd --emit doesn't create files."""
         import sys
 
-        command = [sys.executable, "-m", "fplaunch.cli", "setup-systemd", "--emit"]
+        command = [sys.executable, "-m", "fplaunch.cli", "--emit", "systemd"]
         success = self.run_emit_test(command, "setup-systemd emit safety")
         assert success
 
@@ -62,7 +69,15 @@ class TestEmitSafety:
         """Test that global --emit flag works safely."""
         import sys
 
-        command = [sys.executable, "-m", "fplaunch.cli", "--emit", "set-pref", "chrome", "system"]
+        command = [
+            sys.executable,
+            "-m",
+            "fplaunch.cli",
+            "--emit",
+            "set-pref",
+            "chrome",
+            "system",
+        ]
         success = self.run_emit_test(command, "global emit flag safety")
         assert success
 
@@ -70,7 +85,7 @@ class TestEmitSafety:
         """Test that config --emit works safely."""
         import sys
 
-        command = [sys.executable, "-m", "fplaunch.cli", "config", "--emit"]
+        command = [sys.executable, "-m", "fplaunch.cli", "--emit", "config"]
         success = self.run_emit_test(command, "config emit safety")
         assert success
 
@@ -78,7 +93,7 @@ class TestEmitSafety:
         """Test that monitor --emit works safely."""
         import sys
 
-        command = [sys.executable, "-m", "fplaunch.cli", "monitor", "--emit"]
+        command = [sys.executable, "-m", "fplaunch.cli", "--emit", "monitor"]
         success = self.run_emit_test(command, "monitor emit safety")
         assert success
 

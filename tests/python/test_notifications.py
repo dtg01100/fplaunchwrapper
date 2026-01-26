@@ -3,7 +3,6 @@
 Tests all notification functionality with proper mocking and fixtures.
 """
 
-import subprocess
 from unittest.mock import Mock, patch
 
 import pytest
@@ -25,7 +24,7 @@ class TestNotifySendAvailable:
     @pytest.fixture
     def mock_subprocess_run(self):
         """Mock subprocess.run for testing."""
-        with patch("fplaunch.notifications.subprocess.run") as mock:
+        with patch("lib.notifications.subprocess.run") as mock:
             yield mock
 
     def test_notify_send_available_true(self, mock_subprocess_run):
@@ -78,13 +77,13 @@ class TestSendNotification:
     @pytest.fixture
     def mock_subprocess_run(self):
         """Mock subprocess.run for testing."""
-        with patch("fplaunch.notifications.subprocess.run") as mock:
+        with patch("lib.notifications.subprocess.run") as mock:
             yield mock
 
     @pytest.fixture
     def mock_notify_available(self):
         """Mock notify_send_available to return True."""
-        with patch("fplaunch.notifications.notify_send_available", return_value=True):
+        with patch("lib.notifications.notify_send_available", return_value=True):
             yield
 
     def test_send_notification_basic(self, mock_subprocess_run, mock_notify_available):
@@ -109,7 +108,9 @@ class TestSendNotification:
         assert args[5] == "Test Title"
         assert args[6] == "Test Message"
 
-    def test_send_notification_with_urgency(self, mock_subprocess_run, mock_notify_available):
+    def test_send_notification_with_urgency(
+        self, mock_subprocess_run, mock_notify_available
+    ):
         """Test notification with custom urgency."""
         if not send_notification:
             pytest.skip("notifications module not available")
@@ -136,7 +137,9 @@ class TestSendNotification:
         args = mock_subprocess_run.call_args[0][0]
         assert args[2] == "critical"
 
-    def test_send_notification_with_timeout(self, mock_subprocess_run, mock_notify_available):
+    def test_send_notification_with_timeout(
+        self, mock_subprocess_run, mock_notify_available
+    ):
         """Test notification with custom timeout."""
         if not send_notification:
             pytest.skip("notifications module not available")
@@ -156,14 +159,16 @@ class TestSendNotification:
             pytest.skip("notifications module not available")
 
         # Mock notify_send_available returning False
-        with patch("fplaunch.notifications.notify_send_available", return_value=False):
+        with patch("lib.notifications.notify_send_available", return_value=False):
             result = send_notification("Title", "Message")
             assert result is False
 
             # Verify subprocess.run was not called
             mock_subprocess_run.assert_not_called()
 
-    def test_send_notification_failure(self, mock_subprocess_run, mock_notify_available):
+    def test_send_notification_failure(
+        self, mock_subprocess_run, mock_notify_available
+    ):
         """Test notification when notify-send command fails."""
         if not send_notification:
             pytest.skip("notifications module not available")
@@ -176,7 +181,9 @@ class TestSendNotification:
         result = send_notification("Title", "Message")
         assert result is False
 
-    def test_send_notification_exception(self, mock_subprocess_run, mock_notify_available):
+    def test_send_notification_exception(
+        self, mock_subprocess_run, mock_notify_available
+    ):
         """Test notification when an exception occurs."""
         if not send_notification:
             pytest.skip("notifications module not available")
@@ -194,13 +201,13 @@ class TestSendUpdateFailureNotification:
     @pytest.fixture
     def mock_subprocess_run(self):
         """Mock subprocess.run for testing."""
-        with patch("fplaunch.notifications.subprocess.run") as mock:
+        with patch("lib.notifications.subprocess.run") as mock:
             yield mock
 
     @pytest.fixture
     def mock_notify_available(self):
         """Mock notify_send_available to return True."""
-        with patch("fplaunch.notifications.notify_send_available", return_value=True):
+        with patch("lib.notifications.notify_send_available", return_value=True):
             yield
 
     def test_send_update_failure_notification_basic(
@@ -232,7 +239,7 @@ class TestSendUpdateFailureNotification:
         if not send_update_failure_notification:
             pytest.skip("notifications module not available")
 
-        with patch("fplaunch.notifications.notify_send_available", return_value=False):
+        with patch("lib.notifications.notify_send_available", return_value=False):
             result = send_update_failure_notification("Error message")
             assert result is False
 
@@ -265,7 +272,7 @@ class TestNotificationSecurity:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("fplaunch.notifications.subprocess.run") as mock_run, patch(
+        with patch("lib.notifications.subprocess.run") as mock_run, patch(
             "lib.notifications.notify_send_available", return_value=True
         ):
             mock_result = Mock()
@@ -294,7 +301,7 @@ class TestNotificationSecurity:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("fplaunch.notifications.subprocess.run") as mock_run, patch(
+        with patch("lib.notifications.subprocess.run") as mock_run, patch(
             "lib.notifications.notify_send_available", return_value=True
         ):
             mock_result = Mock()
@@ -316,7 +323,7 @@ class TestNotificationSecurity:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("fplaunch.notifications.subprocess.run") as mock_run, patch(
+        with patch("lib.notifications.subprocess.run") as mock_run, patch(
             "lib.notifications.notify_send_available", return_value=True
         ):
             mock_result = Mock()
@@ -339,7 +346,7 @@ class TestNotificationEdgeCases:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("fplaunch.notifications.subprocess.run") as mock_run, patch(
+        with patch("lib.notifications.subprocess.run") as mock_run, patch(
             "lib.notifications.notify_send_available", return_value=True
         ):
             mock_result = Mock()
@@ -359,7 +366,7 @@ class TestNotificationEdgeCases:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("fplaunch.notifications.subprocess.run") as mock_run, patch(
+        with patch("lib.notifications.subprocess.run") as mock_run, patch(
             "lib.notifications.notify_send_available", return_value=True
         ):
             mock_result = Mock()
@@ -377,7 +384,7 @@ class TestNotificationEdgeCases:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("fplaunch.notifications.subprocess.run") as mock_run, patch(
+        with patch("lib.notifications.subprocess.run") as mock_run, patch(
             "lib.notifications.notify_send_available", return_value=True
         ):
             mock_result = Mock()
@@ -395,7 +402,7 @@ class TestNotificationEdgeCases:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("fplaunch.notifications.subprocess.run") as mock_run, patch(
+        with patch("lib.notifications.subprocess.run") as mock_run, patch(
             "lib.notifications.notify_send_available", return_value=True
         ):
             mock_result = Mock()
@@ -418,7 +425,7 @@ class TestNotificationIntegration:
         if not (notify_send_available and send_notification):
             pytest.skip("notifications module not available")
 
-        with patch("fplaunch.notifications.subprocess.run") as mock_run:
+        with patch("lib.notifications.subprocess.run") as mock_run:
             # Mock which command (availability check)
             which_result = Mock()
             which_result.returncode = 0
@@ -449,7 +456,7 @@ class TestNotificationIntegration:
         if not (notify_send_available and send_notification):
             pytest.skip("notifications module not available")
 
-        with patch("fplaunch.notifications.subprocess.run") as mock_run:
+        with patch("lib.notifications.subprocess.run") as mock_run:
             # Mock which command to return failure
             which_result = Mock()
             which_result.returncode = 1

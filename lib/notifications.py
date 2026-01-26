@@ -3,11 +3,11 @@
 Provides desktop notification support using notify-send (Linux standard),
 with fallback if notify-send is not available or notifications are disabled.
 """
+
 from __future__ import annotations
 
 import subprocess
 import sys
-from typing import Any
 
 
 def notify_send_available() -> bool:
@@ -22,7 +22,10 @@ def notify_send_available() -> bool:
 
 
 def send_notification(
-    title: str, message: str, urgency: str = "normal", timeout: int = 5000  # milliseconds
+    title: str,
+    message: str,
+    urgency: str = "normal",
+    timeout: int = 5000,  # milliseconds
 ) -> bool:
     """Send a desktop notification using notify-send.
 

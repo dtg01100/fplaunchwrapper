@@ -3,7 +3,6 @@
 
 import os
 import stat
-import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -108,7 +107,7 @@ exec flatpak run com.example.App "$@"
         with patch("shutil.which", return_value=None):
             # Generator should handle missing flatpak command
             with pytest.raises((FileNotFoundError, RuntimeError, SystemExit)):
-                result = generator.run_command(["flatpak", "list"], "Check Flatpak")
+                generator.run_command(["flatpak", "list"], "Check Flatpak")
 
 
 class TestWrapperCleanup:
@@ -180,7 +179,7 @@ exec flatpak run com.example.App "$@"
 """
         wrapper.write_text(wrapper_content)
 
-        cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir))
+        WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir))
 
         # Mock is_wrapper_file check from python_utils
         with patch("fplaunch.python_utils.is_wrapper_file", return_value=True):
@@ -219,7 +218,9 @@ class TestSystemdSetup:
         """Test SystemdSetup initializes correctly."""
         bin_dir, systemd_dir = temp_systemd_dirs
 
-        with patch.object(SystemdSetup, "_get_systemd_unit_dir", return_value=systemd_dir):
+        with patch.object(
+            SystemdSetup, "_get_systemd_unit_dir", return_value=systemd_dir
+        ):
             setup = SystemdSetup(bin_dir=str(bin_dir))
 
             assert setup.bin_dir == bin_dir
@@ -276,7 +277,9 @@ WantedBy=default.target
         with patch.object(
             SystemdSetup, "_detect_flatpak_bin_dir", return_value=mock_flatpak_dir
         ):
-            with patch.object(SystemdSetup, "_get_systemd_unit_dir", return_value=systemd_dir):
+            with patch.object(
+                SystemdSetup, "_get_systemd_unit_dir", return_value=systemd_dir
+            ):
                 setup = SystemdSetup(bin_dir=str(bin_dir))
                 assert setup.flatpak_bin_dir == mock_flatpak_dir
 
@@ -284,7 +287,9 @@ WantedBy=default.target
         """Test emit mode doesn't create actual systemd unit files."""
         bin_dir, systemd_dir = temp_systemd_dirs
 
-        with patch.object(SystemdSetup, "_get_systemd_unit_dir", return_value=systemd_dir):
+        with patch.object(
+            SystemdSetup, "_get_systemd_unit_dir", return_value=systemd_dir
+        ):
             setup = SystemdSetup(bin_dir=str(bin_dir), emit_mode=True)
 
             assert setup.emit_mode is True
@@ -342,9 +347,7 @@ class TestIntegrationScenarios:
         dirs = integrated_env
 
         # Generate wrapper first
-        generator = WrapperGenerator(
-            str(dirs["bin_dir"]), config_dir=str(dirs["config_dir"])
-        )
+        WrapperGenerator(str(dirs["bin_dir"]), config_dir=str(dirs["config_dir"]))
 
         # Setup systemd
         with patch.object(

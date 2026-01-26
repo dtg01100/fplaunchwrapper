@@ -3,21 +3,19 @@
 Tests the performance of fplaunchwrapper under load.
 """
 
+# Add the project root to the path
+import sys
 import tempfile
 import time
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-
-# Add the project root to the path
-import sys
-
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from lib.cleanup import WrapperCleanup
 from lib.generate import WrapperGenerator
 from lib.launch import AppLauncher
 from lib.manage import WrapperManager
-from lib.cleanup import WrapperCleanup
 
 
 class TestPerformance:
@@ -48,7 +46,7 @@ class TestPerformance:
         apps = []
         for i in range(num_wrappers):
             app_name = f"test_app_{i}"
-            flatpak_id = f"org.test.App{i}"
+            _ = f"org.test.App{i}"
             apps.append(app_name)
 
         start_time = time.time()
@@ -81,7 +79,7 @@ class TestPerformance:
         apps = []
         for i in range(num_wrappers):
             app_name = f"test_app_{i}"
-            flatpak_id = f"org.test.App{i}"
+            _ = f"org.test.App{i}"
             apps.append(app_name)
 
         start_time = time.time()
@@ -145,7 +143,9 @@ class TestPerformance:
             apps.append(app_name)
 
         # Clean up all wrappers and measure performance
-        cleanup = WrapperCleanup(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
+        cleanup = WrapperCleanup(
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir)
+        )
         start_time = time.time()
         results = []
         for app_name in apps:
@@ -228,8 +228,12 @@ class TestPerformance:
 
     def test_scalability_mixed_operations(self) -> None:
         """Test mixed operations (generate, launch, cleanup)."""
-        generator = WrapperGenerator(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
-        cleanup = WrapperCleanup(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
+        generator = WrapperGenerator(
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir)
+        )
+        cleanup = WrapperCleanup(
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir)
+        )
 
         # Perform mixed operations
         num_operations = 20

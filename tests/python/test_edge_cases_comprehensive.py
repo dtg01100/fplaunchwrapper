@@ -17,11 +17,8 @@ from unittest.mock import Mock, patch
 import pytest
 
 try:
-    from lib.cleanup import WrapperCleanup
     from lib.generate import WrapperGenerator
-    from lib.launch import AppLauncher
     from lib.manage import WrapperManager
-    from lib.systemd_setup import SystemdSetup
 
     MODULES_AVAILABLE = True
 except ImportError:
@@ -132,7 +129,8 @@ class TestInputValidationEdgeCases:
             "space in.id",  # Space
             "special@char.id",  # Special chars
             "a" * 200,  # Very long
-            "id.with.100.dots." + ".".join([str(i) for i in range(100)]),  # Too many components
+            "id.with.100.dots."
+            + ".".join([str(i) for i in range(100)]),  # Too many components
         ]
 
         for malformed_id in malformed_ids:

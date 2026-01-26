@@ -32,7 +32,9 @@ class TestEmitVerbose:
         """Test generate emit verbose shows wrapper content."""
         from lib.generate import WrapperGenerator
 
-        content = WrapperGenerator("/tmp/test", None, True, True, True).create_wrapper_script(
+        content = WrapperGenerator(
+            "/tmp/test", None, True, True, True
+        ).create_wrapper_script(
             "firefox",
             "org.mozilla.firefox",
         )

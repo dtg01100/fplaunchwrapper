@@ -3,21 +3,18 @@
 Simple Performance Testing for fplaunchwrapper - Safe and Isolated
 """
 
-import sys
-import time
-import tempfile
-import shutil
 import os
+import shutil
+import statistics
+import tempfile
+import time
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch, Mock
-import statistics
+from unittest.mock import Mock, patch
 
 try:
-    from fplaunch.generate import WrapperGenerator
-    from fplaunch.manage import WrapperManager
-    from fplaunch.cleanup import WrapperCleanup
-    from fplaunch.launch import AppLauncher
+    from lib.generate import WrapperGenerator
+    from lib.manage import WrapperManager
 
     MODULES_AVAILABLE = True
 except ImportError:
@@ -38,7 +35,10 @@ def _build_perf_env(isolated_home=None):
     for path in (config_dir, data_dir, cache_dir, bin_dir):
         path.mkdir(parents=True, exist_ok=True)
 
-    old_env = {key: os.environ.get(key) for key in ("HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME")}
+    old_env = {
+        key: os.environ.get(key)
+        for key in ("HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME")
+    }
     os.environ["HOME"] = str(base_dir)
     os.environ["XDG_CONFIG_HOME"] = str(config_dir.parent)
     os.environ["XDG_DATA_HOME"] = str(data_dir.parent)
@@ -70,7 +70,7 @@ def benchmark_operation(name, operation_func, iterations=5):
 
     for i in range(iterations):
         start_time = time.perf_counter()
-        result = operation_func(i)
+        operation_func(i)
         end_time = time.perf_counter()
 
         execution_time = (end_time - start_time) * 1000

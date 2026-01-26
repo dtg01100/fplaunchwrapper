@@ -234,7 +234,9 @@ class TestManagementFunctions:
         assert (temp_env["config_dir"] / "aliases").exists()
 
         # Check preference values
-        assert (temp_env["config_dir"] / "firefox.pref").read_text().strip() == "flatpak"
+        assert (
+            temp_env["config_dir"] / "firefox.pref"
+        ).read_text().strip() == "flatpak"
         assert (temp_env["config_dir"] / "chrome.pref").read_text().strip() == "system"
         assert (temp_env["config_dir"] / "vlc.pref").read_text().strip() == "flatpak"
 

@@ -92,7 +92,7 @@ exit 0
         env = os.environ.copy()
         env.update(
             {
-                "PATH": f"{flatpak.parent}:{system_dir}:{bin_dir}:{env.get('PATH','')}",
+                "PATH": f"{flatpak.parent}:{system_dir}:{bin_dir}:{env.get('PATH', '')}",
                 "HOME": str(temp_dir),
                 "XDG_DATA_HOME": str(data_dir),
                 "XDG_CONFIG_HOME": str(xdg_config),
@@ -233,7 +233,9 @@ exit 0
         output = result.stdout.strip()
 
         # Should show the XDG config directory path
-        expected_path = f"{os.path.expanduser('~')}/.local/share/applications/org.mozilla.firefox"
+        expected_path = (
+            f"{os.path.expanduser('~')}/.local/share/applications/org.mozilla.firefox"
+        )
         assert output == expected_path
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
@@ -250,7 +252,9 @@ exit 0
                     stdout="Application: org.mozilla.firefox\nRuntime: org.fedoraproject.Platform/x86_64/f40\n",
                     stderr="",
                 )
-            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+            return subprocess.CompletedProcess(
+                args=cmd, returncode=0, stdout="", stderr=""
+            )
 
         mock_subprocess.side_effect = mock_run
 
@@ -300,7 +304,9 @@ exit 0
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="Override applied", stderr=""
                 )
-            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+            return subprocess.CompletedProcess(
+                args=cmd, returncode=0, stdout="", stderr=""
+            )
 
         mock_subprocess.side_effect = mock_run
 
@@ -353,7 +359,9 @@ exit 0
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="YOLO mode applied", stderr=""
                 )
-            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+            return subprocess.CompletedProcess(
+                args=cmd, returncode=0, stdout="", stderr=""
+            )
 
         mock_subprocess.side_effect = mock_run
 
@@ -404,7 +412,9 @@ exit 0
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="Overrides reset", stderr=""
                 )
-            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+            return subprocess.CompletedProcess(
+                args=cmd, returncode=0, stdout="", stderr=""
+            )
 
         mock_subprocess.side_effect = mock_run
 
@@ -449,9 +459,14 @@ exit 0
         def mock_run(cmd, **kwargs):
             if "flatpak run" in " ".join(cmd) and "--no-sandbox" in " ".join(cmd):
                 return subprocess.CompletedProcess(
-                    args=cmd, returncode=0, stdout="App launched unrestricted", stderr=""
+                    args=cmd,
+                    returncode=0,
+                    stdout="App launched unrestricted",
+                    stderr="",
                 )
-            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+            return subprocess.CompletedProcess(
+                args=cmd, returncode=0, stdout="", stderr=""
+            )
 
         mock_subprocess.side_effect = mock_run
 
@@ -543,7 +558,7 @@ exit 0
             assert generator.generate_wrapper("org.mozilla.firefox") is True
 
         wrapper_path = temp_env["bin_dir"] / "firefox"
-        pref_file = temp_env["config_dir"] / "firefox.pref"
+        _ = temp_env["config_dir"] / "firefox.pref"
 
         # Verify the wrapper script contains the alias implementation
         wrapper_content = wrapper_path.read_text()
@@ -700,7 +715,9 @@ echo "testapp executed"
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="Firefox launched\n", stderr=""
                 )
-            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+            return subprocess.CompletedProcess(
+                args=cmd, returncode=0, stdout="", stderr=""
+            )
 
         mock_subprocess.side_effect = mock_run
 
@@ -779,7 +796,9 @@ echo "testapp executed"
         ]:
             assert flag in flag_lines
 
-    def test_script_management_flags_generated_wrapper(self, generated_wrapper, tmp_path) -> None:
+    def test_script_management_flags_generated_wrapper(
+        self, generated_wrapper, tmp_path
+    ) -> None:
         pre_script = tmp_path / "pre.sh"
         pre_script.write_text("#!/usr/bin/env bash\necho pre\n")
         pre_script.chmod(0o755)
@@ -789,7 +808,7 @@ echo "testapp executed"
         post_script.chmod(0o755)
 
         config_dir = generated_wrapper["config_dir"]
-        hook_dir = config_dir / "scripts" / "firefox"
+        _ = config_dir / "scripts" / "firefox"
 
         set_pre = self._run_wrapper(
             generated_wrapper,
@@ -810,10 +829,14 @@ echo "testapp executed"
         )
         assert isinstance(set_post.returncode, int)
 
-        remove_pre = self._run_wrapper(generated_wrapper, "--fpwrapper-remove-pre-script")
+        remove_pre = self._run_wrapper(
+            generated_wrapper, "--fpwrapper-remove-pre-script"
+        )
         assert isinstance(remove_pre.returncode, int)
 
-        remove_post = self._run_wrapper(generated_wrapper, "--fpwrapper-remove-post-script")
+        remove_post = self._run_wrapper(
+            generated_wrapper, "--fpwrapper-remove-post-script"
+        )
         assert isinstance(remove_post.returncode, int)
 
     def test_one_shot_launch_prefers_system(self, generated_wrapper) -> None:
@@ -845,7 +868,9 @@ echo "testapp executed"
     def test_sandbox_and_run_flags_hit_flatpak(self, generated_wrapper) -> None:
         self._run_wrapper(generated_wrapper, "--fpwrapper-sandbox-yolo")
         self._run_wrapper(generated_wrapper, "--fpwrapper-sandbox-reset")
-        self._run_wrapper(generated_wrapper, "--fpwrapper-run-unrestricted", "--version")
+        self._run_wrapper(
+            generated_wrapper, "--fpwrapper-run-unrestricted", "--version"
+        )
 
         log_content = generated_wrapper["flatpak_log"].read_text()
         assert "override --user org.mozilla.firefox --filesystem=host" in log_content
@@ -858,9 +883,11 @@ echo "testapp executed"
         # Non-interactive mode may cause different behavior; just validate it returns
         assert isinstance(edit_result.returncode, int)
 
-        pref_file = generated_wrapper["config_dir"] / "firefox.pref"
+        _ = generated_wrapper["config_dir"] / "firefox.pref"
 
-        set_pref = self._run_wrapper(generated_wrapper, "--fpwrapper-set-override", "system")
+        set_pref = self._run_wrapper(
+            generated_wrapper, "--fpwrapper-set-override", "system"
+        )
         # In non-interactive mode, option handling may bypass normal execution
         assert isinstance(set_pref.returncode, int)
 
@@ -899,7 +926,9 @@ echo "testapp executed"
 
         # Verify the two flags are in the same conditional
         assert pref_line_1 > 0, "Preference handling code not found"
-        assert pref_line_2 > pref_line_1, "Preference file write not found after conditional"
+        assert pref_line_2 > pref_line_1, (
+            "Preference file write not found after conditional"
+        )
 
         # Extract the actual block to verify both flags are handled together
         block = wrapper_content[pref_line_1 : pref_line_2 + 50]
@@ -916,27 +945,31 @@ echo "testapp executed"
         assert "--fpwrapper-set-preference" in help_output, "Alias flag not in help"
 
         # Preference should be labeled as an alias
-        assert (
-            "Alias for" in help_output or "alias" in help_output.lower()
-        ), "Help text should indicate alias relationship"
+        assert "Alias for" in help_output or "alias" in help_output.lower(), (
+            "Help text should indicate alias relationship"
+        )
 
     def test_alias_flag_persistence(self, generated_wrapper) -> None:
         """Test that both alias and original flag store preference identically."""
-        pref_file = generated_wrapper["config_dir"] / "firefox.pref"
+        _ = generated_wrapper["config_dir"] / "firefox.pref"
 
         # Set using original flag
-        result1 = self._run_wrapper(generated_wrapper, "--fpwrapper-set-override", "system")
+        result1 = self._run_wrapper(
+            generated_wrapper, "--fpwrapper-set-override", "system"
+        )
         assert result1.returncode == 0
 
         # Preference file should exist (if in mode that creates it)
         # Note: In test environment this may not work, but we verify no error occurs
 
         # Set using alias flag - should work identically
-        result2 = self._run_wrapper(generated_wrapper, "--fpwrapper-set-preference", "flatpak")
+        result2 = self._run_wrapper(
+            generated_wrapper, "--fpwrapper-set-preference", "flatpak"
+        )
         assert result2.returncode == 0
 
         # Both should return same exit code type
-        assert type(result1.returncode) == type(result2.returncode)
+        assert type(result1.returncode) is type(result2.returncode)
 
 
 if __name__ == "__main__":

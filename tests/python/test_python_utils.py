@@ -6,6 +6,7 @@ Tests all core functionality with proper mocking and fixtures.
 import os
 import subprocess
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -59,7 +60,7 @@ class TestPythonUtils:
         with tempfile.TemporaryDirectory() as tmpdir:
             test_path = os.path.join(tmpdir, "test")
             result = canonicalize_path_no_resolve(test_path)
-            assert result == test_path
+            assert result == Path(test_path)
 
     def test_canonicalize_path_relative(self) -> None:
         """Test relative path canonicalization."""
@@ -72,7 +73,7 @@ class TestPythonUtils:
             os.chdir(tmpdir)
             try:
                 result = canonicalize_path_no_resolve("../test")
-                expected = os.path.abspath("../test")
+                expected = Path(os.path.abspath("../test"))
                 assert result == expected
             finally:
                 os.chdir(original_cwd)
@@ -243,7 +244,9 @@ exit 0
         )
         script_path.chmod(0o755)
 
-        result = subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
+        result = subprocess.run(
+            [str(script_path)], check=False, capture_output=True, text=True
+        )
         assert result.returncode == 0
         assert "Hello from bash script" in result.stdout
 

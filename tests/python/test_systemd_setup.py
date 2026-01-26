@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import pytest
 
 # Add lib to path for imports
@@ -47,18 +47,30 @@ class SystemdTestFixtures:
     @staticmethod
     def validate_systemd_unit(content: str) -> tuple[bool, str]:
         """Validate systemd unit file syntax using systemd-analyze if available."""
+        import tempfile
+        import os
+
         try:
-            result = subprocess.run(
-                ["systemd-analyze", "verify", "--no-pager"],
-                input=content,
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if result.returncode == 0:
-                return True, "Valid systemd unit"
-            else:
-                return False, result.stderr
+            # Write content to a temporary file since systemd-analyze expects a file path
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".timer", delete=False
+            ) as f:
+                f.write(content)
+                temp_file = f.name
+
+            try:
+                result = subprocess.run(
+                    ["systemd-analyze", "verify", "--no-pager", temp_file],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if result.returncode == 0:
+                    return True, "Valid systemd unit"
+                else:
+                    return False, result.stderr
+            finally:
+                os.unlink(temp_file)
         except (FileNotFoundError, subprocess.TimeoutExpired):
             # systemd-analyze not available, do basic validation
             required_sections = ["[Unit]", "[Service]"]
@@ -505,7 +517,9 @@ class TestListAppServices:
             (systemd_dir / "flatpak-wrapper-thunderbird.timer").write_text(
                 "[Timer]\nOnCalendar=hourly\n"
             )
-            (systemd_dir / "flatpak-wrapper-vlc.timer").write_text("[Timer]\nOnCalendar=weekly\n")
+            (systemd_dir / "flatpak-wrapper-vlc.timer").write_text(
+                "[Timer]\nOnCalendar=weekly\n"
+            )
 
             apps = setup.list_app_services()
 

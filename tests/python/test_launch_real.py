@@ -10,7 +10,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-
 # Import actual implementation
 from lib.launch import AppLauncher, main
 
@@ -81,7 +80,7 @@ class TestAppLauncherReal:
         new_config = self.temp_dir / "new_config"
         assert not new_config.exists()
 
-        launcher = AppLauncher(
+        AppLauncher(
             app_name="firefox",
             config_dir=str(new_config),
         )

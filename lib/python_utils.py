@@ -137,7 +137,9 @@ def is_wrapper_file(file_path: str | Path) -> bool | None:
 
         # Validate ID format
         id_value = re.search(r'ID="([^"]*)"', id_match.group())
-        return not (not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1)))
+        return not (
+            not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1))
+        )
     except (IOError, OSError, UnicodeDecodeError, re.error):
         # Handle specific file and regex exceptions
         return False

@@ -97,7 +97,9 @@ class TestEdgeCases:
         os.chmod(read_only_bin_dir, 0o444)
 
         generator = WrapperGenerator(
-            bin_dir=str(read_only_bin_dir), config_dir=str(read_only_config_dir), verbose=True
+            bin_dir=str(read_only_bin_dir),
+            config_dir=str(read_only_config_dir),
+            verbose=True,
         )
 
         # Attempt to generate a wrapper in a read-only directory
@@ -121,7 +123,9 @@ class TestEdgeCases:
         non_existent_config_dir = non_existent_dir / "non_existent_config"
 
         generator = WrapperGenerator(
-            bin_dir=str(non_existent_bin_dir), config_dir=str(non_existent_config_dir), verbose=True
+            bin_dir=str(non_existent_bin_dir),
+            config_dir=str(non_existent_config_dir),
+            verbose=True,
         )
 
         # Attempt to generate a wrapper in a non-existent directory

@@ -43,13 +43,17 @@ class TestSafety:
         with patch.object(sys, "argv", ["script"]):
             with patch.dict(os.environ, {"FPWRAPPER_TEST_ENV": "false"}):
                 # Temporarily remove unittest modules to simulate non-test environment
-                unittest_modules = [mod for mod in sys.modules if mod.startswith("unittest")]
+                unittest_modules = [
+                    mod for mod in sys.modules if mod.startswith("unittest")
+                ]
                 for mod in unittest_modules:
                     del sys.modules[mod]
 
                 # Also remove pytest modules
                 pytest_modules = [
-                    mod for mod in sys.modules if mod.startswith("pytest") or "pytest" in mod
+                    mod
+                    for mod in sys.modules
+                    if mod.startswith("pytest") or "pytest" in mod
                 ]
                 for mod in pytest_modules:
                     del sys.modules[mod]

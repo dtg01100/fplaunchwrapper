@@ -2,26 +2,20 @@
 
 ## Architecture Overview
 
-This project manages Flatpak application wrappers, enabling simplified commands like `firefox` instead of `flatpak run org.mozilla.firefox`. The architecture uses a **proxy package pattern** for development without installation.
+This project manages Flatpak application wrappers, enabling simplified commands like `firefox` instead of `flatpak run org.mozilla.firefox`. The architecture uses a **direct package structure** with all implementation in the `lib/` directory.
 
-### Dual Package Structure
+### Package Structure
 
 - **`lib/`** - Implementation modules (actual code: `cleanup.py`, `cli.py`, `config_manager.py`, `generate.py`, `launch.py`, `manage.py`, `systemd_setup.py`, etc.)
-- **`fplaunch/`** - Proxy package that re-exports `lib/` modules under the `fplaunch` namespace
 
-**Import Strategy**: Always import from `fplaunch.*` (not `lib.*`) to work both in development and after installation:
+**Import Strategy**: Always import from `lib.*` directly since this is now the package structure.
 
 ```python
-# ✅ Correct - works in dev and installed
-from fplaunch.manage import WrapperManager
-from fplaunch.cleanup import WrapperCleanup
-from fplaunch.generate import WrapperGenerator
-
-# ❌ Avoid - only works in dev, fails when installed
+# ✅ Correct - works in both dev and installed environments
 from lib.manage import WrapperManager
+from lib.cleanup import WrapperCleanup
+from lib.generate import WrapperGenerator
 ```
-
-The `fplaunch/__init__.py` contains the full re-export list. When adding new modules, update both `lib/` and `fplaunch/` with a shim file.
 
 ## Key Entry Points
 
@@ -111,10 +105,10 @@ black .
 # Run linters
 ruff check .
 flake8 .
-pylint lib/ fplaunch/
+pylint lib/
 
 # Security scan
-bandit -r lib/ fplaunch/
+bandit -r lib/
 ```
 
 ### Project Configuration
@@ -159,8 +153,7 @@ Modules log via `self.log(message, level)` where level is `info`, `warning`, `er
 
 | Path | Purpose |
 |------|---------|
-| `lib/` | Implementation modules |
-| `fplaunch/` | Proxy package (re-exports lib/) |
+| `lib/` | Implementation modules (Python package) |
 | `tests/python/` | Unit tests |
 | `tests/conftest.py` | Pytest fixtures and configuration |
 | `pyproject.toml` | Project metadata and configuration |
@@ -173,25 +166,19 @@ Modules log via `self.log(message, level)` where level is `info`, `warning`, `er
 ### Adding a New Module
 
 1. Create implementation in `lib/newmodule.py`
-2. Create proxy in `fplaunch/newmodule.py`:
-   ```python
-   from lib.newmodule import *  # noqa: F401, F403
-   ```
-3. Add to `fplaunch/__init__.py` `__all__` list
-4. Add entry point to `pyproject.toml` if CLI command needed
+2. Add entry point to `pyproject.toml` if CLI command needed
 
 ### Adding a New Test
 
 1. Create `tests/python/test_newmodule.py`
-2. Import from `fplaunch.*` (not `lib.*`)
+2. Import from `lib.*` directly
 3. Use pytest fixtures from `conftest.py`
 4. Mock flatpak with provided fixtures
 
 ### Modifying CLI Commands
 
-1. Find entry point in `pyproject.toml` → maps to `fplaunch.<module>:main`
+1. Find entry point in `pyproject.toml` → maps to `lib.<module>:main`
 2. Modify implementation in `lib/<module>.py`
-3. Proxy automatically updates via `fplaunch/<module>.py`
 
 ## Known Issues & Workarounds
 

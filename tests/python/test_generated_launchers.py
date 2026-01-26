@@ -8,9 +8,9 @@ work correctly with all features.
 from __future__ import annotations
 
 import os
+import subprocess
 import tempfile
 from pathlib import Path
-import subprocess
 
 import pytest
 
@@ -117,7 +117,10 @@ class TestGeneratedLaunchers:
 
             # Should fail because flatpak app isn't actually installed
             assert result.returncode != 0
-            assert "not installed" in result.stderr.lower() or "error" in result.stderr.lower()
+            assert (
+                "not installed" in result.stderr.lower()
+                or "error" in result.stderr.lower()
+            )
 
     def test_generated_wrapper_with_invalid_args(self) -> None:
         """Test that wrappers handle invalid arguments."""
@@ -175,7 +178,7 @@ class TestGeneratedLaunchers:
         # Re-generate the wrapper
         self.generator.generate_wrapper("org.mozilla.firefox")
 
-        wrapper_path = self.bin_dir / app_name
+        _ = self.bin_dir / app_name
 
         # Verify the environment file is properly read by the wrapper
         assert env_file.exists()
@@ -260,8 +263,9 @@ class TestGeneratedLauncherIntegration:
 
     def test_launcher_executes_generated_wrapper(self) -> None:
         """Test that AppLauncher can execute generated wrappers."""
+        from unittest.mock import Mock, patch
+
         from lib.launch import AppLauncher
-        from unittest.mock import patch, Mock
 
         with patch("subprocess.run") as mock_run, patch(
             "fplaunch.safety.safe_launch_check", return_value=True
@@ -282,8 +286,9 @@ class TestGeneratedLauncherIntegration:
 
     def test_generated_wrapper_with_safety_check(self) -> None:
         """Test that generated wrappers interact with safety checks."""
+        from unittest.mock import Mock, patch
+
         from lib.launch import AppLauncher
-        from unittest.mock import patch, Mock
 
         # Create a safety check failure scenario
         with patch("subprocess.run") as mock_run, patch(
@@ -424,7 +429,9 @@ class TestNonInteractiveBehavior:
         )
 
         assert result.returncode != 0
-        assert "not installed" in result.stderr.lower() or "error" in result.stderr.lower()
+        assert (
+            "not installed" in result.stderr.lower() or "error" in result.stderr.lower()
+        )
 
     def test_non_interactive_with_one_shot_pref(self) -> None:
         """Test that one-shot preference works in non-interactive mode."""
@@ -656,7 +663,7 @@ class TestFPWrapperForce:
 
         env = os.environ.copy()
         env["FPWRAPPER_FORCE"] = "interactive"
-        result = subprocess.run(
+        subprocess.run(
             [str(wrapper_path)],
             capture_output=True,
             text=True,
@@ -737,7 +744,7 @@ class TestPreferenceScenarios:
 
         pref_file.write_text("system")
 
-        result = subprocess.run(
+        subprocess.run(
             [str(wrapper_path)],
             capture_output=True,
             text=True,

@@ -186,7 +186,9 @@ class TestConfigManager:
                 setattr(config.config, key, value)
                 # Verify the value was actually set
                 actual_value = getattr(config.config, key)
-                assert actual_value == value, f"Expected {key}={value}, got {actual_value}"
+                assert actual_value == value, (
+                    f"Expected {key}={value}, got {actual_value}"
+                )
 
     @patch("pathlib.Path.home")
     def test_config_directory_paths(self, mock_home) -> None:
@@ -285,7 +287,9 @@ class TestConfigManager:
         required_attrs = ["bin_dir", "debug_mode", "log_level", "blocklist"]
 
         for attr in required_attrs:
-            assert hasattr(config.config, attr), f"Config missing required attribute: {attr}"
+            assert hasattr(config.config, attr), (
+                f"Config missing required attribute: {attr}"
+            )
 
     @patch("pathlib.Path.home")
     def test_config_migration_handling(self, mock_home) -> None:

@@ -58,7 +58,7 @@ class TestWrapperGeneratorReal:
         assert not new_bin.exists()
         assert not new_config.exists()
 
-        gen = WrapperGenerator(
+        WrapperGenerator(
             bin_dir=str(new_bin),
             config_dir=str(new_config),
         )
@@ -69,7 +69,7 @@ class TestWrapperGeneratorReal:
 
     def test_init_saves_bin_dir_to_config(self) -> None:
         """Test __init__ saves bin_dir to config file."""
-        gen = WrapperGenerator(
+        WrapperGenerator(
             bin_dir=str(self.bin_dir),
             config_dir=str(self.config_dir),
         )
@@ -83,7 +83,7 @@ class TestWrapperGeneratorReal:
         new_bin = self.temp_dir / "emit_bin"
         new_config = self.temp_dir / "emit_config"
 
-        gen = WrapperGenerator(
+        WrapperGenerator(
             bin_dir=str(new_bin),
             config_dir=str(new_config),
             emit_mode=True,
@@ -195,8 +195,14 @@ class TestWrapperGeneratorReal:
         # First call (user apps)
         # Second call (system apps with duplicate)
         mock_run.side_effect = [
-            Mock(returncode=0, stdout="org.mozilla.firefox\ncom.google.Chrome\n", stderr=""),
-            Mock(returncode=0, stdout="org.mozilla.firefox\norg.gimp.GIMP\n", stderr=""),
+            Mock(
+                returncode=0,
+                stdout="org.mozilla.firefox\ncom.google.Chrome\n",
+                stderr="",
+            ),
+            Mock(
+                returncode=0, stdout="org.mozilla.firefox\norg.gimp.GIMP\n", stderr=""
+            ),
         ]
 
         gen = WrapperGenerator(

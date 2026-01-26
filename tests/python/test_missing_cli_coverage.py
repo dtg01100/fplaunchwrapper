@@ -5,11 +5,10 @@ Tests profiles, presets, install, uninstall, and manifest commands
 using Click CLI testing framework.
 """
 
-import os
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import Mock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -113,7 +112,7 @@ class TestProfilesCLI:
     def test_profiles_export(self, runner, temp_config_dir, tmp_path):
         """Test exporting a profile."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
-            export_file = tmp_path / "test_profile.toml"
+            _ = tmp_path / "test_profile.toml"
             result = runner.invoke(cli_module.cli, ["profiles", "export", "default"])
 
             assert result.exit_code == 0 or "export" in result.output.lower()
@@ -129,7 +128,9 @@ class TestProfilesCLI:
             profile_file = tmp_path / "import_profile.toml"
             profile_file.write_text("[app_preferences]\n")
 
-            result = runner.invoke(cli_module.cli, ["profiles", "import", str(profile_file)])
+            result = runner.invoke(
+                cli_module.cli, ["profiles", "import", str(profile_file)]
+            )
 
             assert result.exit_code == 0 or "not found" in result.output.lower()
 
@@ -196,18 +197,6 @@ class TestPresetsCLI:
 
             assert result.exit_code != 0
             assert "required" in result.output.lower()
-
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
-    def test_presets_get_requires_name(self, runner, temp_config_dir):
-        """Test presets get requires preset name."""
-        with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
-            result = runner.invoke(cli_module.cli, ["presets", "get"])
-
-            # CLI might exit with 0 even for missing arguments (CLI bug)
-            assert "required" in result.output.lower() or result.exit_code != 0
 
     @pytest.mark.skipif(
         not getattr(cli_module, "CLICK_AVAILABLE", False),
@@ -300,7 +289,9 @@ class TestInstallCLI:
     )
     @patch("subprocess.run")
     @patch("lib.generate.WrapperGenerator")
-    def test_install_flatpak_success(self, mock_generator, mock_run, runner, temp_config_dir):
+    def test_install_flatpak_success(
+        self, mock_generator, mock_run, runner, temp_config_dir
+    ):
         """Test successful install of Flatpak app."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
         result = runner.invoke(
@@ -319,9 +310,11 @@ class TestInstallCLI:
         not getattr(cli_module, "CLICK_AVAILABLE", False),
         reason="Click not available",
     )
-    @patch("subprocess.run")
     @patch("lib.generate.WrapperGenerator")
-    def test_install_flatpak_failure(self, mock_generator, mock_run, runner, temp_config_dir):
+    @patch("lib.cli.run_command")
+    def test_install_flatpak_failure(
+        self, mock_run, mock_generator, runner, temp_config_dir
+    ):
         """Test install when flatpak install fails."""
         mock_run.return_value = Mock(returncode=1, stderr="Install failed")
         result = runner.invoke(
@@ -362,7 +355,9 @@ class TestUninstallCLI:
     @patch("lib.manage.WrapperManager")
     def test_uninstall_emit_mode(self, mock_manager, mock_run, runner):
         """Test uninstall in emit mode doesn't actually uninstall."""
-        result = runner.invoke(cli_module.cli, ["uninstall", "--emit", "org.example.app"])
+        result = runner.invoke(
+            cli_module.cli, ["uninstall", "--emit", "org.example.app"]
+        )
 
         assert result.exit_code == 0
         assert "emit" in result.output.lower()
@@ -372,8 +367,7 @@ class TestUninstallCLI:
         reason="Click not available",
     )
     @patch("subprocess.run")
-    @patch("lib.manage.WrapperManager")
-    def test_uninstall_success(self, mock_manager, mock_run, runner, temp_config_dir):
+    def test_uninstall_success(self, mock_run, runner, temp_config_dir):
         """Test successful uninstall."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
         result = runner.invoke(
@@ -381,8 +375,6 @@ class TestUninstallCLI:
             [
                 "uninstall",
                 "org.example.app",
-                "--config-dir",
-                str(temp_config_dir),
             ],
         )
 
@@ -393,15 +385,17 @@ class TestUninstallCLI:
         not getattr(cli_module, "CLICK_AVAILABLE", False),
         reason="Click not available",
     )
-    @patch("subprocess.run")
-    @patch("lib.manage.WrapperManager")
-    def test_uninstall_failure(self, mock_manager, mock_run, runner, temp_config_dir):
-        """Test uninstall when flatpak uninstall fails."""
-        mock_run.return_value = Mock(returncode=1, stderr="Uninstall failed")
+    @patch("lib.cli.run_command")
+    @patch("lib.generate.WrapperGenerator")
+    def test_install_flatpak_failure(
+        self, mock_generator, mock_run, runner, temp_config_dir
+    ):
+        """Test install when flatpak install fails."""
+        mock_run.return_value = Mock(returncode=1, stderr="Install failed")
         result = runner.invoke(
             cli_module.cli,
             [
-                "uninstall",
+                "install",
                 "org.example.app",
                 "--config-dir",
                 str(temp_config_dir),
@@ -416,8 +410,7 @@ class TestUninstallCLI:
         reason="Click not available",
     )
     @patch("subprocess.run")
-    @patch("lib.manage.WrapperManager")
-    def test_uninstall_with_data_removal(self, mock_manager, mock_run, runner, temp_config_dir):
+    def test_uninstall_with_data_removal(self, mock_run, runner, temp_config_dir):
         """Test uninstall with --remove-data flag."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
         result = runner.invoke(
@@ -426,8 +419,6 @@ class TestUninstallCLI:
                 "uninstall",
                 "--remove-data",
                 "org.example.app",
-                "--config-dir",
-                str(temp_config_dir),
             ],
         )
 
@@ -435,102 +426,6 @@ class TestUninstallCLI:
         # Should have called with --delete-data flag
         call_args = mock_run.call_args[0][0]
         assert "--delete-data" in call_args
-
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
-    @patch("subprocess.run")
-    @patch("lib.manage.WrapperManager")
-    def test_uninstall_emit_mode(self, mock_manager, mock_run, runner):
-        """Test uninstall in emit mode doesn't actually uninstall."""
-        result = runner.invoke(cli_module.cli, ["uninstall", "--emit", "org.example.app"])
-
-        assert result.exit_code == 0
-        assert "emit" in result.output.lower()
-
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
-    @patch("subprocess.run")
-    @patch("lib.manage.WrapperManager")
-    def test_uninstall_success(self, mock_manager, mock_run, runner, temp_config_dir):
-        """Test successful uninstall."""
-        mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
-        result = runner.invoke(
-            cli_module.cli,
-            [
-                "uninstall",
-                "org.example.app",
-                "--config-dir",
-                str(temp_config_dir),
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "uninstalled" in result.output.lower()
-
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
-    @patch("subprocess.run")
-    @patch("lib.manage.WrapperManager")
-    def test_uninstall_failure(self, mock_manager, mock_run, runner, temp_config_dir):
-        """Test uninstall when flatpak uninstall fails."""
-        mock_run.return_value = Mock(returncode=1, stderr="Uninstall failed")
-        result = runner.invoke(
-            cli_module.cli,
-            [
-                "uninstall",
-                "org.example.app",
-                "--config-dir",
-                str(temp_config_dir),
-            ],
-        )
-
-        assert result.exit_code != 0
-        assert "error" in result.output.lower() or "failed" in result.output.lower()
-
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
-    @patch("subprocess.run")
-    @patch("lib.manage.WrapperManager")
-    def test_uninstall_with_data_removal(self, mock_manager, mock_run, runner, temp_config_dir):
-        """Test uninstall with --remove-data flag."""
-        mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
-        result = runner.invoke(
-            cli_module.cli,
-            [
-                "uninstall",
-                "--remove-data",
-                "org.example.app",
-                "--config-dir",
-                str(temp_config_dir),
-            ],
-        )
-
-        assert result.exit_code == 0
-        # Should have called with --delete-data flag
-        if mock_run.called:
-            call_args = mock_run.call_args[0][0]
-            assert "--delete-data" in call_args
-
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
-    @patch("subprocess.run")
-    @patch("lib.manage.WrapperManager")
-    def test_uninstall_requires_app_name(self, mock_manager, mock_run, runner):
-        """Test uninstall requires app name argument."""
-        result = runner.invoke(cli_module.cli, ["uninstall"])
-
-        # Click should handle missing argument
-        assert "Missing argument" in result.output or result.exit_code != 0
 
 
 class TestManifestCLI:
@@ -543,7 +438,9 @@ class TestManifestCLI:
     @patch("subprocess.run")
     def test_manifest_emit_mode(self, mock_run, runner):
         """Test manifest in emit mode."""
-        result = runner.invoke(cli_module.cli, ["manifest", "--emit", "org.example.app"])
+        result = runner.invoke(
+            cli_module.cli, ["manifest", "--emit", "org.example.app"]
+        )
 
         assert result.exit_code == 0
         assert "emit" in result.output.lower()

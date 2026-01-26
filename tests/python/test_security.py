@@ -119,8 +119,8 @@ class TestSecurity:
         dangerous_wrapper = tmp_path / "dangerous_wrapper"
         dangerous_wrapper.write_text("flatpak run org.mozilla.firefox")
 
-        # Verify the launch is allowed in test environment with mocked flatpak
-        assert safe_launch_check("firefox", dangerous_wrapper) is True
+        # Verify the launch is blocked in test environment for dangerous browser commands
+        assert safe_launch_check("firefox", dangerous_wrapper) is False
 
     def test_safe_launch_check_with_safe_wrapper(self, tmp_path: Path) -> None:
         """Test safe launch check with a safe wrapper."""
@@ -144,7 +144,7 @@ class TestSecurity:
         # Attempt to launch with an adversarial app name
         adversarial_launcher = AppLauncher(app_name="../../../etc/passwd")
         with patch("subprocess.run") as mock_run, patch(
-            "fplaunch.safety.safe_launch_check", return_value=True
+            "lib.safety.safe_launch_check", return_value=True
         ):
             mock_run.return_value = Mock(returncode=0)
             launch_result = adversarial_launcher.launch()
@@ -225,7 +225,9 @@ class TestSecurity:
         assert result is True
 
         # Clean up with a sanitized app name
-        cleanup = WrapperCleanup(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
+        cleanup = WrapperCleanup(
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir)
+        )
         cleanup_result = cleanup.cleanup_app(app_name)
 
         # Verify the result (should succeed with sanitized app name)

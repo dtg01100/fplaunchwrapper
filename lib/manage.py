@@ -272,7 +272,10 @@ class WrapperManager:
                         if not line:
                             continue
                         # Expect alias format 'alias:target' or 'name other'
-                        if line.endswith(f":{wrapper_name}") or line.split()[0] == wrapper_name:
+                        if (
+                            line.endswith(f":{wrapper_name}")
+                            or line.split()[0] == wrapper_name
+                        ):
                             # Skip alias referencing removed wrapper
                             continue
                         new_lines.append(line)
@@ -286,7 +289,9 @@ class WrapperManager:
 
             # Log success if anything removed
             if removed_any:
-                self.log(f"Removed wrapper and associated files: {wrapper_name}", "success")
+                self.log(
+                    f"Removed wrapper and associated files: {wrapper_name}", "success"
+                )
             else:
                 # Nothing to remove
                 self.log(f"No files removed for wrapper: {wrapper_name}", "info")
@@ -299,7 +304,11 @@ class WrapperManager:
     def set_preference(self, wrapper_name: str, preference: str) -> bool:
         """Set launch preference for a wrapper."""
         # Validate inputs
-        if not wrapper_name or not isinstance(wrapper_name, str) or not wrapper_name.strip():
+        if (
+            not wrapper_name
+            or not isinstance(wrapper_name, str)
+            or not wrapper_name.strip()
+        ):
             self.log("Invalid wrapper name: must be a non-empty string", "error")
             return False
 
@@ -466,7 +475,9 @@ class WrapperManager:
                 print(f"{'Wrapper':<30} {'Flatpak ID':<30} {'Path'}")
                 print("-" * 90)
                 for wrapper in matches:
-                    print(f"{wrapper['name']:<30} {wrapper['id']:<30} {wrapper['path']}")
+                    print(
+                        f"{wrapper['name']:<30} {wrapper['id']:<30} {wrapper['path']}"
+                    )
                 print(f"\n{len(matches)} match{'es' if len(matches) > 1 else ''} found")
         else:
             if console:
@@ -513,14 +524,18 @@ class WrapperManager:
                     for file_type, file_path in files:
                         table.add_row(file_type, file_path)
 
-                    console.print(Panel.fit(table, title=f"Generated Files: {app_name}"))
+                    console.print(
+                        Panel.fit(table, title=f"Generated Files: {app_name}")
+                    )
                 else:
                     print(f"Generated Files: {app_name}")
                     for file_type, file_path in files:
                         print(f"  {file_type}: {file_path}")
             else:
                 if console:
-                    console.print(f"[yellow]No generated files found for {app_name}[/yellow]")
+                    console.print(
+                        f"[yellow]No generated files found for {app_name}[/yellow]"
+                    )
                 else:
                     print(f"No generated files found for {app_name}")
         else:
@@ -678,7 +693,9 @@ class WrapperManager:
                 try:
                     from .python_utils import sanitize_id_to_name
 
-                    sanitized_installed = [sanitize_id_to_name(a) for a in installed_apps]
+                    sanitized_installed = [
+                        sanitize_id_to_name(a) for a in installed_apps
+                    ]
                     if item.name not in sanitized_installed:
                         remove_item = True
                 except Exception:
@@ -731,7 +748,9 @@ class WrapperManager:
 
         return removed_count
 
-    def _resolve_alias_chain(self, alias_name: str, aliases: dict[str, str]) -> list[str]:
+    def _resolve_alias_chain(
+        self, alias_name: str, aliases: dict[str, str]
+    ) -> list[str]:
         """Resolve an alias to its final target, following all alias chains.
 
         Args:
@@ -821,7 +840,11 @@ class WrapperManager:
             self.log("Invalid alias name: must be a non-empty string", "error")
             return False
 
-        if not target_wrapper or not isinstance(target_wrapper, str) or not target_wrapper.strip():
+        if (
+            not target_wrapper
+            or not isinstance(target_wrapper, str)
+            or not target_wrapper.strip()
+        ):
             self.log("Invalid target wrapper: must be a non-empty string", "error")
             return False
 
@@ -848,7 +871,9 @@ class WrapperManager:
             if validate_target:
                 target_path = self.bin_dir / target_wrapper
                 if not target_path.exists():
-                    self.log(f"Error: Target wrapper '{target_wrapper}' not found", "error")
+                    self.log(
+                        f"Error: Target wrapper '{target_wrapper}' not found", "error"
+                    )
                     return False
 
             # Read existing aliases
@@ -887,7 +912,9 @@ class WrapperManager:
                     chain_str = " -> ".join([alias_name] + target_chain[1:])
                     self.log(f"Info: Complete alias chain will be: {chain_str}", "info")
                 except Exception as e:
-                    self.log(f"Warning: Could not resolve target alias chain: {e}", "warning")
+                    self.log(
+                        f"Warning: Could not resolve target alias chain: {e}", "warning"
+                    )
 
             # Add new alias
             aliases[alias_name] = target_wrapper
@@ -966,7 +993,9 @@ class WrapperManager:
             self.log(f"Failed to unblock application: {e}", "error")
             return False
 
-    def set_environment_variable(self, wrapper_name: str, var_name: str, var_value: str) -> bool:
+    def set_environment_variable(
+        self, wrapper_name: str, var_name: str, var_value: str
+    ) -> bool:
         """Set an environment variable for a wrapper."""
         self.log(f"Setting {var_name}={var_value} for {wrapper_name}...")
 
@@ -1081,7 +1110,9 @@ class WrapperManager:
             # Apply aliases
             if aliases:
                 aliases_file = self.config_dir / "aliases"
-                aliases_content = "\n".join(f"{k}:{v}" for k, v in aliases.items()) + "\n"
+                aliases_content = (
+                    "\n".join(f"{k}:{v}" for k, v in aliases.items()) + "\n"
+                )
                 aliases_file.write_text(aliases_content)
 
             # Apply environment variables

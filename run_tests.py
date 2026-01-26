@@ -3,9 +3,7 @@
 Simple test runner to execute multiple test files and report results
 """
 
-import sys
 import os
-from pathlib import Path
 import importlib.util
 import traceback
 

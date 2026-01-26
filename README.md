@@ -143,11 +143,10 @@ uv run flake8 lib/ tests/python/
 
 ```
 fplaunchwrapper/
-├── fplaunch/                     # Python package
-├── lib/                          # Backward compatibility
+├── lib/                          # Python package
 ├── tests/                        # Test suite
 ├── docs/                         # Documentation
-├── examples/                      # Usage examples
+├── examples/                     # Usage examples
 └── pyproject.toml               # Package config
 ```
 

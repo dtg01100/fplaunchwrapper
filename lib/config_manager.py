@@ -106,7 +106,9 @@ class WrapperConfig:
     )  # Custom permission presets
     schema_version: int = 1  # Schema version for migration purposes
     cron_interval: int = 6  # Cron interval in hours (default: 6 hours)
-    enable_notifications: bool = True  # Enable desktop notifications for update failures
+    enable_notifications: bool = (
+        True  # Enable desktop notifications for update failures
+    )
 
 
 class EnhancedConfigManager:
@@ -119,8 +121,12 @@ class EnhancedConfigManager:
     def __init__(self, app_name="fplaunchwrapper") -> None:
         self.app_name = app_name
         # Resolve config/data directories using XDG variables with Path.home fallback
-        xdg_config_home = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
-        xdg_data_home = os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
+        xdg_config_home = os.environ.get(
+            "XDG_CONFIG_HOME", str(Path.home() / ".config")
+        )
+        xdg_data_home = os.environ.get(
+            "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+        )
         self.config_dir = Path(xdg_config_home) / app_name
         self.data_dir = Path(xdg_data_home) / app_name
         self.config_file = self.config_dir / "config.toml"
@@ -130,9 +136,15 @@ class EnhancedConfigManager:
         # Template variables for substitution
         self.template_variables = {
             "HOME": str(Path.home()),
-            "XDG_CONFIG_HOME": os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
-            "XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share")),
-            "XDG_CACHE_HOME": os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")),
+            "XDG_CONFIG_HOME": os.environ.get(
+                "XDG_CONFIG_HOME", str(Path.home() / ".config")
+            ),
+            "XDG_DATA_HOME": os.environ.get(
+                "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+            ),
+            "XDG_CACHE_HOME": os.environ.get(
+                "XDG_CACHE_HOME", str(Path.home() / ".cache")
+            ),
             "CONFIG_DIR": str(self.config_dir),
             "DATA_DIR": str(self.data_dir),
         }
@@ -299,12 +311,16 @@ class EnhancedConfigManager:
                 validated_config = PydanticWrapperConfig(**processed_data)
                 self._apply_validated_config(validated_config)
             except ValidationError as e:
-                raise ConfigValidationError(f"Configuration validation failed: {e}") from e
+                raise ConfigValidationError(
+                    f"Configuration validation failed: {e}"
+                ) from e
         else:
             # Fallback validation without Pydantic
             self._apply_unvalidated_config(processed_data)
 
-    def _apply_validated_config(self, validated_config: "PydanticWrapperConfig") -> None:
+    def _apply_validated_config(
+        self, validated_config: "PydanticWrapperConfig"
+    ) -> None:
         """Apply validated configuration from Pydantic model."""
         self.config.bin_dir = validated_config.bin_dir
         self.config.debug_mode = validated_config.debug_mode
@@ -428,9 +444,7 @@ class EnhancedConfigManager:
 
         # Permission presets
         if self.config.permission_presets:
-            data["permission_presets"] = {}
-            for preset_name, permissions in self.config.permission_presets.items():
-                data["permission_presets"][preset_name] = {"permissions": list(permissions)}
+            data["permission_presets"] = dict(self.config.permission_presets)
 
         return data
 

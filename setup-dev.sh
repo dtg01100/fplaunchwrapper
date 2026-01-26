@@ -231,10 +231,10 @@ print('All Python tests passed!')
     else
         log_warn "pytest not available, running basic validation..."
         if python3 -c "
-from fplaunch.generate import WrapperGenerator
-from fplaunch.manage import WrapperManager
-from fplaunch.cleanup import WrapperCleanup
-from fplaunch.launch import AppLauncher
+from lib.generate import WrapperGenerator
+from lib.manage import WrapperManager
+from lib.cleanup import WrapperCleanup
+from lib.launch import AppLauncher
 print('✅ Python modules imported successfully')
 "; then
             log_success "Basic Python validation passed"

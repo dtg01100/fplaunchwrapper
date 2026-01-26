@@ -7,7 +7,6 @@ wrapper name conflict checking.
 import tempfile
 from pathlib import Path
 
-
 from lib.manage import WrapperManager
 
 
@@ -145,7 +144,7 @@ class TestRecursiveAliasChainDetection:
 
             # Try to create circular reference: firefox -> browser
             # This should either fail or be detected
-            result2 = manager.create_alias("firefox", "browser")
+            manager.create_alias("firefox", "browser")
 
             # Either result is acceptable; what matters is chain resolution works
             aliases_file = config_dir / "aliases"
@@ -187,7 +186,9 @@ class TestWrapperNameConflictChecking:
             manager = WrapperManager(bin_dir=str(bin_dir), config_dir=str(config_dir))
 
             # Create alias with target validation enabled
-            result = manager.create_alias("browser", "nonexistent", validate_target=True)
+            result = manager.create_alias(
+                "browser", "nonexistent", validate_target=True
+            )
 
             # Should fail because target doesn't exist
             assert result is False
@@ -203,7 +204,9 @@ class TestWrapperNameConflictChecking:
             manager = WrapperManager(bin_dir=str(bin_dir), config_dir=str(config_dir))
 
             # Create alias without target validation (default behavior)
-            result = manager.create_alias("browser", "future-firefox", validate_target=False)
+            result = manager.create_alias(
+                "browser", "future-firefox", validate_target=False
+            )
 
             # Should succeed even though target doesn't exist yet
             assert result is True
@@ -319,9 +322,6 @@ class TestAliasFileManagement:
             result = manager1.create_alias("browser", "firefox")
             assert result is True
 
-            # Create new manager instance
-            manager2 = WrapperManager(bin_dir=str(bin_dir), config_dir=str(config_dir))
-
             # Verify alias still exists by reading aliases file
             aliases_file = config_dir / "aliases"
             content = aliases_file.read_text()
@@ -348,6 +348,6 @@ class TestEmitMode:
 
             # Result should indicate success, but file shouldn't be created
             # (emit mode just logs what would happen)
-            aliases_file = config_dir / "aliases"
+            _ = config_dir / "aliases"
             # File may or may not exist in emit mode - what matters is behavior is correct
             assert isinstance(result, bool)

@@ -5,14 +5,13 @@ Integration Test Runner - Validates Safe Integration Testing
 Ensures all integration tests run in complete isolation with zero side effects.
 """
 
-import sys
 import os
-import tempfile
 import shutil
+import sys
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch, Mock
-import time
+from unittest.mock import Mock, patch
 
 
 def _build_safe_env(isolated_home=None):
@@ -29,7 +28,10 @@ def _build_safe_env(isolated_home=None):
     for path in (config_dir, data_dir, cache_dir, bin_dir):
         path.mkdir(parents=True, exist_ok=True)
 
-    old_env = {key: os.environ.get(key) for key in ("HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME")}
+    old_env = {
+        key: os.environ.get(key)
+        for key in ("HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME")
+    }
     os.environ["HOME"] = str(base_dir)
     os.environ["XDG_CONFIG_HOME"] = str(config_dir.parent)
     os.environ["XDG_DATA_HOME"] = str(data_dir.parent)
@@ -61,10 +63,10 @@ def test_integration_safety(isolated_home=None):
 
     # Simple safety check - just verify we can import and basic functionality works
     try:
-        from fplaunch.generate import WrapperGenerator
-        from fplaunch.manage import WrapperManager
-        from fplaunch.cleanup import WrapperCleanup
-        from fplaunch.launch import AppLauncher
+        from lib.cleanup import WrapperCleanup
+        from lib.generate import WrapperGenerator
+        from lib.launch import AppLauncher
+        from lib.manage import WrapperManager
 
         # Test basic instantiation with mocking
         with patch("subprocess.run") as mock_run, patch(
@@ -112,19 +114,6 @@ def test_mock_completeness():
     print("🎭 Testing Mock Completeness...")
 
     # List of operations that should NEVER execute in real tests
-    dangerous_operations = [
-        "subprocess.run",
-        "subprocess.Popen",
-        "subprocess.call",
-        "os.system",
-        "os.execvp",
-        "os.execv",
-        "os.spawnvp",
-        "os.spawnv",
-        "systemctl",  # Should be mocked
-        "flatpak",  # Should be mocked
-    ]
-
     # This is a static check - in real CI we'd use tools to detect
     # any unmocked dangerous operations
 

@@ -92,7 +92,11 @@ class TestIntegrationWorkflows:
         generator = WrapperGenerator(
             bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
         )
-        apps = [("app1", "org.test.App1"), ("app2", "org.test.App2"), ("app3", "org.test.App3")]
+        apps = [
+            ("app1", "org.test.App1"),
+            ("app2", "org.test.App2"),
+            ("app3", "org.test.App3"),
+        ]
         for app_name, flatpak_id in apps:
             result = generator.generate_wrapper(app_name, flatpak_id=flatpak_id)
             assert result is True

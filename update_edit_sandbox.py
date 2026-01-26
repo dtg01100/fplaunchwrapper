@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-with open('lib/generate.py', 'r') as f:
+with open("lib/generate.py", "r") as f:
     lines = f.readlines()
 
 # Enhanced --fpwrapper-edit-sandbox implementation
-enhanced_edit_sandbox = '''# Edit sandbox permissions - Enhanced interactive implementation
+enhanced_edit_sandbox = """# Edit sandbox permissions - Enhanced interactive implementation
 if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
     if ! command -v flatpak >/dev/null 2>&1; then
         echo "Flatpak not available - cannot edit sandbox"
@@ -327,12 +327,12 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
     esac
     exit 0
 fi
-'''
+"""
 
 # Replace lines 582-841 with enhanced implementation
 lines[582:841] = enhanced_edit_sandbox.splitlines(True)
 
-with open('lib/generate.py', 'w') as f:
+with open("lib/generate.py", "w") as f:
     f.writelines(lines)
 
 print("Successfully updated --fpwrapper-edit-sandbox implementation")
