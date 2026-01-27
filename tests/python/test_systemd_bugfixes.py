@@ -13,11 +13,10 @@ This test file validates fixes for critical bugs found during code review:
 
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, patch
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))

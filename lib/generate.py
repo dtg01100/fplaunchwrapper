@@ -9,7 +9,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from rich.console import Console as _Console
 from rich.progress import (
@@ -48,13 +48,26 @@ except Exception:
     UTILS_AVAILABLE = False
 
     # Provide Any-typed fallbacks so the rest of the module can call them safely
-    acquire_lock: Any = lambda *args, **kwargs: False
-    find_executable: Any = lambda *args, **kwargs: None
-    get_wrapper_id: Any = lambda *args, **kwargs: None
-    is_wrapper_file: Any = lambda *args, **kwargs: False
-    release_lock: Any = lambda *args, **kwargs: False
-    sanitize_id_to_name: Any = lambda *args, **kwargs: ""
-    validate_home_dir: Any = lambda *args, **kwargs: False
+    def acquire_lock(*args: Any, **kwargs: Any) -> bool:
+        return False
+
+    def find_executable(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    def get_wrapper_id(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    def is_wrapper_file(*args: Any, **kwargs: Any) -> bool:
+        return False
+
+    def release_lock(*args: Any, **kwargs: Any) -> bool:
+        return False
+
+    def sanitize_id_to_name(*args: Any, **kwargs: Any) -> str:
+        return ""
+
+    def validate_home_dir(*args: Any, **kwargs: Any) -> bool:
+        return False
 
 
 console = _Console()

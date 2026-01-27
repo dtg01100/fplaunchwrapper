@@ -16,7 +16,7 @@ if __name__ == "__main__":
 try:
     from lib.safety import safe_launch_check
 except ImportError:
-    from .safety import safe_launch_check
+    from .safety import safe_launch_check  # noqa: F401
 
 
 # Test environment detection for launch module

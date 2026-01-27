@@ -8,10 +8,10 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    import builtins
+    pass
 
 import click
 import rich
@@ -765,7 +765,7 @@ def presets_add(ctx, preset_name, permission) -> int:
     """Add a new permission preset."""
     # Check if permissions were provided
     if not permission:
-        console_err.print(f"[red]Error:[/red] At least one permission is required")
+        console_err.print("[red]Error:[/red] At least one permission is required")
         return 1
 
     console.print(f"[green]✓[/green] Added preset: {preset_name}")

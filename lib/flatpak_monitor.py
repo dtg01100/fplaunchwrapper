@@ -51,7 +51,7 @@ Observer = _WatchdogObserver
 # Systemd notify support (optional) - import at runtime via importlib to avoid
 # static import resolution errors in environments where systemd Python
 # bindings aren't installed.
-import importlib
+import importlib  # noqa: E402
 
 try:
     _systemd_daemon = importlib.import_module("systemd.daemon")
