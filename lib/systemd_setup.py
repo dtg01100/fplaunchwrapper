@@ -11,14 +11,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-try:
-    from rich.console import Console
+from rich.console import Console
 
-    RICH_AVAILABLE = True
-except ImportError:
-    RICH_AVAILABLE = False
-
-console = Console() if RICH_AVAILABLE else None
+console = Console()
 
 
 class SystemdSetup:
@@ -107,25 +102,13 @@ class SystemdSetup:
     def log(self, message: str, level: str = "info") -> None:
         """Log a message."""
         if level == "error":
-            if console:
-                console.print(f"[red]✗[/red] {message}")
-            else:
-                print(f"Error: {message}", file=sys.stderr)
+            console.print(f"[red]✗[/red] {message}")
         elif level == "warning":
-            if console:
-                console.print(f"[yellow]⚠[/yellow] {message}")
-            else:
-                print(f"Warning: {message}")
+            console.print(f"[yellow]⚠[/yellow] {message}")
         elif level == "success":
-            if console:
-                console.print(f"[green]✓[/green] {message}")
-            else:
-                print(f"✓ {message}")
+            console.print(f"[green]✓[/green] {message}")
         elif level == "info" or level == "":
-            if console:
-                console.print(message)
-            else:
-                print(message)
+            console.print(message)
 
     def check_prerequisites(self) -> bool:
         """Check if prerequisites are met with detailed error reporting."""
@@ -268,51 +251,33 @@ WantedBy=timers.target
                     path_content = self.create_path_unit()
                     timer_content = self.create_timer_unit()
 
-                    if console:
-                        from rich.panel import Panel
+                    from rich.panel import Panel
 
-                        console.print(
-                            Panel.fit(
-                                service_content,
-                                title="📄 flatpak-wrappers.service",
-                                border_style="blue",
-                            ),
-                        )
-                        console.print(
-                            Panel.fit(
-                                path_content,
-                                title="📄 flatpak-wrappers.path",
-                                border_style="green",
-                            ),
-                        )
-                        console.print(
-                            Panel.fit(
-                                timer_content,
-                                title="📄 flatpak-wrappers.timer",
-                                border_style="yellow",
-                            ),
-                        )
-                        # Also print raw contents for stdout capture in tests
-                        print(service_content)
-                        print(path_content)
-                        print(timer_content)
-                    else:
-                        self.log("=" * 50)
-                        self.log("Service unit content:")
-                        self.log("-" * 30)
-                        for line in service_content.split("\n"):
-                            self.log(line)
-                        self.log("=" * 50)
-                        self.log("Path unit content:")
-                        self.log("-" * 30)
-                        for line in path_content.split("\n"):
-                            self.log(line)
-                        self.log("=" * 50)
-                        self.log("Timer unit content:")
-                        self.log("-" * 30)
-                        for line in timer_content.split("\n"):
-                            self.log(line)
-                        self.log("=" * 50)
+                    console.print(
+                        Panel.fit(
+                            service_content,
+                            title="📄 flatpak-wrappers.service",
+                            border_style="blue",
+                        ),
+                    )
+                    console.print(
+                        Panel.fit(
+                            path_content,
+                            title="📄 flatpak-wrappers.path",
+                            border_style="green",
+                        ),
+                    )
+                    console.print(
+                        Panel.fit(
+                            timer_content,
+                            title="📄 flatpak-wrappers.timer",
+                            border_style="yellow",
+                        ),
+                    )
+                    # Also print raw contents for stdout capture in tests
+                    print(service_content)
+                    print(path_content)
+                    print(timer_content)
 
                 self.log("EMIT: Would run: systemctl --user daemon-reload")
                 self.log(

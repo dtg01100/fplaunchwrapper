@@ -41,10 +41,6 @@ def temp_bin_dir():
 class TestProfilesCLI:
     """Test profiles CLI command."""
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_profiles_list_shows_default(self, runner, temp_config_dir):
         """Test profiles list shows default profile."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -53,10 +49,6 @@ class TestProfilesCLI:
             assert result.exit_code == 0
             assert "default" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_profiles_create(self, runner, temp_config_dir):
         """Test creating a new profile."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -65,10 +57,6 @@ class TestProfilesCLI:
             assert result.exit_code == 0
             assert "created" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_profiles_create_requires_name(self, runner, temp_config_dir):
         """Test profiles create requires profile name."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -77,10 +65,6 @@ class TestProfilesCLI:
             # CLI prints error message even if exit code is 0 (CLI bug)
             assert "required" in result.output.lower() or result.exit_code != 0
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_profiles_switch(self, runner, temp_config_dir):
         """Test switching profiles."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -93,10 +77,6 @@ class TestProfilesCLI:
             assert result.exit_code == 0
             assert "switched" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_profiles_current(self, runner, temp_config_dir):
         """Test showing current profile."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -105,10 +85,6 @@ class TestProfilesCLI:
             assert result.exit_code == 0
             assert "current" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_profiles_export(self, runner, temp_config_dir, tmp_path):
         """Test exporting a profile."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -117,10 +93,6 @@ class TestProfilesCLI:
 
             assert result.exit_code == 0 or "export" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_profiles_import(self, runner, temp_config_dir, tmp_path):
         """Test importing a profile."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -134,10 +106,6 @@ class TestProfilesCLI:
 
             assert result.exit_code == 0 or "not found" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_profiles_list_without_action(self, runner, temp_config_dir):
         """Test profiles without action defaults to list."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -147,10 +115,6 @@ class TestProfilesCLI:
             # Should show at least default profile
             assert "default" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_profiles_invalid_action(self, runner, temp_config_dir):
         """Test profiles with invalid action."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -163,10 +127,6 @@ class TestProfilesCLI:
 class TestPresetsCLI:
     """Test presets CLI command."""
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_presets_list(self, runner, temp_config_dir):
         """Test listing permission presets."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -175,10 +135,6 @@ class TestPresetsCLI:
             assert result.exit_code == 0
             assert "presets" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_presets_list_without_action(self, runner, temp_config_dir):
         """Test presets without action defaults to list."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -186,10 +142,6 @@ class TestPresetsCLI:
 
             assert result.exit_code == 0
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_presets_get_requires_name(self, runner, temp_config_dir):
         """Test presets get requires preset name."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -198,10 +150,6 @@ class TestPresetsCLI:
             assert result.exit_code != 0
             assert "required" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_presets_get_invalid_preset(self, runner, temp_config_dir):
         """Test presets get with invalid preset name."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -210,10 +158,6 @@ class TestPresetsCLI:
             # CLI might exit with 0 even for not found (CLI bug)
             assert "not found" in result.output.lower() or result.exit_code != 0
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_presets_add_requires_name_and_permissions(self, runner, temp_config_dir):
         """Test presets add requires name and permissions."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -221,10 +165,6 @@ class TestPresetsCLI:
 
             assert "required" in result.output.lower() or result.exit_code != 0
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_presets_add(self, runner, temp_config_dir):
         """Test adding a new preset."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -243,10 +183,6 @@ class TestPresetsCLI:
 
             assert result.exit_code == 0 or "added" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_presets_remove_requires_name(self, runner, temp_config_dir):
         """Test presets remove requires preset name."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -254,10 +190,6 @@ class TestPresetsCLI:
 
             assert "required" in result.output.lower() or result.exit_code != 0
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_presets_invalid_action(self, runner, temp_config_dir):
         """Test presets with invalid action."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
@@ -269,10 +201,6 @@ class TestPresetsCLI:
 class TestInstallCLI:
     """Test install CLI command."""
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     @patch("lib.generate.WrapperGenerator")
     def test_install_emit_mode(self, mock_generator, mock_run, runner):
@@ -283,10 +211,6 @@ class TestInstallCLI:
         assert result.exit_code == 0
         assert "emit" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     @patch("lib.generate.WrapperGenerator")
     def test_install_flatpak_success(
@@ -306,10 +230,6 @@ class TestInstallCLI:
         # Should have tried to install flatpak
         assert mock_run.called
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("lib.generate.WrapperGenerator")
     @patch("lib.cli.run_command")
     def test_install_flatpak_failure(
@@ -330,10 +250,6 @@ class TestInstallCLI:
         assert result.exit_code != 0
         assert "error" in result.output.lower() or "failed" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     @patch("lib.generate.WrapperGenerator")
     def test_install_requires_app_name(self, mock_generator, mock_run, runner):
@@ -347,10 +263,6 @@ class TestInstallCLI:
 class TestUninstallCLI:
     """Test uninstall CLI command."""
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     @patch("lib.manage.WrapperManager")
     def test_uninstall_emit_mode(self, mock_manager, mock_run, runner):
@@ -362,10 +274,6 @@ class TestUninstallCLI:
         assert result.exit_code == 0
         assert "emit" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     def test_uninstall_success(self, mock_run, runner, temp_config_dir):
         """Test successful uninstall."""
@@ -381,10 +289,6 @@ class TestUninstallCLI:
         assert result.exit_code == 0
         assert "uninstalled" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("lib.cli.run_command")
     @patch("lib.generate.WrapperGenerator")
     def test_install_flatpak_failure(
@@ -405,10 +309,6 @@ class TestUninstallCLI:
         assert result.exit_code != 0
         assert "error" in result.output.lower() or "failed" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     def test_uninstall_with_data_removal(self, mock_run, runner, temp_config_dir):
         """Test uninstall with --remove-data flag."""
@@ -431,10 +331,6 @@ class TestUninstallCLI:
 class TestManifestCLI:
     """Test manifest CLI command."""
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     def test_manifest_emit_mode(self, mock_run, runner):
         """Test manifest in emit mode."""
@@ -445,10 +341,6 @@ class TestManifestCLI:
         assert result.exit_code == 0
         assert "emit" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     def test_manifest_success(self, mock_run, runner):
         """Test successful manifest retrieval."""
@@ -463,10 +355,6 @@ class TestManifestCLI:
         assert "manifest" in result.output.lower()
         mock_run.assert_called_once()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     def test_manifest_failure(self, mock_run, runner):
         """Test manifest when flatpak info fails."""
@@ -476,10 +364,6 @@ class TestManifestCLI:
         assert result.exit_code != 0
         assert "error" in result.output.lower() or "failed" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     def test_manifest_without_app_name(self, mock_run, runner):
         """Test manifest requires app name argument."""
@@ -488,10 +372,6 @@ class TestManifestCLI:
         # Click should handle missing argument
         assert "Missing argument" in result.output or result.exit_code != 0
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     @patch("subprocess.run")
     def test_manifest_runs_flatpak_info(self, mock_run, runner):
         """Test manifest command calls flatpak info."""

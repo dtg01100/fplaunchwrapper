@@ -15,13 +15,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-try:
-    from rich.console import Console
-    from rich.prompt import Confirm
-
-    RICH_AVAILABLE = True
-except ImportError:
-    RICH_AVAILABLE = False
+from rich.console import Console
+from rich.prompt import Confirm
 
 # Import our utilities
 try:
@@ -31,7 +26,7 @@ try:
 except ImportError:
     UTILS_AVAILABLE = False
 
-console = Console() if RICH_AVAILABLE else None
+console = Console()
 
 
 @dataclass
@@ -385,10 +380,7 @@ class WrapperCleanup:
             return True
 
         # Get user confirmation
-        if console:
-            return Confirm.ask("Proceed with cleanup?")
-        response = input("Proceed with cleanup? (y/N): ").strip().lower()
-        return response in ["y", "yes"]
+        return Confirm.ask("Proceed with cleanup?")
 
     def perform_cleanup(self) -> bool:
         """Perform the actual cleanup."""

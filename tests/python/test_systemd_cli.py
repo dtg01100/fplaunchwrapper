@@ -16,14 +16,8 @@ import pytest
 # Add lib to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
 
-try:
-    from click.testing import CliRunner
-    from cli import cli
-
-    CLICK_AVAILABLE = True
-except ImportError:
-    CLICK_AVAILABLE = False
-    pytest.skip("Click not available", allow_module_level=True)
+from click.testing import CliRunner
+from cli import cli
 
 
 class TestSystemdCliCommand:

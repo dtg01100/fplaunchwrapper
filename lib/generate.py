@@ -11,29 +11,25 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
-try:
-    from rich.console import Console as _Console
-    from rich.progress import (
-        BarColumn as _BarColumn,
-    )
-    from rich.progress import (
-        Progress as _Progress,
-    )
-    from rich.progress import (
-        SpinnerColumn as _SpinnerColumn,
-    )
-    from rich.progress import (
-        TextColumn as _TextColumn,
-    )
+from rich.console import Console as _Console
+from rich.progress import (
+    BarColumn as _BarColumn,
+)
+from rich.progress import (
+    Progress as _Progress,
+)
+from rich.progress import (
+    SpinnerColumn as _SpinnerColumn,
+)
+from rich.progress import (
+    TextColumn as _TextColumn,
+)
 
-    RICH_AVAILABLE = True
-except Exception:
-    _Console = None
-    _BarColumn = None
-    _Progress = None
-    _SpinnerColumn = None
-    _TextColumn = None
-    RICH_AVAILABLE = False
+Console = _Console
+BarColumn = _BarColumn
+Progress = _Progress
+SpinnerColumn = _SpinnerColumn
+TextColumn = _TextColumn
 
 # Import our utilities
 try:
@@ -61,17 +57,8 @@ except Exception:
     validate_home_dir: Any = lambda *args, **kwargs: False
 
 
-console: Optional[Any] = None
-console_err: Optional[Any] = None
-if RICH_AVAILABLE and _Console is not None:
-    try:
-        console = _Console()
-    except Exception:
-        console = None
-    try:
-        console_err = _Console(stderr=True)
-    except Exception:
-        console_err = None
+console = _Console()
+console_err = _Console(stderr=True)
 
 
 class WrapperGenerator:
@@ -286,26 +273,14 @@ class WrapperGenerator:
     def log(self, message: str, level: str = "info") -> None:
         """Log a message to appropriate stream."""
         if level == "error":
-            if console_err:
-                console_err.print(f"[red]ERROR:[/red] {message}")
-            else:
-                print(f"ERROR: {message}", file=sys.stderr)
+            console_err.print(f"[red]ERROR:[/red] {message}")
         elif level == "warning":
-            if console_err:
-                console_err.print(f"[yellow]WARN:[/yellow] {message}")
-            else:
-                print(f"WARN: {message}", file=sys.stderr)
+            console_err.print(f"[yellow]WARN:[/yellow] {message}")
         elif level == "success":
-            if console:
-                console.print(f"[green]✓[/green] {message}")
-            else:
-                print(f"✓ {message}")
+            console.print(f"[green]✓[/green] {message}")
         else:
             # info messages
-            if console:
-                console.print(message)
-            else:
-                print(message)
+            console.print(message)
 
     def run_command(
         self,
@@ -313,7 +288,7 @@ class WrapperGenerator:
         description: str = "",
     ) -> subprocess.CompletedProcess:
         """Run a command with optional progress display."""
-        if description and console and not self.verbose:
+        if description and not self.verbose:
             with console.status(f"[bold green]{description}..."):
                 result = subprocess.run(
                     cmd, check=False, capture_output=True, text=True
@@ -546,24 +521,18 @@ class WrapperGenerator:
             # Show file content if verbose emit mode
             if self.emit_verbose:
                 self.log(f"EMIT: File content for {wrapper_path}:")
-                # Use Rich panel for better formatting if available
-                if console:
-                    from rich.panel import Panel
+                # Use Rich panel for better formatting
+                from rich.panel import Panel
 
-                    console.print(
-                        Panel.fit(
-                            wrapper_content,
-                            title=f"📄 {wrapper_name} wrapper script",
-                            border_style="blue",
-                        ),
-                    )
-                    # Also print raw content so redirect_stdout-based tests can capture it
-                    print(wrapper_content)
-                else:
-                    self.log("-" * 50)
-                    for i, line in enumerate(wrapper_content.split("\n"), 1):
-                        self.log(f"{i:2d}: {line}")
-                    self.log("-" * 50)
+                console.print(
+                    Panel.fit(
+                        wrapper_content,
+                        title=f"📄 {wrapper_name} wrapper script",
+                        border_style="blue",
+                    ),
+                )
+                # Also print raw content so redirect_stdout-based tests can capture it
+                print(wrapper_content)
 
             return True
         try:
@@ -612,20 +581,13 @@ class WrapperGenerator:
         updated_count = 0
         skipped_count = 0
 
-        # Use progress bar if rich is available and progress components are present
-        if (
-            console
-            and not self.verbose
-            and _Progress is not None
-            and _SpinnerColumn is not None
-            and _TextColumn is not None
-            and _BarColumn is not None
-        ):
-            with _Progress(
-                _SpinnerColumn(),
-                _TextColumn("[progress.description]{task.description}"),
-                _BarColumn(),
-                _TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        # Use progress bar if not in verbose mode
+        if not self.verbose:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
                 console=console,
             ) as progress:
                 task = progress.add_task(

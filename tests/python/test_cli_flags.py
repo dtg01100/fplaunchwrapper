@@ -20,8 +20,6 @@ def runner():
 def cli_mod():
     import lib.cli as cli
 
-    if not getattr(cli, "CLICK_AVAILABLE", False):
-        pytest.skip("Click not available")
     return cli
 
 

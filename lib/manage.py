@@ -10,46 +10,25 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from rich.console import Console
+from rich.table import Table
+
+console = Console()
+console_err = Console(stderr=True)
+
 try:
-    from rich.console import Console as _Console
-    from rich.table import Table as _Table
-
-    RICH_AVAILABLE = True
-except Exception:
-    _Console = None
-    _Table = None
-    RICH_AVAILABLE = False
-
-# Initialize Rich consoles for stdout and stderr in a safe way
-console: Optional[Any] = None
-console_err: Optional[Any] = None
-if RICH_AVAILABLE and _Console is not None:
-    try:
-        console = _Console()
-    except Exception:
-        console = None
-    try:
-        console_err = _Console(stderr=True)
-    except Exception:
-        console_err = None
-
-# Import our utilities
-try:
+    from lib.python_utils import (
+        get_wrapper_id,
+        is_wrapper_file,
+    )
+except ImportError:
     from .python_utils import (
         get_wrapper_id,
         is_wrapper_file,
     )
-
-    UTILS_AVAILABLE = True
-except Exception:
-    UTILS_AVAILABLE = False
-
-    # Provide Any-typed callables so static type-checkers do not attempt to
-    # compare signatures against python_utils when it isn't available.
-    # These are safe fallbacks for environments (or tests) where the real
-    # implementations aren't present.
-    get_wrapper_id: Any = lambda *args, **kwargs: None
-    is_wrapper_file: Any = lambda *args, **kwargs: False
 
 
 class WrapperManager:
@@ -107,34 +86,19 @@ class WrapperManager:
         """
         if level == "error":
             # Errors always go to stderr
-            if console_err:
-                console_err.print(f"[red]ERROR:[/red] {message}")
-            else:
-                print(f"ERROR: {message}", file=sys.stderr)
+            console_err.print(f"[red]ERROR:[/red] {message}")
         elif level == "warning":
             # Warnings always go to stderr
-            if console_err:
-                console_err.print(f"[yellow]WARN:[/yellow] {message}")
-            else:
-                print(f"WARNING: {message}", file=sys.stderr)
+            console_err.print(f"[yellow]WARN:[/yellow] {message}")
         elif level == "success":
             # Success messages go to stdout
-            if console:
-                console.print(f"[green]✓[/green] {message}")
-            else:
-                print(f"✓ {message}")
+            console.print(f"[green]✓[/green] {message}")
         elif level in ["info", "emit"]:
             # Info and emit messages go to stdout
-            if console:
-                console.print(message)
-            else:
-                print(message)
+            console.print(message)
         else:
             # Default: info/stdout
-            if console:
-                console.print(message)
-            else:
-                print(message)
+            console.print(message)
 
     def list_wrappers(self) -> list[dict[str, str]]:
         """List all installed wrappers."""
@@ -145,7 +109,7 @@ class WrapperManager:
 
         for item in self.bin_dir.iterdir():
             if item.is_file() and os.access(item, os.X_OK):
-                if UTILS_AVAILABLE and is_wrapper_file(str(item)):
+                if is_wrapper_file(str(item)):
                     wrapper_id = get_wrapper_id(str(item))
                     wrappers.append(
                         {
@@ -182,35 +146,22 @@ class WrapperManager:
         wrappers = self.list_wrappers()
 
         if not wrappers:
-            if console:
-                console.print("[yellow]No wrappers found[/yellow]")
-                console.print(
-                    f"Run 'fplaunch generate {self.bin_dir}' to create wrappers",
-                )
-            else:
-                print("No wrappers found")
-                print(f"Run 'fplaunch generate {self.bin_dir}' to create wrappers")
+            console.print("[yellow]No wrappers found[/yellow]")
+            console.print(
+                f"Run 'fplaunch generate {self.bin_dir}' to create wrappers",
+            )
             return
 
-        if console and _Table is not None:
-            table = _Table(title="Flatpak Wrappers")
-            table.add_column("Wrapper", style="cyan", no_wrap=True)
-            table.add_column("Flatpak ID", style="magenta")
-            table.add_column("Path", style="dim")
+        table = Table(title="Flatpak Wrappers")
+        table.add_column("Wrapper", style="cyan", no_wrap=True)
+        table.add_column("Flatpak ID", style="magenta")
+        table.add_column("Path", style="dim")
 
-            for wrapper in wrappers:
-                table.add_row(wrapper["name"], wrapper["id"], wrapper["path"])
+        for wrapper in wrappers:
+            table.add_row(wrapper["name"], wrapper["id"], wrapper["path"])
 
-            console.print(table)
-            console.print(f"\n[green]{len(wrappers)}[/green] wrappers found")
-        else:
-            # Plain text fallback
-            print("Flatpak Wrappers:")
-            print(f"{'Wrapper':<30} {'Flatpak ID':<30} {'Path'}")
-            print("-" * 90)
-            for wrapper in wrappers:
-                print(f"{wrapper['name']:<30} {wrapper['id']:<30} {wrapper['path']}")
-            print(f"\n{len(wrappers)} wrappers found")
+        console.print(table)
+        console.print(f"\n[green]{len(wrappers)}[/green] wrappers found")
 
     def remove_wrapper(self, wrapper_name: str, force: bool = False) -> bool:
         """Remove a specific wrapper."""
@@ -222,20 +173,13 @@ class WrapperManager:
 
         # Confirm removal unless forced or in emit mode
         if not force and not self.emit_mode:
-            if console:
-                from rich.prompt import Confirm
+            from rich.prompt import Confirm
 
-                if not Confirm.ask(
-                    f"Are you sure you want to remove wrapper '{wrapper_name}'?",
-                ):
-                    console.print("[yellow]Removal cancelled[/yellow]")
-                    return False
-            else:
-                response = input(
-                    f"Are you sure you want to remove wrapper '{wrapper_name}'? (y/n): ",
-                )
-                if response.lower() not in ["y", "yes"]:
-                    return False
+            if not Confirm.ask(
+                f"Are you sure you want to remove wrapper '{wrapper_name}'?",
+            ):
+                console.print("[yellow]Removal cancelled[/yellow]")
+                return False
 
         # In emit mode, just show what would be done
         if self.emit_mode:
@@ -354,22 +298,17 @@ class WrapperManager:
             # Show file content if verbose emit mode
             if self.emit_verbose:
                 self.log(f"EMIT: File content for {pref_file}:")
-                if console:
-                    from rich.panel import Panel
+                from rich.panel import Panel
 
-                    console.print(
-                        Panel.fit(
-                            preference,
-                            title=f"📄 {wrapper_name}.pref preference file",
-                            border_style="green",
-                        ),
-                    )
-                    # Also print raw content for tests that capture stdout
-                    print(preference)
-                else:
-                    self.log("-" * 30)
-                    self.log(f"Content: {preference}")
-                    self.log("-" * 30)
+                console.print(
+                    Panel.fit(
+                        preference,
+                        title=f"📄 {wrapper_name}.pref preference file",
+                        border_style="green",
+                    ),
+                )
+                # Also print raw content for tests that capture stdout
+                print(preference)
 
             return True
         try:
@@ -431,7 +370,7 @@ class WrapperManager:
         wrapper_id = None
         preference = self.get_preference(wrapper_name)
 
-        if UTILS_AVAILABLE and is_wrapper_file(str(wrapper_path)):
+        if is_wrapper_file(str(wrapper_path)):
             wrapper_id = get_wrapper_id(str(wrapper_path))
 
         info_lines = [
@@ -442,22 +381,14 @@ class WrapperManager:
             f"Executable: {'Yes' if os.access(wrapper_path, os.X_OK) else 'No'}",
         ]
 
-        if console:
-            from rich.panel import Panel
+        from rich.panel import Panel
 
-            console.print(
-                Panel.fit(
-                    "\n".join(info_lines),
-                    title=f"Wrapper Information: {wrapper_name}",
-                ),
-            )
-        else:
-            # Plain text fallback
-            print(f"\nWrapper Information: {wrapper_name}")
-            print("-" * 40)
-            for line in info_lines:
-                print(line)
-            print()
+        console.print(
+            Panel.fit(
+                "\n".join(info_lines),
+                title=f"Wrapper Information: {wrapper_name}",
+            ),
+        )
 
         return True
 
@@ -476,33 +407,20 @@ class WrapperManager:
                 matches.append(wrapper)
 
         if matches:
-            if console and _Table is not None:
-                table = _Table(title=f"Search Results for '{query}'")
-                table.add_column("Wrapper", style="cyan", no_wrap=True)
-                table.add_column("Flatpak ID", style="magenta")
-                table.add_column("Path", style="dim")
+            table = Table(title=f"Search Results for '{query}'")
+            table.add_column("Wrapper", style="cyan", no_wrap=True)
+            table.add_column("Flatpak ID", style="magenta")
+            table.add_column("Path", style="dim")
 
-                for wrapper in matches:
-                    table.add_row(wrapper["name"], wrapper["id"], wrapper["path"])
+            for wrapper in matches:
+                table.add_row(wrapper["name"], wrapper["id"], wrapper["path"])
 
-                console.print(table)
-                console.print(
-                    f"\n[green]{len(matches)}[/green] match{'es' if len(matches) > 1 else ''} found"
-                )
-            else:
-                print(f"Search Results for '{query}':")
-                print(f"{'Wrapper':<30} {'Flatpak ID':<30} {'Path'}")
-                print("-" * 90)
-                for wrapper in matches:
-                    print(
-                        f"{wrapper['name']:<30} {wrapper['id']:<30} {wrapper['path']}"
-                    )
-                print(f"\n{len(matches)} match{'es' if len(matches) > 1 else ''} found")
+            console.print(table)
+            console.print(
+                f"\n[green]{len(matches)}[/green] match{'es' if len(matches) > 1 else ''} found"
+            )
         else:
-            if console:
-                console.print(f"[yellow]No wrappers found matching '{query}'[/yellow]")
-            else:
-                print(f"No wrappers found matching '{query}'")
+            console.print(f"[yellow]No wrappers found matching '{query}'[/yellow]")
 
     def show_generated_files(self, app_name: str | None = None) -> None:
         """Show generated files for wrappers.
@@ -532,31 +450,21 @@ class WrapperManager:
                 files.append(("Post-run Script", str(post_run_script)))
 
             if files:
-                if console:
-                    from rich.panel import Panel
-                    from rich.table import Table
+                from rich.panel import Panel
+                from rich.table import Table
 
-                    table = Table()
-                    table.add_column("Type", style="cyan")
-                    table.add_column("Path", style="white")
+                table = Table()
+                table.add_column("Type", style="cyan")
+                table.add_column("Path", style="white")
 
-                    for file_type, file_path in files:
-                        table.add_row(file_type, file_path)
+                for file_type, file_path in files:
+                    table.add_row(file_type, file_path)
 
-                    console.print(
-                        Panel.fit(table, title=f"Generated Files: {app_name}")
-                    )
-                else:
-                    print(f"Generated Files: {app_name}")
-                    for file_type, file_path in files:
-                        print(f"  {file_type}: {file_path}")
+                console.print(Panel.fit(table, title=f"Generated Files: {app_name}"))
             else:
-                if console:
-                    console.print(
-                        f"[yellow]No generated files found for {app_name}[/yellow]"
-                    )
-                else:
-                    print(f"No generated files found for {app_name}")
+                console.print(
+                    f"[yellow]No generated files found for {app_name}[/yellow]"
+                )
         else:
             # Show all generated files
             wrappers = self.list_wrappers()
@@ -585,39 +493,19 @@ class WrapperManager:
                     all_files.append(("Post-run Script", str(post_run_script)))
 
             if all_files:
-                if console and _Table is not None:
-                    table = _Table(title="All Generated Files")
-                    table.add_column("Type", style="cyan")
-                    table.add_column("Path", style="white")
+                table = Table(title="All Generated Files")
+                table.add_column("Type", style="cyan")
+                table.add_column("Path", style="white")
 
-                    for file_type, file_path in all_files:
-                        table.add_row(file_type, file_path)
+                for file_type, file_path in all_files:
+                    table.add_row(file_type, file_path)
 
-                    console.print(table)
-                    console.print(
-                        f"\n[green]{len(all_files)}[/green] generated file{'s' if len(all_files) > 1 else ''} found"
-                    )
-                elif console:
-                    console.print("All Generated Files:")
-                    for file_type, file_path in all_files:
-                        console.print(f"  {file_type}: {file_path}")
-                    console.print(
-                        f"\n[green]{len(all_files)}[/green] generated file{'s' if len(all_files) > 1 else ''} found"
-                    )
-                else:
-                    print("All Generated Files:")
-                    print(f"{'Type':<20} {'Path'}")
-                    print("-" * 80)
-                    for file_type, file_path in all_files:
-                        print(f"{file_type:<20} {file_path}")
-                    print(
-                        f"\n{len(all_files)} generated file{'s' if len(all_files) > 1 else ''} found"
-                    )
+                console.print(table)
+                console.print(
+                    f"\n[green]{len(all_files)}[/green] generated file{'s' if len(all_files) > 1 else ''} found"
+                )
             else:
-                if console:
-                    console.print("[yellow]No generated files found[/yellow]")
-                else:
-                    print("No generated files found")
+                console.print("[yellow]No generated files found[/yellow]")
 
     def discover_features(self) -> None:
         """Discover and show available features."""
@@ -634,49 +522,29 @@ class WrapperManager:
             ("Configuration", "TOML-based configuration with validation"),
         ]
 
-        if console and _Table is not None:
-            table = _Table(title="fplaunchwrapper Features")
-            table.add_column("Feature", style="cyan", no_wrap=True)
-            table.add_column("Description", style="white")
+        from rich.table import Table as RichTable
 
-            for feature, description in features:
-                table.add_row(feature, description)
+        table = RichTable(title="fplaunchwrapper Features")
+        table.add_column("Feature", style="cyan", no_wrap=True)
+        table.add_column("Description", style="white")
 
-            console.print(table)
-        elif console:
-            console.print("[bold]fplaunchwrapper Features[/bold]")
-            for feature, description in features:
-                console.print(f"  {feature}: {description}")
+        for feature, description in features:
+            table.add_row(feature, description)
 
-            # Show usage examples
-            console.print("\n[bold]Usage Examples:[/bold]")
-            examples = [
-                "fplaunch generate ~/bin          # Generate wrappers",
-                "fplaunch list                     # List all wrappers",
-                "fplaunch set-pref firefox flatpak # Set preference",
-                "fplaunch monitor                  # Monitor for changes",
-                "firefox --fpwrapper-help          # Wrapper help",
-            ]
+        console.print(table)
 
-            for example in examples:
-                console.print(f"  [green]$[/green] {example}")
-        else:
-            # Plain text fallback
-            print("fplaunchwrapper Features:")
-            print(f"{'Feature':<25} {'Description'}")
-            print("-" * 70)
-            for feature, description in features:
-                print(f"{feature:<25} {description}")
-            print("\nUsage Examples:")
-            examples = [
-                "fplaunch generate ~/bin          # Generate wrappers",
-                "fplaunch list                     # List all wrappers",
-                "fplaunch set-pref firefox flatpak # Set preference",
-                "fplaunch monitor                  # Monitor for changes",
-                "firefox --fpwrapper-help          # Wrapper help",
-            ]
-            for example in examples:
-                print(f"  $ {example}")
+        # Show usage examples
+        console.print("\n[bold]Usage Examples:[/bold]")
+        examples = [
+            "fplaunch generate ~/bin          # Generate wrappers",
+            "fplaunch list                     # List all wrappers",
+            "fplaunch set-pref firefox flatpak # Set preference",
+            "fplaunch monitor                  # Monitor for changes",
+            "firefox --fpwrapper-help          # Wrapper help",
+        ]
+
+        for example in examples:
+            console.print(f"  [green]$[/green] {example}")
 
     def cleanup_obsolete(self) -> int:
         """Clean up wrappers for uninstalled applications."""
@@ -707,29 +575,16 @@ class WrapperManager:
             remove_item = False
 
             # Check if it's a wrapper
-            if UTILS_AVAILABLE:
-                try:
-                    from .python_utils import get_wrapper_id, is_wrapper_file
+            try:
+                from .python_utils import get_wrapper_id, is_wrapper_file
 
-                    if is_wrapper_file(str(item)):
-                        wrapper_id = get_wrapper_id(str(item))
-                        if wrapper_id and wrapper_id not in installed_apps:
-                            remove_item = True
-                except Exception:
-                    # If we can't determine, don't remove
-                    pass
-            else:
-                # Fallback: treat file as potential wrapper
-                try:
-                    from .python_utils import sanitize_id_to_name
-
-                    sanitized_installed = [
-                        sanitize_id_to_name(a) for a in installed_apps
-                    ]
-                    if item.name not in sanitized_installed:
+                if is_wrapper_file(str(item)):
+                    wrapper_id = get_wrapper_id(str(item))
+                    if wrapper_id and wrapper_id not in installed_apps:
                         remove_item = True
-                except Exception:
-                    pass
+            except Exception:
+                # If we can't determine, don't remove
+                pass
 
             if remove_item:
                 if self.emit_mode:
@@ -1312,10 +1167,7 @@ def main() -> int | None:
         return 0
 
     except Exception as e:
-        if console:
-            console.print(f"[red]Error:[/red] {e}")
-        else:
-            pass
+        console.print(f"[red]Error:[/red] {e}")
         return 1
 
 

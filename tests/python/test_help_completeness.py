@@ -23,12 +23,6 @@ def runner():
     return CliRunner()
 
 
-@pytest.fixture
-def cli_available():
-    """Check if Click is available."""
-    return getattr(cli_module, "CLICK_AVAILABLE", False)
-
-
 class TestHelpSupport:
     """Test that all commands have --help support."""
 
@@ -120,10 +114,6 @@ class TestHelpSupport:
                 f"{result.stdout}"
             )
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_main_cli_has_help(self, runner):
         """Test main CLI has --help support."""
         result = runner.invoke(cli_module.cli, ["--help"])
@@ -133,10 +123,6 @@ class TestHelpSupport:
         assert "commands:" in result.output.lower()
         assert "-h" in result.output or "--help" in result.output
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_all_click_commands_have_help(self, runner):
         """Test all Click CLI subcommands have --help support."""
         for command in self.CLICK_COMMANDS:
@@ -161,10 +147,6 @@ class TestHelpSupport:
                 f"Command {command} --help doesn't mention help flag:\n{result.output}"
             )
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_systemd_subcommands_have_help(self, runner):
         """Test systemd subcommands have help."""
         for action in self.SYSTEMD_ACTIONS:
@@ -176,10 +158,6 @@ class TestHelpSupport:
                 f"systemd --help doesn't mention action '{action}':\n{result.output}"
             )
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_profiles_subcommands_have_help(self, runner):
         """Test profiles subcommands show usage."""
         result = runner.invoke(cli_module.cli, ["profiles", "--help"])
@@ -188,10 +166,6 @@ class TestHelpSupport:
         # Should mention actions
         assert "action" in result.output.lower() or "list" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_presets_subcommands_have_help(self, runner):
         """Test presets subcommands show usage."""
         result = runner.invoke(cli_module.cli, ["presets", "--help"])
@@ -200,10 +174,6 @@ class TestHelpSupport:
         # Should mention actions
         assert "action" in result.output.lower() or "list" in result.output.lower()
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_config_subcommands_have_help(self, runner):
         """Test config subcommands show usage."""
         result = runner.invoke(cli_module.cli, ["config", "--help"])
@@ -216,10 +186,6 @@ class TestHelpSupport:
 class TestHelpCompleteness:
     """Test that help output is comprehensive."""
 
-    @pytest.mark.skipif(
-        not getattr(cli_module, "CLICK_AVAILABLE", False),
-        reason="Click not available",
-    )
     def test_main_help_shows_all_commands(self, runner):
         """Test main help lists all expected commands."""
         result = runner.invoke(cli_module.cli, ["--help"])

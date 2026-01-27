@@ -10,14 +10,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Import our utilities
-try:
-    UTILS_AVAILABLE = True
-except ImportError:
-    UTILS_AVAILABLE = False
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Import safety mechanisms using lazy loading to avoid circular imports
-# SAFETY_AVAILABLE = False  # Will be set lazily
+try:
+    from lib.safety import safe_launch_check
+except ImportError:
+    from .safety import safe_launch_check
 
 
 # Test environment detection for launch module
@@ -71,48 +70,6 @@ class AppLauncher:
                 self.bin_dir = Path.home() / "bin"
 
         self.args = args or []
-        self._safety_check = None  # Lazy-loaded safety check function
-
-    def _get_safety_check(self):
-        """Lazy load safety module to avoid circular imports.
-
-        Prefer importing the safety module from the `fplaunch` package so that
-        test harnesses can patch `fplaunch.safety` (e.g., with unittest.mock).
-        If that is not available, fall back to the local `lib.safety`
-        implementation. If neither is present, allow launches but report a
-        warning when verbose.
-        """
-        if self._safety_check is None:
-            try:
-                import sys
-
-                # If tests have patched the module in sys.modules (patch() may
-                # add/modify the module), prefer that to ensure the mocked
-                # function is used.
-                mod = sys.modules.get("fplaunch.safety")
-                if mod is not None and hasattr(mod, "safe_launch_check"):
-                    self._safety_check = getattr(mod, "safe_launch_check")
-                    return True, self._safety_check
-
-                # Prefer package-level safety so tests can patch fplaunch.safety.
-                # Fall back to the local implementation if package import fails.
-                try:
-                    from fplaunch.safety import safe_launch_check  # type: ignore
-                except Exception:
-                    from lib.safety import safe_launch_check  # type: ignore
-
-                self._safety_check = safe_launch_check
-                return True, self._safety_check
-            except Exception:
-                # Safety module not available, allow all launches
-                self._safety_check = lambda *args, **kwargs: True
-                if self.verbose:
-                    print(
-                        "Warning: Safety module not available, launching without security checks",
-                        file=sys.stderr,
-                    )
-                return False, self._safety_check
-        return True, self._safety_check
 
     def _get_hook_scripts(self, app_name: str, hook_type: str) -> list[Path]:
         """Get pre or post-launch hook scripts for an app.

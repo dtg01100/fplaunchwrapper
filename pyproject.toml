@@ -30,6 +30,8 @@ dependencies = [
     "pathlib>=1.0.1",           # Already in Python stdlib since 3.4
     "platformdirs>=3.0.0",      # Cross-platform directory handling
     "watchdog>=3.0.0",          # File system monitoring
+    "click>=8.1.0",             # Modern CLI framework
+    "rich>=13.0.0",             # Enhanced terminal output
 ]
 
 [project.optional-dependencies]
@@ -43,10 +45,8 @@ robustness = [
 
 # Phase 3: Advanced features (Low priority)
 advanced = [
-    "click>=8.1.0",             # Modern CLI framework
     "structlog>=23.1.0",        # Structured logging
     "validators>=0.22.0",       # Input validation library
-    "rich>=13.0.0",             # Enhanced terminal output
 ]
 
 # Development and testing (Optional)
