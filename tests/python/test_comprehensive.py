@@ -192,7 +192,7 @@ class TestComprehensiveSuite:
             sys.executable,
             "-c",
             (
-                "import sys; sys.argv = ['fplaunch.cli','nonexistentcmd']; import fplaunch.cli; sys.exit(fplaunch.cli.main())"
+                "import sys; sys.argv = ['lib.cli','nonexistentcmd']; import lib.cli; sys.exit(lib.cli.main())"
             ),
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -207,7 +207,7 @@ class TestComprehensiveSuite:
         import sys
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "--help"],
+            [sys.executable, "-m", "lib.cli", "--help"],
             "Basic CLI integration",
         )
 
