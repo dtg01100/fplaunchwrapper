@@ -20,12 +20,12 @@ console = Console()
 console_err = Console(stderr=True)
 
 try:
-    from lib.python_utils import (
+    from lib.safety import (
         get_wrapper_id,
         is_wrapper_file,
     )
 except ImportError:
-    from .python_utils import (
+    from .safety import (
         get_wrapper_id,
         is_wrapper_file,
     )
@@ -576,7 +576,7 @@ class WrapperManager:
 
             # Check if it's a wrapper
             try:
-                from .python_utils import get_wrapper_id, is_wrapper_file
+                from .safety import get_wrapper_id, is_wrapper_file
 
                 if is_wrapper_file(str(item)):
                     wrapper_id = get_wrapper_id(str(item))

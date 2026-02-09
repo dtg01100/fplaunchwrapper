@@ -36,9 +36,11 @@ try:
     from .python_utils import (
         acquire_lock,
         find_executable,
+        release_lock,
+    )
+    from .safety import (
         get_wrapper_id,
         is_wrapper_file,
-        release_lock,
         sanitize_id_to_name,
         validate_home_dir,
     )

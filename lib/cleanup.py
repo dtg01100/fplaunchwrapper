@@ -20,7 +20,7 @@ from rich.prompt import Confirm
 
 # Import our utilities
 try:
-    from python_utils import is_wrapper_file
+    from safety import is_wrapper_file
 
     UTILS_AVAILABLE = True
 except ImportError:
