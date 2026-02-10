@@ -163,13 +163,16 @@ class TestPresetCLICommands:
             yield Path(tmpdir)
 
     def test_list_presets_empty(self, temp_config_dir):
-        """Test listing presets when none defined."""
+        """Test listing presets includes built-in presets."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             manager = EnhancedConfigManager()
             presets = manager.list_permission_presets()
 
             assert isinstance(presets, list)
-            assert len(presets) == 0
+            assert len(presets) == 6  # Built-in presets
+            assert "development" in presets
+            assert "gaming" in presets
+            assert "media" in presets
 
     def test_add_preset(self, temp_config_dir):
         """Test adding a permission preset."""
@@ -234,40 +237,35 @@ class TestPresetCLICommands:
     def test_preset_persistence(self, temp_config_dir):
         """Test that presets persist across instances."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
-            # Create first instance and add preset
             manager1 = EnhancedConfigManager()
             manager1.add_permission_preset(
-                "media", ["--device=dri", "--socket=pulseaudio"]
+                "custom", ["--device=dri", "--socket=pulseaudio"]
             )
 
-            # Create second instance and verify preset exists
             manager2 = EnhancedConfigManager()
             presets = manager2.list_permission_presets()
-            assert "media" in presets
+            assert "custom" in presets
 
-            # Verify permissions are correct
-            perms = manager2.get_permission_preset("media")
+            perms = manager2.get_permission_preset("custom")
+            assert perms is not None
             assert "--device=dri" in perms
             assert "--socket=pulseaudio" in perms
 
     def test_multiple_presets(self, temp_config_dir):
-        """Test managing multiple presets."""
+        """Test managing multiple custom presets."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             manager = EnhancedConfigManager()
 
-            # Add multiple presets
             presets_data = {
-                "development": ["--filesystem=home", "--device=dri"],
-                "media": ["--device=dri", "--socket=pulseaudio"],
-                "network": ["--share=network"],
+                "custom1": ["--filesystem=home", "--device=dri"],
+                "custom2": ["--device=dri", "--socket=pulseaudio"],
+                "custom3": ["--share=network"],
             }
 
             for name, perms in presets_data.items():
                 manager.add_permission_preset(name, perms)
 
-            # Verify all exist
             presets = manager.list_permission_presets()
-            assert len(presets) == 3
             for name in presets_data.keys():
                 assert name in presets
 
@@ -276,14 +274,11 @@ class TestPresetCLICommands:
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             manager = EnhancedConfigManager()
 
-            # Add initial preset
-            manager.add_permission_preset("gaming", ["--device=dri"])
-
-            # Update it
+            manager.add_permission_preset("custom", ["--device=dri"])
             updated_perms = ["--device=dri", "--socket=pulseaudio", "--share=network"]
-            manager.add_permission_preset("gaming", updated_perms)
+            manager.add_permission_preset("custom", updated_perms)
 
-            # Verify it's updated
-            perms = manager.get_permission_preset("gaming")
+            perms = manager.get_permission_preset("custom")
+            assert perms is not None
             assert perms == updated_perms
             assert len(perms) == 3

@@ -505,9 +505,56 @@ class EnhancedConfigManager:
         """Check if app is blocked."""
         return app_id in self.config.blocklist
 
+    BUILTIN_PRESETS = {
+        "development": [
+            "--filesystem=home",
+            "--filesystem=host",
+            "--device=dri",
+            "--socket=x11",
+            "--socket=wayland",
+            "--share=ipc",
+        ],
+        "media": [
+            "--device=dri",
+            "--socket=pulseaudio",
+            "--socket=wayland",
+            "--socket=x11",
+            "--share=ipc",
+            "--filesystem=~/Music",
+            "--filesystem=~/Videos",
+        ],
+        "network": [
+            "--share=network",
+            "--share=ipc",
+            "--socket=x11",
+            "--socket=wayland",
+        ],
+        "minimal": ["--share=ipc"],
+        "gaming": [
+            "--device=dri",
+            "--device=input",
+            "--socket=pulseaudio",
+            "--socket=wayland",
+            "--socket=x11",
+            "--share=ipc",
+            "--share=network",
+            "--filesystem=~/Games",
+        ],
+        "offline": [
+            "--device=dri",
+            "--socket=pulseaudio",
+            "--socket=wayland",
+            "--socket=x11",
+            "--share=ipc",
+            "--filesystem=home",
+        ],
+    }
+
     def list_permission_presets(self) -> list[str]:
         """List available permission preset names."""
-        return sorted(self.config.permission_presets.keys())
+        presets = set(self.BUILTIN_PRESETS.keys())
+        presets.update(self.config.permission_presets.keys())
+        return sorted(presets)
 
     def get_permission_preset(self, preset_name: str) -> list[str] | None:
         """Get permissions for a specific preset.
@@ -518,6 +565,9 @@ class EnhancedConfigManager:
         Returns:
             List of permission strings, or None if preset not found
         """
+        preset_lower = preset_name.lower()
+        if preset_lower in self.BUILTIN_PRESETS:
+            return self.BUILTIN_PRESETS[preset_lower]
         return self.config.permission_presets.get(preset_name)
 
     def add_permission_preset(self, preset_name: str, permissions: list[str]) -> None:
