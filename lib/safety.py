@@ -20,6 +20,19 @@ import sys
 import unicodedata
 from pathlib import Path
 
+try:
+    from .exceptions import (
+        ForbiddenNameError,
+        InvalidFlatpakIdError,
+        PathTraversalError,
+        SafetyError,
+    )
+except ImportError:
+    SafetyError = Exception
+    ForbiddenNameError = Exception
+    PathTraversalError = Exception
+    InvalidFlatpakIdError = Exception
+
 
 _PYTEST_MODULE_SNAPSHOT = {
     name: module for name, module in sys.modules.items() if "pytest" in name

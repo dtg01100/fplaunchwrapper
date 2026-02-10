@@ -18,6 +18,11 @@ try:
 except ImportError:
     from .safety import safe_launch_check
 
+try:
+    from .exceptions import AppNotFoundError, LaunchBlockedError, LaunchError
+except ImportError:
+    AppNotFoundError = LaunchBlockedError = LaunchError = Exception
+
 
 # Test environment detection for launch module
 def is_test_environment_launch():

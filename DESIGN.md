@@ -57,6 +57,7 @@
 | `systemd_setup.py` | `SystemdSetup` | Creates systemd user units or cron jobs |
 | `flatpak_monitor.py` | `FlatpakEventHandler` | Watchdog-based monitoring daemon |
 | `cleanup.py` | `WrapperCleanup` | Removes obsolete wrappers |
+| `exceptions.py` | Exception hierarchy | Custom exceptions for all error types |
 | `python_utils.py` | Utility functions | Path normalization, lock management, temp file creation, executable finding |
 | `safety.py` | Security boundaries | Input validation, path traversal prevention, wrapper validation, forbidden names, test environment detection |
 | `notifications.py` | Desktop notifications | libnotify integration for user feedback |
@@ -361,6 +362,7 @@ fplaunchwrapper/
 │   ├── systemd_setup.py     Systemd/cron integration
 │   ├── flatpak_monitor.py   Filesystem monitoring
 │   ├── cleanup.py           Obsolete wrapper removal
+│   ├── exceptions.py        Exception hierarchy
 │   ├── python_utils.py      Utility functions (path normalization, locking, temp files)
 │   ├── safety.py            Security boundaries (input validation, path safety, forbidden names)
 │   └── notifications.py     Desktop notifications

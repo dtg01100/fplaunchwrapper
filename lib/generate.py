@@ -33,6 +33,10 @@ TextColumn = _TextColumn
 
 # Import our utilities
 try:
+    from .exceptions import (
+        FplaunchError,
+        WrapperGenerationError,
+    )
     from .python_utils import (
         acquire_lock,
         find_executable,
@@ -49,7 +53,8 @@ try:
 except Exception:
     UTILS_AVAILABLE = False
 
-    # Provide Any-typed fallbacks so the rest of the module can call them safely
+    FplaunchError = Exception
+    WrapperGenerationError = RuntimeError
     acquire_lock: Any = lambda *args, **kwargs: False
     find_executable: Any = lambda *args, **kwargs: None
     get_wrapper_id: Any = lambda *args, **kwargs: None
@@ -308,20 +313,22 @@ class WrapperGenerator:
 
         flatpak_path = find_executable("flatpak") if UTILS_AVAILABLE else None
         if not flatpak_path:
-            msg = "Flatpak not found. Please install Flatpak first."
-            raise RuntimeError(msg)
+            raise WrapperGenerationError(
+                "flatpak", "Flatpak not found. Please install Flatpak first."
+            )
 
         self.log(f"Found Flatpak at: {flatpak_path}")
 
-        # Get installed apps from both user and system installations
         result = self.run_command(
             [flatpak_path, "list", "--app", "--columns=application"],
             "Getting installed Flatpak applications",
         )
 
         if result.returncode != 0:
-            msg = f"Failed to get Flatpak applications: {result.stderr}"
-            raise RuntimeError(msg)
+            raise WrapperGenerationError(
+                "flatpak",
+                f"Failed to get Flatpak applications: {result.stderr}",
+            )
 
         # Parse output and remove duplicates
         apps = []
@@ -433,8 +440,7 @@ class WrapperGenerator:
                 Flatpak ID.
         """
         if not UTILS_AVAILABLE:
-            msg = "Python utilities not available"
-            raise RuntimeError(msg)
+            raise WrapperGenerationError(app_id, "Python utilities not available")
 
         # Check if app is blocklisted
         if self.is_blocklisted(app_id):
@@ -570,10 +576,14 @@ class WrapperGenerator:
                 bin_dir=str(self.bin_dir),
             )
 
-        except FileNotFoundError:
-            raise RuntimeError(f"Wrapper template file not found: {template_path}")
+        except FileNotFoundError as e:
+            raise WrapperGenerationError(
+                app_id, f"Wrapper template file not found: {template_path}"
+            ) from e
         except Exception as e:
-            raise RuntimeError(f"Failed to read wrapper template: {e}")
+            raise WrapperGenerationError(
+                app_id, f"Failed to read wrapper template: {e}"
+            ) from e
 
     def generate_all_wrappers(self, installed_apps: list[str]) -> tuple[int, int, int]:
         """Generate wrappers for all installed applications."""

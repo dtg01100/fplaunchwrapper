@@ -65,41 +65,15 @@ except Exception:
     TOML_AVAILABLE = False
 
 
-# Custom exceptions for configuration errors
-class ConfigError(Exception):
-    """Base exception for configuration-related errors."""
-
-    pass
-
-
-class ConfigFileNotFoundError(ConfigError):
-    """Raised when configuration file is not found."""
-
-    pass
-
-
-class ConfigParseError(ConfigError):
-    """Raised when configuration file cannot be parsed."""
-
-    pass
-
-
-class ConfigValidationError(ConfigError):
-    """Raised when configuration data fails validation."""
-
-    pass
-
-
-class ConfigMigrationError(ConfigError):
-    """Raised when configuration migration fails."""
-
-    pass
-
-
-class ConfigPermissionError(ConfigError):
-    """Raised when configuration file cannot be accessed due to permissions."""
-
-    pass
+from .exceptions import (
+    ConfigError,
+    ConfigFileNotFoundError,
+    ConfigMigrationError,
+    ConfigParseError,
+    ConfigPermissionError,
+    ConfigValidationError,
+    FplaunchError,
+)
 
 
 @dataclass
