@@ -145,6 +145,7 @@ def cli(ctx, verbose, emit, emit_verbose, config_dir, version) -> None:
             "[yellow]🧪 EMIT MODE: Commands will be shown but not executed[/yellow]"
         )
 
+
 @cli.command()
 @click.argument("bin_dir", required=False)
 @click.pass_context
@@ -170,10 +171,9 @@ def generate(ctx, bin_dir) -> int:
         )
         return generator.run()
     except ImportError as e:
-        console_err.print(
-            f"[red]Error:[/red] Failed to import wrapper generator: {e}"
-        )
+        console_err.print(f"[red]Error:[/red] Failed to import wrapper generator: {e}")
         raise SystemExit(1)
+
 
 @cli.command(name="list")
 @click.argument("app_name", required=False)
@@ -201,10 +201,9 @@ def list_wrappers(ctx, app_name, show_all) -> int:
             return 0
 
     except ImportError as e:
-        console_err.print(
-            f"[red]Error:[/red] Failed to import wrapper manager: {e}"
-        )
+        console_err.print(f"[red]Error:[/red] Failed to import wrapper manager: {e}")
         raise SystemExit(1)
+
 
 @cli.command()
 @click.argument("app_name")
@@ -241,6 +240,7 @@ def install(ctx, app_name, emit) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] {e}")
         raise SystemExit(1)
+
 
 @cli.command()
 @click.argument("app_name")
@@ -291,6 +291,7 @@ def uninstall(ctx, app_name, remove_data, emit) -> int:
         console_err.print(f"[red]Error:[/red] {e}")
         raise SystemExit(1)
 
+
 @cli.command()
 @click.argument("app_name")
 @click.pass_context
@@ -304,6 +305,7 @@ def launch(ctx, app_name) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] {e}")
         raise SystemExit(1)
+
 
 @cli.command()
 @click.argument("name")
@@ -330,6 +332,7 @@ def remove(ctx, name, force) -> int:
         console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
         raise SystemExit(1)
 
+
 @cli.command()
 @click.pass_context
 def cleanup(ctx) -> int:
@@ -345,12 +348,14 @@ def cleanup(ctx) -> int:
         console_err.print(f"[red]Error:[/red] Failed to import cleanup: {e}")
         raise SystemExit(1)
 
+
 @cli.command(name="clean")  # Alias for cleanup
 @click.pass_context
 def clean(ctx) -> int:
     """Clean up orphaned wrapper files and artifacts (alias for cleanup)."""
     # Just delegate to the cleanup command
     return cleanup.callback(ctx)
+
 
 @cli.command()
 @click.option("--daemon", is_flag=True, help="Run in daemon mode (background)")
@@ -381,6 +386,7 @@ def monitor(ctx, daemon) -> int:
         console_err.print(f"[red]Error:[/red] Failed to import monitor: {e}")
         raise SystemExit(1)
 
+
 @cli.command(name="set-pref")
 @click.argument("wrapper_name")
 @click.argument("preference")
@@ -406,6 +412,7 @@ def set_pref(ctx, wrapper_name, preference) -> int:
         console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
         raise SystemExit(1)
 
+
 @cli.command(name="pref")
 @click.argument("wrapper_name")
 @click.argument("preference")
@@ -414,6 +421,7 @@ def pref(ctx, wrapper_name, preference) -> int:
     """Alias for set-pref."""
     # Call the same implementation as `set_pref`.
     return set_pref(ctx, wrapper_name, preference)
+
 
 @cli.command(name="rm")
 @click.argument("name")
@@ -439,6 +447,7 @@ def rm(ctx, name, force) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
         raise SystemExit(1)
+
 
 def _run_systemd_setup(
     ctx, bin_dir: str | None = None, wrapper_script: str | None = None
@@ -479,6 +488,7 @@ def _run_systemd_setup(
         console_err.print(f"[red]Error:[/red] Failed to import systemd_setup: {e}")
         raise SystemExit(1)
 
+
 @cli.command(name="systemd-setup")
 @click.argument("bin_dir", required=False)
 @click.argument("wrapper_script", required=False)
@@ -490,6 +500,7 @@ def systemd_setup_cmd(ctx, bin_dir, wrapper_script) -> int:
     # provided).
     return _run_systemd_setup(ctx, bin_dir, wrapper_script)
 
+
 @cli.group(name="systemd", invoke_without_command=True)
 @click.pass_context
 def systemd_group(ctx) -> None:
@@ -500,6 +511,7 @@ def systemd_group(ctx) -> None:
     # without a subcommand.
     if ctx.invoked_subcommand is None:
         return _run_systemd_setup(ctx, None, None)
+
 
 def _systemd_simple_action(ctx) -> int:
     try:
@@ -518,50 +530,60 @@ def _systemd_simple_action(ctx) -> int:
         # If the systemd helper is not available, treat as a no-op for help/output tests
         return 0
 
+
 @systemd_group.command(name="enable")
 @click.pass_context
 def systemd_enable(ctx) -> int:
     return _systemd_simple_action(ctx)
+
 
 @systemd_group.command(name="disable")
 @click.pass_context
 def systemd_disable(ctx) -> int:
     return _systemd_simple_action(ctx)
 
+
 @systemd_group.command(name="status")
 @click.pass_context
 def systemd_status(ctx) -> int:
     return _systemd_simple_action(ctx)
+
 
 @systemd_group.command(name="start")
 @click.pass_context
 def systemd_start(ctx) -> int:
     return _systemd_simple_action(ctx)
 
+
 @systemd_group.command(name="stop")
 @click.pass_context
 def systemd_stop(ctx) -> int:
     return _systemd_simple_action(ctx)
+
 
 @systemd_group.command(name="restart")
 @click.pass_context
 def systemd_restart(ctx) -> int:
     return _systemd_simple_action(ctx)
 
+
 @systemd_group.command(name="reload")
 @click.pass_context
 def systemd_reload(ctx) -> int:
     return _systemd_simple_action(ctx)
+
 
 @systemd_group.command(name="logs")
 @click.pass_context
 def systemd_logs(ctx) -> int:
     return _systemd_simple_action(ctx)
 
+
 @systemd_group.command(name="list")
 @click.pass_context
 def systemd_list(ctx) -> int:
     return _systemd_simple_action(ctx)
+
 
 @systemd_group.command(name="test")
 @click.option(
@@ -574,12 +596,11 @@ def systemd_test(ctx, emit) -> int:
 
     if emit_mode:
         console.print("[yellow]EMIT: Would run systemd test[/yellow]")
-        return (
-            0  # Return 0 in emit mode to indicate success without actual execution
-        )
+        return 0  # Return 0 in emit mode to indicate success without actual execution
 
     # Perform the actual test action
     return _systemd_simple_action(ctx)
+
 
 @cli.command()
 @click.argument("app_name")
@@ -599,6 +620,7 @@ def info(ctx, app_name) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
         raise SystemExit(1)
+
 
 @cli.command()
 @click.argument("query", required=False)
@@ -623,12 +645,14 @@ def search(ctx, query) -> int:
         console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
         raise SystemExit(1)
 
+
 @cli.command(name="discover")
 @click.argument("query", required=False)
 @click.pass_context
 def discover(ctx, query) -> int:
     """Alias for search."""
     return search(ctx, query)
+
 
 @cli.group(name="profiles", invoke_without_command=True)
 @click.pass_context
@@ -638,35 +662,90 @@ def profiles_group(ctx) -> None:
         # Default to list when no subcommand provided
         ctx.invoke(profiles_list)
 
+
 @profiles_group.command(name="list")
 @click.pass_context
 def profiles_list(ctx) -> int:
     """List available profiles."""
-    console.print("default")
-    return 0
+    try:
+        from lib.config_manager import create_config_manager
+
+        cfg = create_config_manager()
+        profiles = cfg.list_profiles()
+        active = cfg.get_active_profile()
+        for profile in profiles:
+            if profile == active:
+                console.print(f"[bold green]* {profile}[/bold green]")
+            else:
+                console.print(f"  {profile}")
+        return 0
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to list profiles: {e}")
+        return 1
+
 
 @profiles_group.command(name="create")
 @click.argument("profile_name")
+@click.option("--copy-from", help="Copy configuration from existing profile")
 @click.pass_context
-def profiles_create(ctx, profile_name) -> int:
+def profiles_create(ctx, profile_name, copy_from) -> int:
     """Create a new profile."""
-    console.print(f"[green]✓[/green] Created profile: {profile_name}")
-    return 0
+    try:
+        from lib.config_manager import create_config_manager
+
+        cfg = create_config_manager()
+        if cfg.create_profile(profile_name, copy_from):
+            console.print(f"[green]✓[/green] Created profile: {profile_name}")
+            return 0
+        else:
+            console_err.print(
+                f"[red]Error:[/red] Could not create profile '{profile_name}' "
+                "(may already exist or invalid name)"
+            )
+            return 1
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to create profile: {e}")
+        return 1
+
 
 @profiles_group.command(name="switch")
 @click.argument("profile_name")
 @click.pass_context
 def profiles_switch(ctx, profile_name) -> int:
     """Switch to a profile."""
-    console.print(f"[green]✓[/green] Switched to profile: {profile_name}")
-    return 0
+    try:
+        from lib.config_manager import create_config_manager
+
+        cfg = create_config_manager()
+        if cfg.switch_profile(profile_name):
+            console.print(f"[green]✓[/green] Switched to profile: {profile_name}")
+            return 0
+        else:
+            console_err.print(
+                f"[red]Error:[/red] Could not switch to profile '{profile_name}' "
+                "(profile may not exist)"
+            )
+            return 1
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to switch profile: {e}")
+        return 1
+
 
 @profiles_group.command(name="current")
 @click.pass_context
 def profiles_current(ctx) -> int:
     """Show current profile."""
-    console.print("Current profile: [bold]default[/bold]")
-    return 0
+    try:
+        from lib.config_manager import create_config_manager
+
+        cfg = create_config_manager()
+        active = cfg.get_active_profile()
+        console.print(f"Current profile: [bold]{active}[/bold]")
+        return 0
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to get current profile: {e}")
+        return 1
+
 
 @profiles_group.command(name="export")
 @click.argument("profile_name")
@@ -674,8 +753,25 @@ def profiles_current(ctx) -> int:
 @click.pass_context
 def profiles_export(ctx, profile_name, output_file) -> int:
     """Export a profile to a file."""
-    console.print(f"[green]✓[/green] Exported profile: {profile_name}")
-    return 0
+    try:
+        from lib.config_manager import create_config_manager
+
+        cfg = create_config_manager()
+        export_path = Path(output_file) if output_file else Path(f"{profile_name}.toml")
+        if cfg.export_profile(profile_name, export_path):
+            console.print(
+                f"[green]✓[/green] Exported profile '{profile_name}' to {export_path}"
+            )
+            return 0
+        else:
+            console_err.print(
+                f"[red]Error:[/red] Could not export profile '{profile_name}'"
+            )
+            return 1
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to export profile: {e}")
+        return 1
+
 
 @profiles_group.command(name="import")
 @click.argument("input_file")
@@ -683,8 +779,26 @@ def profiles_export(ctx, profile_name, output_file) -> int:
 @click.pass_context
 def profiles_import(ctx, input_file, profile_name) -> int:
     """Import a profile from a file."""
-    console.print(f"[green]✓[/green] Imported profile from: {input_file}")
-    return 0
+    try:
+        from lib.config_manager import create_config_manager
+
+        cfg = create_config_manager()
+        import_path = Path(input_file)
+        name = profile_name or import_path.stem
+        if cfg.import_profile(name, import_path):
+            console.print(
+                f"[green]✓[/green] Imported profile '{name}' from {import_path}"
+            )
+            return 0
+        else:
+            console_err.print(
+                f"[red]Error:[/red] Could not import profile from '{input_file}'"
+            )
+            return 1
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to import profile: {e}")
+        return 1
+
 
 @cli.group(name="presets", invoke_without_command=True)
 @click.pass_context
@@ -694,14 +808,95 @@ def presets_group(ctx) -> None:
         # Default to list when no subcommand provided
         ctx.invoke(presets_list)
 
+
 @presets_group.command(name="list")
 @click.pass_context
 def presets_list(ctx) -> int:
     """List available permission presets."""
-    console.print(
-        "Available presets: [green]default[/green], [green]minimal[/green], [green]full[/green]"
-    )
-    return 0
+    try:
+        from lib.config_manager import create_config_manager
+
+        cfg = create_config_manager()
+        presets = cfg.list_permission_presets()
+        if presets:
+            console.print("Available presets:")
+            for preset in presets:
+                console.print(f"  [green]{preset}[/green]")
+        else:
+            console.print("No custom presets defined")
+        return 0
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to list presets: {e}")
+        return 1
+
+
+@presets_group.command(name="get")
+@click.argument("preset_name", required=False)
+@click.pass_context
+def presets_get(ctx, preset_name) -> int:
+    """Get a permission preset."""
+    if not preset_name:
+        raise click.UsageError("PRESET_NAME is required")
+
+    try:
+        from lib.config_manager import create_config_manager
+
+        cfg = create_config_manager()
+        permissions = cfg.get_permission_preset(preset_name)
+        if permissions is None:
+            console_err.print(f"[red]Error:[/red] Preset '{preset_name}' not found")
+            return 1
+
+        console.print(f"[yellow]Preset {preset_name}:[/yellow]")
+        for perm in permissions:
+            console.print(f"  {perm}")
+        return 0
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to get preset: {e}")
+        return 1
+
+
+@presets_group.command(name="add")
+@click.argument("preset_name")
+@click.option("-p", "--permission", multiple=True, help="Add a permission")
+@click.pass_context
+def presets_add(ctx, preset_name, permission) -> int:
+    """Add a new permission preset."""
+    if not permission:
+        console_err.print("[red]Error:[/red] At least one permission is required")
+        return 1
+
+    try:
+        from lib.config_manager import create_config_manager
+
+        cfg = create_config_manager()
+        cfg.add_permission_preset(preset_name, list(permission))
+        console.print(f"[green]✓[/green] Added preset: {preset_name}")
+        return 0
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to add preset: {e}")
+        return 1
+
+
+@presets_group.command(name="remove")
+@click.argument("preset_name")
+@click.pass_context
+def presets_remove(ctx, preset_name) -> int:
+    """Remove a permission preset."""
+    try:
+        from lib.config_manager import create_config_manager
+
+        cfg = create_config_manager()
+        if cfg.remove_permission_preset(preset_name):
+            console.print(f"[green]✓[/green] Removed preset: {preset_name}")
+            return 0
+        else:
+            console_err.print(f"[red]Error:[/red] Preset '{preset_name}' not found")
+            return 1
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to remove preset: {e}")
+        return 1
+
 
 @presets_group.command(name="get")
 @click.argument("preset_name", required=False)
@@ -723,6 +918,7 @@ def presets_get(ctx, preset_name) -> int:
     console.print(f"[yellow]Preset {preset_name}:[/yellow]\n  permissions=none")
     return 0
 
+
 @presets_group.command(name="add")
 @click.argument("preset_name")
 @click.option("-p", "--permission", multiple=True, help="Add a permission")
@@ -737,6 +933,7 @@ def presets_add(ctx, preset_name, permission) -> int:
     console.print(f"[green]✓[/green] Added preset: {preset_name}")
     return 0
 
+
 @presets_group.command(name="remove")
 @click.argument("preset_name")
 @click.pass_context
@@ -745,11 +942,13 @@ def presets_remove(ctx, preset_name) -> int:
     console.print(f"[green]✓[/green] Removed preset: {preset_name}")
     return 0
 
+
 @cli.command(name="files")
 @click.pass_context
 def files(ctx) -> int:
     """Files helper."""
     return 0
+
 
 @cli.command(name="manifest")
 @click.argument("app_name")
@@ -793,6 +992,7 @@ def manifest(ctx, app_name, emit) -> int:
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
 
+
 @cli.command()
 @click.argument("action", required=False)
 @click.argument("value", required=False)
@@ -811,9 +1011,7 @@ def config(ctx, action, value) -> int:
         if action == "cron-interval":
             if not value:
                 interval = cfg.get_cron_interval()
-                console.print(
-                    f"Current cron interval: [bold]{interval}[/bold] hours"
-                )
+                console.print(f"Current cron interval: [bold]{interval}[/bold] hours")
             else:
                 interval = int(value)
                 cfg.set_cron_interval(interval)

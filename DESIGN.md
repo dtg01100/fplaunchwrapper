@@ -143,12 +143,12 @@ When `schema_version` doesn't match the current version, migration functions upg
 
 ## Profiles & Presets
 
-### Profiles *(Aspirational - Not Fully Implemented)*
+### Profiles
 
-Profiles allow switching between different configuration sets (e.g., "work", "personal"). Intended behavior:
+Profiles allow switching between different configuration sets (e.g., "work", "personal"):
 - Stored as separate files in `profiles/` directory
-- Switching would update active configuration
-- Could support per-profile app preferences and presets
+- CLI commands: `fplaunch profiles list|create|switch|current|export|import`
+- Switching updates the active profile in config
 
 ### Presets
 
