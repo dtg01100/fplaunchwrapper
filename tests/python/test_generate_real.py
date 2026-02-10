@@ -220,6 +220,8 @@ class TestWrapperGeneratorReal:
     @patch("lib.generate.subprocess.run")
     def test_get_installed_flatpaks_error_handling(self, mock_run, mock_find) -> None:
         """Test get_installed_flatpaks() handles errors."""
+        from lib.exceptions import WrapperGenerationError
+
         mock_find.return_value = "/usr/bin/flatpak"
         mock_run.return_value = Mock(
             returncode=1,
@@ -232,7 +234,7 @@ class TestWrapperGeneratorReal:
             config_dir=str(self.config_dir),
         )
 
-        with pytest.raises(RuntimeError, match="Failed to get Flatpak applications"):
+        with pytest.raises(WrapperGenerationError, match="Failed to get Flatpak applications"):
             gen.get_installed_flatpaks()
 
     def test_is_blocklisted_no_file(self) -> None:

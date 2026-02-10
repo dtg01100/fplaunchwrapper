@@ -41,6 +41,9 @@ if [ -f "$ENV_FILE" ]; then
 fi
 SCRIPT_BIN_DIR="{bin_dir}"
 ONE_SHOT_PREF=""
+# Hook failure mode (default from config, can be overridden)
+HOOK_FAILURE_MODE="{hook_failure_mode_default}"
+ONE_SHOT_HOOK_FAILURE=""
 
 mkdir -p "$PREF_DIR"
 
@@ -68,8 +71,8 @@ run_single_launch() {{
     local choice="$1"
     shift
 
-    # Run pre-launch script if present
-    run_pre_launch_script "$@"
+    # Run pre-launch script if present (pass the source type)
+    run_pre_launch_script "$choice" "$@"
 
     if [ "$choice" = "system" ]; then
         if [ "$SYSTEM_EXISTS" = true ]; then
@@ -92,17 +95,56 @@ run_single_launch() {{
     fi
 }}
 
-# Pre-launch script execution
-run_pre_launch_script() {{
-    if [ -x "$PRE_SCRIPT" ]; then
-        "$PRE_SCRIPT" "$NAME" "$ID" "$source" "$@"
+# Determine effective hook failure mode
+get_hook_failure_mode() {{
+    if [ -n "$ONE_SHOT_HOOK_FAILURE" ]; then
+        echo "$ONE_SHOT_HOOK_FAILURE"
+    elif [ -n "$FPWRAPPER_HOOK_FAILURE" ]; then
+        echo "$FPWRAPPER_HOOK_FAILURE"
+    else
+        echo "$HOOK_FAILURE_MODE"
     fi
 }}
 
-# Post-launch script execution
+# Pre-launch script execution with failure handling
+# Usage: run_pre_launch_script <source> [args...]
+#   source: "system", "flatpak", or "unknown" (indicates launch source)
+run_pre_launch_script() {{
+    local source="$1"
+    shift
+    local failure_mode=$(get_hook_failure_mode)
+    
+    if [ -x "$PRE_SCRIPT" ]; then
+        export FPWRAPPER_WRAPPER_NAME="$NAME"
+        export FPWRAPPER_APP_ID="$ID"
+        export FPWRAPPER_SOURCE="$source"
+        export FPWRAPPER_HOOK_FAILURE_MODE="$failure_mode"
+        
+        "$PRE_SCRIPT" "$NAME" "$ID" "$source" "$@"
+        local hook_exit=$?
+        
+        if [ $hook_exit -ne 0 ]; then
+            case "$failure_mode" in
+                abort)
+                    echo "[fplaunchwrapper] Pre-launch hook failed (exit $hook_exit), aborting launch" >&2
+                    exit $hook_exit
+                    ;;
+                warn)
+                    echo "[fplaunchwrapper] Warning: Pre-launch hook failed (exit $hook_exit)" >&2
+                    ;;
+                ignore)
+                    # Silent continuation
+                    ;;
+            esac
+        fi
+    fi
+}}
+
+# Post-launch script execution with failure handling
 run_post_launch_script() {{
     local exit_code="$1"
     local source="$2"  # "system" or "flatpak"
+    local failure_mode=$(get_hook_failure_mode)
     
     if [ -x "$POST_SCRIPT" ]; then
         (
@@ -110,8 +152,25 @@ run_post_launch_script() {{
             export FPWRAPPER_SOURCE="$source"
             export FPWRAPPER_WRAPPER_NAME="$NAME"
             export FPWRAPPER_APP_ID="$ID"
+            export FPWRAPPER_HOOK_FAILURE_MODE="$failure_mode"
             "$POST_SCRIPT" "$NAME" "$ID" "$source" "$exit_code" "$@"
-        ) 2>&1 || echo "[fplaunchwrapper] Warning: Post-launch script failed with exit code $?" >&2
+        )
+        local hook_exit=$?
+        
+        if [ $hook_exit -ne 0 ]; then
+            case "$failure_mode" in
+                abort)
+                    # Note: Cannot abort - app already ran. Just warn.
+                    echo "[fplaunchwrapper] Post-launch hook failed (exit $hook_exit)" >&2
+                    ;;
+                warn)
+                    echo "[fplaunchwrapper] Warning: Post-launch hook failed (exit $hook_exit)" >&2
+                    ;;
+                ignore)
+                    # Silent continuation
+                    ;;
+            esac
+        fi
     fi
 }}
 
@@ -173,6 +232,34 @@ if [ "$1" = "--fpwrapper-force-interactive" ]; then
     shift
 fi
 
+# Hook failure mode override
+if [ "$1" = "--fpwrapper-hook-failure" ]; then
+    if [ -z "$2" ]; then
+        echo "Usage: $NAME --fpwrapper-hook-failure [abort|warn|ignore]" >&2
+        exit 1
+    fi
+    case "$2" in
+        abort|warn|ignore)
+            ONE_SHOT_HOOK_FAILURE="$2"
+            shift 2
+            ;;
+        *)
+            echo "Invalid hook failure mode: $2 (use abort|warn|ignore)" >&2
+            exit 1
+            ;;
+    esac
+fi
+
+if [ "$1" = "--fpwrapper-abort-on-hook-failure" ]; then
+    ONE_SHOT_HOOK_FAILURE="abort"
+    shift
+fi
+
+if [ "$1" = "--fpwrapper-ignore-hook-failure" ]; then
+    ONE_SHOT_HOOK_FAILURE="ignore"
+    shift
+fi
+
 # Discover system info
 set_system_info
 
@@ -198,6 +285,9 @@ if [ "$1" = "--fpwrapper-help" ]; then
     echo "  --fpwrapper-set-preference [system|flatpak] Alias for --fpwrapper-set-override"
     echo "  --fpwrapper-launch [system|flatpak] Launch once without saving"
     echo "  --fpwrapper-force-interactive Force interactive mode (even in scripts)"
+    echo "  --fpwrapper-hook-failure [abort|warn|ignore] Set hook failure mode"
+    echo "  --fpwrapper-abort-on-hook-failure Abort launch if hook fails"
+    echo "  --fpwrapper-ignore-hook-failure Ignore hook failures silently"
     echo "  --fpwrapper-set-pre-script <script> Set pre-launch script"
     echo "  --fpwrapper-set-post-script <script> Set post-run script"
     echo "  --fpwrapper-remove-pre-script Remove pre-launch script"
@@ -660,14 +750,12 @@ if ! is_interactive; then
         run_single_launch "$ONE_SHOT_PREF" "$@"
     fi
 
-    # Ensure pre-launch hooks run in non-interactive flows
-    run_pre_launch_script "$@"
-
     # Find next executable in PATH
     IFS=: read -ra PATH_DIRS <<< "$PATH"
     for dir in "${{PATH_DIRS[@]}}"; do
         [ -z "$dir" ] && continue
         if [ -x "$dir/$NAME" ] && [ "$dir/$NAME" != "$SCRIPT_BIN_DIR/$NAME" ]; then
+            run_pre_launch_script "system" "$@"
             "$dir/$NAME" "$@"
             exit_code=$?
             run_post_launch_script "$exit_code" "system"
@@ -676,7 +764,7 @@ if ! is_interactive; then
     done
 
     # Run flatpak
-    run_pre_launch_script "$@"
+    run_pre_launch_script "flatpak" "$@"
     flatpak run "$ID" "$@"
     exit_code=$?
     run_post_launch_script "$exit_code" "flatpak"
@@ -703,7 +791,7 @@ fi
 # Interactive launch logic
 if [ "$PREF" = "system" ]; then
     if [ "$SYSTEM_EXISTS" = true ]; then
-        run_pre_launch_script "$@"
+        run_pre_launch_script "system" "$@"
         "$NAME" "$@"
         exit_code=$?
         run_post_launch_script "$exit_code" "system"
@@ -711,14 +799,14 @@ if [ "$PREF" = "system" ]; then
     else
         # System command gone, fall back to flatpak
         echo "flatpak" > "$PREF_FILE"
-        run_pre_launch_script "$@"
+        run_pre_launch_script "flatpak" "$@"
         flatpak run "$ID" "$@"
         exit_code=$?
         run_post_launch_script "$exit_code" "flatpak"
         exit "$exit_code"
     fi
 elif [ "$PREF" = "flatpak" ]; then
-    run_pre_launch_script "$@"
+    run_pre_launch_script "flatpak" "$@"
     flatpak run "$ID" "$@"
     exit_code=$?
     run_post_launch_script "$exit_code" "flatpak"
@@ -743,7 +831,7 @@ else
         fi
 
         echo "$PREF" > "$PREF_FILE"
-        run_pre_launch_script "$@"
+        run_pre_launch_script "$PREF" "$@"
         if [ "$PREF" = "system" ]; then
             "$NAME" "$@"
         else
@@ -757,7 +845,7 @@ else
         if [ "$SYSTEM_EXISTS" = true ]; then
             PREF="system"
             echo "$PREF" > "$PREF_FILE"
-            run_pre_launch_script "$@"
+            run_pre_launch_script "system" "$@"
             "$NAME" "$@"
             exit_code=$?
             run_post_launch_script "$exit_code" "system"
@@ -765,7 +853,7 @@ else
         else
             PREF="flatpak"
             echo "$PREF" > "$PREF_FILE"
-            run_pre_launch_script "$@"
+            run_pre_launch_script "flatpak" "$@"
             flatpak run "$ID" "$@"
             exit_code=$?
             run_post_launch_script "$exit_code" "flatpak"

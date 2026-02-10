@@ -76,6 +76,10 @@ from .exceptions import (
 )
 
 
+# Valid hook failure modes
+HOOK_FAILURE_MODES = ("abort", "warn", "ignore")
+
+
 @dataclass
 class AppPreferences:
     """Preferences for a specific Flatpak application."""
@@ -85,6 +89,9 @@ class AppPreferences:
     pre_launch_script: str | None = None
     post_launch_script: str | None = None
     custom_args: list[str] = field(default_factory=list)
+    # Hook failure modes: "abort", "warn", "ignore", or None to inherit from global
+    pre_launch_failure_mode: str | None = None
+    post_launch_failure_mode: str | None = None
 
 
 @dataclass
@@ -108,6 +115,10 @@ class WrapperConfig:
     enable_notifications: bool = (
         True  # Enable desktop notifications for update failures
     )
+    # Global hook failure mode defaults
+    hook_failure_mode_default: str = "warn"
+    pre_launch_failure_mode_default: str | None = None  # Overrides hook_failure_mode_default for pre-launch
+    post_launch_failure_mode_default: str | None = None  # Overrides hook_failure_mode_default for post-launch
 
 
 class EnhancedConfigManager:
@@ -329,6 +340,11 @@ class EnhancedConfigManager:
         self.config.cron_interval = validated_config.cron_interval
         self.config.enable_notifications = validated_config.enable_notifications
 
+        # Apply hook failure mode defaults
+        self.config.hook_failure_mode_default = validated_config.hook_failure_mode_default
+        self.config.pre_launch_failure_mode_default = validated_config.pre_launch_failure_mode_default
+        self.config.post_launch_failure_mode_default = validated_config.post_launch_failure_mode_default
+
         # Convert Pydantic models to dataclasses
         self.config.global_preferences = AppPreferences(
             launch_method=validated_config.global_preferences.launch_method,
@@ -336,6 +352,8 @@ class EnhancedConfigManager:
             pre_launch_script=validated_config.global_preferences.pre_launch_script,
             post_launch_script=validated_config.global_preferences.post_launch_script,
             custom_args=list(validated_config.global_preferences.custom_args),
+            pre_launch_failure_mode=validated_config.global_preferences.pre_launch_failure_mode,
+            post_launch_failure_mode=validated_config.global_preferences.post_launch_failure_mode,
         )
 
         # Process app preferences
@@ -347,6 +365,8 @@ class EnhancedConfigManager:
                 pre_launch_script=pref_model.pre_launch_script,
                 post_launch_script=pref_model.post_launch_script,
                 custom_args=list(pref_model.custom_args),
+                pre_launch_failure_mode=pref_model.pre_launch_failure_mode,
+                post_launch_failure_mode=pref_model.post_launch_failure_mode,
             )
 
         # Permission presets
@@ -361,6 +381,17 @@ class EnhancedConfigManager:
         self.config.cron_interval = data.get("cron_interval", self.config.cron_interval)
         self.config.enable_notifications = data.get(
             "enable_notifications", self.config.enable_notifications
+        )
+
+        # Hook failure mode defaults
+        self.config.hook_failure_mode_default = data.get(
+            "hook_failure_mode_default", "warn"
+        )
+        self.config.pre_launch_failure_mode_default = data.get(
+            "pre_launch_failure_mode_default"
+        )
+        self.config.post_launch_failure_mode_default = data.get(
+            "post_launch_failure_mode_default"
         )
 
         # Blocklist
@@ -389,6 +420,8 @@ class EnhancedConfigManager:
                 pre_launch_script=gp_data.get("pre_launch_script"),
                 post_launch_script=gp_data.get("post_launch_script"),
                 custom_args=list(gp_data.get("custom_args", [])),
+                pre_launch_failure_mode=gp_data.get("pre_launch_failure_mode"),
+                post_launch_failure_mode=gp_data.get("post_launch_failure_mode"),
             )
 
         # App-specific preferences
@@ -400,6 +433,8 @@ class EnhancedConfigManager:
                     pre_launch_script=pref_data.get("pre_launch_script"),
                     post_launch_script=pref_data.get("post_launch_script"),
                     custom_args=list(pref_data.get("custom_args", [])),
+                    pre_launch_failure_mode=pref_data.get("pre_launch_failure_mode"),
+                    post_launch_failure_mode=pref_data.get("post_launch_failure_mode"),
                 )
 
     def _serialize_config(self) -> dict[str, Any]:
@@ -412,7 +447,15 @@ class EnhancedConfigManager:
             "blocklist": self.config.blocklist,
             "cron_interval": self.config.cron_interval,
             "enable_notifications": self.config.enable_notifications,
+            # Global hook failure mode defaults
+            "hook_failure_mode_default": self.config.hook_failure_mode_default,
         }
+
+        # Add optional hook failure mode defaults if set
+        if self.config.pre_launch_failure_mode_default:
+            data["pre_launch_failure_mode_default"] = self.config.pre_launch_failure_mode_default
+        if self.config.post_launch_failure_mode_default:
+            data["post_launch_failure_mode_default"] = self.config.post_launch_failure_mode_default
 
         # Global preferences
         gp = self.config.global_preferences
@@ -425,6 +468,11 @@ class EnhancedConfigManager:
             data["global_preferences"]["pre_launch_script"] = gp.pre_launch_script
         if gp.post_launch_script:
             data["global_preferences"]["post_launch_script"] = gp.post_launch_script
+        # Add hook failure modes to global preferences if set
+        if gp.pre_launch_failure_mode:
+            data["global_preferences"]["pre_launch_failure_mode"] = gp.pre_launch_failure_mode
+        if gp.post_launch_failure_mode:
+            data["global_preferences"]["post_launch_failure_mode"] = gp.post_launch_failure_mode
 
         # App preferences
         if self.config.app_preferences:
@@ -439,6 +487,11 @@ class EnhancedConfigManager:
                     app_data["pre_launch_script"] = prefs.pre_launch_script
                 if prefs.post_launch_script:
                     app_data["post_launch_script"] = prefs.post_launch_script
+                # Add hook failure modes to app preferences if set
+                if prefs.pre_launch_failure_mode:
+                    app_data["pre_launch_failure_mode"] = prefs.pre_launch_failure_mode
+                if prefs.post_launch_failure_mode:
+                    app_data["post_launch_failure_mode"] = prefs.post_launch_failure_mode
                 data["app_preferences"][app_id] = app_data
 
         # Permission presets
@@ -504,6 +557,56 @@ class EnhancedConfigManager:
     def is_blocked(self, app_id: str) -> bool:
         """Check if app is blocked."""
         return app_id in self.config.blocklist
+
+    def get_effective_hook_failure_mode(
+        self, app_id: str, hook_type: str, runtime_override: str | None = None
+    ) -> str:
+        """Get the effective hook failure mode for an app.
+
+        Resolves the failure mode using this precedence (highest to lowest):
+        1. Runtime CLI override
+        2. Environment variable (FPWRAPPER_HOOK_FAILURE)
+        3. Per-app configuration
+        4. Global default for hook type (pre_launch_failure_mode_default or post_launch_failure_mode_default)
+        5. Global default (hook_failure_mode_default)
+        6. Built-in default ("warn")
+
+        Args:
+            app_id: Application identifier
+            hook_type: Either "pre" or "post"
+            runtime_override: Runtime CLI override for failure mode
+
+        Returns:
+            Effective failure mode: "abort", "warn", or "ignore"
+        """
+        # 1. Runtime override (highest priority)
+        if runtime_override and runtime_override in HOOK_FAILURE_MODES:
+            return runtime_override
+
+        # 2. Environment variable
+        env_mode = os.environ.get("FPWRAPPER_HOOK_FAILURE")
+        if env_mode and env_mode in HOOK_FAILURE_MODES:
+            return env_mode
+
+        # 3. Per-app configuration
+        prefs = self.get_app_preferences(app_id)
+        if hook_type == "pre" and prefs.pre_launch_failure_mode:
+            return prefs.pre_launch_failure_mode
+        if hook_type == "post" and prefs.post_launch_failure_mode:
+            return prefs.post_launch_failure_mode
+
+        # 4. Global default for hook type
+        if hook_type == "pre" and self.config.pre_launch_failure_mode_default:
+            return self.config.pre_launch_failure_mode_default
+        if hook_type == "post" and self.config.post_launch_failure_mode_default:
+            return self.config.post_launch_failure_mode_default
+
+        # 5. Global default
+        if self.config.hook_failure_mode_default:
+            return self.config.hook_failure_mode_default
+
+        # 6. Built-in default
+        return "warn"
 
     BUILTIN_PRESETS = {
         "development": [
@@ -777,6 +880,17 @@ if PYDANTIC_AVAILABLE:
         pre_launch_script: str | None = None
         post_launch_script: str | None = None
         custom_args: list[str] = Field(default_factory=list)
+        pre_launch_failure_mode: str | None = Field(default=None)
+        post_launch_failure_mode: str | None = Field(default=None)
+
+        @field_validator("pre_launch_failure_mode", "post_launch_failure_mode")
+        @classmethod
+        def validate_failure_mode(cls, v):
+            """Validate hook failure mode values."""
+            if v is not None and v not in HOOK_FAILURE_MODES:
+                msg = f"Invalid failure mode '{v}'. Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
+                raise ValueError(msg)
+            return v
 
         @field_validator("custom_args")
         @classmethod
@@ -868,6 +982,28 @@ if PYDANTIC_AVAILABLE:
         enable_notifications: bool = Field(
             default=True
         )  # Enable desktop notifications for update failures
+        # Global hook failure mode defaults
+        hook_failure_mode_default: str = Field(default="warn")
+        pre_launch_failure_mode_default: str | None = Field(default=None)
+        post_launch_failure_mode_default: str | None = Field(default=None)
+
+        @field_validator("hook_failure_mode_default")
+        @classmethod
+        def validate_hook_failure_mode_default(cls, v):
+            """Validate hook failure mode values."""
+            if v is not None and v not in HOOK_FAILURE_MODES:
+                msg = f"Invalid failure mode '{v}'. Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
+                raise ValueError(msg)
+            return v or "warn"  # Default to "warn" if empty
+
+        @field_validator("pre_launch_failure_mode_default", "post_launch_failure_mode_default")
+        @classmethod
+        def validate_optional_failure_mode(cls, v):
+            """Validate optional hook failure mode values."""
+            if v is not None and v not in HOOK_FAILURE_MODES:
+                msg = f"Invalid failure mode '{v}'. Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
+                raise ValueError(msg)
+            return v
 
         class Config:
             """Configuration for Pydantic model."""

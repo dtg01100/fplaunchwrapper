@@ -5,6 +5,7 @@ log_level = "INFO"
 blocklist = []
 cron_interval = 6
 enable_notifications = true
+hook_failure_mode_default = "warn"
 
 [global_preferences]
 launch_method = "auto"

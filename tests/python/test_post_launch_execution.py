@@ -141,9 +141,11 @@ class TestPostLaunchScriptExecution:
         app_id = "com.test.App"
         wrapper_content = generator.create_wrapper_script(wrapper_name, app_id)
 
-        # Verify error handling is in place - the 2>&1 || echo line
-        assert "2>&1 || echo" in wrapper_content
+        # Verify error handling is in place - checks hook exit code and handles failures
+        assert "hook_exit=$?" in wrapper_content
         assert "[fplaunchwrapper] Warning" in wrapper_content
+        # Verify failure mode handling (abort/warn/ignore)
+        assert "case \"$failure_mode\"" in wrapper_content or "failure_mode" in wrapper_content
 
     def test_post_launch_script_not_called_when_missing(self, temp_dirs):
         """Test that missing post-launch script doesn't cause issues."""

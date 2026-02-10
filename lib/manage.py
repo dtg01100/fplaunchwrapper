@@ -422,6 +422,99 @@ class WrapperManager:
         else:
             console.print(f"[yellow]No wrappers found matching '{query}'[/yellow]")
 
+    def list_managed_files(
+        self, app_name: str | None = None, file_type: str | None = None
+    ) -> dict[str, list[dict[str, str]]]:
+        """List all managed files for wrappers.
+
+        Args:
+            app_name: Optional app name to filter files by
+            file_type: Optional filter for file type ('wrappers', 'prefs', 'env', 'aliases', 'all')
+
+        Returns:
+            Dictionary with app names as keys and lists of file info as values
+        """
+        result = {}
+
+        # Determine data directory
+        xdg_data_home = os.environ.get(
+            "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+        )
+        data_dir = Path(xdg_data_home) / "fplaunchwrapper"
+
+        if app_name:
+            # Single app mode
+            apps_to_check = [app_name]
+        else:
+            # Get all wrappers
+            wrappers = self.list_wrappers()
+            apps_to_check = [w["name"] for w in wrappers]
+
+        for app in apps_to_check:
+            files = []
+
+            # Wrapper script
+            wrapper_path = self.bin_dir / app
+            if wrapper_path.exists() and (file_type is None or file_type in ("wrappers", "all")):
+                files.append({
+                    "type": "wrapper",
+                    "path": str(wrapper_path),
+                })
+
+            # Preference file
+            pref_file = self.config_dir / f"{app}.pref"
+            if pref_file.exists() and (file_type is None or file_type in ("prefs", "all")):
+                files.append({
+                    "type": "preference",
+                    "path": str(pref_file),
+                })
+
+            # Environment file
+            env_file = self.config_dir / f"{app}.env"
+            if env_file.exists() and (file_type is None or file_type in ("env", "all")):
+                files.append({
+                    "type": "environment",
+                    "path": str(env_file),
+                })
+
+            # Data directory
+            app_data_dir = data_dir / app
+            if app_data_dir.exists() and (file_type is None or file_type in ("all")):
+                files.append({
+                    "type": "data",
+                    "path": str(app_data_dir),
+                })
+
+            # Hook scripts
+            script_dir = self.config_dir / "scripts" / app
+            if script_dir.exists():
+                pre_launch = script_dir / "pre-launch.sh"
+                post_run = script_dir / "post-run.sh"
+                if pre_launch.exists():
+                    files.append({
+                        "type": "pre-launch",
+                        "path": str(pre_launch),
+                    })
+                if post_run.exists():
+                    files.append({
+                        "type": "post-run",
+                        "path": str(post_run),
+                    })
+
+            if files:
+                result[app] = files
+
+        # Add aliases file if it exists and no specific app is requested
+        if not app_name and (file_type is None or file_type in ("aliases", "all")):
+            aliases_file = self.config_dir / "aliases"
+            if aliases_file.exists():
+                result["_aliases"] = [{
+                    "type": "aliases",
+                    "path": str(aliases_file),
+                }]
+
+        return result
+
     def show_generated_files(self, app_name: str | None = None) -> None:
         """Show generated files for wrappers.
 

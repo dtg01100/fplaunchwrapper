@@ -87,11 +87,15 @@ class TestHelpSupport:
             if not script.exists():
                 pytest.skip(f"Script not found: {script_path}")
 
+            # Convert script path to module name (e.g., lib/config_manager.py -> lib.config_manager)
+            module_name = script_path.replace("/", ".").replace(".py", "")
+
             result = subprocess.run(
-                [sys.executable, str(script), "--help"],
+                [sys.executable, "-m", module_name, "--help"],
                 capture_output=True,
                 text=True,
                 timeout=10,
+                cwd=Path(__file__).parent.parent.parent,
             )
 
             # Should exit successfully
@@ -208,12 +212,12 @@ class TestHelpCompleteness:
 
     def test_launch_help_shows_usage_examples(self):
         """Test launch.py help includes usage examples."""
-        script = Path(__file__).parent.parent.parent / "lib/launch.py"
         result = subprocess.run(
-            [sys.executable, str(script), "--help"],
+            [sys.executable, "-m", "lib.launch", "--help"],
             capture_output=True,
             text=True,
             timeout=10,
+            cwd=Path(__file__).parent.parent.parent,
         )
 
         assert result.returncode == 0
@@ -221,12 +225,12 @@ class TestHelpCompleteness:
 
     def test_config_help_shows_all_actions(self):
         """Test config_manager.py help shows all actions."""
-        script = Path(__file__).parent.parent.parent / "lib/config_manager.py"
         result = subprocess.run(
-            [sys.executable, str(script), "--help"],
+            [sys.executable, "-m", "lib.config_manager", "--help"],
             capture_output=True,
             text=True,
             timeout=10,
+            cwd=Path(__file__).parent.parent.parent,
         )
 
         assert result.returncode == 0
@@ -238,12 +242,12 @@ class TestHelpCompleteness:
 
     def test_generate_help_shows_directory_argument(self):
         """Test generate.py help mentions directory argument."""
-        script = Path(__file__).parent.parent.parent / "lib/generate.py"
         result = subprocess.run(
-            [sys.executable, str(script), "--help"],
+            [sys.executable, "-m", "lib.generate", "--help"],
             capture_output=True,
             text=True,
             timeout=10,
+            cwd=Path(__file__).parent.parent.parent,
         )
 
         assert result.returncode == 0
@@ -251,12 +255,12 @@ class TestHelpCompleteness:
 
     def test_cleanup_help_shows_dry_run_option(self):
         """Test cleanup.py help mentions dry-run option."""
-        script = Path(__file__).parent.parent.parent / "lib/cleanup.py"
         result = subprocess.run(
-            [sys.executable, str(script), "--help"],
+            [sys.executable, "-m", "lib.cleanup", "--help"],
             capture_output=True,
             text=True,
             timeout=10,
+            cwd=Path(__file__).parent.parent.parent,
         )
 
         assert result.returncode == 0
@@ -264,12 +268,12 @@ class TestHelpCompleteness:
 
     def test_systemd_help_shows_setup_information(self):
         """Test systemd_setup.py help mentions setup information."""
-        script = Path(__file__).parent.parent.parent / "lib/systemd_setup.py"
         result = subprocess.run(
-            [sys.executable, str(script), "--help"],
+            [sys.executable, "-m", "lib.systemd_setup", "--help"],
             capture_output=True,
             text=True,
             timeout=10,
+            cwd=Path(__file__).parent.parent.parent,
         )
 
         assert result.returncode == 0

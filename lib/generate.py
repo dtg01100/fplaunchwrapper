@@ -407,6 +407,15 @@ class WrapperGenerator:
         # Template file path in templates directory
         template_path = script_dir.parent / "templates" / "wrapper.template.sh"
 
+        # Get hook failure mode default from config
+        hook_failure_mode_default = "warn"
+        try:
+            from lib.config_manager import create_config_manager
+            config = create_config_manager()
+            hook_failure_mode_default = config.config.hook_failure_mode_default or "warn"
+        except Exception:
+            pass  # Use default
+
         try:
             with open(template_path, "r") as file:
                 template_content = file.read()
@@ -417,6 +426,7 @@ class WrapperGenerator:
                 app_id=app_id,
                 config_dir=str(self.config_dir),
                 bin_dir=str(self.bin_dir),
+                hook_failure_mode_default=hook_failure_mode_default,
             )
 
         except FileNotFoundError as e:

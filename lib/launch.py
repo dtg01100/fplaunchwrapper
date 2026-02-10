@@ -53,11 +53,13 @@ class AppLauncher:
         env: dict | None = None,
         verbose: bool = False,
         debug: bool = False,
+        hook_failure_mode: str | None = None,
     ) -> None:
         self.app_name = app_name
         self.verbose = verbose
         self.debug = debug
         self.env = env
+        self.hook_failure_mode = hook_failure_mode  # Runtime override for hook failure mode
 
         self.config_dir = Path(
             config_dir or (Path.home() / ".config" / "fplaunchwrapper"),
@@ -130,6 +132,34 @@ class AppLauncher:
 
         return scripts
 
+    def _get_effective_failure_mode(self, hook_type: str) -> str:
+        """Get the effective failure mode for a hook type.
+
+        Args:
+            hook_type: Either 'pre' or 'post'
+
+        Returns:
+            Failure mode: "abort", "warn", or "ignore"
+        """
+        # Try to get from config manager
+        try:
+            from lib.config_manager import create_config_manager
+
+            config = create_config_manager()
+            return config.get_effective_hook_failure_mode(
+                self.app_name or "", hook_type, self.hook_failure_mode
+            )
+        except Exception:
+            pass
+
+        # Check environment variable
+        env_mode = os.environ.get("FPWRAPPER_HOOK_FAILURE")
+        if env_mode in ("abort", "warn", "ignore"):
+            return env_mode
+
+        # Default to warn
+        return "warn"
+
     def _run_hook_scripts(
         self, hook_type: str, exit_code: int = 0, source: str = "flatpak"
     ) -> bool:
@@ -142,19 +172,28 @@ class AppLauncher:
 
         Returns:
             True if all scripts succeeded or no scripts exist, False if any failed
+            For post-launch hooks with 'abort' mode, returns True but prints warning
         """
+        if not self.app_name:
+            return True
+
         scripts = self._get_hook_scripts(self.app_name, hook_type)
 
         if not scripts:
             return True
 
+        # Get effective failure mode
+        failure_mode = self._get_effective_failure_mode(hook_type)
+
         if self.verbose:
             print(
-                f"Running {hook_type}-launch scripts for {self.app_name}",
+                f"Running {hook_type}-launch scripts for {self.app_name} (failure mode: {failure_mode})",
                 file=sys.stderr,
             )
 
         all_succeeded = True
+        hook_exit_code = 0
+
         for script_path in scripts:
             try:
                 if self.debug:
@@ -165,6 +204,7 @@ class AppLauncher:
                 env["FPWRAPPER_WRAPPER_NAME"] = self.app_name
                 env["FPWRAPPER_APP_ID"] = self._sanitize_app_name(self.app_name)
                 env["FPWRAPPER_SOURCE"] = source
+                env["FPWRAPPER_HOOK_FAILURE_MODE"] = failure_mode
 
                 if hook_type == "post":
                     env["FPWRAPPER_EXIT_CODE"] = str(exit_code)
@@ -188,27 +228,73 @@ class AppLauncher:
 
                 if result.returncode != 0:
                     all_succeeded = False
-                    if self.verbose:
+                    hook_exit_code = result.returncode
+
+                    if failure_mode == "abort":
+                        if hook_type == "pre":
+                            print(
+                                f"[fplaunchwrapper] Pre-launch hook failed (exit {result.returncode}), aborting launch: {script_path}",
+                                file=sys.stderr,
+                            )
+                            # For pre-launch, abort means stop everything
+                            return False
+                        else:
+                            # Post-launch abort: can't abort, app already ran
+                            print(
+                                f"[fplaunchwrapper] Post-launch hook failed (exit {result.returncode}): {script_path}",
+                                file=sys.stderr,
+                            )
+                    elif failure_mode == "warn":
                         print(
-                            f"Warning: {hook_type} hook failed ({script_path}): {result.stderr}",
+                            f"[fplaunchwrapper] Warning: {hook_type}-launch hook failed ({script_path}): {result.stderr}",
                             file=sys.stderr,
                         )
+                    # ignore mode: silent
 
                 elif self.verbose and result.stdout:
                     print(f"{hook_type} hook output: {result.stdout}", file=sys.stderr)
 
             except subprocess.TimeoutExpired:
                 all_succeeded = False
-                if self.verbose:
+                hook_exit_code = 124  # Standard timeout exit code
+
+                if failure_mode == "abort":
+                    if hook_type == "pre":
+                        print(
+                            f"[fplaunchwrapper] Pre-launch hook timed out, aborting launch: {script_path}",
+                            file=sys.stderr,
+                        )
+                        return False
+                    else:
+                        print(
+                            f"[fplaunchwrapper] Post-launch hook timed out: {script_path}",
+                            file=sys.stderr,
+                        )
+                elif failure_mode == "warn":
                     print(
-                        f"Warning: {hook_type} hook timed out ({script_path})",
+                        f"[fplaunchwrapper] Warning: {hook_type}-launch hook timed out ({script_path})",
                         file=sys.stderr,
                     )
+
             except Exception as e:
                 all_succeeded = False
-                if self.verbose:
+                hook_exit_code = 1
+
+                if failure_mode == "abort":
+                    if hook_type == "pre":
+                        print(
+                            f"[fplaunchwrapper] Pre-launch hook error, aborting launch ({script_path}): {e}",
+                            file=sys.stderr,
+                        )
+                        return False
+                    else:
+                        print(
+                            f"[fplaunchwrapper] Post-launch hook error ({script_path}): {e}",
+                            file=sys.stderr,
+                        )
+                elif failure_mode == "warn":
                     print(
-                        f"Warning: Error running {hook_type} hook ({script_path}): {e}",
+                        f"[fplaunchwrapper] Warning: Error running {hook_type}-launch hook ({script_path}): {e}",
                         file=sys.stderr,
                     )
 
@@ -222,17 +308,32 @@ class AppLauncher:
 
     # Backwards compatibility: provide launch_app method
 
+    def _get_safety_check(self):
+        """Get the safety check function if available.
+
+        Returns:
+            Tuple of (safety_available, safe_launch_check_function)
+        """
+        try:
+            from lib.safety import safe_launch_check
+            return True, safe_launch_check
+        except ImportError:
+            try:
+                from .safety import safe_launch_check
+                return True, safe_launch_check
+            except ImportError:
+                return False, None
+
     def _perform_safety_checks(self) -> bool:
         """Perform safety checks before launching.
 
         Returns True if launch should proceed, False if blocked.
         """
         # Safety check using lazy-loaded safety module
-        safety_available, safe_launch_check = self._get_safety_check()
-        if safety_available and not safe_launch_check(
-            self.app_name, self._find_wrapper()
-        ):
-            return False
+        safety_available, safety_check_func = self._get_safety_check()
+        if safety_available and safety_check_func:
+            if not safety_check_func(self.app_name, self._find_wrapper()):
+                return False
         return True
 
     def _determine_launch_source(self) -> tuple[str, Path | None]:
@@ -552,6 +653,29 @@ Pre and post-launch hooks are executed automatically if configured.
         help="Custom bin directory for wrapper scripts",
     )
 
+    parser.add_argument(
+        "--hook-failure",
+        dest="hook_failure",
+        choices=["abort", "warn", "ignore"],
+        help="Override hook failure mode for this launch (abort, warn, or ignore)",
+    )
+
+    parser.add_argument(
+        "--abort-on-hook-failure",
+        action="store_const",
+        dest="hook_failure",
+        const="abort",
+        help="Abort launch if any hook fails (shorthand for --hook-failure abort)",
+    )
+
+    parser.add_argument(
+        "--ignore-hook-failure",
+        action="store_const",
+        dest="hook_failure",
+        const="ignore",
+        help="Ignore hook failures silently (shorthand for --hook-failure ignore)",
+    )
+
     try:
         args = parser.parse_args()
     except SystemExit as e:
@@ -567,6 +691,7 @@ Pre and post-launch hooks are executed automatically if configured.
         debug=args.debug,
         config_dir=args.config_dir,
         bin_dir=args.bin_dir,
+        hook_failure_mode=args.hook_failure,
     )
     return 0 if launcher.launch() else 1
 

@@ -294,13 +294,38 @@ def uninstall(ctx, app_name, remove_data, emit) -> int:
 
 @cli.command()
 @click.argument("app_name")
+@click.option(
+    "--hook-failure",
+    type=click.Choice(["abort", "warn", "ignore"]),
+    default=None,
+    help="Override hook failure mode for this launch (abort, warn, or ignore)",
+)
+@click.option(
+    "--abort-on-hook-failure",
+    is_flag=True,
+    default=False,
+    help="Abort launch if any hook fails (shorthand for --hook-failure abort)",
+)
+@click.option(
+    "--ignore-hook-failure",
+    is_flag=True,
+    default=False,
+    help="Ignore hook failures silently (shorthand for --hook-failure ignore)",
+)
 @click.pass_context
-def launch(ctx, app_name) -> int:
+def launch(ctx, app_name, hook_failure, abort_on_hook_failure, ignore_hook_failure) -> int:
     """Launch a Flatpak application via its wrapper."""
     try:
         from lib.launch import AppLauncher  # type: ignore
 
-        launcher = AppLauncher(app_name)
+        # Resolve hook failure mode from options
+        resolved_hook_failure = hook_failure
+        if abort_on_hook_failure:
+            resolved_hook_failure = "abort"
+        elif ignore_hook_failure:
+            resolved_hook_failure = "ignore"
+
+        launcher = AppLauncher(app_name, hook_failure_mode=resolved_hook_failure)
         return 0 if launcher.launch() else 1
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] {e}")
@@ -898,56 +923,91 @@ def presets_remove(ctx, preset_name) -> int:
         return 1
 
 
-@presets_group.command(name="get")
-@click.argument("preset_name", required=False)
-@click.pass_context
-def presets_get(ctx, preset_name) -> int:
-    """Get a permission preset."""
-    # Check if preset_name is provided
-    if not preset_name:
-        import click
-
-        raise click.UsageError("PRESET_NAME is required")
-
-    # For testing purposes, let's simulate that some presets don't exist
-    known_presets = ["default", "minimal", "full", "browser", "media"]
-    if preset_name not in known_presets:
-        console_err.print(f"[red]Error:[/red] Preset '{preset_name}' not found")
-        return 1
-
-    console.print(f"[yellow]Preset {preset_name}:[/yellow]\n  permissions=none")
-    return 0
-
-
-@presets_group.command(name="add")
-@click.argument("preset_name")
-@click.option("-p", "--permission", multiple=True, help="Add a permission")
-@click.pass_context
-def presets_add(ctx, preset_name, permission) -> int:
-    """Add a new permission preset."""
-    # Check if permissions were provided
-    if not permission:
-        console_err.print(f"[red]Error:[/red] At least one permission is required")
-        return 1
-
-    console.print(f"[green]✓[/green] Added preset: {preset_name}")
-    return 0
-
-
-@presets_group.command(name="remove")
-@click.argument("preset_name")
-@click.pass_context
-def presets_remove(ctx, preset_name) -> int:
-    """Remove a permission preset."""
-    console.print(f"[green]✓[/green] Removed preset: {preset_name}")
-    return 0
-
-
 @cli.command(name="files")
+@click.argument("app_name", required=False)
+@click.option("--all", "-a", "show_all", is_flag=True, help="Show all managed files (wrappers, prefs, env, aliases)")
+@click.option("--wrappers", is_flag=True, help="Show only wrapper scripts")
+@click.option("--prefs", is_flag=True, help="Show only preference files")
+@click.option("--env", is_flag=True, help="Show only environment files")
+@click.option("--paths", is_flag=True, help="Output raw paths (machine-parseable)")
+@click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
 @click.pass_context
-def files(ctx) -> int:
-    """Files helper."""
-    return 0
+def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> int:
+    """Display all files managed by fplaunchwrapper for a given application.
+
+    Without APP_NAME, lists all managed files across all apps.
+    """
+    import json as json_module
+
+    try:
+        from lib.manage import WrapperManager  # type: ignore
+
+        manager = _instantiate_compat(
+            WrapperManager,
+            config_dir=ctx.obj.get("config_dir"),
+            verbose=ctx.obj.get("verbose", False),
+            emit_mode=ctx.obj.get("emit", False),
+            emit_verbose=ctx.obj.get("emit_verbose", False),
+        )
+
+        # Determine file type filter
+        file_type = None
+        if wrappers:
+            file_type = "wrappers"
+        elif prefs:
+            file_type = "prefs"
+        elif env:
+            file_type = "env"
+        elif show_all:
+            file_type = "all"
+
+        # Get managed files
+        managed_files = manager.list_managed_files(app_name, file_type)
+
+        if not managed_files:
+            if app_name:
+                console.print(f"[yellow]No managed files found for {app_name}[/yellow]")
+            else:
+                console.print("[yellow]No managed files found[/yellow]")
+            return 0
+
+        # Output based on format options
+        if json_output:
+            # JSON output
+            console.print(json_module.dumps(managed_files, indent=2))
+        elif paths:
+            # Raw paths output (machine-parseable)
+            for app_files in managed_files.values():
+                for file_info in app_files:
+                    console.print(file_info["path"])
+        else:
+            # Human-readable output
+            for app, files_list in managed_files.items():
+                if app == "_aliases":
+                    # Handle aliases separately
+                    for file_info in files_list:
+                        console.print(f"Aliases:    {file_info['path']}")
+                    continue
+
+                if app_name:
+                    # Single app mode with header
+                    console.print(f"[bold]Files for {app}:[/bold]")
+                    for file_info in files_list:
+                        file_type_display = file_info["type"].capitalize()
+                        # Align output
+                        console.print(f"  {file_type_display:<12} {file_info['path']}")
+                else:
+                    # Multiple apps mode
+                    console.print(f"\n[bold]{app}:[/bold]")
+                    for file_info in files_list:
+                        file_type_display = file_info["type"].capitalize()
+                        console.print(f"  {file_type_display:<12} {file_info['path']}")
+
+        return 0
+
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
+        raise SystemExit(1)
 
 
 @cli.command(name="manifest")

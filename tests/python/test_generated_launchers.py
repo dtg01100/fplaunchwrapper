@@ -268,7 +268,7 @@ class TestGeneratedLauncherIntegration:
         from lib.launch import AppLauncher
 
         with patch("subprocess.run") as mock_run, patch(
-            "fplaunch.safety.safe_launch_check", return_value=True
+            "lib.safety.safe_launch_check", return_value=True
         ):
             mock_result = Mock()
             mock_result.returncode = 0
