@@ -373,14 +373,25 @@ class TestManifestCLI:
         assert "Missing argument" in result.output or result.exit_code != 0
 
     @patch("subprocess.run")
-    def test_manifest_runs_flatpak_info(self, mock_run, runner):
-        """Test manifest command calls flatpak info."""
+    def test_manifest_calls_flatpak_correctly(self, mock_run, runner):
+        """Test manifest command calls flatpak info --show-manifest."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
         result = runner.invoke(cli_module.cli, ["manifest", "org.example.app"])
 
         assert result.exit_code == 0
-        # Should call flatpak info --show-manifest
         call_args = mock_run.call_args[0][0]
-        assert "flatpak" in call_args
-        assert "info" in call_args
-        assert "--show-manifest" in call_args
+        assert call_args == ["flatpak", "info", "--show-manifest", "org.example.app"]
+
+    @patch("subprocess.run")
+    def test_manifest_failure_returns_nonzero(self, mock_run, runner):
+        """Test manifest exits non-zero when flatpak fails."""
+        mock_run.return_value = Mock(returncode=1, stderr="App not found")
+        result = runner.invoke(cli_module.cli, ["manifest", "org.example.app"])
+
+        assert result.exit_code != 0
+
+    def test_manifest_requires_app_name(self, runner):
+        """Test manifest requires app name argument."""
+        result = runner.invoke(cli_module.cli, ["manifest"])
+
+        assert result.exit_code != 0

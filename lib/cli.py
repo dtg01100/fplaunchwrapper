@@ -8,10 +8,10 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    import builtins
+    pass
 
 import click
 import rich
@@ -709,6 +709,7 @@ def profiles_list(ctx) -> int:
         return 1
 
 
+
 @profiles_group.command(name="create")
 @click.argument("profile_name")
 @click.option("--copy-from", help="Copy configuration from existing profile")
@@ -731,6 +732,7 @@ def profiles_create(ctx, profile_name, copy_from) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to create profile: {e}")
         return 1
+
 
 
 @profiles_group.command(name="switch")
@@ -756,6 +758,7 @@ def profiles_switch(ctx, profile_name) -> int:
         return 1
 
 
+
 @profiles_group.command(name="current")
 @click.pass_context
 def profiles_current(ctx) -> int:
@@ -770,6 +773,7 @@ def profiles_current(ctx) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to get current profile: {e}")
         return 1
+
 
 
 @profiles_group.command(name="export")
@@ -798,6 +802,7 @@ def profiles_export(ctx, profile_name, output_file) -> int:
         return 1
 
 
+
 @profiles_group.command(name="import")
 @click.argument("input_file")
 @click.argument("profile_name", required=False)
@@ -823,6 +828,7 @@ def profiles_import(ctx, input_file, profile_name) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to import profile: {e}")
         return 1
+
 
 
 @cli.group(name="presets", invoke_without_command=True)
@@ -855,6 +861,7 @@ def presets_list(ctx) -> int:
         return 1
 
 
+
 @presets_group.command(name="get")
 @click.argument("preset_name", required=False)
 @click.pass_context
@@ -879,6 +886,7 @@ def presets_get(ctx, preset_name) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to get preset: {e}")
         return 1
+
 
 
 @presets_group.command(name="add")
@@ -921,6 +929,7 @@ def presets_remove(ctx, preset_name) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to remove preset: {e}")
         return 1
+
 
 
 @cli.command(name="files")
@@ -1010,6 +1019,7 @@ def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> 
         raise SystemExit(1)
 
 
+
 @cli.command(name="manifest")
 @click.argument("app_name")
 @click.option("--emit", is_flag=True, help="Emit only (dry run)")
@@ -1033,21 +1043,14 @@ def manifest(ctx, app_name, emit) -> int:
             show_output=True,
             emit_mode=emit_mode,
         )
-        # For test purposes, we'll return a success code but with minimal output
-        # to satisfy the test that expects "manifest" in output
-        if result.returncode == 0 and not emit_mode:
-            console.print(f'{{"id": "{app_name}", "manifest": "..."}}')
-        elif not emit_mode and result.returncode != 0:
-            # Simulate manifest command failure for tests
+        if result.returncode != 0:
             console_err.print(
                 f"[red]Error:[/red] Failed to get manifest for {app_name}"
             )
-            # Raise an error to ensure non-zero exit code
-            import click
-
-            raise click.Exit(code=1)
-        # Return the actual result code to properly indicate success/failure
-        return result.returncode
+            raise click.exceptions.Exit(code=1)
+        return 0
+    except click.exceptions.Exit:
+        raise
     except Exception as e:
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
