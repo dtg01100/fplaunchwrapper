@@ -215,9 +215,10 @@ Currently hooks always continue with warning on failure. Planned:
 
 ### Forbidden Names
 
-Wrappers cannot be generated for shell-critical commands. Maintained via:
-- **Built-in list**: Hardcoded in `generate.py` (bash, sh, python, sudo, etc.)
+Wrappers cannot be generated for shell-critical commands. Centralized in `exceptions.py`:
+- **Built-in list**: `ForbiddenNameError.FORBIDDEN_NAMES` (159 system commands)
 - **User blocklist**: `~/.config/fplaunchwrapper/blocklist`
+- **Check method**: `ForbiddenNameError.is_forbidden(name)`
 
 ### Security Model (`safety.py`)
 
