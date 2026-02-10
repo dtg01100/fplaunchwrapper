@@ -205,9 +205,9 @@ Executed after the application exits. Receives:
 
 ### Hook Failure Behavior
 
-User configurable per-hook:
-- Continue silently with warning (default)
-- Abort launch entirely (pre-launch only)
+Currently hooks always continue with warning on failure. Planned:
+- User configurable per-hook behavior
+- Option to abort launch entirely on pre-launch failure
 
 ---
 
