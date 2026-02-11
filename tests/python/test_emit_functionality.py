@@ -197,5 +197,49 @@ class TestEmitFunctionality:
         assert before_count == after_count
 
 
+class TestEmitVerboseContent:
+    """Test emit verbose content inspection (from test_emit_verbose.py)."""
+
+    def test_generate_emit_verbose(self) -> None:
+        """Test generate emit verbose shows wrapper content."""
+        if not GENERATE_AVAILABLE:
+            pytest.skip("WrapperGenerator not available")
+
+        content = WrapperGenerator(
+            "/tmp/test", None, True, True, True
+        ).create_wrapper_script(
+            "firefox",
+            "org.mozilla.firefox",
+        )
+        assert "#!/usr/bin/env bash" in content
+
+    def test_manage_emit_verbose(self) -> None:
+        """Test manage emit verbose shows preference content."""
+        if not MANAGE_AVAILABLE:
+            pytest.skip("WrapperManager not available")
+
+        import tempfile
+
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            m = WrapperManager(config_dir=str(tmp), verbose=False, emit_mode=False)
+            assert m.set_preference("firefox", "flatpak") is True
+            content = (tmp / "firefox.pref").read_text()
+            assert "flatpak" in content
+        finally:
+            import shutil
+
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_systemd_emit_verbose(self) -> None:
+        """Test systemd emit verbose shows unit content."""
+        if not SYSTEMD_AVAILABLE:
+            pytest.skip("SystemdSetup not available")
+
+        s = SystemdSetup(emit_mode=True, emit_verbose=True)
+        service = s.create_service_unit()
+        assert "[Unit]" in service and "[Service]" in service
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

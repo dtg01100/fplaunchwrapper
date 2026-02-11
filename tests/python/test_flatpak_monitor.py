@@ -333,12 +333,18 @@ class TestFlatpakMonitor:
         # Should call callback multiple times (no debouncing implemented yet)
         assert callback.call_count == 5
 
-    def test_monitor_thread_safety(self) -> None:
+    @patch("lib.flatpak_monitor.Observer")
+    def test_monitor_thread_safety(self, mock_observer_class) -> None:
         """Test thread safety of monitor operations."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
         import threading
+
+        # Mock the observer to avoid signal handling issues in non-main threads
+        # and inotify watch limits
+        mock_observer = Mock()
+        mock_observer_class.return_value = mock_observer
 
         callback = Mock()
         monitor = FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
@@ -366,7 +372,7 @@ class TestFlatpakMonitor:
             t.join()
 
         # Should not have threading errors
-        assert len(errors) == 0
+        assert len(errors) == 0, f"Thread errors: {errors}"
         assert len(results) == 3
 
 

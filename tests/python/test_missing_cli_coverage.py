@@ -352,8 +352,14 @@ class TestManifestCLI:
         result = runner.invoke(cli_module.cli, ["manifest", "org.example.app"])
 
         assert result.exit_code == 0
-        assert "manifest" in result.output.lower()
+        # The manifest command doesn't print to Click's output on success;
+        # it lets flatpak output go directly to stdout. Verify the subprocess
+        # was called correctly instead.
         mock_run.assert_called_once()
+        call_args = mock_run.call_args[0][0]
+        assert "flatpak" in call_args
+        assert "--show-manifest" in call_args
+        assert "org.example.app" in call_args
 
     @patch("subprocess.run")
     def test_manifest_failure(self, mock_run, runner):

