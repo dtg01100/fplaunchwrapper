@@ -92,6 +92,14 @@ Each generated wrapper is a self-contained bash script created from `templates/w
 --fpwrapper-set-post-script   Set post-run hook script
 ```
 
+#### Additional Wrapper Options
+
+| Option | Description |
+|--------|-------------|
+| `--fpwrapper-run-unrestricted` | Run Flatpak with `--no-sandbox` flag |
+| `--fpwrapper-remove-pre-script` | Remove pre-launch script for this invocation |
+| `--fpwrapper-remove-post-script` | Remove post-run script for this invocation |
+
 ### Interactive Detection
 
 A wrapper is considered interactive when:
@@ -138,6 +146,13 @@ post_launch_script = "/path/to/script.sh"
 ### Schema Migration
 
 When `schema_version` doesn't match the current version, migration functions upgrade the config file automatically while preserving user settings.
+
+#### Additional Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `cron_interval` | integer | 6 | Cron interval in hours for cleanup |
+| `enable_notifications` | boolean | true | Enable desktop notifications |
 
 ---
 
@@ -283,6 +298,14 @@ FplaunchError (base)
     └── PathTraversalError
 ```
 
+#### Additional Exception Types
+
+| Exception | Description |
+|-----------|-------------|
+| `ConfigFileNotFoundError` | Configuration file not found |
+| `ConfigPermissionError` | Permission denied accessing config |
+| `InvalidFlatpakIdError` | Invalid Flatpak identifier format |
+
 ---
 
 ## Notifications
@@ -346,6 +369,46 @@ fplaunch-config        Configuration management
 fplaunch-monitor       Monitoring daemon
 ```
 
+### CLI Commands
+
+#### Core Commands
+| Command | Description |
+|---------|-------------|
+| `generate` | Generate wrapper script for a Flatpak app |
+| `launch` | Launch a Flatpak with wrapper options |
+| `manage` | Manage generated wrappers (list, remove, etc.) |
+| `cleanup` | Clean up stale wrappers and configurations |
+
+#### Systemd Command Group
+| Command | Description |
+|---------|-------------|
+| `systemd enable` | Enable systemd service for auto-start |
+| `systemd disable` | Disable systemd service |
+| `systemd status` | Show service status |
+| `systemd start` | Start the service |
+| `systemd stop` | Stop the service |
+| `systemd restart` | Restart the service |
+| `systemd reload` | Reload service configuration |
+| `systemd logs` | View service logs |
+| `systemd list` | List managed services |
+| `systemd test` | Test systemd configuration |
+
+#### Profile/Preset Commands
+| Command | Description |
+|---------|-------------|
+| `profiles` | Manage configuration profiles |
+| `presets` | Manage configuration presets |
+
+#### Utility Commands
+| Command | Description |
+|---------|-------------|
+| `files` | Display managed files with filtering options |
+| `manifest` | Show Flatpak manifest information |
+| `install` | Install Flatpak and generate wrapper |
+| `uninstall` | Uninstall Flatpak and remove wrapper |
+| `search` / `discover` | Search for available wrappers |
+| `config` | Configuration management (show, init, cron-interval) |
+
 ---
 
 ## Directory Structure
@@ -382,11 +445,66 @@ fplaunchwrapper/
 
 ---
 
-## Aspirational Features
+### Hook Failure Modes
 
-These features are partially implemented or planned:
+The hook failure modes system controls how the wrapper handles failures in pre-launch and post-run scripts.
 
-- **Profile switching**: Full profile management with clean switching mechanism
-- **Hook failure modes**: User configuration for abort vs continue behavior
-- **Advanced notifications**: Potential for multi-channel notifications
-- **GUI configuration tool**: Optional graphical interface for preferences
+#### Configuration Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `hook_failure_mode_default` | `ignore` | Default mode for all hooks |
+| `pre_launch_failure_mode_default` | (inherits) | Default for pre-launch hooks |
+| `post_launch_failure_mode_default` | (inherits) | Default for post-run hooks |
+
+#### Failure Modes
+
+| Mode | Behavior |
+|------|----------|
+| `ignore` | Log the failure, continue execution |
+| `warn` | Show warning notification, continue |
+| `abort` | Stop execution, don't launch app |
+
+#### CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `--hook-failure MODE` | Set failure mode for this invocation |
+| `--abort-on-hook-failure` | Shorthand for `--hook-failure abort` |
+| `--ignore-hook-failure` | Shorthand for `--hook-failure ignore` |
+
+#### Wrapper Options
+
+| Option | Description |
+|--------|-------------|
+| `--fpwrapper-hook-failure MODE` | Set failure mode at runtime |
+| `--fpwrapper-abort-on-hook-failure` | Abort on hook failure |
+| `--fpwrapper-ignore-hook-failure` | Ignore hook failures |
+
+#### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `FPWRAPPER_HOOK_FAILURE` | Runtime hook failure mode override |
+| `FPWRAPPER_HOOK_FAILURE_MODE` | Exported to hook scripts (read-only) |
+
+See [`plans/hook-failure-modes-design.md`](plans/hook-failure-modes-design.md) for the full design specification.
+
+---
+
+### Future Enhancements
+
+See [`docs/DEFERRED_FEATURES_IMPLEMENTATION.md`](docs/DEFERRED_FEATURES_IMPLEMENTATION.md) for planned features and enhancement roadmap.
+
+---
+
+## Related Documentation
+
+| Document | Description |
+|----------|-------------|
+| [`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md) | Full command documentation |
+| [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) | Feature completion status |
+| [`docs/ADVANCED_USAGE.md`](docs/ADVANCED_USAGE.md) | Advanced usage examples |
+| [`plans/hook-failure-modes-design.md`](plans/hook-failure-modes-design.md) | Hook failure modes design spec |
+| [`QUICKSTART.md`](QUICKSTART.md) | Quick start guide |
+| [`examples/`](examples/) | Example scripts and configurations |
