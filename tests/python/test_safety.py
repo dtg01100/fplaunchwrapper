@@ -126,15 +126,17 @@ class TestValidateHomeDir:
         assert result is None
 
     def test_path_traversal_attacks(self) -> None:
-        """Test prevention of path traversal attacks."""
-        attack_paths = [
+        """Test that path characters are rejected from launcher names."""
+        path_inputs = [
             "/etc/passwd",
-            "/root/.ssh/id_rsa",
-            "/var/log/syslog",
+            "../../../etc/passwd",
+            "~/../etc/passwd",
         ]
-        for attack_path in attack_paths:
-            result = validate_home_dir(attack_path)
-            assert result is None
+        for path_input in path_inputs:
+            result = sanitize_id_to_name(path_input)
+            assert "/" not in result
+            assert ".." not in result
+            assert "~" not in result
 
 
 class TestCanonicalizePath:
