@@ -455,7 +455,8 @@ class TestCronFallback:
         """Test behavior when neither systemd nor cron is available."""
         from lib.systemd_setup import SystemdSetup
 
-        setup = SystemdSetup(emit_mode=True)
+        # In non-emit mode, should return False when crontab is unavailable
+        setup = SystemdSetup(emit_mode=False)
 
         with patch("shutil.which", return_value=None):
             result = setup.install_cron_job()

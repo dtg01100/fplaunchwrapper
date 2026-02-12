@@ -135,7 +135,7 @@ class WrapperManager:
                                     "id": wrapper_id,
                                 },
                             )
-                    except Exception:
+                    except (OSError, IOError, UnicodeDecodeError):
                         pass
 
         return wrappers
@@ -454,35 +454,47 @@ class WrapperManager:
 
             # Wrapper script
             wrapper_path = self.bin_dir / app
-            if wrapper_path.exists() and (file_type is None or file_type in ("wrappers", "all")):
-                files.append({
-                    "type": "wrapper",
-                    "path": str(wrapper_path),
-                })
+            if wrapper_path.exists() and (
+                file_type is None or file_type in ("wrappers", "all")
+            ):
+                files.append(
+                    {
+                        "type": "wrapper",
+                        "path": str(wrapper_path),
+                    }
+                )
 
             # Preference file
             pref_file = self.config_dir / f"{app}.pref"
-            if pref_file.exists() and (file_type is None or file_type in ("prefs", "all")):
-                files.append({
-                    "type": "preference",
-                    "path": str(pref_file),
-                })
+            if pref_file.exists() and (
+                file_type is None or file_type in ("prefs", "all")
+            ):
+                files.append(
+                    {
+                        "type": "preference",
+                        "path": str(pref_file),
+                    }
+                )
 
             # Environment file
             env_file = self.config_dir / f"{app}.env"
             if env_file.exists() and (file_type is None or file_type in ("env", "all")):
-                files.append({
-                    "type": "environment",
-                    "path": str(env_file),
-                })
+                files.append(
+                    {
+                        "type": "environment",
+                        "path": str(env_file),
+                    }
+                )
 
             # Data directory
             app_data_dir = data_dir / app
             if app_data_dir.exists() and (file_type is None or file_type in ("all")):
-                files.append({
-                    "type": "data",
-                    "path": str(app_data_dir),
-                })
+                files.append(
+                    {
+                        "type": "data",
+                        "path": str(app_data_dir),
+                    }
+                )
 
             # Hook scripts
             script_dir = self.config_dir / "scripts" / app
@@ -490,15 +502,19 @@ class WrapperManager:
                 pre_launch = script_dir / "pre-launch.sh"
                 post_run = script_dir / "post-run.sh"
                 if pre_launch.exists():
-                    files.append({
-                        "type": "pre-launch",
-                        "path": str(pre_launch),
-                    })
+                    files.append(
+                        {
+                            "type": "pre-launch",
+                            "path": str(pre_launch),
+                        }
+                    )
                 if post_run.exists():
-                    files.append({
-                        "type": "post-run",
-                        "path": str(post_run),
-                    })
+                    files.append(
+                        {
+                            "type": "post-run",
+                            "path": str(post_run),
+                        }
+                    )
 
             if files:
                 result[app] = files
@@ -507,10 +523,12 @@ class WrapperManager:
         if not app_name and (file_type is None or file_type in ("aliases", "all")):
             aliases_file = self.config_dir / "aliases"
             if aliases_file.exists():
-                result["_aliases"] = [{
-                    "type": "aliases",
-                    "path": str(aliases_file),
-                }]
+                result["_aliases"] = [
+                    {
+                        "type": "aliases",
+                        "path": str(aliases_file),
+                    }
+                ]
 
         return result
 
@@ -559,6 +577,8 @@ class WrapperManager:
                 )
         else:
             # Show all generated files
+            from rich.table import Table
+
             wrappers = self.list_wrappers()
             all_files = []
 
@@ -585,6 +605,8 @@ class WrapperManager:
                     all_files.append(("Post-run Script", str(post_run_script)))
 
             if all_files:
+                from rich.table import Table
+
                 table = Table(title="All Generated Files")
                 table.add_column("Type", style="cyan")
                 table.add_column("Path", style="white")

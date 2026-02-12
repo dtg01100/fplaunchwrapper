@@ -220,9 +220,9 @@ class FlatpakMonitor:
         # Systemd notify state
         self._systemd_notify_sent = False
 
-    def _get_watch_paths(self):
+    def _get_watch_paths(self) -> list[str]:
         """Get paths that should be monitored for Flatpak changes."""
-        paths = []
+        paths: list[str] = []
 
         # System Flatpak installations
         if os.path.exists("/var/lib/flatpak"):
@@ -240,7 +240,7 @@ class FlatpakMonitor:
 
         return paths
 
-    def _send_systemd_notify(self, status: str = "READY=1"):
+    def _send_systemd_notify(self, status: str = "READY=1") -> None:
         """Send notification to systemd."""
         if SYSTEMD_NOTIFY_AVAILABLE and _systemd_daemon is not None:
             try:
@@ -318,7 +318,7 @@ class FlatpakMonitor:
         if self._should_process_event(path):
             self._on_flatpak_change(event_type, path)
 
-    def _should_process_event(self, path) -> bool:
+    def _should_process_event(self, path: str | object) -> bool:
         """Determine if we should process this event."""
         # Only process events related to Flatpak installations
         path_str = str(path)
@@ -337,7 +337,7 @@ class FlatpakMonitor:
 
         return False
 
-    def _on_flatpak_change(self, event_type, path) -> None:
+    def _on_flatpak_change(self, event_type: str, path: str) -> None:
         """Handle Flatpak-related file system changes."""
         logger.debug("Flatpak change detected: %s - %s", event_type, path)
 
@@ -358,7 +358,7 @@ class FlatpakMonitor:
             with contextlib.suppress(Exception):
                 self.callback(event_type, path)
 
-    def _should_regenerate_wrappers(self, path) -> bool:
+    def _should_regenerate_wrappers(self, path: str) -> bool:
         """Determine if wrappers should be regenerated based on the path."""
         path_str = str(path).lower()
 
@@ -414,7 +414,7 @@ class FlatpakMonitor:
             logger.error("Failed to regenerate wrappers: %s", e)
             return False
 
-    def _signal_handler(self, signum, frame) -> None:
+    def _signal_handler(self, signum: int, frame: object) -> None:
         """Handle shutdown signals."""
         logger.info("Received signal %d, stopping monitor", signum)
         self.stop_monitoring()
@@ -432,8 +432,8 @@ class FlatpakMonitor:
 
 
 def start_flatpak_monitoring(
-    callback=None, daemon=False, config: Optional[Dict[str, Any]] = None
-):
+    callback: Any = None, daemon: bool = False, config: Optional[Dict[str, Any]] = None
+) -> FlatpakMonitor:
     """Start Flatpak monitoring (convenience function)."""
     monitor = FlatpakMonitor(callback=callback, config=config)
 

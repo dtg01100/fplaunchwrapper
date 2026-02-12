@@ -117,8 +117,12 @@ class WrapperConfig:
     )
     # Global hook failure mode defaults
     hook_failure_mode_default: str = "warn"
-    pre_launch_failure_mode_default: str | None = None  # Overrides hook_failure_mode_default for pre-launch
-    post_launch_failure_mode_default: str | None = None  # Overrides hook_failure_mode_default for post-launch
+    pre_launch_failure_mode_default: str | None = (
+        None  # Overrides hook_failure_mode_default for pre-launch
+    )
+    post_launch_failure_mode_default: str | None = (
+        None  # Overrides hook_failure_mode_default for post-launch
+    )
 
 
 class EnhancedConfigManager:
@@ -341,9 +345,15 @@ class EnhancedConfigManager:
         self.config.enable_notifications = validated_config.enable_notifications
 
         # Apply hook failure mode defaults
-        self.config.hook_failure_mode_default = validated_config.hook_failure_mode_default
-        self.config.pre_launch_failure_mode_default = validated_config.pre_launch_failure_mode_default
-        self.config.post_launch_failure_mode_default = validated_config.post_launch_failure_mode_default
+        self.config.hook_failure_mode_default = (
+            validated_config.hook_failure_mode_default
+        )
+        self.config.pre_launch_failure_mode_default = (
+            validated_config.pre_launch_failure_mode_default
+        )
+        self.config.post_launch_failure_mode_default = (
+            validated_config.post_launch_failure_mode_default
+        )
 
         # Convert Pydantic models to dataclasses
         self.config.global_preferences = AppPreferences(
@@ -453,9 +463,13 @@ class EnhancedConfigManager:
 
         # Add optional hook failure mode defaults if set
         if self.config.pre_launch_failure_mode_default:
-            data["pre_launch_failure_mode_default"] = self.config.pre_launch_failure_mode_default
+            data["pre_launch_failure_mode_default"] = (
+                self.config.pre_launch_failure_mode_default
+            )
         if self.config.post_launch_failure_mode_default:
-            data["post_launch_failure_mode_default"] = self.config.post_launch_failure_mode_default
+            data["post_launch_failure_mode_default"] = (
+                self.config.post_launch_failure_mode_default
+            )
 
         # Global preferences
         gp = self.config.global_preferences
@@ -470,9 +484,13 @@ class EnhancedConfigManager:
             data["global_preferences"]["post_launch_script"] = gp.post_launch_script
         # Add hook failure modes to global preferences if set
         if gp.pre_launch_failure_mode:
-            data["global_preferences"]["pre_launch_failure_mode"] = gp.pre_launch_failure_mode
+            data["global_preferences"]["pre_launch_failure_mode"] = (
+                gp.pre_launch_failure_mode
+            )
         if gp.post_launch_failure_mode:
-            data["global_preferences"]["post_launch_failure_mode"] = gp.post_launch_failure_mode
+            data["global_preferences"]["post_launch_failure_mode"] = (
+                gp.post_launch_failure_mode
+            )
 
         # App preferences
         if self.config.app_preferences:
@@ -491,7 +509,9 @@ class EnhancedConfigManager:
                 if prefs.pre_launch_failure_mode:
                     app_data["pre_launch_failure_mode"] = prefs.pre_launch_failure_mode
                 if prefs.post_launch_failure_mode:
-                    app_data["post_launch_failure_mode"] = prefs.post_launch_failure_mode
+                    app_data["post_launch_failure_mode"] = (
+                        prefs.post_launch_failure_mode
+                    )
                 data["app_preferences"][app_id] = app_data
 
         # Permission presets
@@ -517,12 +537,68 @@ class EnhancedConfigManager:
         self.save_config()
 
     def _load_fallback_config(self) -> None:
-        """Fallback config loading for systems without TOML support."""
-        # Implement fallback logic here
+        """Fallback config loading for systems without TOML support.
+
+        Uses a simple key=value format for basic configuration.
+        Only supports flat key-value pairs; complex nested configs require TOML.
+        """
+        if not self.config_file.exists():
+            self._create_default_config()
+            return
+
+        try:
+            content = self.config_file.read_text()
+            for line in content.splitlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, _, value = line.partition("=")
+                    key = key.strip()
+                    value = value.strip()
+                    if key == "bin_dir":
+                        self.config.bin_dir = value
+                    elif key == "debug_mode":
+                        self.config.debug_mode = value.lower() in ("true", "1", "yes")
+                    elif key == "log_level":
+                        self.config.log_level = value.upper()
+                    elif key == "cron_interval":
+                        try:
+                            self.config.cron_interval = int(value)
+                        except ValueError:
+                            pass
+                    elif key == "enable_notifications":
+                        self.config.enable_notifications = value.lower() in (
+                            "true",
+                            "1",
+                            "yes",
+                        )
+                    elif key == "hook_failure_mode_default":
+                        if value in HOOK_FAILURE_MODES:
+                            self.config.hook_failure_mode_default = value
+        except OSError:
+            self._create_default_config()
 
     def _save_fallback_config(self) -> None:
-        """Fallback config saving for systems without TOML support."""
-        # Implement fallback logic here
+        """Fallback config saving for systems without TOML support.
+
+        Uses a simple key=value format for basic configuration.
+        """
+        try:
+            lines = [
+                f"# fplaunchwrapper configuration (fallback format)",
+                f"bin_dir={self.config.bin_dir}",
+                f"debug_mode={self.config.debug_mode}",
+                f"log_level={self.config.log_level}",
+                f"cron_interval={self.config.cron_interval}",
+                f"enable_notifications={self.config.enable_notifications}",
+                f"hook_failure_mode_default={self.config.hook_failure_mode_default}",
+            ]
+            self.config_file.write_text("\n".join(lines) + "\n")
+        except OSError as e:
+            raise ConfigPermissionError(
+                f"Cannot write configuration file {self.config_file}: {e}"
+            ) from e
 
     def get_app_preferences(self, app_id: str) -> AppPreferences:
         """Get preferences for a specific app, falling back to global."""
@@ -996,7 +1072,9 @@ if PYDANTIC_AVAILABLE:
                 raise ValueError(msg)
             return v or "warn"  # Default to "warn" if empty
 
-        @field_validator("pre_launch_failure_mode_default", "post_launch_failure_mode_default")
+        @field_validator(
+            "pre_launch_failure_mode_default", "post_launch_failure_mode_default"
+        )
         @classmethod
         def validate_optional_failure_mode(cls, v):
             """Validate optional hook failure mode values."""

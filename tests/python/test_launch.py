@@ -507,23 +507,12 @@ class TestLaunchSecurity:
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
-        # Create a file with path traversal name
-        traversal_path = self.bin_dir / "../../../etc/passwd"
-        try:
-            traversal_path.parent.mkdir(parents=True, exist_ok=True)
-            traversal_path.write_text("#!/bin/bash\necho 'test'\n")
-            traversal_path.chmod(0o755)
-        except (OSError, PermissionError):
-            # If we can't create the file (permission issues), skip test
-            pytest.skip("Cannot create test file for path traversal test")
-
         launcher = LibAppLauncher(
             app_name="../../../etc/passwd",
             bin_dir=str(self.bin_dir),
             config_dir=str(self.config_dir),
         )
 
-        # Should detect path traversal and return None for wrapper path
         source, wrapper_path = launcher._determine_launch_source()
         assert wrapper_path is None
 

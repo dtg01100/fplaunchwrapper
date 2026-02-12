@@ -11,13 +11,10 @@ This module handles all security boundaries including:
 
 from __future__ import annotations
 
-import contextlib
-import hashlib
 import importlib
 import os
 import re
 import sys
-import unicodedata
 from pathlib import Path
 
 try:
@@ -32,6 +29,44 @@ except ImportError:
     ForbiddenNameError = Exception
     PathTraversalError = Exception
     InvalidFlatpakIdError = Exception
+
+try:
+    from .python_utils import (
+        canonicalize_path_no_resolve,
+        get_wrapper_id,
+        is_wrapper_file,
+        sanitize_id_to_name,
+        sanitize_string,
+        validate_home_dir,
+    )
+
+    UTILS_IMPORTED = True
+except ImportError:
+    from typing import Any
+
+    UTILS_IMPORTED = False
+    canonicalize_path_no_resolve: Any = None
+    get_wrapper_id: Any = None
+    is_wrapper_file: Any = None
+    sanitize_id_to_name: Any = None
+    sanitize_string: Any = None
+    validate_home_dir: Any = None
+
+__all__ = [
+    "canonicalize_path_no_resolve",
+    "get_wrapper_id",
+    "is_test_environment",
+    "is_wrapper_file",
+    "sanitize_id_to_name",
+    "sanitize_string",
+    "validate_flatpak_id",
+    "validate_home_dir",
+    "safe_launch_check",
+    "SafetyError",
+    "ForbiddenNameError",
+    "PathTraversalError",
+    "InvalidFlatpakIdError",
+]
 
 
 _PYTEST_MODULE_SNAPSHOT = {
@@ -92,107 +127,12 @@ def is_test_environment() -> bool:
     return False
 
 
-def sanitize_string(input_str: str) -> str:
-    """Safely sanitize a string for use in shell/Python code."""
-    if not input_str:
-        return ""
-
-    sanitized = input_str.replace("\\", "\\\\")
-    sanitized = sanitized.replace('"', '\\"')
-    sanitized = sanitized.replace("'", "\\'")
-    sanitized = sanitized.replace("$", "\\$")
-    sanitized = sanitized.replace("`", "\\`")
-    sanitized = sanitized.replace("(", "\\(")
-    sanitized = sanitized.replace(")", "\\)")
-    sanitized = sanitized.replace(";", "\\;")
-    sanitized = sanitized.replace("&", "\\&")
-    sanitized = sanitized.replace("|", "\\|")
-    sanitized = sanitized.replace("<", "\\<")
-    sanitized = sanitized.replace(">", "\\>")
-    sanitized = sanitized.replace("\n", "\\n")
-    sanitized = sanitized.replace("\r", "\\r")
-    return sanitized.replace("\t", "\\t")
-
-
-def sanitize_id_to_name(id_str: str) -> str:
-    """Sanitize a Flatpak ID to a safe wrapper name."""
-    try:
-        name = id_str.split(".")[-1].lower()
-
-        try:
-            name = unicodedata.normalize("NFKD", name)
-            name = "".join(c for c in name if not unicodedata.combining(c))
-        except ImportError:
-            pass
-
-        with contextlib.suppress(UnicodeError):
-            name = name.encode("ascii", "ignore").decode("ascii")
-
-        name = re.sub(r"[^a-z0-9_\-]", "-", name)
-
-        name = re.sub(r"^\-+|\-+$", "", name)
-        name = re.sub(r"\-+", "-", name)
-
-        if not name:
-            hash_obj = hashlib.sha256(id_str.encode("utf-8"))
-            name = f"app-{hash_obj.hexdigest()[:8]}"
-
-        return name[:100]
-
-    except (TypeError, AttributeError, UnicodeDecodeError, re.error):
-        try:
-            return f"app-{hashlib.sha256(id_str.encode('utf-8')).hexdigest()[:8]}"
-        except Exception:
-            return "app-fallback"
-
-
-def canonicalize_path_no_resolve(path: str | Path) -> Path | None:
-    """Normalize a path without resolving symlinks."""
-    try:
-        path_str = str(path)
-
-        if path_str.startswith("~"):
-            path_str = os.path.expanduser(path_str)
-
-        if not os.path.isabs(path_str):
-            path_str = os.path.abspath(path_str)
-
-        return Path(os.path.normpath(path_str))
-
-    except (TypeError, ValueError, OSError):
-        return None
-
-
-def validate_home_dir(dir_path: str | Path) -> str | None:
-    """Validate that a directory is within HOME.
-
-    Returns the normalized absolute path string if within HOME, otherwise None.
-    """
-    try:
-        dir_str = str(dir_path)
-
-        if dir_str.startswith("~"):
-            dir_str = os.path.expanduser(dir_str)
-
-        abs_dir = os.path.abspath(dir_str)
-
-        if os.path.islink(abs_dir):
-            abs_dir = os.path.realpath(abs_dir)
-
-        home = os.path.expanduser("~")
-        if abs_dir == home or abs_dir.startswith(home + os.sep):
-            return abs_dir
-
-        return None
-    except (TypeError, ValueError, OSError):
-        return None
-
-
 def validate_flatpak_id(flatpak_id: str) -> bool:
     """Validate a Flatpak ID format.
 
     Valid IDs: org.mozilla.Firefox, com.example.App123
-    Must contain at least one dot, only alphanumeric, hyphens, underscores.
+    Must contain at least one dot, only alphanumeric, hyphens, underscores, dots.
+    Must start with a letter.
     """
     if not flatpak_id or not isinstance(flatpak_id, str):
         return False
@@ -200,66 +140,14 @@ def validate_flatpak_id(flatpak_id: str) -> bool:
     if "." not in flatpak_id:
         return False
 
-    return bool(re.match(r"^[A-Za-z0-9._-]+$", flatpak_id))
-
-
-def is_wrapper_file(file_path: str | Path) -> bool | None:
-    """Check if a file is a valid wrapper script."""
-    try:
-        if not os.path.isfile(file_path):
-            return False
-        if not os.access(file_path, os.R_OK):
-            return False
-        if os.path.islink(file_path):
-            return False
-
-        size = os.path.getsize(file_path)
-        if size > 100000:
-            return False
-
-        with open(file_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(min(8192, size))
-
-        if any(ord(c) < 32 and c not in "\t\n\r" for c in content):
-            return False
-
-        if not re.match(r"^#!.*(bash|sh)", content, re.MULTILINE):
-            return False
-
-        if "Generated by fplaunchwrapper" not in content:
-            return False
-
-        name_match = re.search(r"^NAME=[^\n]*", content, re.MULTILINE)
-        id_match = re.search(r"^ID=[^\n]*", content, re.MULTILINE)
-
-        if not name_match or not id_match:
-            return False
-
-        id_value = re.search(r'ID="([^"]*)"', id_match.group())
-        return not (
-            not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1))
-        )
-    except (IOError, OSError, UnicodeDecodeError, re.error):
+    if (
+        flatpak_id.startswith(".")
+        or flatpak_id.startswith("-")
+        or flatpak_id.startswith("_")
+    ):
         return False
 
-
-def get_wrapper_id(file_path: str | Path) -> str | None:
-    """Extract the wrapper ID from a wrapper script."""
-    try:
-        with open(file_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(8192)
-
-        id_match = re.search(r'^ID="([^"]*)"', content, re.MULTILINE)
-        if id_match:
-            return id_match.group(1)
-
-        comment_match = re.search(r"Flatpak ID:\s*([^\s\n]+)", content)
-        if comment_match:
-            return comment_match.group(1)
-
-        return None
-    except (IOError, OSError, UnicodeDecodeError, re.error):
-        return None
+    return bool(re.match(r"^[A-Za-z][A-Za-z0-9._-]*$", flatpak_id))
 
 
 def is_dangerous_wrapper(wrapper_path: Path) -> bool:

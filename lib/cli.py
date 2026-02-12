@@ -14,10 +14,12 @@ if TYPE_CHECKING:
     pass
 
 import click
-import rich
 from rich.console import Console
 
-RICH_VERSION = getattr(rich, "__version__", None)
+try:
+    from . import __version__ as FPLAUNCH_VERSION
+except ImportError:
+    FPLAUNCH_VERSION = "unknown"
 
 # Instantiate rich Console objects
 console = Console()
@@ -134,8 +136,7 @@ def cli(ctx, verbose, emit, emit_verbose, config_dir, version) -> None:
     )
 
     if version:
-        ver = RICH_VERSION if RICH_VERSION else "unknown"
-        console.print(f"[green]fplaunchwrapper version:[/green] {ver}")
+        console.print(f"[green]fplaunchwrapper version:[/green] {FPLAUNCH_VERSION}")
         raise SystemExit(0)
 
     if verbose:
@@ -313,7 +314,9 @@ def uninstall(ctx, app_name, remove_data, emit) -> int:
     help="Ignore hook failures silently (shorthand for --hook-failure ignore)",
 )
 @click.pass_context
-def launch(ctx, app_name, hook_failure, abort_on_hook_failure, ignore_hook_failure) -> int:
+def launch(
+    ctx, app_name, hook_failure, abort_on_hook_failure, ignore_hook_failure
+) -> int:
     """Launch a Flatpak application via its wrapper."""
     try:
         from lib.launch import AppLauncher  # type: ignore
@@ -709,7 +712,6 @@ def profiles_list(ctx) -> int:
         return 1
 
 
-
 @profiles_group.command(name="create")
 @click.argument("profile_name")
 @click.option("--copy-from", help="Copy configuration from existing profile")
@@ -732,7 +734,6 @@ def profiles_create(ctx, profile_name, copy_from) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to create profile: {e}")
         return 1
-
 
 
 @profiles_group.command(name="switch")
@@ -758,7 +759,6 @@ def profiles_switch(ctx, profile_name) -> int:
         return 1
 
 
-
 @profiles_group.command(name="current")
 @click.pass_context
 def profiles_current(ctx) -> int:
@@ -773,7 +773,6 @@ def profiles_current(ctx) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to get current profile: {e}")
         return 1
-
 
 
 @profiles_group.command(name="export")
@@ -802,7 +801,6 @@ def profiles_export(ctx, profile_name, output_file) -> int:
         return 1
 
 
-
 @profiles_group.command(name="import")
 @click.argument("input_file")
 @click.argument("profile_name", required=False)
@@ -828,7 +826,6 @@ def profiles_import(ctx, input_file, profile_name) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to import profile: {e}")
         return 1
-
 
 
 @cli.group(name="presets", invoke_without_command=True)
@@ -861,7 +858,6 @@ def presets_list(ctx) -> int:
         return 1
 
 
-
 @presets_group.command(name="get")
 @click.argument("preset_name", required=False)
 @click.pass_context
@@ -886,7 +882,6 @@ def presets_get(ctx, preset_name) -> int:
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to get preset: {e}")
         return 1
-
 
 
 @presets_group.command(name="add")
@@ -931,10 +926,15 @@ def presets_remove(ctx, preset_name) -> int:
         return 1
 
 
-
 @cli.command(name="files")
 @click.argument("app_name", required=False)
-@click.option("--all", "-a", "show_all", is_flag=True, help="Show all managed files (wrappers, prefs, env, aliases)")
+@click.option(
+    "--all",
+    "-a",
+    "show_all",
+    is_flag=True,
+    help="Show all managed files (wrappers, prefs, env, aliases)",
+)
 @click.option("--wrappers", is_flag=True, help="Show only wrapper scripts")
 @click.option("--prefs", is_flag=True, help="Show only preference files")
 @click.option("--env", is_flag=True, help="Show only environment files")
@@ -1017,7 +1017,6 @@ def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> 
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
         raise SystemExit(1)
-
 
 
 @cli.command(name="manifest")

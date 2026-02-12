@@ -23,6 +23,26 @@ try:
 except ImportError:
     AppNotFoundError = LaunchBlockedError = LaunchError = Exception
 
+import time
+
+
+_FLATPAK_ID_CACHE: dict[str, tuple[str, float]] = {}
+_CACHE_TTL_SECONDS = 300
+
+
+def _get_cached_flatpak_id(app_name: str) -> str | None:
+    """Get a cached Flatpak ID if still valid."""
+    if app_name in _FLATPAK_ID_CACHE:
+        cached_id, cached_time = _FLATPAK_ID_CACHE[app_name]
+        if time.time() - cached_time < _CACHE_TTL_SECONDS:
+            return cached_id
+    return None
+
+
+def _cache_flatpak_id(app_name: str, flatpak_id: str) -> None:
+    """Cache a Flatpak ID resolution."""
+    _FLATPAK_ID_CACHE[app_name] = (flatpak_id, time.time())
+
 
 # Test environment detection for launch module
 def is_test_environment_launch():
@@ -59,7 +79,9 @@ class AppLauncher:
         self.verbose = verbose
         self.debug = debug
         self.env = env
-        self.hook_failure_mode = hook_failure_mode  # Runtime override for hook failure mode
+        self.hook_failure_mode = (
+            hook_failure_mode  # Runtime override for hook failure mode
+        )
 
         self.config_dir = Path(
             config_dir or (Path.home() / ".config" / "fplaunchwrapper"),
@@ -316,10 +338,12 @@ class AppLauncher:
         """
         try:
             from lib.safety import safe_launch_check
+
             return True, safe_launch_check
         except ImportError:
             try:
                 from .safety import safe_launch_check
+
                 return True, safe_launch_check
             except ImportError:
                 return False, None
@@ -329,7 +353,8 @@ class AppLauncher:
 
         Returns True if launch should proceed, False if blocked.
         """
-        # Safety check using lazy-loaded safety module
+        if self.app_name is None:
+            return False
         safety_available, safety_check_func = self._get_safety_check()
         if safety_available and safety_check_func:
             if not safety_check_func(self.app_name, self._find_wrapper()):
@@ -411,16 +436,19 @@ class AppLauncher:
         if wrapper_path:
             return str(wrapper_path)
 
-        # Fallback to flatpak - try to resolve friendly name to full flatpak ID
+        if self.app_name is None:
+            return ""
+
+        cached = _get_cached_flatpak_id(self.app_name)
+        if cached:
+            return cached
+
         candidate_id = self.app_name
         try:
             from lib.python_utils import find_executable, sanitize_id_to_name
 
             flatpak_path = find_executable("flatpak")
             if flatpak_path:
-                # If subprocess.run has been patched/mocked in tests, avoid
-                # calling flatpak list to prevent extra mocked calls being
-                # counted by tests; only do full resolution in real envs.
                 try:
                     from unittest.mock import Mock
 
@@ -443,9 +471,9 @@ class AppLauncher:
                         for line in res.stdout.strip().splitlines():
                             if sanitize_id_to_name(line) == self.app_name:
                                 candidate_id = line
+                                _cache_flatpak_id(self.app_name, candidate_id)
                                 break
         except Exception:
-            # Best-effort only; fall back to using app_name directly
             pass
 
         return candidate_id
@@ -476,15 +504,13 @@ class AppLauncher:
         if self.debug:
             print(f"Launching: {' '.join(cmd)}", file=sys.stderr)
 
-        run_kwargs = {"capture_output": False}
         if self.env:
-            run_kwargs["env"] = self.env
-
-        return subprocess.run(cmd, **run_kwargs)
+            return subprocess.run(cmd, capture_output=False, env=self.env)
+        return subprocess.run(cmd, capture_output=False)
 
     def _get_wrapper_path(self, app_name: str | None = None) -> Path:
         """Get the wrapper path for an application."""
-        name = app_name or self.app_name
+        name = app_name or self.app_name or ""
         return self.bin_dir / name
 
     def _sanitize_app_name(self, app_name: str) -> str:

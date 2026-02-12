@@ -413,6 +413,13 @@ WantedBy=timers.target
 
     def install_cron_job(self, cron_interval: int = 6) -> bool:
         """Install cron job as fallback."""
+        if self.emit_mode:
+            self.log(f"EMIT: Would check for crontab")
+            self.log(
+                f"EMIT: Would install cron job: 0 */{cron_interval} * * * {self.wrapper_script} {self.bin_dir}"
+            )
+            return True
+
         crontab_path = shutil.which("crontab")
         if not crontab_path:
             self.log("Neither systemd nor crontab available.", "error")
