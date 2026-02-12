@@ -55,19 +55,7 @@ jobs:
 
     - name: Run Python unit tests (safe subset)
       run: |
-        python3 -c "
-        import sys
-        sys.path.insert(0, '.')
-        from tests.python.test_safe_constructor import TestSafeConstructorValidation
-        test_instance = TestSafeConstructorValidation()
-        test_instance.test_wrapper_generator_constructor()
-        test_instance.test_wrapper_manager_constructor()
-        test_instance.test_wrapper_cleanup_constructor()
-        test_instance.test_app_launcher_constructor()
-        test_instance.test_systemd_setup_constructor()
-        test_instance.test_complete_isolation_validation()
-        print('All Python tests passed!')
-        "
+        python3 -m pytest tests/python/test_safety.py -v
 
   package-validation:
     name: Package Installation Test
