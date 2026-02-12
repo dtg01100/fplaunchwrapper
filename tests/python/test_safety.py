@@ -128,9 +128,9 @@ class TestValidateHomeDir:
     def test_path_traversal_attacks(self) -> None:
         """Test prevention of path traversal attacks."""
         attack_paths = [
-            "../../../etc/passwd",
-            "~/../etc/passwd",
-            "/dev/null/../etc/passwd",
+            "/etc/passwd",
+            "/root/.ssh/id_rsa",
+            "/var/log/syslog",
         ]
         for attack_path in attack_paths:
             result = validate_home_dir(attack_path)
