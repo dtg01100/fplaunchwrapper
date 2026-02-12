@@ -123,9 +123,9 @@ def use_python_backend() -> bool:
     type=click.Path(exists=True, dir_okay=True),
     help="Custom configuration directory",
 )
-@click.option("--version", is_flag=True, help="Show version and exit")
+@click.version_option(version=FPLAUNCH_VERSION, prog_name="fplaunch")
 @click.pass_context
-def cli(ctx, verbose, emit, emit_verbose, config_dir, version) -> None:
+def cli(ctx, verbose, emit, emit_verbose, config_dir) -> None:
     """Main entry point for fplaunchwrapper CLI (Click-based)."""
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = bool(verbose)
@@ -134,10 +134,6 @@ def cli(ctx, verbose, emit, emit_verbose, config_dir, version) -> None:
     ctx.obj["config_dir"] = config_dir or os.path.expanduser(
         "~/.config/fplaunchwrapper"
     )
-
-    if version:
-        console.print(f"[green]fplaunchwrapper version:[/green] {FPLAUNCH_VERSION}")
-        raise SystemExit(0)
 
     if verbose:
         console.print("[bold blue]Verbose mode enabled[/bold blue]")
@@ -153,7 +149,15 @@ def cli(ctx, verbose, emit, emit_verbose, config_dir, version) -> None:
 def generate(ctx, bin_dir) -> int:
     """Generate Flatpak application wrappers.
 
-    BIN_DIR: Directory to store wrapper scripts (defaults to ~/bin)
+    Creates wrapper scripts for all installed Flatpak applications,
+    allowing you to launch them by simple name (e.g., 'firefox' instead
+    of 'flatpak run org.mozilla.firefox').
+
+    \b
+    Examples:
+      fplaunch generate              # Generate wrappers in ~/bin
+      fplaunch generate ~/.local/bin # Generate in custom directory
+      fplaunch -v generate           # Verbose output
     """
     if not bin_dir:
         bin_dir = os.path.expanduser("~/bin")
@@ -181,7 +185,13 @@ def generate(ctx, bin_dir) -> int:
 @click.option("--all", "show_all", is_flag=True, help="List all wrappers")
 @click.pass_context
 def list_wrappers(ctx, app_name, show_all) -> int:
-    """List installed Flatpak wrappers or show details for one wrapper."""
+    """List installed Flatpak wrappers or show details for one wrapper.
+
+    \b
+    Examples:
+      fplaunch list           # List all wrappers
+      fplaunch list firefox   # Show details for firefox wrapper
+    """
     try:
         from lib.manage import WrapperManager  # type: ignore
 
@@ -317,7 +327,13 @@ def uninstall(ctx, app_name, remove_data, emit) -> int:
 def launch(
     ctx, app_name, hook_failure, abort_on_hook_failure, ignore_hook_failure
 ) -> int:
-    """Launch a Flatpak application via its wrapper."""
+    """Launch a Flatpak application via its wrapper.
+
+    \b
+    Examples:
+      fplaunch launch firefox
+      fplaunch launch firefox --abort-on-hook-failure
+    """
     try:
         from lib.launch import AppLauncher  # type: ignore
 
@@ -364,7 +380,16 @@ def remove(ctx, name, force) -> int:
 @cli.command()
 @click.pass_context
 def cleanup(ctx) -> int:
-    """Clean up orphaned wrapper files and artifacts."""
+    """Clean up orphaned wrapper files and artifacts.
+
+    Removes wrapper scripts for uninstalled Flatpak applications
+    and cleans up stale configuration files.
+
+    \b
+    Examples:
+      fplaunch cleanup    # Remove orphaned wrappers
+      fplaunch clean      # Alias for cleanup
+    """
     try:
         from lib.cleanup import WrapperCleanup  # type: ignore
 
@@ -381,8 +406,16 @@ def cleanup(ctx) -> int:
 @click.pass_context
 def clean(ctx) -> int:
     """Clean up orphaned wrapper files and artifacts (alias for cleanup)."""
-    # Just delegate to the cleanup command
-    return cleanup.callback(ctx)
+    try:
+        from lib.cleanup import WrapperCleanup  # type: ignore
+
+        cleanup_manager = WrapperCleanup(
+            bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
+        )
+        return cleanup_manager.run()
+    except ImportError as e:
+        console_err.print(f"[red]Error:[/red] Failed to import cleanup: {e}")
+        raise SystemExit(1)
 
 
 @cli.command()
@@ -562,54 +595,63 @@ def _systemd_simple_action(ctx) -> int:
 @systemd_group.command(name="enable")
 @click.pass_context
 def systemd_enable(ctx) -> int:
+    """Enable the systemd service for automatic wrapper generation."""
     return _systemd_simple_action(ctx)
 
 
 @systemd_group.command(name="disable")
 @click.pass_context
 def systemd_disable(ctx) -> int:
+    """Disable the systemd service."""
     return _systemd_simple_action(ctx)
 
 
 @systemd_group.command(name="status")
 @click.pass_context
 def systemd_status(ctx) -> int:
+    """Show status of the systemd service."""
     return _systemd_simple_action(ctx)
 
 
 @systemd_group.command(name="start")
 @click.pass_context
 def systemd_start(ctx) -> int:
+    """Start the systemd service immediately."""
     return _systemd_simple_action(ctx)
 
 
 @systemd_group.command(name="stop")
 @click.pass_context
 def systemd_stop(ctx) -> int:
+    """Stop the systemd service."""
     return _systemd_simple_action(ctx)
 
 
 @systemd_group.command(name="restart")
 @click.pass_context
 def systemd_restart(ctx) -> int:
+    """Restart the systemd service."""
     return _systemd_simple_action(ctx)
 
 
 @systemd_group.command(name="reload")
 @click.pass_context
 def systemd_reload(ctx) -> int:
+    """Reload systemd daemon configuration."""
     return _systemd_simple_action(ctx)
 
 
 @systemd_group.command(name="logs")
 @click.pass_context
 def systemd_logs(ctx) -> int:
+    """View systemd service logs."""
     return _systemd_simple_action(ctx)
 
 
 @systemd_group.command(name="list")
 @click.pass_context
 def systemd_list(ctx) -> int:
+    """List all managed systemd units."""
     return _systemd_simple_action(ctx)
 
 
@@ -619,6 +661,7 @@ def systemd_list(ctx) -> int:
 )
 @click.pass_context
 def systemd_test(ctx, emit) -> int:
+    """Test systemd configuration (dry run)."""
     # Check if emit mode is active from the parent context or local flag
     emit_mode = emit or ctx.obj.get("emit", False) if ctx.obj else False
 
@@ -685,7 +728,7 @@ def discover(ctx, query) -> int:
 @cli.group(name="profiles", invoke_without_command=True)
 @click.pass_context
 def profiles_group(ctx) -> None:
-    """Manage configuration profiles (list/show/create/switch/export/import)."""
+    """Manage configuration profiles (list/current/create/switch/export/import)."""
     if ctx.invoked_subcommand is None:
         # Default to list when no subcommand provided
         ctx.invoke(profiles_list)
@@ -1060,15 +1103,33 @@ def manifest(ctx, app_name, emit) -> int:
 @click.argument("value", required=False)
 @click.pass_context
 def config(ctx, action, value) -> int:
-    """Manage fplaunchwrapper configuration. (show/init/cron-interval/...)"""
+    """Manage fplaunchwrapper configuration.
+
+    \b
+    Actions:
+      show          Show current configuration (default)
+      init          Initialize configuration file
+      cron-interval Get or set cron interval (in hours)
+    """
     try:
         from lib.config_manager import create_config_manager  # type: ignore
 
         cfg = create_config_manager()
         if not action or action == "show":
+            config_path = Path(ctx.obj.get("config_dir", "")) / "config.toml"
+            if config_path.exists():
+                console.print(f"[bold]Configuration file:[/bold] {config_path}")
+                content = config_path.read_text()
+                console.print(content)
+            else:
+                console.print(
+                    f"[yellow]No configuration file found at {config_path}[/yellow]"
+                )
+                console.print("Run 'fplaunch config init' to create one")
             return 0
         if action == "init":
             cfg.save_config()
+            console.print("[green]✓[/green] Configuration initialized")
             return 0
         if action == "cron-interval":
             if not value:
@@ -1082,6 +1143,7 @@ def config(ctx, action, value) -> int:
                 )
             return 0
         console_err.print(f"[red]Error:[/red] Unknown action: {action}")
+        console_err.print("Valid actions: show, init, cron-interval")
         raise SystemExit(1)
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to import config manager: {e}")

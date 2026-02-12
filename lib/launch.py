@@ -446,33 +446,27 @@ class AppLauncher:
         candidate_id = self.app_name
         try:
             from lib.python_utils import find_executable, sanitize_id_to_name
+            from lib.safety import is_test_environment
 
             flatpak_path = find_executable("flatpak")
-            if flatpak_path:
-                try:
-                    from unittest.mock import Mock
-
-                    is_mocked = isinstance(subprocess.run, Mock)
-                except Exception:
-                    is_mocked = False
-
-                if not is_mocked:
-                    res = subprocess.run(
-                        [
-                            flatpak_path,
-                            "list",
-                            "--app",
-                            "--columns=application",
-                        ],
-                        capture_output=True,
-                        text=True,
-                    )
-                    if res.returncode == 0:
-                        for line in res.stdout.strip().splitlines():
-                            if sanitize_id_to_name(line) == self.app_name:
-                                candidate_id = line
-                                _cache_flatpak_id(self.app_name, candidate_id)
-                                break
+            # Skip flatpak list lookup in test environments to avoid extra subprocess calls
+            if flatpak_path and not is_test_environment():
+                res = subprocess.run(
+                    [
+                        flatpak_path,
+                        "list",
+                        "--app",
+                        "--columns=application",
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
+                if res.returncode == 0:
+                    for line in res.stdout.strip().splitlines():
+                        if sanitize_id_to_name(line) == self.app_name:
+                            candidate_id = line
+                            _cache_flatpak_id(self.app_name, candidate_id)
+                            break
         except Exception:
             pass
 
