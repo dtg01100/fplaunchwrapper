@@ -43,7 +43,7 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install --system -e .
-        uv pip install --system pytest pytest-mock
+        uv pip install --system pytest pytest-mock pytest-timeout
 
     - name: Run safe integration tests
       run: |
