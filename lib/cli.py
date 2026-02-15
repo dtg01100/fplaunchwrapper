@@ -21,7 +21,6 @@ try:
 except ImportError:
     FPLAUNCH_VERSION = "unknown"
 
-# Instantiate rich Console objects
 console = Console()
 console_err = Console(stderr=True)
 
@@ -38,12 +37,10 @@ def _instantiate_compat(cls, **kwargs):
     if params and params[0] == "self":
         params = params[1:]
 
-    # Try using only the parameters accepted by the constructor.
     kw = {k: v for k, v in kwargs.items() if k in params}
     try:
         return cls(**kw)
     except TypeError:
-        # Fallback: try positional arguments using the signature order.
         pos_vals = [kwargs.get(p) for p in params if p in kwargs]
         for n in range(len(pos_vals), 0, -1):
             try:
@@ -51,7 +48,6 @@ def _instantiate_compat(cls, **kwargs):
             except TypeError:
                 continue
 
-        # Final fallback: try a conservative common ordering.
         ordered = ["bin_dir", "config_dir", "verbose", "emit_mode", "emit_verbose"]
         pos2 = [kwargs[k] for k in ordered if k in kwargs]
         for n in range(len(pos2), 0, -1):
@@ -60,7 +56,6 @@ def _instantiate_compat(cls, **kwargs):
             except TypeError:
                 continue
 
-        # Nothing worked; re-raise the original TypeError for clarity.
         raise
 
 
@@ -164,7 +159,7 @@ def generate(ctx, bin_dir) -> int:
 
     try:
         # Use namespaced imports (lib.*) so tests that import modules work in both dev and installed envs
-        from lib.generate import WrapperGenerator  # type: ignore
+        from lib.generate import WrapperGenerator
 
         generator = _instantiate_compat(
             WrapperGenerator,
@@ -174,7 +169,8 @@ def generate(ctx, bin_dir) -> int:
             emit_mode=ctx.obj.get("emit", False),
             emit_verbose=ctx.obj.get("emit_verbose", False),
         )
-        return generator.run()
+        result: int = generator.run()
+        return result
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] Failed to import wrapper generator: {e}")
         raise SystemExit(1)
@@ -193,7 +189,7 @@ def list_wrappers(ctx, app_name, show_all) -> int:
       fplaunch list firefox   # Show details for firefox wrapper
     """
     try:
-        from lib.manage import WrapperManager  # type: ignore
+        from lib.manage import WrapperManager
 
         manager = _instantiate_compat(
             WrapperManager,
@@ -204,7 +200,6 @@ def list_wrappers(ctx, app_name, show_all) -> int:
         )
 
         if app_name:
-            # show_info returns True on success, False otherwise
             success = manager.show_info(app_name)
             return 0 if success else 1
         else:
@@ -224,7 +219,6 @@ def install(ctx, app_name, emit) -> int:
     """Install a Flatpak application and generate a wrapper for it."""
     emit_mode = emit or ctx.obj.get("emit", False)
     try:
-        # Run the flatpak install and then generate wrappers (delegated to WrapperGenerator)
         result = run_command(
             ["flatpak", "install", "-y", app_name],
             f"Installing Flatpak app: {app_name}",
@@ -236,8 +230,7 @@ def install(ctx, app_name, emit) -> int:
             )
             return result.returncode
 
-        # Generate wrappers after installing
-        from lib.generate import WrapperGenerator  # type: ignore
+        from lib.generate import WrapperGenerator
 
         generator = _instantiate_compat(
             WrapperGenerator,
@@ -247,7 +240,7 @@ def install(ctx, app_name, emit) -> int:
             emit_mode=emit_mode,
             emit_verbose=ctx.obj.get("emit_verbose", False),
         )
-        return generator.run()
+        return int(generator.run())
     except ImportError as e:
         console_err.print(f"[red]Error:[/red] {e}")
         raise SystemExit(1)
@@ -262,8 +255,7 @@ def uninstall(ctx, app_name, remove_data, emit) -> int:
     """Uninstall a Flatpak application and remove its wrapper."""
     emit_mode = emit or ctx.obj.get("emit", False)
     try:
-        # Try removing wrapper (best-effort), then uninstall Flatpak
-        from lib.manage import WrapperManager  # type: ignore
+        from lib.manage import WrapperManager
 
         manager = _instantiate_compat(
             WrapperManager,
@@ -272,7 +264,6 @@ def uninstall(ctx, app_name, remove_data, emit) -> int:
             emit_mode=emit_mode,
         )
 
-        # Continue even if remove_wrapper fails
         wrapper_removed = False
         try:
             wrapper_removed = manager.remove_wrapper(app_name, force=True)
@@ -292,7 +283,6 @@ def uninstall(ctx, app_name, remove_data, emit) -> int:
             )
             return result.returncode
 
-        # Report success
         console.print(
             f"[green]✓[/green] Uninstalled {app_name} (wrapper: {'removed' if wrapper_removed else 'not found'})"
         )
@@ -335,9 +325,8 @@ def launch(
       fplaunch launch firefox --abort-on-hook-failure
     """
     try:
-        from lib.launch import AppLauncher  # type: ignore
+        from lib.launch import AppLauncher
 
-        # Resolve hook failure mode from options
         resolved_hook_failure = hook_failure
         if abort_on_hook_failure:
             resolved_hook_failure = "abort"
@@ -358,7 +347,7 @@ def launch(
 def remove(ctx, name, force) -> int:
     """Remove a wrapper by name."""
     try:
-        from lib.manage import WrapperManager  # type: ignore
+        from lib.manage import WrapperManager
 
         manager = _instantiate_compat(
             WrapperManager,
@@ -391,7 +380,7 @@ def cleanup(ctx) -> int:
       fplaunch clean      # Alias for cleanup
     """
     try:
-        from lib.cleanup import WrapperCleanup  # type: ignore
+        from lib.cleanup import WrapperCleanup
 
         cleanup_manager = WrapperCleanup(
             bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
@@ -407,7 +396,7 @@ def cleanup(ctx) -> int:
 def clean(ctx) -> int:
     """Clean up orphaned wrapper files and artifacts (alias for cleanup)."""
     try:
-        from lib.cleanup import WrapperCleanup  # type: ignore
+        from lib.cleanup import WrapperCleanup
 
         cleanup_manager = WrapperCleanup(
             bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
@@ -437,7 +426,7 @@ def monitor(ctx, daemon) -> int:
         return 0
 
     try:
-        from lib.flatpak_monitor import main as monitor_main  # type: ignore
+        from lib.flatpak_monitor import main as monitor_main
 
         # Call the main entrypoint programmatically and avoid argparse
         # parsing of the process argv by requesting a skip of parsing.
@@ -455,7 +444,7 @@ def monitor(ctx, daemon) -> int:
 def set_pref(ctx, wrapper_name, preference) -> int:
     """Set launch preference for a wrapper (system|flatpak or a Flatpak ID)."""
     try:
-        from lib.manage import WrapperManager  # type: ignore
+        from lib.manage import WrapperManager
 
         manager = _instantiate_compat(
             WrapperManager,
@@ -481,7 +470,8 @@ def set_pref(ctx, wrapper_name, preference) -> int:
 def pref(ctx, wrapper_name, preference) -> int:
     """Alias for set-pref."""
     # Call the same implementation as `set_pref`.
-    return set_pref(ctx, wrapper_name, preference)
+    result: int = set_pref(ctx, wrapper_name, preference)
+    return result
 
 
 @cli.command(name="rm")
@@ -491,7 +481,7 @@ def pref(ctx, wrapper_name, preference) -> int:
 def rm(ctx, name, force) -> int:
     """Alias for remove (delegates directly to manager implementation)."""
     try:
-        from lib.manage import WrapperManager  # type: ignore
+        from lib.manage import WrapperManager
 
         manager = _instantiate_compat(
             WrapperManager,
@@ -525,7 +515,7 @@ def _run_systemd_setup(
     testing (where tests often patch methods on SystemdSetup).
     """
     try:
-        from lib.systemd_setup import SystemdSetup  # type: ignore
+        from lib.systemd_setup import SystemdSetup
 
         setup = _instantiate_compat(
             SystemdSetup,
@@ -556,9 +546,6 @@ def _run_systemd_setup(
 @click.pass_context
 def systemd_setup_cmd(ctx, bin_dir, wrapper_script) -> int:
     """Install/enable systemd units for automatic wrapper generation."""
-    # Defer to the helper so the logic is shareable with the `systemd`
-    # group callback (which may invoke the setup when no subcommand is
-    # provided).
     return _run_systemd_setup(ctx, bin_dir, wrapper_script)
 
 
@@ -566,29 +553,25 @@ def systemd_setup_cmd(ctx, bin_dir, wrapper_script) -> int:
 @click.pass_context
 def systemd_group(ctx) -> None:
     """Manage systemd user units (enable|disable|status|start|stop|restart|reload|logs|list|test)."""
-    # Default behavior: run the systemd setup when no subcommand is provided.
-    # Call the underlying helper (not the Click-wrapped command object) so
-    # that we avoid treating the Context as an iterable when invoked
-    # without a subcommand.
     if ctx.invoked_subcommand is None:
-        return _run_systemd_setup(ctx, None, None)
+        _run_systemd_setup(ctx, None, None)
+        return
+    return
 
 
 def _systemd_simple_action(ctx) -> int:
     try:
-        from lib.systemd_setup import SystemdSetup  # type: ignore
+        from lib.systemd_setup import SystemdSetup
 
         setup = _instantiate_compat(
             SystemdSetup,
             emit_mode=ctx.obj.get("emit", False),
             emit_verbose=ctx.obj.get("emit_verbose", False),
         )
-        # Try a safe no-op that still exercises the module for tests.
         if hasattr(setup, "install_systemd_units"):
             return 0 if setup.install_systemd_units() else 1
         return 0
     except ImportError:
-        # If the systemd helper is not available, treat as a no-op for help/output tests
         return 0
 
 
@@ -662,14 +645,12 @@ def systemd_list(ctx) -> int:
 @click.pass_context
 def systemd_test(ctx, emit) -> int:
     """Test systemd configuration (dry run)."""
-    # Check if emit mode is active from the parent context or local flag
     emit_mode = emit or ctx.obj.get("emit", False) if ctx.obj else False
 
     if emit_mode:
         console.print("[yellow]EMIT: Would run systemd test[/yellow]")
-        return 0  # Return 0 in emit mode to indicate success without actual execution
+        return 0
 
-    # Perform the actual test action
     return _systemd_simple_action(ctx)
 
 
@@ -679,7 +660,7 @@ def systemd_test(ctx, emit) -> int:
 def info(ctx, app_name) -> int:
     """Show information about a wrapper."""
     try:
-        from lib.manage import WrapperManager  # type: ignore
+        from lib.manage import WrapperManager
 
         manager = _instantiate_compat(
             WrapperManager,
@@ -699,7 +680,7 @@ def info(ctx, app_name) -> int:
 def search(ctx, query) -> int:
     """Search or discover wrappers. Alias: discover."""
     try:
-        from lib.manage import WrapperManager  # type: ignore
+        from lib.manage import WrapperManager
 
         manager = _instantiate_compat(
             WrapperManager,
@@ -722,7 +703,8 @@ def search(ctx, query) -> int:
 @click.pass_context
 def discover(ctx, query) -> int:
     """Alias for search."""
-    return search(ctx, query)
+    result: int = search(ctx, query)
+    return result
 
 
 @cli.group(name="profiles", invoke_without_command=True)
@@ -730,7 +712,6 @@ def discover(ctx, query) -> int:
 def profiles_group(ctx) -> None:
     """Manage configuration profiles (list/current/create/switch/export/import)."""
     if ctx.invoked_subcommand is None:
-        # Default to list when no subcommand provided
         ctx.invoke(profiles_list)
 
 
@@ -876,7 +857,6 @@ def profiles_import(ctx, input_file, profile_name) -> int:
 def presets_group(ctx) -> None:
     """Manage permission presets (list/get/add/remove)."""
     if ctx.invoked_subcommand is None:
-        # Default to list when no subcommand provided
         ctx.invoke(presets_list)
 
 
@@ -992,7 +972,7 @@ def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> 
     import json as json_module
 
     try:
-        from lib.manage import WrapperManager  # type: ignore
+        from lib.manage import WrapperManager
 
         manager = _instantiate_compat(
             WrapperManager,
@@ -1002,7 +982,6 @@ def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> 
             emit_verbose=ctx.obj.get("emit_verbose", False),
         )
 
-        # Determine file type filter
         file_type = None
         if wrappers:
             file_type = "wrappers"
@@ -1013,7 +992,6 @@ def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> 
         elif show_all:
             file_type = "all"
 
-        # Get managed files
         managed_files = manager.list_managed_files(app_name, file_type)
 
         if not managed_files:
@@ -1023,33 +1001,25 @@ def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> 
                 console.print("[yellow]No managed files found[/yellow]")
             return 0
 
-        # Output based on format options
         if json_output:
-            # JSON output
             console.print(json_module.dumps(managed_files, indent=2))
         elif paths:
-            # Raw paths output (machine-parseable)
             for app_files in managed_files.values():
                 for file_info in app_files:
                     console.print(file_info["path"])
         else:
-            # Human-readable output
             for app, files_list in managed_files.items():
                 if app == "_aliases":
-                    # Handle aliases separately
                     for file_info in files_list:
                         console.print(f"Aliases:    {file_info['path']}")
                     continue
 
                 if app_name:
-                    # Single app mode with header
                     console.print(f"[bold]Files for {app}:[/bold]")
                     for file_info in files_list:
                         file_type_display = file_info["type"].capitalize()
-                        # Align output
                         console.print(f"  {file_type_display:<12} {file_info['path']}")
                 else:
-                    # Multiple apps mode
                     console.print(f"\n[bold]{app}:[/bold]")
                     for file_info in files_list:
                         file_type_display = file_info["type"].capitalize()
@@ -1112,7 +1082,7 @@ def config(ctx, action, value) -> int:
       cron-interval Get or set cron interval (in hours)
     """
     try:
-        from lib.config_manager import create_config_manager  # type: ignore
+        from lib.config_manager import create_config_manager
 
         cfg = create_config_manager()
         if not action or action == "show":
@@ -1153,18 +1123,15 @@ def config(ctx, action, value) -> int:
 def main(argv: Optional[list[str]] = None) -> int:
     """Entrypoint used by console scripts. Dispatch to Click."""
     argv = argv if argv is not None else sys.argv[1:]
-    # Use Click to parse and handle the invocation
     try:
-        # Click returns None or raises SystemExit; we want an int
-        cli.main(args=argv, prog_name="fplaunch", standalone_mode=False)  # type: ignore
+        cli.main(args=argv, prog_name="fplaunch", standalone_mode=False)
         return 0
     except SystemExit as e:
-        return int(e.code) if isinstance(e.code, int) else (0 if e.code == 0 else 1)
+        code = e.code
+        if isinstance(code, int):
+            return code
+        return 1
     except Exception as e:
-        # Catch Click exceptions (and any other unexpected errors) and
-        # normalize them to a non-zero return code instead of allowing an
-        # exception to propagate. Tests expect main() to return an int for
-        # invalid invocations rather than raising.
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
 

@@ -1,4 +1,3 @@
-# fplaunchwrapper package
 """Comprehensive Flatpak wrapper management system.
 
 This package provides tools for managing Flatpak application wrappers,

@@ -9,7 +9,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from rich.console import Console as _Console
 from rich.progress import (
@@ -31,50 +31,77 @@ Progress = _Progress
 SpinnerColumn = _SpinnerColumn
 TextColumn = _TextColumn
 
-# Import our utilities
+# Define fallback functions first with explicit types
+def _acquire_lock_fallback(name: str, timeout: float = 30) -> bool:
+    return False
+
+def _find_executable_fallback(name: str) -> str | None:
+    return None
+
+def _get_wrapper_id_fallback(path: str) -> str | None:
+    return None
+
+def _is_wrapper_file_fallback(path: str) -> bool:
+    return False
+
+def _release_lock_fallback(name: str) -> bool:
+    return False
+
+def _sanitize_id_to_name_fallback(app_id: str) -> str:
+    return ""
+
+def _validate_home_dir_fallback(path: str) -> str | None:
+    return None
+
+class _ForbiddenNameError(Exception):
+    FORBIDDEN_NAMES: frozenset[str] = frozenset()
+
+class _WrapperGenerationError(Exception):
+    def __init__(self, app_id: str, message: str):
+        self.app_id = app_id
+        super().__init__(message)
+
+from typing import Union
+
+acquire_lock: Callable[[str, float], bool | None] = _acquire_lock_fallback
+find_executable: Callable[[str], str | None] = _find_executable_fallback
+get_wrapper_id: Callable[[str], str | None] = _get_wrapper_id_fallback
+is_wrapper_file: Callable[[str], bool] = _is_wrapper_file_fallback
+release_lock: Callable[[str], bool | None] = _release_lock_fallback
+sanitize_id_to_name: Callable[[str], str] = _sanitize_id_to_name_fallback
+validate_home_dir: Callable[[str], str | None] = _validate_home_dir_fallback
+
+ForbiddenNameError: Any = _ForbiddenNameError
+WrapperGenerationError: Any = _WrapperGenerationError
+
 try:
     from .exceptions import (
-        FplaunchError,
-        ForbiddenNameError,
-        WrapperGenerationError,
+        ForbiddenNameError as _ForbiddenNameErrorReal,
+        WrapperGenerationError as _WrapperGenerationErrorReal,
     )
     from .python_utils import (
-        acquire_lock,
-        find_executable,
-        release_lock,
+        acquire_lock as _acquire_lock_real,
+        find_executable as _find_executable_real,
+        release_lock as _release_lock_real,
     )
     from .safety import (
-        get_wrapper_id,
-        is_wrapper_file,
-        sanitize_id_to_name,
-        validate_home_dir,
+        get_wrapper_id as _get_wrapper_id_real,
+        is_wrapper_file as _is_wrapper_file_real,
+        sanitize_id_to_name as _sanitize_id_to_name_real,
+        validate_home_dir as _validate_home_dir_real,
     )
-
+    acquire_lock = _acquire_lock_real
+    find_executable = _find_executable_real
+    release_lock = _release_lock_real
+    get_wrapper_id = _get_wrapper_id_real
+    is_wrapper_file = _is_wrapper_file_real
+    sanitize_id_to_name = _sanitize_id_to_name_real
+    validate_home_dir = _validate_home_dir_real
+    ForbiddenNameError = _ForbiddenNameErrorReal
+    WrapperGenerationError = _WrapperGenerationErrorReal
     UTILS_AVAILABLE = True
 except Exception:
     UTILS_AVAILABLE = False
-
-    # Provide Any-typed fallbacks so the rest of the module can call them safely
-    def acquire_lock(*args: Any, **kwargs: Any) -> bool:
-        return False
-
-    def find_executable(*args: Any, **kwargs: Any) -> None:
-        return None
-
-    def get_wrapper_id(*args: Any, **kwargs: Any) -> None:
-        return None
-
-    def is_wrapper_file(*args: Any, **kwargs: Any) -> bool:
-        return False
-
-    def release_lock(*args: Any, **kwargs: Any) -> bool:
-        return False
-
-    def sanitize_id_to_name(*args: Any, **kwargs: Any) -> str:
-        return ""
-
-    def validate_home_dir(*args: Any, **kwargs: Any) -> bool:
-        return False
 
 console = _Console()
 console_err = _Console(stderr=True)
@@ -136,7 +163,6 @@ class WrapperGenerator:
         elif level == "success":
             console.print(f"[green]✓[/green] {message}")
         else:
-            # info messages
             console.print(message)
 
     def run_command(
@@ -180,7 +206,6 @@ class WrapperGenerator:
                 f"Failed to get Flatpak applications: {result.stderr}",
             )
 
-        # Parse output and remove duplicates
         apps = []
         for line in str(result.stdout).strip().split("\n"):
             line = line.strip()
@@ -207,7 +232,6 @@ class WrapperGenerator:
 
         removed_count = 0
 
-        # Get existing wrappers
         if not self.bin_dir.exists():
             return 0
 
@@ -217,13 +241,11 @@ class WrapperGenerator:
 
             remove_item = False
 
-            # Check if it's a wrapper
             if UTILS_AVAILABLE and is_wrapper_file(str(item)):
                 wrapper_id = get_wrapper_id(str(item))
                 if wrapper_id and wrapper_id not in installed_apps:
                     remove_item = True
             else:
-                # Fallback: treat file as potential wrapper and remove if name not in installed apps
                 sanitized_installed = [sanitize_id_to_name(a) for a in installed_apps]
                 if item.name not in sanitized_installed:
                     remove_item = True
@@ -234,12 +256,10 @@ class WrapperGenerator:
                     item.unlink()
                     removed_count += 1
 
-                    # Remove preference file
                     pref_file = self.config_dir / f"{item.name}.pref"
                     if pref_file.exists():
                         pref_file.unlink()
 
-                    # Remove aliases
                     aliases_file = self.config_dir / "aliases"
                     if aliases_file.exists():
                         content = aliases_file.read_text()
@@ -292,25 +312,21 @@ class WrapperGenerator:
         if not UTILS_AVAILABLE:
             raise WrapperGenerationError(app_id, "Python utilities not available")
 
-        # Check if app is blocklisted
         if self.is_blocklisted(app_id):
             self.log(f"Skipping blocklisted app: {app_id}", "warning")
             return False
 
-        # Sanitize app ID to create wrapper name
         wrapper_name = sanitize_id_to_name(app_id)
         if not wrapper_name:
             self.log(f"Skipping invalid app ID: {app_id}", "warning")
             return False
 
-        # Check for forbidden wrapper names to avoid colliding with system commands
         if self.is_forbidden_wrapper_name(wrapper_name):
             self.log(f"Skipping forbidden wrapper name: {wrapper_name}", "warning")
             return False
 
         target_flatpak_id = flatpak_id or app_id
 
-        # Basic flatpak ID validation: allow alnum, dot, dash, underscore
         import re
 
         if not re.match(r"^[A-Za-z0-9._-]+$", target_flatpak_id):
@@ -320,7 +336,6 @@ class WrapperGenerator:
                     "warning",
                 )
                 return False
-            # If no explicit flatpak_id was provided, fall back to a sanitized name
             target_flatpak_id = sanitize_id_to_name(app_id)
             if not target_flatpak_id:
                 self.log(
@@ -331,7 +346,6 @@ class WrapperGenerator:
 
         wrapper_path = self.bin_dir / wrapper_name
 
-        # Check for existing wrapper (handle permission errors gracefully)
         try:
             wrapper_existed = wrapper_path.exists()
         except PermissionError:
@@ -339,13 +353,10 @@ class WrapperGenerator:
             return False
         if wrapper_existed:
             existing_id = get_wrapper_id(str(wrapper_path)) if UTILS_AVAILABLE else None
-            # If the existing file isn't recognized as our wrapper, treat it as a name collision
             if existing_id is None:
                 try:
-                    # Try reading file to ensure it's a real file and not a mocked path
                     _ = wrapper_path.read_text()
                 except Exception as e:
-                    # Can't read file (possibly mocked); allow creation
                     self.log(
                         f"Note: Could not verify existing wrapper file: {e}", "info"
                     )
@@ -365,7 +376,6 @@ class WrapperGenerator:
         wrapper_content = self.create_wrapper_script(wrapper_name, target_flatpak_id)
 
         if self.emit_mode:
-            # In emit mode, just show what would be done
             action = "Update" if wrapper_existed else "Create"
             self.log(f"EMIT: Would {action.lower()} wrapper: {wrapper_name}")
             self.log(
@@ -373,13 +383,10 @@ class WrapperGenerator:
             )
             self.log(f"EMIT: Would set permissions to 755 on {wrapper_path}")
 
-            # For debugging (tests), indicate emit
             print(f"EMIT MODE active for {wrapper_name}")
 
-            # Show file content if verbose emit mode
             if self.emit_verbose:
                 self.log(f"EMIT: File content for {wrapper_path}:")
-                # Use Rich panel for better formatting
                 from rich.panel import Panel
 
                 console.print(
@@ -389,7 +396,6 @@ class WrapperGenerator:
                         border_style="blue",
                     ),
                 )
-                # Also print raw content so redirect_stdout-based tests can capture it
                 print(wrapper_content)
 
             return True
@@ -409,12 +415,9 @@ class WrapperGenerator:
 
     def create_wrapper_script(self, wrapper_name: str, app_id: str) -> str:
         """Create the content of a wrapper script by reading from template file."""
-        # Get the directory of the current script
         script_dir = Path(__file__).parent
-        # Template file path in templates directory
         template_path = script_dir.parent / "templates" / "wrapper.template.sh"
 
-        # Get hook failure mode default from config
         hook_failure_mode_default = "warn"
         try:
             from lib.config_manager import create_config_manager
@@ -427,7 +430,6 @@ class WrapperGenerator:
             with open(template_path, "r") as file:
                 template_content = file.read()
 
-            # Replace template variables
             return template_content.format(
                 wrapper_name=wrapper_name,
                 app_id=app_id,
@@ -453,7 +455,6 @@ class WrapperGenerator:
         updated_count = 0
         skipped_count = 0
 
-        # Use progress bar if not in verbose mode
         if not self.verbose:
             with Progress(
                 SpinnerColumn(),
@@ -485,13 +486,11 @@ class WrapperGenerator:
     def run(self) -> int:
         """Main generation process."""
         try:
-            # Acquire lock (skip in emit mode)
             if not self.emit_mode and not acquire_lock(self.lock_name, 30):
                 self.log("Failed to acquire generation lock", "error")
                 return 1
 
             try:
-                # Get installed applications
                 installed_apps = self.get_installed_flatpaks()
                 app_count = len(installed_apps)
                 self.log(f"Found {app_count} Flatpak applications")
@@ -503,15 +502,12 @@ class WrapperGenerator:
                     )
                     return 1
 
-                # Clean up obsolete wrappers
                 removed_count = self.cleanup_obsolete_wrappers(installed_apps)
 
-                # Generate new wrappers
                 created_count, updated_count, skipped_count = self.generate_wrappers(
                     installed_apps,
                 )
 
-                # Summary
                 self.log("")
                 self.log("📊 Generation Summary:")
                 self.log(f"   ✅ Created: {created_count} new wrappers")
@@ -537,7 +533,6 @@ class WrapperGenerator:
         except Exception as e:
             self.log(f"Generation failed: {e}", "error")
 
-            # Send failure notification if notifications are enabled
             try:
                 from lib.config_manager import create_config_manager
                 from lib.notifications import send_update_failure_notification
@@ -546,7 +541,6 @@ class WrapperGenerator:
                 if config.get_enable_notifications():
                     send_update_failure_notification(str(e))
             except Exception:
-                # Ignore any errors in notification system
                 pass
 
             return 1
@@ -600,13 +594,11 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate bin directory (skip in emit mode)
     if not args.emit:
         bin_dir = os.path.expanduser(args.bin_dir)
         if not validate_home_dir(bin_dir) if UTILS_AVAILABLE else True:
             return 1
 
-    # Create generator and run
     generator = WrapperGenerator(args.bin_dir, args.verbose, args.emit)
     return generator.run()
 

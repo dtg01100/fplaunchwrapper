@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 
@@ -35,7 +36,6 @@ class SystemdSetup:
 
     def _find_wrapper_script(self) -> str:
         """Find the wrapper generation script."""
-        # Try various locations
         candidates = [
             Path.cwd() / "fplaunch-generate",
             Path.cwd() / "lib" / "generate.py",
@@ -48,7 +48,6 @@ class SystemdSetup:
             if candidate.exists() and candidate.is_file():
                 return str(candidate)
 
-        # Fallback to Python module
         return f"{sys.executable} -m fplaunch.generate"
 
     def _get_systemd_unit_dir(self) -> Path:
@@ -70,7 +69,6 @@ class SystemdSetup:
             if os.path.isdir(candidate):
                 return candidate
 
-        # Try to get from flatpak command
         flatpak_path = shutil.which("flatpak")
         if flatpak_path:
             try:
@@ -81,7 +79,6 @@ class SystemdSetup:
                     text=True,
                 )
                 if result.returncode == 0:
-                    # Look for PATH entries
                     for line in str(result.stdout).split("\n"):
                         if line.startswith("PATH="):
                             path_value = line.split("=", 1)[1]
@@ -96,7 +93,6 @@ class SystemdSetup:
             except (subprocess.CalledProcessError, OSError):
                 pass
 
-        # Default fallback
         return str(Path.home() / ".local" / "share" / "flatpak" / "exports" / "bin")
 
     def log(self, message: str, level: str = "info") -> None:
@@ -112,14 +108,12 @@ class SystemdSetup:
 
     def check_prerequisites(self) -> bool:
         """Check if prerequisites are met with detailed error reporting."""
-        # Check if Flatpak is installed
         if not self._command_available("flatpak"):
             self.log(
                 "Error: Flatpak not installed. Please install Flatpak first.", "error"
             )
             return False
 
-        # Check if wrapper script exists
         if self.wrapper_script.startswith(f"{sys.executable} -m"):
             module_name = self.wrapper_script.split()[-1]
             self.log(f"Using Python module: {module_name}")
@@ -145,14 +139,12 @@ class SystemdSetup:
                     )
                     return False
 
-        # Check if systemd is available
         if not self._systemd_available():
             self.log(
                 "Systemd user services not available, will try cron fallback.",
                 "warning",
             )
 
-        # Check if bin directory is valid
         try:
             if not self.bin_dir.exists():
                 self.log(
@@ -234,7 +226,6 @@ WantedBy=timers.target
         """Install and enable systemd units with detailed error handling."""
         try:
             if self.emit_mode:
-                # In emit mode, just show what would be done
                 self.log("EMIT: Would create systemd unit directory")
 
                 service_unit_path = self.systemd_unit_dir / "flatpak-wrappers.service"
@@ -245,7 +236,6 @@ WantedBy=timers.target
                 self.log(f"EMIT: Would write path unit to {path_unit_path}")
                 self.log(f"EMIT: Would write timer unit to {timer_unit_path}")
 
-                # Show file contents if verbose emit mode
                 if self.emit_verbose:
                     service_content = self.create_service_unit()
                     path_content = self.create_path_unit()
@@ -274,7 +264,6 @@ WantedBy=timers.target
                             border_style="yellow",
                         ),
                     )
-                    # Also print raw contents for stdout capture in tests
                     print(service_content)
                     print(path_content)
                     print(timer_content)
@@ -294,14 +283,12 @@ WantedBy=timers.target
                 )
                 return True
 
-            # Create unit directory
             try:
                 self.systemd_unit_dir.mkdir(parents=True, exist_ok=True)
             except Exception as e:
                 self.log(f"Failed to create systemd unit directory: {e}", "error")
                 return False
 
-            # Write unit files
             service_unit = self.systemd_unit_dir / "flatpak-wrappers.service"
             path_unit = self.systemd_unit_dir / "flatpak-wrappers.path"
             timer_unit = self.systemd_unit_dir / "flatpak-wrappers.timer"
@@ -316,13 +303,11 @@ WantedBy=timers.target
 
             self.log("Created systemd unit files")
 
-            # Get systemctl path
             systemctl_path = shutil.which("systemctl")
             if not systemctl_path:
                 self.log("systemctl not found, cannot manage systemd units", "error")
                 return False
 
-            # Reload daemon
             try:
                 result = subprocess.run(
                     [systemctl_path, "--user", "daemon-reload"],
@@ -339,7 +324,6 @@ WantedBy=timers.target
                 self.log(f"Failed to reload systemd daemon: {e}", "error")
                 return False
 
-            # Enable and start path unit
             try:
                 result = subprocess.run(
                     [systemctl_path, "--user", "enable", "flatpak-wrappers.path"],
@@ -368,7 +352,6 @@ WantedBy=timers.target
                 self.log(f"Failed to start path unit: {e}", "error")
                 return False
 
-            # Enable and start timer unit
             try:
                 result = subprocess.run(
                     [systemctl_path, "--user", "enable", "flatpak-wrappers.timer"],
@@ -414,7 +397,7 @@ WantedBy=timers.target
     def install_cron_job(self, cron_interval: int = 6) -> bool:
         """Install cron job as fallback."""
         if self.emit_mode:
-            self.log(f"EMIT: Would check for crontab")
+            self.log("EMIT: Would check for crontab")
             self.log(
                 f"EMIT: Would install cron job: 0 */{cron_interval} * * * {self.wrapper_script} {self.bin_dir}"
             )
@@ -431,7 +414,6 @@ WantedBy=timers.target
         try:
             cron_job = f"0 */{cron_interval} * * * {self.wrapper_script} {self.bin_dir}"
 
-            # Check if cron job already exists
             result = subprocess.run(
                 [crontab_path, "-l"],
                 check=False,
@@ -444,7 +426,6 @@ WantedBy=timers.target
                 )
                 return True
 
-            # Add cron job
             if result.returncode == 0:
                 new_cron = str(result.stdout).rstrip() + "\n" + cron_job + "\n"
             else:
@@ -475,7 +456,6 @@ WantedBy=timers.target
         try:
             self.log("Setting up automatic Flatpak wrapper management...")
 
-            # Check prerequisites
             if not self.check_prerequisites():
                 return 1
 
@@ -483,7 +463,6 @@ WantedBy=timers.target
             self.log(f"Using bin directory: {self.bin_dir}")
             self.log(f"Monitoring Flatpak bin directory: {self.flatpak_bin_dir}")
 
-            # Try systemd first, then cron fallback
             if self._systemd_available():
                 if self.install_systemd_units():
                     return 0
@@ -493,7 +472,6 @@ WantedBy=timers.target
             if self.install_cron_job(cron_interval):
                 return 0
 
-            # Neither systemd nor cron worked
             self.log("Automatic setup failed.", "error")
             self.log(
                 f"Please run '{self.wrapper_script} {self.bin_dir}' manually to update wrappers.",
@@ -504,7 +482,6 @@ WantedBy=timers.target
             self.log(f"Setup failed: {e}", "error")
             return 1
 
-    # App-specific service management
     def enable_app_service(self, app_id: str) -> bool:
         """Enable automatic wrapper monitoring for a specific app.
 
@@ -519,7 +496,6 @@ WantedBy=timers.target
             return False
 
         try:
-            # Create app-specific timer unit
             service_name = f"flatpak-wrapper-{app_id}.service"
             timer_name = f"flatpak-wrapper-{app_id}.timer"
 
@@ -546,7 +522,6 @@ ExecStart=/bin/sh -c 'test -x {safe_wrapper_script} && {safe_wrapper_script} {sa
             service_file.write_text(service_content)
             self.log(f"Created service unit: {service_name}")
 
-            # Create timer unit (runs daily for this app)
             timer_content = f"""[Unit]
 Description=Timer for {app_id} wrapper generation
 
@@ -602,21 +577,18 @@ WantedBy=timers.target
                 self.log(f"EMIT: Would remove {service_name}")
                 return True
 
-            # Disable timer
             subprocess.run(
                 [systemctl_path, "--user", "disable", timer_name],
                 check=False,
                 capture_output=True,
             )
 
-            # Stop timer if running
             subprocess.run(
                 [systemctl_path, "--user", "stop", timer_name],
                 check=False,
                 capture_output=True,
             )
 
-            # Remove unit files
             timer_file = self.systemd_unit_dir / timer_name
             service_file = self.systemd_unit_dir / service_name
 
@@ -628,7 +600,6 @@ WantedBy=timers.target
                 service_file.unlink()
                 self.log(f"Removed service unit: {service_name}")
 
-            # Reload daemon
             subprocess.run(
                 [systemctl_path, "--user", "daemon-reload"],
                 check=False,
@@ -851,7 +822,6 @@ WantedBy=timers.target
         try:
             apps = []
             for unit_file in self.systemd_unit_dir.glob("flatpak-wrapper-*.timer"):
-                # Extract app_id from filename
                 app_id = unit_file.stem.replace("flatpak-wrapper-", "")
                 apps.append(app_id)
             return sorted(apps)
@@ -908,7 +878,7 @@ WantedBy=timers.target
             self.log(f"Error disabling systemd units: {e}", "error")
             return False
 
-    def check_systemd_status(self) -> dict:
+    def check_systemd_status(self) -> dict[str, Any]:
         """Check the status of systemd timer units with detailed information."""
         try:
             systemctl_path = shutil.which("systemctl")
@@ -923,7 +893,7 @@ WantedBy=timers.target
                     "load_state": None,
                 }
 
-            status = {
+            status: dict[str, Any] = {
                 "enabled": False,
                 "active": False,
                 "failed": False,
@@ -940,13 +910,11 @@ WantedBy=timers.target
             ]
 
             for unit_name in unit_names:
-                unit_info = {}
+                unit_info: dict[str, Any] = {}
 
-                # Check if unit file exists
                 unit_path = self.systemd_unit_dir / unit_name
                 unit_info["exists"] = unit_path.exists()
 
-                # Check if enabled
                 result = subprocess.run(
                     ["systemctl", "--user", "is-enabled", unit_name],
                     check=False,
@@ -954,9 +922,9 @@ WantedBy=timers.target
                     text=True,
                 )
                 unit_info["enabled"] = result.returncode == 0
-                unit_info["enabled_status"] = str(result.stdout).strip()
+                enabled_status = str(result.stdout).strip()
+                unit_info["enabled_status"] = enabled_status
 
-                # Check if active
                 result = subprocess.run(
                     ["systemctl", "--user", "is-active", unit_name],
                     check=False,
@@ -964,9 +932,9 @@ WantedBy=timers.target
                     text=True,
                 )
                 unit_info["active"] = result.returncode == 0
-                unit_info["active_status"] = str(result.stdout).strip()
+                active_status = str(result.stdout).strip()
+                unit_info["active_status"] = active_status
 
-                # Check load state
                 result = subprocess.run(
                     ["systemctl", "--user", "show", unit_name, "--property=LoadState"],
                     check=False,
@@ -976,9 +944,9 @@ WantedBy=timers.target
                 if result.returncode == 0:
                     parts = str(result.stdout).strip().split("=", 1)
                     if len(parts) == 2:
-                        unit_info["load_state"] = parts[1]
+                        load_state = parts[1]
+                        unit_info["load_state"] = load_state
 
-                # Check active state details
                 result = subprocess.run(
                     [
                         "systemctl",
@@ -994,9 +962,9 @@ WantedBy=timers.target
                 if result.returncode == 0:
                     parts = str(result.stdout).strip().split("=", 1)
                     if len(parts) == 2:
-                        unit_info["active_state"] = parts[1]
+                        active_state = parts[1]
+                        unit_info["active_state"] = active_state
 
-                # Check for failures
                 result = subprocess.run(
                     ["systemctl", "--user", "show", unit_name, "--property=Result"],
                     check=False,
@@ -1006,11 +974,11 @@ WantedBy=timers.target
                 if result.returncode == 0:
                     parts = str(result.stdout).strip().split("=", 1)
                     if len(parts) == 2:
-                        unit_info["result"] = parts[1]
-                        if unit_info["result"] == "fail":
+                        result_val = parts[1]
+                        unit_info["result"] = result_val
+                        if result_val == "fail":
                             status["failed"] = True
 
-                # Get last run time for services/timers
                 if unit_name.endswith(".service") or unit_name.endswith(".timer"):
                     result = subprocess.run(
                         [
@@ -1027,11 +995,10 @@ WantedBy=timers.target
                     if result.returncode == 0:
                         parts = str(result.stdout).strip().split("=", 1)
                         if len(parts) == 2:
-                            timestamp = parts[1]
+                            timestamp: str = parts[1]
                             if timestamp:
                                 unit_info["last_run"] = timestamp
 
-                # Get next run time for timers
                 if unit_name.endswith(".timer"):
                     result = subprocess.run(
                         ["systemctl", "--user", "list-timers", unit_name, "--no-pager"],
@@ -1045,7 +1012,8 @@ WantedBy=timers.target
                             if unit_name in line:
                                 parts = line.split()
                                 if len(parts) > 1:
-                                    unit_info["next_run"] = parts[0] + " " + parts[1]
+                                    next_run = parts[0] + " " + parts[1]
+                                    unit_info["next_run"] = next_run
 
                 status["units"][unit_name] = unit_info
 
@@ -1054,7 +1022,6 @@ WantedBy=timers.target
                 if unit_info["active"]:
                     status["active"] = True
 
-                # Update overall load state
                 if unit_info.get("load_state"):
                     status["load_state"] = unit_info["load_state"]
 
@@ -1122,7 +1089,6 @@ Examples:
     args = parser.parse_args()
 
     setup = SystemdSetup(bin_dir=args.bin_dir, wrapper_script=args.script)
-    # Pass cron interval to run method
     return setup.run(cron_interval=args.cron_interval)
 
 

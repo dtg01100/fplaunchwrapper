@@ -11,46 +11,77 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Union, Literal
 
 try:
     from platformdirs import user_config_dir, user_data_dir
 except ImportError:
-    # Fallback implementation
-    def user_config_dir(appname):
+    # Fallback implementation with matching signatures
+    def user_config_dir(
+        appname: str | None = None,
+        appauthor: Union[str, Literal[False], None] = None,
+        version: str | None = None,
+        roaming: bool = False,
+        ensure_exists: bool = True,
+    ) -> str:
         return os.path.expanduser(f"~/.config/{appname}")
 
-    def user_data_dir(appname):
+    def user_data_dir(
+        appname: str | None = None,
+        appauthor: Union[str, Literal[False], None] = None,
+        version: str | None = None,
+        roaming: bool = False,
+        ensure_exists: bool = True,
+    ) -> str:
         return os.path.expanduser(f"~/.local/share/{appname}")
 
 
-try:
-    from pydantic import BaseModel, Field, ValidationError, field_validator
+# Pydantic is optional. Use Any for all pydantic types to avoid static type conflicts.
+# This allows the module to work whether pydantic is installed or not.
+BaseModel: Any
+Field: Any
+ValidationError: Any
+field_validator: Any
+PYDANTIC_AVAILABLE: bool
 
+try:
+    from pydantic import BaseModel as _BaseModel, Field as _Field, ValidationError as _ValidationError, field_validator as _field_validator
+
+    BaseModel = _BaseModel
+    Field = _Field
+    ValidationError = _ValidationError
+    field_validator = _field_validator
     PYDANTIC_AVAILABLE = True
 except Exception:
     # Pydantic is optional. Provide minimal shims so the module can still be
     # imported and basic fallback behavior is possible when Pydantic is absent.
-    PYDANTIC_AVAILABLE = False
-
-    class BaseModel:  # minimal placeholder for type-checking and imports
-        def __init__(self, *args, **kwargs):  # no-op
+    
+    class _RuntimeBaseModel:
+        def __init__(self, *args, **kwargs):
             pass
 
-    def Field(*args, **kwargs):  # compatibility stub
+    def _RuntimeField(*args, **kwargs):
         return None
 
-    def field_validator(*args, **kwargs):  # decorator stub
+    def _RuntimeFieldValidator(*args, **kwargs):
         def _decorator(fn):
             return fn
-
         return _decorator
 
-    class ValidationError(Exception):
-        """Placeholder ValidationError when pydantic is not installed."""
-
+    class _RuntimeValidationError(Exception):
         pass
 
+    BaseModel = _RuntimeBaseModel
+    Field = _RuntimeField
+    field_validator = _RuntimeFieldValidator
+    ValidationError = _RuntimeValidationError
+    PYDANTIC_AVAILABLE = False
+
+
+# TOML support is optional. Use Any for static analysis.
+tomli: Any
+tomli_w: Any
+TOML_AVAILABLE: bool
 
 try:
     import tomli
@@ -67,12 +98,10 @@ except Exception:
 
 from .exceptions import (
     ConfigError,
-    ConfigFileNotFoundError,
     ConfigMigrationError,
     ConfigParseError,
     ConfigPermissionError,
     ConfigValidationError,
-    FplaunchError,
 )
 
 
@@ -147,7 +176,6 @@ class EnhancedConfigManager:
         self.config = WrapperConfig()
         self.config.schema_version = self.CURRENT_SCHEMA_VERSION
 
-        # Template variables for substitution
         self.template_variables = {
             "HOME": str(Path.home()),
             "XDG_CONFIG_HOME": os.environ.get(
@@ -163,7 +191,6 @@ class EnhancedConfigManager:
             "DATA_DIR": str(self.data_dir),
         }
 
-        # Ensure directories exist (best-effort; ignore read-only errors)
         try:
             self.config_dir.mkdir(parents=True, exist_ok=True)
         except OSError:
@@ -173,7 +200,6 @@ class EnhancedConfigManager:
         except OSError:
             pass
 
-        # Load configuration
         try:
             self.load_config()
         except ConfigPermissionError as e:
@@ -238,9 +264,7 @@ class EnhancedConfigManager:
                 if TOML_AVAILABLE:
                     with open(self.config_file, "rb") as f:
                         data = tomli.load(f)
-                    # Migrate configuration if needed
                     data = self._migrate_config(data)
-                    # Parse configuration with validation
                     self._parse_config_data(data)
                 else:
                     self._load_fallback_config()
@@ -257,7 +281,6 @@ class EnhancedConfigManager:
                     f"Configuration validation failed for {self.config_file}: {e}"
                 ) from e
         else:
-            # File doesn't exist - this is not an error, just create defaults
             self._create_default_config()
 
     def save_config(self) -> None:
@@ -315,13 +338,10 @@ class EnhancedConfigManager:
 
     def _parse_config_data(self, data: dict[str, Any]) -> None:
         """Parse configuration data with validation and variable substitution."""
-        # Process all values with variable substitution
         processed_data = self._process_config_value(data)
 
-        # Validate with Pydantic if available
         if PYDANTIC_AVAILABLE:
             try:
-                # Validate using Pydantic model
                 validated_config = PydanticWrapperConfig(**processed_data)
                 self._apply_validated_config(validated_config)
             except ValidationError as e:
@@ -329,7 +349,6 @@ class EnhancedConfigManager:
                     f"Configuration validation failed: {e}"
                 ) from e
         else:
-            # Fallback validation without Pydantic
             self._apply_unvalidated_config(processed_data)
 
     def _apply_validated_config(
@@ -344,7 +363,6 @@ class EnhancedConfigManager:
         self.config.cron_interval = validated_config.cron_interval
         self.config.enable_notifications = validated_config.enable_notifications
 
-        # Apply hook failure mode defaults
         self.config.hook_failure_mode_default = (
             validated_config.hook_failure_mode_default
         )
@@ -355,7 +373,6 @@ class EnhancedConfigManager:
             validated_config.post_launch_failure_mode_default
         )
 
-        # Convert Pydantic models to dataclasses
         self.config.global_preferences = AppPreferences(
             launch_method=validated_config.global_preferences.launch_method,
             env_vars=dict(validated_config.global_preferences.env_vars),
@@ -366,7 +383,6 @@ class EnhancedConfigManager:
             post_launch_failure_mode=validated_config.global_preferences.post_launch_failure_mode,
         )
 
-        # Process app preferences
         self.config.app_preferences = {}
         for app_id, pref_model in validated_config.app_preferences.items():
             self.config.app_preferences[app_id] = AppPreferences(
@@ -379,12 +395,10 @@ class EnhancedConfigManager:
                 post_launch_failure_mode=pref_model.post_launch_failure_mode,
             )
 
-        # Permission presets
         self.config.permission_presets = validated_config.permission_presets
 
     def _apply_unvalidated_config(self, data: dict[str, Any]) -> None:
         """Apply configuration without Pydantic validation (fallback)."""
-        # Basic configuration
         self.config.bin_dir = data.get("bin_dir", self.config.bin_dir)
         self.config.debug_mode = data.get("debug_mode", self.config.debug_mode)
         self.config.log_level = data.get("log_level", self.config.log_level)
@@ -393,7 +407,6 @@ class EnhancedConfigManager:
             "enable_notifications", self.config.enable_notifications
         )
 
-        # Hook failure mode defaults
         self.config.hook_failure_mode_default = data.get(
             "hook_failure_mode_default", "warn"
         )
@@ -404,11 +417,9 @@ class EnhancedConfigManager:
             "post_launch_failure_mode_default"
         )
 
-        # Blocklist
         if "blocklist" in data:
             self.config.blocklist = list(data["blocklist"])
 
-        # Permission presets
         if "permission_presets" in data:
             presets_data = data["permission_presets"]
             if isinstance(presets_data, dict):
@@ -421,7 +432,6 @@ class EnhancedConfigManager:
                         # Support direct list format
                         self.config.permission_presets[preset_name] = list(preset_data)
 
-        # Global preferences
         if "global_preferences" in data:
             gp_data = data["global_preferences"]
             self.config.global_preferences = AppPreferences(
@@ -434,7 +444,6 @@ class EnhancedConfigManager:
                 post_launch_failure_mode=gp_data.get("post_launch_failure_mode"),
             )
 
-        # App-specific preferences
         if "app_preferences" in data:
             for app_id, pref_data in data["app_preferences"].items():
                 self.config.app_preferences[app_id] = AppPreferences(
@@ -449,7 +458,7 @@ class EnhancedConfigManager:
 
     def _serialize_config(self) -> dict[str, Any]:
         """Serialize configuration to TOML-compatible format with schema version."""
-        data = {
+        data: dict[str, Any] = {
             "schema_version": self.CURRENT_SCHEMA_VERSION,
             "bin_dir": str(self.config.bin_dir),
             "debug_mode": self.config.debug_mode,
@@ -457,11 +466,9 @@ class EnhancedConfigManager:
             "blocklist": self.config.blocklist,
             "cron_interval": self.config.cron_interval,
             "enable_notifications": self.config.enable_notifications,
-            # Global hook failure mode defaults
             "hook_failure_mode_default": self.config.hook_failure_mode_default,
         }
 
-        # Add optional hook failure mode defaults if set
         if self.config.pre_launch_failure_mode_default:
             data["pre_launch_failure_mode_default"] = (
                 self.config.pre_launch_failure_mode_default
@@ -471,7 +478,6 @@ class EnhancedConfigManager:
                 self.config.post_launch_failure_mode_default
             )
 
-        # Global preferences
         gp = self.config.global_preferences
         data["global_preferences"] = {
             "launch_method": gp.launch_method,
@@ -482,17 +488,11 @@ class EnhancedConfigManager:
             data["global_preferences"]["pre_launch_script"] = gp.pre_launch_script
         if gp.post_launch_script:
             data["global_preferences"]["post_launch_script"] = gp.post_launch_script
-        # Add hook failure modes to global preferences if set
         if gp.pre_launch_failure_mode:
-            data["global_preferences"]["pre_launch_failure_mode"] = (
-                gp.pre_launch_failure_mode
-            )
+            data["global_preferences"]["pre_launch_failure_mode"] = str(gp.pre_launch_failure_mode)
         if gp.post_launch_failure_mode:
-            data["global_preferences"]["post_launch_failure_mode"] = (
-                gp.post_launch_failure_mode
-            )
+            data["global_preferences"]["post_launch_failure_mode"] = str(gp.post_launch_failure_mode)
 
-        # App preferences
         if self.config.app_preferences:
             data["app_preferences"] = {}
             for app_id, prefs in self.config.app_preferences.items():
@@ -505,16 +505,12 @@ class EnhancedConfigManager:
                     app_data["pre_launch_script"] = prefs.pre_launch_script
                 if prefs.post_launch_script:
                     app_data["post_launch_script"] = prefs.post_launch_script
-                # Add hook failure modes to app preferences if set
                 if prefs.pre_launch_failure_mode:
-                    app_data["pre_launch_failure_mode"] = prefs.pre_launch_failure_mode
+                    app_data["pre_launch_failure_mode"] = str(prefs.pre_launch_failure_mode)
                 if prefs.post_launch_failure_mode:
-                    app_data["post_launch_failure_mode"] = (
-                        prefs.post_launch_failure_mode
-                    )
+                    app_data["post_launch_failure_mode"] = str(prefs.post_launch_failure_mode)
                 data["app_preferences"][app_id] = app_data
 
-        # Permission presets
         if self.config.permission_presets:
             data["permission_presets"] = dict(self.config.permission_presets)
 
@@ -529,11 +525,9 @@ class EnhancedConfigManager:
         self.config.log_level = "INFO"
         self.config.blocklist = []
 
-    # Additional API used by tests
     def reset_to_defaults(self) -> None:
         """Reset configuration values back to defaults."""
         self._create_default_config()
-        # Also persist defaults
         self.save_config()
 
     def _load_fallback_config(self) -> None:
@@ -586,7 +580,7 @@ class EnhancedConfigManager:
         """
         try:
             lines = [
-                f"# fplaunchwrapper configuration (fallback format)",
+                "# fplaunchwrapper configuration (fallback format)",
                 f"bin_dir={self.config.bin_dir}",
                 f"debug_mode={self.config.debug_mode}",
                 f"log_level={self.config.log_level}",

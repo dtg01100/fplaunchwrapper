@@ -18,7 +18,6 @@ from pathlib import Path
 from rich.console import Console
 from rich.prompt import Confirm
 
-# Import our utilities
 try:
     from safety import is_wrapper_file
 
@@ -88,20 +87,17 @@ class WrapperCleanup:
 
         self.config = config or CleanupConfig()
 
-        # Legacy compatibility properties (computed from config)
         self.dry_run = self.config.dry_run
         self.assume_yes = self.config.assume_yes_effective
         self.force = self.config.force
         self.interactive = self.config.interactive
         self.verbose = self.config.verbose_effective
 
-        # Set up directories from config
         self.bin_dir = self.config.bin_dir_path
         self.config_dir = self.config.config_dir_path
         self.data_dir = self.config.data_dir_path
         self.systemd_unit_dir = self._get_systemd_unit_dir()
 
-        # Optional selective removal flags from config
         self.remove_wrappers = self.config.remove_wrappers
         self.remove_prefs = self.config.remove_prefs
         self.remove_data = self.config.remove_data
@@ -111,8 +107,7 @@ class WrapperCleanup:
             Path(self.config.backup_dir) if self.config.backup_dir else None
         )
 
-        # Initialize cleanup items
-        self.cleanup_items = {
+        self.cleanup_items: dict[str, list] = {
             "wrappers": [],
             "symlinks": [],
             "scripts": [],
@@ -306,7 +301,6 @@ class WrapperCleanup:
 
     def get_cleanup_summary(self) -> dict[str, int]:
         """Return a summary of discovered cleanup items."""
-        # Ensure scan was performed
         self.scan_for_cleanup_items()
         return {
             "wrappers": len(self.cleanup_items["wrappers"]),
@@ -352,7 +346,6 @@ class WrapperCleanup:
         self.log("- Man pages:         ~/.local/share/man")
         self.log("")
 
-        # Show detailed breakdown
         total_items = 0
         for category, items in self.cleanup_items.items():
             if items:
@@ -375,71 +368,55 @@ class WrapperCleanup:
             self.log("\nDRY RUN - No changes will be made.")
             return True
 
-        # Avoid interactive prompts unless explicitly requested
         if self.assume_yes or not self.interactive:
             return True
 
-        # Get user confirmation
         return Confirm.ask("Proceed with cleanup?")
 
     def perform_cleanup(self) -> bool:
         """Perform the actual cleanup."""
         try:
-            # track errors
             self.had_errors = False
-            # Optional backup before removal
             if self.create_backup and not self.dry_run:
                 import tempfile
 
                 backup_root = self.backup_dir or Path(
                     tempfile.mkdtemp(prefix="fp_cleanup_")
                 )
-                # Backup wrappers
                 with contextlib.suppress(Exception):
                     for f in self.cleanup_items["wrappers"]:
                         dst = backup_root / "wrappers" / f.name
                         dst.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(f, dst)
-                # Backup preferences
                 with contextlib.suppress(Exception):
                     for f in self.cleanup_items["preferences"]:
                         dst = backup_root / "preferences" / f.name
                         dst.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(f, dst)
-                # Backup data files (bounded)
                 with contextlib.suppress(Exception):
                     for f in self.cleanup_items["data_files"][:1000]:
                         dst = backup_root / "data" / f.name
                         dst.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(f, dst)
 
-            # 1. Stop and disable systemd units
             if self.remove_systemd or self.remove_systemd is None:
                 self._cleanup_systemd_units()
 
-            # 2. Remove cron entries
             self._cleanup_cron_entries()
 
-            # 3. Remove wrappers, symlinks, and scripts
             if self.remove_wrappers or self.remove_wrappers is None:
                 self._cleanup_wrappers_and_scripts()
 
-            # 4. Remove bash completion
             self._cleanup_completion_files()
 
-            # 5. Remove man pages
             self._cleanup_man_pages()
 
-            # 6. Remove config directory
-            # Preferences
             if self.remove_prefs or self.remove_prefs is None:
                 for pref in self.cleanup_items["preferences"]:
                     self._remove_file(pref, f"Removing preference: {pref}")
-            # Data files
             if self.remove_data or self.remove_data is None:
                 for df in self.cleanup_items["data_files"]:
                     self._remove_file(df, f"Removing data file: {df}")
-            # Config directory (only remove when prefs/data are targeted)
             if (self.remove_prefs or self.remove_prefs is None) or (
                 self.remove_data or self.remove_data is None
             ):
@@ -457,12 +434,10 @@ class WrapperCleanup:
         if not self.cleanup_items["systemd_units"]:
             return
 
-        # Stop and disable services
         systemctl_path = shutil.which("systemctl")
         if systemctl_path:
             self.log("Stopping and disabling systemd units...")
             if not self.dry_run:
-                # Stop services
                 subprocess.run(
                     [
                         systemctl_path,
@@ -476,7 +451,6 @@ class WrapperCleanup:
                     capture_output=True,
                 )
 
-                # Disable services
                 subprocess.run(
                     [
                         systemctl_path,
@@ -490,14 +464,12 @@ class WrapperCleanup:
                     capture_output=True,
                 )
 
-                # Reload daemon
                 subprocess.run(
                     [systemctl_path, "--user", "daemon-reload"],
                     check=False,
                     capture_output=True,
                 )
 
-        # Remove unit files
         for unit_path in self.cleanup_items["systemd_units"]:
             self._remove_file(unit_path, f"Removing systemd unit: {unit_path}")
 
@@ -511,7 +483,6 @@ class WrapperCleanup:
             self.log("Removing cron entries...")
             if not self.dry_run:
                 try:
-                    # Get current crontab
                     result = subprocess.run(
                         [crontab_path, "-l"],
                         check=False,
@@ -520,13 +491,11 @@ class WrapperCleanup:
                     )
                     if result.returncode == 0:
                         current_cron = result.stdout
-                        # Remove all lines containing fplaunch (covers all fplaunchwrapper-related entries)
                         new_cron = "\n".join(
                             line
                             for line in current_cron.split("\n")
                             if "fplaunch" not in line
                         )
-                        # Update crontab
                         subprocess.run(
                             [crontab_path, "-"],
                             check=False,
@@ -539,19 +508,15 @@ class WrapperCleanup:
 
     def _cleanup_wrappers_and_scripts(self) -> None:
         """Remove wrappers, symlinks, and scripts."""
-        # Remove wrappers
         for wrapper in self.cleanup_items["wrappers"]:
             self._remove_file(wrapper, f"Removing wrapper: {wrapper}")
 
-        # Remove symlinks
         for symlink in self.cleanup_items["symlinks"]:
             self._remove_file(symlink, f"Removing symlink: {symlink}")
 
-        # Remove scripts
         for script in self.cleanup_items["scripts"]:
             self._remove_file(script, f"Removing script: {script}")
 
-        # Remove lib directory if it exists
         lib_dir = self.bin_dir / "lib"
         if lib_dir.exists() and lib_dir.is_dir():
             self._remove_directory(lib_dir, f"Removing library directory: {lib_dir}")
@@ -569,7 +534,6 @@ class WrapperCleanup:
         for manpage in self.cleanup_items["man_pages"]:
             self._remove_file(manpage, f"Removing man page: {manpage}")
 
-        # Clean up empty directories
         if not self.dry_run:
             man_dir = Path.home() / ".local" / "share" / "man"
             for subdir in ["man1", "man7"]:
@@ -618,15 +582,12 @@ class WrapperCleanup:
     def run(self) -> int:
         """Run the cleanup process."""
         try:
-            # Scan for items to clean up
             self.scan_for_cleanup_items()
 
-            # Show summary and get confirmation
             if not self.confirm_cleanup():
                 self.log("Cleanup cancelled.")
                 return 0
 
-            # Perform cleanup
             if self.dry_run:
                 self.log("DRY RUN - No files were removed.")
                 return 0
@@ -651,21 +612,15 @@ class WrapperCleanup:
         Mirrors the behavior of run() but returns True/False instead of exit codes.
         """
         try:
-            # Discover items
             self.scan_for_cleanup_items()
-            # Confirmation (respect interactive/force flags)
             if not self.confirm_cleanup():
-                return False  # Cancelled should return False
-            # Dry run means success without changes
+                return False
             if self.dry_run:
                 return True
-            # Perform actual cleanup
             return bool(self.perform_cleanup())
         except (OSError, subprocess.CalledProcessError, ValueError, KeyboardInterrupt):
-            # Any exception means cleanup failed
             return False
 
-    # Safe integration test methods
     def cleanup_all(self) -> bool:
         """Simulate cleanup all for testing."""
         self.log("Simulating cleanup of all wrappers")
@@ -730,7 +685,6 @@ This removes:
 
     parser.add_argument("--config-dir", help="Override configuration directory")
 
-    # Compatibility and extended flags
     parser.add_argument(
         "--force", action="store_true", help="Force non-interactive cleanup"
     )

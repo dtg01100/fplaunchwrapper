@@ -1,4 +1,4 @@
-## Help Output Improvements
+# Help Output Improvements
 
 ### Changes Made
 

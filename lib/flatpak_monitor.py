@@ -14,7 +14,6 @@ import sys
 import time
 from typing import Any, Dict, Optional
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -22,30 +21,34 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Optional watchdog dependency - use Any to avoid static type conflicts
+from typing import TYPE_CHECKING, Any, List, Optional
+
+WatchdogEventHandler: Any
+WatchdogObserver: Any
+WATCHDOG_AVAILABLE: bool
+
 try:
-    from watchdog.events import (
-        FileSystemEventHandler as _WatchdogFileSystemEventHandler,
-    )
-    from watchdog.observers import Observer as _WatchdogObserver
+    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler
+    from watchdog.observers import Observer as WatchdogObserver
 
     WATCHDOG_AVAILABLE = True
 except Exception:
-    _WatchdogFileSystemEventHandler = None
-    _WatchdogObserver = None
+    # Use Any for fallback to avoid type conflicts
+    WatchdogEventHandler = None
+    WatchdogObserver = None
     WATCHDOG_AVAILABLE = False
 
+# Runtime observer class (None when watchdog not present)
+Observer: Any = WatchdogObserver
+
 # For runtime we select a base handler that is the watchdog class when present,
-# otherwise a neutral fallback (object). We intentionally do NOT define a
-# module-level `FileSystemEventHandler` class here to avoid static type
-# mismatches with watchdog's own type.
+# otherwise a neutral fallback (object).
 _BaseFSHandler: Any = (
-    _WatchdogFileSystemEventHandler
-    if _WatchdogFileSystemEventHandler is not None
+    WatchdogEventHandler
+    if WatchdogEventHandler is not None
     else object
 )
-
-# Make Observer available at module scope (None when watchdog not present)
-Observer = _WatchdogObserver
 
 
 # Systemd notify support (optional) - import at runtime via importlib to avoid
@@ -57,7 +60,7 @@ try:
     _systemd_daemon = importlib.import_module("systemd.daemon")
     SYSTEMD_NOTIFY_AVAILABLE = True
 except Exception:
-    _systemd_daemon = None
+    _systemd_daemon = None  # type: ignore[assignment]
     SYSTEMD_NOTIFY_AVAILABLE = False
 
 
@@ -66,20 +69,20 @@ class FlatpakEventHandler(_BaseFSHandler):
 
     def __init__(self, callback=None, config: Optional[Dict[str, Any]] = None) -> None:
         self.callback = callback
-        self.last_event_time = 0
+        self.last_event_time = 0.0
         self.config = config or {}
-        self.cooldown_seconds = self.config.get(
+        self.cooldown_seconds: float = self.config.get(
             "cooldown", 2
-        )  # Prevent rapid-fire events
-        self.pending_events = []
-        self.batch_window = self.config.get(
+        )
+        self.pending_events: List[tuple[str, str]] = []
+        self.batch_window: float = self.config.get(
             "batch_window", 1.0
-        )  # Collect events for 1 second
-        self.batch_timer = None
-        self._event_lock = None
+        )
+        self.batch_timer: Optional[Any] = None
+        self._event_lock: Optional[Any] = None
         self._init_lock()
 
-    def _init_lock(self):
+    def _init_lock(self) -> None:
         """Initialize thread lock for event queueing."""
         try:
             import threading
@@ -112,10 +115,8 @@ class FlatpakEventHandler(_BaseFSHandler):
 
     def _should_process_event(self, path) -> bool:
         """Determine if we should process this event."""
-        # Only process events related to Flatpak installations
         path_str = str(path)
 
-        # Check for Flatpak-related paths
         flatpak_paths = [
             "/var/lib/flatpak",
             "/home",
@@ -139,24 +140,22 @@ class FlatpakEventHandler(_BaseFSHandler):
 
     def _queue_event_unlocked(self, event_type, path) -> None:
         """Queue event without lock (internal method)."""
-        # Add to pending events if not already there
         event_key = (event_type, path)
         if event_key not in self.pending_events:
             self.pending_events.append(event_key)
             logger.debug("Queued event: %s - %s", event_type, path)
 
-        # Reset batch timer
-        if self.batch_timer:
+        if self.batch_timer is not None:
             self.batch_timer.cancel()
 
-        # Import threading here to avoid issues if not available
         import threading
 
         self.batch_timer = threading.Timer(
             self.batch_window, self._flush_pending_events
         )
-        self.batch_timer.daemon = True
-        self.batch_timer.start()
+        if self.batch_timer is not None:
+            self.batch_timer.daemon = True
+            self.batch_timer.start()
 
     def _flush_pending_events(self) -> None:
         """Process all pending events and trigger callback once."""
@@ -171,23 +170,20 @@ class FlatpakEventHandler(_BaseFSHandler):
         if not self.pending_events:
             return
 
-        # Check cooldown
         current_time = time.time()
         if current_time - self.last_event_time < self.cooldown_seconds:
-            # Still in cooldown, reschedule
             import threading
 
             delay = self.cooldown_seconds - (current_time - self.last_event_time)
             self.batch_timer = threading.Timer(delay, self._flush_pending_events)
-            self.batch_timer.daemon = True
-            self.batch_timer.start()
+            if self.batch_timer is not None:
+                self.batch_timer.daemon = True
+                self.batch_timer.start()
             logger.debug("Cooldown active, rescheduling flush in %.1fs", delay)
             return
 
-        # Update cooldown timestamp
         self.last_event_time = current_time
 
-        # Trigger callback with all batched events
         if self.callback:
             with contextlib.suppress(Exception):
                 logger.debug("Flushing %d batched events", len(self.pending_events))
@@ -207,33 +203,27 @@ class FlatpakMonitor:
         bin_dir: Optional[str] = None,
         config: Optional[Dict[str, Any]] = None,
     ) -> None:
-        # bin_dir is accepted for test compatibility but not used in monitoring logic
         self.callback = callback
         self.bin_dir = bin_dir
-        self.observer = None
+        self.observer: Optional[Any] = None
         self.running = False
         self.config = config or {}
 
-        # Paths to monitor
         self.watch_paths = self._get_watch_paths()
 
-        # Systemd notify state
         self._systemd_notify_sent = False
 
     def _get_watch_paths(self) -> list[str]:
         """Get paths that should be monitored for Flatpak changes."""
         paths: list[str] = []
 
-        # System Flatpak installations
         if os.path.exists("/var/lib/flatpak"):
             paths.append("/var/lib/flatpak")
 
-        # User Flatpak installations
         user_flatpak = os.path.expanduser("~/.local/share/flatpak")
         if os.path.exists(user_flatpak):
             paths.append(user_flatpak)
 
-        # User app data (where Flatpak apps store data)
         user_app_data = os.path.expanduser("~/.var/app")
         if os.path.exists(user_app_data):
             paths.append(user_app_data)
@@ -258,18 +248,14 @@ class FlatpakMonitor:
             return False
 
         try:
-            # Instantiate the observer only when the class is available
             self.observer = Observer() if Observer is not None else None
 
-            # Set up event handler
             event_handler = FlatpakEventHandler(
                 callback=self._on_flatpak_change, config=self.config
             )
 
-            # Watch all relevant paths
             for path in self.watch_paths:
                 if os.path.exists(path) and self.observer is not None:
-                    # Schedule the handler for this path
                     self.observer.schedule(event_handler, path, recursive=True)
                     logger.info("Watching path: %s", path)
 
@@ -277,11 +263,9 @@ class FlatpakMonitor:
                 self.observer.start()
             self.running = True
 
-            # Set up signal handlers for graceful shutdown
             signal.signal(signal.SIGINT, self._signal_handler)
             signal.signal(signal.SIGTERM, self._signal_handler)
 
-            # Send systemd notify ready signal
             self._send_systemd_notify()
 
             logger.info("Flatpak monitor started successfully")
@@ -300,7 +284,6 @@ class FlatpakMonitor:
             self.running = False
             logger.info("Flatpak monitor stopped")
 
-    # Compatibility methods expected by tests
     def start(self) -> bool:
         """Alias for start_monitoring()."""
         return self.start_monitoring()
@@ -314,16 +297,13 @@ class FlatpakMonitor:
         path = getattr(event, "src_path", "")
         event_type = getattr(event, "event_type", "modified")
 
-        # Check if we should process this event (similar to FlatpakEventHandler)
         if self._should_process_event(path):
             self._on_flatpak_change(event_type, path)
 
     def _should_process_event(self, path: str | object) -> bool:
         """Determine if we should process this event."""
-        # Only process events related to Flatpak installations
         path_str = str(path)
 
-        # Check for Flatpak-related paths
         flatpak_paths = [
             "/var/lib/flatpak",
             "/home",
@@ -341,10 +321,8 @@ class FlatpakMonitor:
         """Handle Flatpak-related file system changes."""
         logger.debug("Flatpak change detected: %s - %s", event_type, path)
 
-        # Debounce rapid events
         time.sleep(self.config.get("debounce", 1))
 
-        # Check if we need to regenerate wrappers
         if self._should_regenerate_wrappers(path):
             logger.info("Regenerating Flatpak wrappers due to change: %s", path)
             success = self._regenerate_wrappers()
@@ -353,7 +331,6 @@ class FlatpakMonitor:
             else:
                 logger.error("Failed to regenerate Flatpak wrappers")
 
-        # Call user callback if provided
         if self.callback:
             with contextlib.suppress(Exception):
                 self.callback(event_type, path)
@@ -362,17 +339,14 @@ class FlatpakMonitor:
         """Determine if wrappers should be regenerated based on the path."""
         path_str = str(path).lower()
 
-        # Regenerate on app installation/removal
         if "exports" in path_str or "app" in path_str:
             return True
 
-        # Regenerate on metadata changes
         return bool("metadata" in path_str or "manifest" in path_str)
 
     def _regenerate_wrappers(self) -> bool:
         """Regenerate Flatpak wrappers."""
         try:
-            # Find the fplaunch-generate script
             script_paths = [
                 os.path.join(os.path.dirname(__file__), "..", "fplaunch-generate"),
                 "/usr/local/bin/fplaunch-generate",
@@ -438,13 +412,12 @@ def start_flatpak_monitoring(
     monitor = FlatpakMonitor(callback=callback, config=config)
 
     if daemon:
-        # Run in background
         import threading
 
         thread = threading.Thread(target=monitor.start_monitoring, daemon=True)
         thread.start()
         return monitor
-    # Run in foreground
+
     if monitor.start_monitoring():
         monitor.wait()
     return monitor
@@ -465,13 +438,11 @@ def main(
     wrapper) without argparse trying to parse unrelated arguments.
     """
     if skip_parse:
-        # Programmatic invocation: use provided args directly and do not parse argv.
         start_flatpak_monitoring(callback=callback, daemon=daemon, config=config)
         return
 
     import argparse
 
-    # Parse command line arguments
     parser = argparse.ArgumentParser(
         description="Flatpak installation monitoring service"
     )
@@ -522,10 +493,8 @@ def main(
 
     args = parser.parse_args()
 
-    # Configure logging
     logger.setLevel(getattr(logging, args.log_level.upper()))
 
-    # Load callback if specified
     callback_func = None
     if args.callback:
         try:
@@ -536,7 +505,6 @@ def main(
             logger.error("Failed to load callback %s: %s", args.callback, e)
             sys.exit(1)
 
-    # Build configuration
     config = {
         "batch_window": args.batch_window,
         "cooldown": args.cooldown,
@@ -552,6 +520,5 @@ def main(
         pass
 
 
-# CLI interface
 if __name__ == "__main__":
     main()

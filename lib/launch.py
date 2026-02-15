@@ -18,10 +18,30 @@ try:
 except ImportError:
     from .safety import safe_launch_check  # noqa: F401
 
+class _AppNotFoundError(Exception):
+    pass
+
+class _LaunchBlockedError(Exception):
+    pass
+
+class _LaunchError(Exception):
+    pass
+
+AppNotFoundError = _AppNotFoundError
+LaunchBlockedError = _LaunchBlockedError
+LaunchError = _LaunchError
+
 try:
-    from .exceptions import AppNotFoundError, LaunchBlockedError, LaunchError
+    from .exceptions import (
+        AppNotFoundError as _AppNotFoundErrorReal,
+        LaunchBlockedError as _LaunchBlockedErrorReal,
+        LaunchError as _LaunchErrorReal,
+    )
+    AppNotFoundError = _AppNotFoundErrorReal  # type: ignore[misc,assignment]
+    LaunchBlockedError = _LaunchBlockedErrorReal  # type: ignore[misc,assignment]
+    LaunchError = _LaunchErrorReal  # type: ignore[misc,assignment]
 except ImportError:
-    AppNotFoundError = LaunchBlockedError = LaunchError = Exception
+    pass
 
 import time
 
@@ -44,17 +64,14 @@ def _cache_flatpak_id(app_name: str, flatpak_id: str) -> None:
     _FLATPAK_ID_CACHE[app_name] = (flatpak_id, time.time())
 
 
-# Test environment detection for launch module
-def is_test_environment_launch():
+def is_test_environment_launch() -> bool:
     """Check if we're running in test environment for launch module."""
     import os
     import sys
 
-    # Check for pytest/unittest
     if "pytest" in sys.modules or "unittest" in sys.modules:
         return True
 
-    # Check for pytest environment variables
     if any(key.startswith("PYTEST_") for key in os.environ):
         return True
 
@@ -80,7 +97,7 @@ class AppLauncher:
         self.debug = debug
         self.env = env
         self.hook_failure_mode = (
-            hook_failure_mode  # Runtime override for hook failure mode
+            hook_failure_mode
         )
 
         self.config_dir = Path(
@@ -88,7 +105,6 @@ class AppLauncher:
         )
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
-        # Get bin directory - prioritize parameter, then config, then default
         if bin_dir:
             self.bin_dir = Path(bin_dir)
         else:
@@ -112,7 +128,6 @@ class AppLauncher:
         """
         scripts = []
 
-        # Try to get script from config manager
         try:
             from lib.config_manager import create_config_manager
 
@@ -138,7 +153,6 @@ class AppLauncher:
         except Exception:
             pass
 
-        # Try default script location if no configured script found
         if not scripts:
             scripts_dir = self.config_dir / "scripts" / app_name
 
@@ -163,23 +177,21 @@ class AppLauncher:
         Returns:
             Failure mode: "abort", "warn", or "ignore"
         """
-        # Try to get from config manager
         try:
             from lib.config_manager import create_config_manager
 
             config = create_config_manager()
-            return config.get_effective_hook_failure_mode(
+            mode: str = config.get_effective_hook_failure_mode(
                 self.app_name or "", hook_type, self.hook_failure_mode
             )
+            return mode
         except Exception:
             pass
 
-        # Check environment variable
         env_mode = os.environ.get("FPWRAPPER_HOOK_FAILURE")
         if env_mode in ("abort", "warn", "ignore"):
             return env_mode
 
-        # Default to warn
         return "warn"
 
     def _run_hook_scripts(
@@ -204,7 +216,6 @@ class AppLauncher:
         if not scripts:
             return True
 
-        # Get effective failure mode
         failure_mode = self._get_effective_failure_mode(hook_type)
 
         if self.verbose:
@@ -214,14 +225,12 @@ class AppLauncher:
             )
 
         all_succeeded = True
-        hook_exit_code = 0
 
         for script_path in scripts:
             try:
                 if self.debug:
                     print(f"Executing {hook_type} hook: {script_path}", file=sys.stderr)
 
-                # Set environment variables
                 env = os.environ.copy()
                 env["FPWRAPPER_WRAPPER_NAME"] = self.app_name
                 env["FPWRAPPER_APP_ID"] = self._sanitize_app_name(self.app_name)
@@ -231,15 +240,12 @@ class AppLauncher:
                 if hook_type == "post":
                     env["FPWRAPPER_EXIT_CODE"] = str(exit_code)
 
-                # Prepare arguments according to documentation
-                # Use sanitized app name to prevent command injection
                 safe_app_name = self._sanitize_app_name(self.app_name)
                 args = [str(script_path), safe_app_name, safe_app_name, source]
                 if hook_type == "post":
                     args.append(str(exit_code))
                 args.extend(self.args)
 
-                # Try running the script directly
                 result = subprocess.run(
                     args,
                     capture_output=True,
@@ -250,7 +256,6 @@ class AppLauncher:
 
                 if result.returncode != 0:
                     all_succeeded = False
-                    hook_exit_code = result.returncode
 
                     if failure_mode == "abort":
                         if hook_type == "pre":
@@ -258,10 +263,8 @@ class AppLauncher:
                                 f"[fplaunchwrapper] Pre-launch hook failed (exit {result.returncode}), aborting launch: {script_path}",
                                 file=sys.stderr,
                             )
-                            # For pre-launch, abort means stop everything
                             return False
                         else:
-                            # Post-launch abort: can't abort, app already ran
                             print(
                                 f"[fplaunchwrapper] Post-launch hook failed (exit {result.returncode}): {script_path}",
                                 file=sys.stderr,
@@ -271,14 +274,12 @@ class AppLauncher:
                             f"[fplaunchwrapper] Warning: {hook_type}-launch hook failed ({script_path}): {result.stderr}",
                             file=sys.stderr,
                         )
-                    # ignore mode: silent
 
                 elif self.verbose and result.stdout:
                     print(f"{hook_type} hook output: {result.stdout}", file=sys.stderr)
 
             except subprocess.TimeoutExpired:
                 all_succeeded = False
-                hook_exit_code = 124  # Standard timeout exit code
 
                 if failure_mode == "abort":
                     if hook_type == "pre":
@@ -300,7 +301,6 @@ class AppLauncher:
 
             except Exception as e:
                 all_succeeded = False
-                hook_exit_code = 1
 
                 if failure_mode == "abort":
                     if hook_type == "pre":
@@ -327,8 +327,6 @@ class AppLauncher:
         self.app_name = app_name
         self.args = args or []
         return self.launch()
-
-    # Backwards compatibility: provide launch_app method
 
     def _get_safety_check(self):
         """Get the safety check function if available.
@@ -370,11 +368,8 @@ class AppLauncher:
         source = "flatpak"
         wrapper_path = self._find_wrapper()
 
-        # If a wrapper file exists but is not executable, treat as a permission error
         candidate_wrapper = self._get_wrapper_path()
         try:
-            # Avoid treating arbitrary filesystem paths as wrappers if they
-            # escape the configured bin_dir (prevent path traversal attacks).
             if not self._is_path_safe(candidate_wrapper, self.bin_dir):
                 escaped = True
             else:
@@ -390,9 +385,8 @@ class AppLauncher:
                         f"Warning: Wrapper {candidate_wrapper} exists but is not executable",
                         file=sys.stderr,
                     )
-                return source, None  # This will cause launch failure
+                return source, None
         except Exception:
-            # If any filesystem error, continue with normal logic
             pass
 
         if wrapper_path:
@@ -413,17 +407,14 @@ class AppLauncher:
             if pref_file.exists():
                 preference = pref_file.read_text().strip()
                 if preference == "flatpak":
-                    # Honor explicit flatpak preference
                     wrapper_path = None
                     source = "flatpak"
                 elif preference == "system":
-                    # Honor explicit system preference if wrapper exists
                     if wrapper_path:
                         source = "system"
                     else:
                         source = "flatpak"
         except Exception:
-            # Best-effort only; ignore preference read errors
             pass
 
         return wrapper_path, source
@@ -449,7 +440,6 @@ class AppLauncher:
             from lib.safety import is_test_environment
 
             flatpak_path = find_executable("flatpak")
-            # Skip flatpak list lookup in test environments to avoid extra subprocess calls
             if flatpak_path and not is_test_environment():
                 res = subprocess.run(
                     [
@@ -515,8 +505,6 @@ class AppLauncher:
         """
         import re
 
-        # Replace only dangerous shell metacharacters with underscores
-        # Keep alphanumeric, dots, dashes, and underscores
         sanitized = re.sub(r"[^a-zA-Z0-9_.-]", "_", app_name)
         return sanitized
 
@@ -544,7 +532,6 @@ class AppLauncher:
             if not self._is_path_safe(wrapper_path, self.bin_dir):
                 return False
         except Exception:
-            # If resolution fails, fall back to simple existence check
             pass
         return wrapper_path.exists() and os.access(wrapper_path, os.X_OK)
 
@@ -566,14 +553,11 @@ class AppLauncher:
     def launch(self) -> bool:
         """Launch the application with pre/post-launch hook support."""
         try:
-            # Perform safety checks
             if not self._perform_safety_checks():
                 return False
 
-            # Determine launch source
             source, wrapper_path = self._determine_launch_source()
 
-            # Run pre-launch hooks
             if not self._run_hook_scripts("pre", source=source):
                 if self.verbose:
                     print(
@@ -581,20 +565,15 @@ class AppLauncher:
                     )
                 return False
 
-            # Check preference file override
             wrapper_path, source = self._check_preference_override(wrapper_path, source)
 
-            # Resolve command identifier
             command_id = self._resolve_flatpak_id(wrapper_path)
 
-            # Build launch command
             cmd = self._build_launch_command(command_id, wrapper_path)
 
-            # Execute launch
             result = self._execute_launch(cmd)
             launch_success = result.returncode == 0
 
-            # Run post-launch hooks (even if launch failed)
             if not self._run_hook_scripts(
                 "post", exit_code=result.returncode, source=source
             ):
@@ -602,8 +581,6 @@ class AppLauncher:
                     print(
                         f"Post-launch hooks failed for {self.app_name}", file=sys.stderr
                     )
-                # Don't fail based on post-launch hook failure
-                # (app already launched)
 
             return launch_success
 
@@ -699,8 +676,6 @@ Pre and post-launch hooks are executed automatically if configured.
     try:
         args = parser.parse_args()
     except SystemExit as e:
-        # Convert argparse exit into return code for easier testing
-        # If argparse exited with code 0 (e.g., --help), return 0
         exit_code = getattr(e, "code", 1)
         return 0 if exit_code == 0 else 1
 

@@ -25,10 +25,6 @@ Icon=firefox
 Type=Application
 ```
 
-## Pre-launch and Post-run Script Examples
-
-These examples show the basic functionality for Linux users who want to customize their Flatpak application launches.
-
 ## Basic Pre-launch Script
 
 ```bash

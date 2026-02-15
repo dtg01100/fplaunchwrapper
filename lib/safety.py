@@ -16,41 +16,69 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
+# Define fallback exception classes first
+class _SafetyError(Exception):
+    pass
+
+class _ForbiddenNameError(Exception):
+    pass
+
+class _PathTraversalError(Exception):
+    pass
+
+class _InvalidFlatpakIdError(Exception):
+    pass
+
+# Default to fallback values
+SafetyError = _SafetyError
+ForbiddenNameError = _ForbiddenNameError
+PathTraversalError = _PathTraversalError
+InvalidFlatpakIdError = _InvalidFlatpakIdError
+
+# Default utils to None
+canonicalize_path_no_resolve: Any = None
+get_wrapper_id: Any = None
+is_wrapper_file: Any = None
+sanitize_id_to_name: Any = None
+sanitize_string: Any = None
+validate_home_dir: Any = None
+UTILS_IMPORTED = False
+
+# Try to import and override with real implementations
 try:
     from .exceptions import (
-        ForbiddenNameError,
-        InvalidFlatpakIdError,
-        PathTraversalError,
-        SafetyError,
+        ForbiddenNameError as _ForbiddenNameErrorReal,
+        InvalidFlatpakIdError as _InvalidFlatpakIdErrorReal,
+        PathTraversalError as _PathTraversalErrorReal,
+        SafetyError as _SafetyErrorReal,
     )
+    SafetyError = _SafetyErrorReal  # type: ignore[misc,assignment]
+    ForbiddenNameError = _ForbiddenNameErrorReal  # type: ignore[misc,assignment]
+    PathTraversalError = _PathTraversalErrorReal  # type: ignore[misc,assignment]
+    InvalidFlatpakIdError = _InvalidFlatpakIdErrorReal  # type: ignore[misc,assignment]
 except ImportError:
-    SafetyError = Exception
-    ForbiddenNameError = Exception
-    PathTraversalError = Exception
-    InvalidFlatpakIdError = Exception
+    pass
 
 try:
     from .python_utils import (
-        canonicalize_path_no_resolve,
-        get_wrapper_id,
-        is_wrapper_file,
-        sanitize_id_to_name,
-        sanitize_string,
-        validate_home_dir,
+        canonicalize_path_no_resolve as _canonicalize_path_no_resolve,
+        get_wrapper_id as _get_wrapper_id,
+        is_wrapper_file as _is_wrapper_file,
+        sanitize_id_to_name as _sanitize_id_to_name,
+        sanitize_string as _sanitize_string,
+        validate_home_dir as _validate_home_dir,
     )
-
+    canonicalize_path_no_resolve = _canonicalize_path_no_resolve
+    get_wrapper_id = _get_wrapper_id
+    is_wrapper_file = _is_wrapper_file
+    sanitize_id_to_name = _sanitize_id_to_name
+    sanitize_string = _sanitize_string
+    validate_home_dir = _validate_home_dir
     UTILS_IMPORTED = True
 except ImportError:
-    from typing import Any
-
-    UTILS_IMPORTED = False
-    canonicalize_path_no_resolve: Any = None
-    get_wrapper_id: Any = None
-    is_wrapper_file: Any = None
-    sanitize_id_to_name: Any = None
-    sanitize_string: Any = None
-    validate_home_dir: Any = None
+    pass
 
 __all__ = [
     "canonicalize_path_no_resolve",
