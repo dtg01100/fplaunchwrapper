@@ -25,6 +25,21 @@ try:
 except ImportError:
     UTILS_AVAILABLE = False
 
+try:
+    from lib.paths import (
+        get_default_bin_dir,
+        get_default_config_dir,
+        get_default_data_dir,
+        get_systemd_unit_dir,
+    )
+except ImportError:
+    from .paths import (
+        get_default_bin_dir,
+        get_default_config_dir,
+        get_default_data_dir,
+        get_systemd_unit_dir,
+    )
+
 console = Console()
 
 
@@ -49,13 +64,9 @@ class CleanupConfig:
 
     def __post_init__(self):
         """Set derived values after initialization."""
-        self.bin_dir_path = Path(self.bin_dir or (Path.home() / "bin"))
-        self.config_dir_path = Path(
-            self.config_dir or (Path.home() / ".config" / "fplaunchwrapper"),
-        )
-        self.data_dir_path = Path(
-            self.data_dir or (Path.home() / ".local" / "share" / "fplaunchwrapper")
-        )
+        self.bin_dir_path = Path(self.bin_dir) if self.bin_dir else get_default_bin_dir()
+        self.config_dir_path = Path(self.config_dir) if self.config_dir else get_default_config_dir()
+        self.data_dir_path = Path(self.data_dir) if self.data_dir else get_default_data_dir()
         self.assume_yes_effective = (
             self.assume_yes
             or self.force
@@ -122,11 +133,7 @@ class WrapperCleanup:
 
     def _get_systemd_unit_dir(self) -> Path:
         """Get systemd user unit directory."""
-        xdg_config_home = os.environ.get(
-            "XDG_CONFIG_HOME",
-            str(Path.home() / ".config"),
-        )
-        return Path(xdg_config_home) / "systemd" / "user"
+        return get_systemd_unit_dir()
 
     def scan_for_cleanup_items(self) -> None:
         """Scan for items that can be cleaned up."""

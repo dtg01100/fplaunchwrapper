@@ -79,6 +79,7 @@ try:
         ForbiddenNameError as _ForbiddenNameErrorReal,
         WrapperGenerationError as _WrapperGenerationErrorReal,
     )
+    from .paths import get_default_config_dir
     from .python_utils import (
         acquire_lock as _acquire_lock_real,
         find_executable as _find_executable_real,
@@ -136,11 +137,7 @@ class WrapperGenerator:
         self.emit_mode = emit_mode
         self.emit_verbose = emit_verbose
         self.lock_name = "generate"
-        self.config_dir = (
-            Path(config_dir)
-            if config_dir
-            else (Path.home() / ".config" / "fplaunchwrapper")
-        )
+        self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
 
         # Ensure directories exist (unless in emit mode)
         if not emit_mode:

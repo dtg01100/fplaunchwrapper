@@ -24,6 +24,11 @@ except ImportError:
 console = Console()
 console_err = Console(stderr=True)
 
+# Import handler for consistent error messaging
+from lib.import_utils import ImportErrorHandler, safe_import
+
+import_handler = ImportErrorHandler(console_err)
+
 
 def _instantiate_compat(cls, **kwargs):
     """Instantiate ``cls`` with best-effort compatibility across constructor signatures.
@@ -157,23 +162,17 @@ def generate(ctx, bin_dir) -> int:
     if not bin_dir:
         bin_dir = os.path.expanduser("~/bin")
 
-    try:
-        # Use namespaced imports (lib.*) so tests that import modules work in both dev and installed envs
-        from lib.generate import WrapperGenerator
-
-        generator = _instantiate_compat(
-            WrapperGenerator,
-            bin_dir=bin_dir,
-            config_dir=ctx.obj.get("config_dir"),
-            verbose=ctx.obj.get("verbose", False),
-            emit_mode=ctx.obj.get("emit", False),
-            emit_verbose=ctx.obj.get("emit_verbose", False),
-        )
-        result: int = generator.run()
-        return result
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import wrapper generator: {e}")
-        raise SystemExit(1)
+    WrapperGenerator = import_handler.require("lib.generate", "WrapperGenerator")
+    generator = _instantiate_compat(
+        WrapperGenerator,
+        bin_dir=bin_dir,
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
+        emit_mode=ctx.obj.get("emit", False),
+        emit_verbose=ctx.obj.get("emit_verbose", False),
+    )
+    result: int = generator.run()
+    return result
 
 
 @cli.command(name="list")
@@ -188,27 +187,21 @@ def list_wrappers(ctx, app_name, show_all) -> int:
       fplaunch list           # List all wrappers
       fplaunch list firefox   # Show details for firefox wrapper
     """
-    try:
-        from lib.manage import WrapperManager
+    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
+    manager = _instantiate_compat(
+        WrapperManager,
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
+        emit_mode=ctx.obj.get("emit", False),
+        emit_verbose=ctx.obj.get("emit_verbose", False),
+    )
 
-        manager = _instantiate_compat(
-            WrapperManager,
-            config_dir=ctx.obj.get("config_dir"),
-            verbose=ctx.obj.get("verbose", False),
-            emit_mode=ctx.obj.get("emit", False),
-            emit_verbose=ctx.obj.get("emit_verbose", False),
-        )
-
-        if app_name:
-            success = manager.show_info(app_name)
-            return 0 if success else 1
-        else:
-            manager.display_wrappers()
-            return 0
-
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import wrapper manager: {e}")
-        raise SystemExit(1)
+    if app_name:
+        success = manager.show_info(app_name)
+        return 0 if success else 1
+    else:
+        manager.display_wrappers()
+        return 0
 
 
 @cli.command()
@@ -218,32 +211,27 @@ def list_wrappers(ctx, app_name, show_all) -> int:
 def install(ctx, app_name, emit) -> int:
     """Install a Flatpak application and generate a wrapper for it."""
     emit_mode = emit or ctx.obj.get("emit", False)
-    try:
-        result = run_command(
-            ["flatpak", "install", "-y", app_name],
-            f"Installing Flatpak app: {app_name}",
-            emit_mode=emit_mode,
+    result = run_command(
+        ["flatpak", "install", "-y", app_name],
+        f"Installing Flatpak app: {app_name}",
+        emit_mode=emit_mode,
+    )
+    if result.returncode != 0:
+        console_err.print(
+            f"[red]Error:[/red] Failed to install Flatpak app: {result.stderr}"
         )
-        if result.returncode != 0:
-            console_err.print(
-                f"[red]Error:[/red] Failed to install Flatpak app: {result.stderr}"
-            )
-            return result.returncode
+        return result.returncode
 
-        from lib.generate import WrapperGenerator
-
-        generator = _instantiate_compat(
-            WrapperGenerator,
-            bin_dir=os.path.expanduser("~/bin"),
-            config_dir=ctx.obj.get("config_dir"),
-            verbose=ctx.obj.get("verbose", False),
-            emit_mode=emit_mode,
-            emit_verbose=ctx.obj.get("emit_verbose", False),
-        )
-        return int(generator.run())
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] {e}")
-        raise SystemExit(1)
+    WrapperGenerator = import_handler.require("lib.generate", "WrapperGenerator")
+    generator = _instantiate_compat(
+        WrapperGenerator,
+        bin_dir=os.path.expanduser("~/bin"),
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
+        emit_mode=emit_mode,
+        emit_verbose=ctx.obj.get("emit_verbose", False),
+    )
+    return int(generator.run())
 
 
 @cli.command()
@@ -254,43 +242,38 @@ def install(ctx, app_name, emit) -> int:
 def uninstall(ctx, app_name, remove_data, emit) -> int:
     """Uninstall a Flatpak application and remove its wrapper."""
     emit_mode = emit or ctx.obj.get("emit", False)
+    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
+    manager = _instantiate_compat(
+        WrapperManager,
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
+        emit_mode=emit_mode,
+    )
+
+    wrapper_removed = False
     try:
-        from lib.manage import WrapperManager
+        wrapper_removed = manager.remove_wrapper(app_name, force=True)
+    except Exception:
+        pass
 
-        manager = _instantiate_compat(
-            WrapperManager,
-            config_dir=ctx.obj.get("config_dir"),
-            verbose=ctx.obj.get("verbose", False),
-            emit_mode=emit_mode,
+    cmd = ["flatpak", "uninstall", "-y"]
+    if remove_data:
+        cmd.append("--delete-data")
+    cmd.append(app_name)
+    result = run_command(
+        cmd, f"Uninstalling Flatpak app: {app_name}", emit_mode=emit_mode
+    )
+    if result.returncode != 0:
+        console_err.print(
+            f"[red]Error:[/red] Failed to uninstall Flatpak app: {result.stderr}"
         )
+        return result.returncode
 
-        wrapper_removed = False
-        try:
-            wrapper_removed = manager.remove_wrapper(app_name, force=True)
-        except Exception:
-            pass
+    console.print(
+        f"[green]✓[/green] Uninstalled {app_name} (wrapper: {'removed' if wrapper_removed else 'not found'})"
+    )
 
-        cmd = ["flatpak", "uninstall", "-y"]
-        if remove_data:
-            cmd.append("--delete-data")
-        cmd.append(app_name)
-        result = run_command(
-            cmd, f"Uninstalling Flatpak app: {app_name}", emit_mode=emit_mode
-        )
-        if result.returncode != 0:
-            console_err.print(
-                f"[red]Error:[/red] Failed to uninstall Flatpak app: {result.stderr}"
-            )
-            return result.returncode
-
-        console.print(
-            f"[green]✓[/green] Uninstalled {app_name} (wrapper: {'removed' if wrapper_removed else 'not found'})"
-        )
-
-        return 0
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] {e}")
-        raise SystemExit(1)
+    return 0
 
 
 @cli.command()
@@ -324,20 +307,15 @@ def launch(
       fplaunch launch firefox
       fplaunch launch firefox --abort-on-hook-failure
     """
-    try:
-        from lib.launch import AppLauncher
+    AppLauncher = import_handler.require("lib.launch", "AppLauncher")
+    resolved_hook_failure = hook_failure
+    if abort_on_hook_failure:
+        resolved_hook_failure = "abort"
+    elif ignore_hook_failure:
+        resolved_hook_failure = "ignore"
 
-        resolved_hook_failure = hook_failure
-        if abort_on_hook_failure:
-            resolved_hook_failure = "abort"
-        elif ignore_hook_failure:
-            resolved_hook_failure = "ignore"
-
-        launcher = AppLauncher(app_name, hook_failure_mode=resolved_hook_failure)
-        return 0 if launcher.launch() else 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] {e}")
-        raise SystemExit(1)
+    launcher = AppLauncher(app_name, hook_failure_mode=resolved_hook_failure)
+    return 0 if launcher.launch() else 1
 
 
 @cli.command()
@@ -346,24 +324,19 @@ def launch(
 @click.pass_context
 def remove(ctx, name, force) -> int:
     """Remove a wrapper by name."""
-    try:
-        from lib.manage import WrapperManager
-
-        manager = _instantiate_compat(
-            WrapperManager,
-            config_dir=ctx.obj.get("config_dir"),
-            verbose=ctx.obj.get("verbose", False),
-            emit_mode=ctx.obj.get("emit", False),
-        )
-        if manager.remove_wrapper(name, force=force):
-            console.print(f"[green]✓[/green] Removed wrapper: {name}")
-            return 0
-        else:
-            console_err.print(f"[red]Error:[/red] Failed to remove wrapper: {name}")
-            return 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
-        raise SystemExit(1)
+    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
+    manager = _instantiate_compat(
+        WrapperManager,
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
+        emit_mode=ctx.obj.get("emit", False),
+    )
+    if manager.remove_wrapper(name, force=force):
+        console.print(f"[green]✓[/green] Removed wrapper: {name}")
+        return 0
+    else:
+        console_err.print(f"[red]Error:[/red] Failed to remove wrapper: {name}")
+        return 1
 
 
 @cli.command()
@@ -379,32 +352,22 @@ def cleanup(ctx) -> int:
       fplaunch cleanup    # Remove orphaned wrappers
       fplaunch clean      # Alias for cleanup
     """
-    try:
-        from lib.cleanup import WrapperCleanup
-
-        cleanup_manager = WrapperCleanup(
-            bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
-        )
-        return cleanup_manager.run()
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import cleanup: {e}")
-        raise SystemExit(1)
+    WrapperCleanup = import_handler.require("lib.cleanup", "WrapperCleanup")
+    cleanup_manager = WrapperCleanup(
+        bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
+    )
+    return cleanup_manager.run()
 
 
 @cli.command(name="clean")  # Alias for cleanup
 @click.pass_context
 def clean(ctx) -> int:
     """Clean up orphaned wrapper files and artifacts (alias for cleanup)."""
-    try:
-        from lib.cleanup import WrapperCleanup
-
-        cleanup_manager = WrapperCleanup(
-            bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
-        )
-        return cleanup_manager.run()
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import cleanup: {e}")
-        raise SystemExit(1)
+    WrapperCleanup = import_handler.require("lib.cleanup", "WrapperCleanup")
+    cleanup_manager = WrapperCleanup(
+        bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
+    )
+    return cleanup_manager.run()
 
 
 @cli.command()
@@ -425,16 +388,11 @@ def monitor(ctx, daemon) -> int:
         )
         return 0
 
-    try:
-        from lib.flatpak_monitor import main as monitor_main
-
-        # Call the main entrypoint programmatically and avoid argparse
-        # parsing of the process argv by requesting a skip of parsing.
-        monitor_main(daemon=daemon, skip_parse=True)
-        return 0
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import monitor: {e}")
-        raise SystemExit(1)
+    monitor_main = import_handler.require("lib.flatpak_monitor", "main")
+    # Call the main entrypoint programmatically and avoid argparse
+    # parsing of the process argv by requesting a skip of parsing.
+    monitor_main(daemon=daemon, skip_parse=True)
+    return 0
 
 
 @cli.command(name="set-pref")
@@ -443,24 +401,19 @@ def monitor(ctx, daemon) -> int:
 @click.pass_context
 def set_pref(ctx, wrapper_name, preference) -> int:
     """Set launch preference for a wrapper (system|flatpak or a Flatpak ID)."""
-    try:
-        from lib.manage import WrapperManager
-
-        manager = _instantiate_compat(
-            WrapperManager,
-            config_dir=ctx.obj.get("config_dir"),
-            verbose=ctx.obj.get("verbose", False),
-            emit_mode=ctx.obj.get("emit", False),
-            emit_verbose=ctx.obj.get("emit_verbose", False),
-        )
-        if wrapper_name == "all":
-            updated = manager.set_preference_all(preference)
-            return 0 if updated > 0 else 1
-        success = manager.set_preference(wrapper_name, preference)
-        return 0 if success else 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
-        raise SystemExit(1)
+    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
+    manager = _instantiate_compat(
+        WrapperManager,
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
+        emit_mode=ctx.obj.get("emit", False),
+        emit_verbose=ctx.obj.get("emit_verbose", False),
+    )
+    if wrapper_name == "all":
+        updated = manager.set_preference_all(preference)
+        return 0 if updated > 0 else 1
+    success = manager.set_preference(wrapper_name, preference)
+    return 0 if success else 1
 
 
 @cli.command(name="pref")
@@ -480,24 +433,19 @@ def pref(ctx, wrapper_name, preference) -> int:
 @click.pass_context
 def rm(ctx, name, force) -> int:
     """Alias for remove (delegates directly to manager implementation)."""
-    try:
-        from lib.manage import WrapperManager
-
-        manager = _instantiate_compat(
-            WrapperManager,
-            config_dir=ctx.obj.get("config_dir"),
-            verbose=ctx.obj.get("verbose", False),
-            emit_mode=ctx.obj.get("emit", False),
-        )
-        if manager.remove_wrapper(name, force=force):
-            console.print(f"[green]✓[/green] Removed wrapper: {name}")
-            return 0
-        else:
-            console_err.print(f"[red]Error:[/red] Failed to remove wrapper: {name}")
-            return 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
-        raise SystemExit(1)
+    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
+    manager = _instantiate_compat(
+        WrapperManager,
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
+        emit_mode=ctx.obj.get("emit", False),
+    )
+    if manager.remove_wrapper(name, force=force):
+        console.print(f"[green]✓[/green] Removed wrapper: {name}")
+        return 0
+    else:
+        console_err.print(f"[red]Error:[/red] Failed to remove wrapper: {name}")
+        return 1
 
 
 def _run_systemd_setup(
@@ -514,30 +462,25 @@ def _run_systemd_setup(
     problem and makes the behavior safe for both direct invocation and
     testing (where tests often patch methods on SystemdSetup).
     """
+    SystemdSetup = import_handler.require("lib.systemd_setup", "SystemdSetup")
+    setup = _instantiate_compat(
+        SystemdSetup,
+        bin_dir=bin_dir,
+        wrapper_script=wrapper_script,
+        emit_mode=ctx.obj.get("emit", False),
+        emit_verbose=ctx.obj.get("emit_verbose", False),
+    )
     try:
-        from lib.systemd_setup import SystemdSetup
-
-        setup = _instantiate_compat(
-            SystemdSetup,
-            bin_dir=bin_dir,
-            wrapper_script=wrapper_script,
-            emit_mode=ctx.obj.get("emit", False),
-            emit_verbose=ctx.obj.get("emit_verbose", False),
-        )
-        try:
-            # Prefer calling a 'run' entrypoint if present (tests patch this),
-            # otherwise fall back to the more specific install helper.
-            if hasattr(setup, "run"):
-                return 0 if setup.run() else 1
-            if hasattr(setup, "install_systemd_units"):
-                return 0 if setup.install_systemd_units() else 1
-            return 0
-        except Exception as e:
-            console_err.print(f"[red]Error:[/red] {e}")
-            return 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import systemd_setup: {e}")
-        raise SystemExit(1)
+        # Prefer calling a 'run' entrypoint if present (tests patch this),
+        # otherwise fall back to the more specific install helper.
+        if hasattr(setup, "run"):
+            return 0 if setup.run() else 1
+        if hasattr(setup, "install_systemd_units"):
+            return 0 if setup.install_systemd_units() else 1
+        return 0
+    except Exception as e:
+        console_err.print(f"[red]Error:[/red] {e}")
+        return 1
 
 
 @cli.command(name="systemd-setup")
@@ -560,19 +503,17 @@ def systemd_group(ctx) -> None:
 
 
 def _systemd_simple_action(ctx) -> int:
-    try:
-        from lib.systemd_setup import SystemdSetup
-
-        setup = _instantiate_compat(
-            SystemdSetup,
-            emit_mode=ctx.obj.get("emit", False),
-            emit_verbose=ctx.obj.get("emit_verbose", False),
-        )
-        if hasattr(setup, "install_systemd_units"):
-            return 0 if setup.install_systemd_units() else 1
+    SystemdSetup = safe_import("lib.systemd_setup", "SystemdSetup")
+    if SystemdSetup is None:
         return 0
-    except ImportError:
-        return 0
+    setup = _instantiate_compat(
+        SystemdSetup,
+        emit_mode=ctx.obj.get("emit", False),
+        emit_verbose=ctx.obj.get("emit_verbose", False),
+    )
+    if hasattr(setup, "install_systemd_units"):
+        return 0 if setup.install_systemd_units() else 1
+    return 0
 
 
 @systemd_group.command(name="enable")
@@ -659,19 +600,14 @@ def systemd_test(ctx, emit) -> int:
 @click.pass_context
 def info(ctx, app_name) -> int:
     """Show information about a wrapper."""
-    try:
-        from lib.manage import WrapperManager
-
-        manager = _instantiate_compat(
-            WrapperManager,
-            config_dir=ctx.obj.get("config_dir"),
-            verbose=ctx.obj.get("verbose", False),
-        )
-        success = manager.show_info(app_name)
-        return 0 if success else 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
-        raise SystemExit(1)
+    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
+    manager = _instantiate_compat(
+        WrapperManager,
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
+    )
+    success = manager.show_info(app_name)
+    return 0 if success else 1
 
 
 @cli.command()
@@ -679,23 +615,18 @@ def info(ctx, app_name) -> int:
 @click.pass_context
 def search(ctx, query) -> int:
     """Search or discover wrappers. Alias: discover."""
-    try:
-        from lib.manage import WrapperManager
-
-        manager = _instantiate_compat(
-            WrapperManager,
-            config_dir=ctx.obj.get("config_dir"),
-            verbose=ctx.obj.get("verbose", False),
-        )
-        # Minimal behavior: call discover_features if available, otherwise list wrappers
-        if hasattr(manager, "discover_features"):
-            manager.discover_features()
-            return 0
-        manager.display_wrappers()
+    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
+    manager = _instantiate_compat(
+        WrapperManager,
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
+    )
+    # Minimal behavior: call discover_features if available, otherwise list wrappers
+    if hasattr(manager, "discover_features"):
+        manager.discover_features()
         return 0
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
-        raise SystemExit(1)
+    manager.display_wrappers()
+    return 0
 
 
 @cli.command(name="discover")
@@ -719,21 +650,16 @@ def profiles_group(ctx) -> None:
 @click.pass_context
 def profiles_list(ctx) -> int:
     """List available profiles."""
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        profiles = cfg.list_profiles()
-        active = cfg.get_active_profile()
-        for profile in profiles:
-            if profile == active:
-                console.print(f"[bold green]* {profile}[/bold green]")
-            else:
-                console.print(f"  {profile}")
-        return 0
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to list profiles: {e}")
-        return 1
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    profiles = cfg.list_profiles()
+    active = cfg.get_active_profile()
+    for profile in profiles:
+        if profile == active:
+            console.print(f"[bold green]* {profile}[/bold green]")
+        else:
+            console.print(f"  {profile}")
+    return 0
 
 
 @profiles_group.command(name="create")
@@ -742,21 +668,16 @@ def profiles_list(ctx) -> int:
 @click.pass_context
 def profiles_create(ctx, profile_name, copy_from) -> int:
     """Create a new profile."""
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        if cfg.create_profile(profile_name, copy_from):
-            console.print(f"[green]✓[/green] Created profile: {profile_name}")
-            return 0
-        else:
-            console_err.print(
-                f"[red]Error:[/red] Could not create profile '{profile_name}' "
-                "(may already exist or invalid name)"
-            )
-            return 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to create profile: {e}")
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    if cfg.create_profile(profile_name, copy_from):
+        console.print(f"[green]✓[/green] Created profile: {profile_name}")
+        return 0
+    else:
+        console_err.print(
+            f"[red]Error:[/red] Could not create profile '{profile_name}' "
+            "(may already exist or invalid name)"
+        )
         return 1
 
 
@@ -765,21 +686,16 @@ def profiles_create(ctx, profile_name, copy_from) -> int:
 @click.pass_context
 def profiles_switch(ctx, profile_name) -> int:
     """Switch to a profile."""
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        if cfg.switch_profile(profile_name):
-            console.print(f"[green]✓[/green] Switched to profile: {profile_name}")
-            return 0
-        else:
-            console_err.print(
-                f"[red]Error:[/red] Could not switch to profile '{profile_name}' "
-                "(profile may not exist)"
-            )
-            return 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to switch profile: {e}")
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    if cfg.switch_profile(profile_name):
+        console.print(f"[green]✓[/green] Switched to profile: {profile_name}")
+        return 0
+    else:
+        console_err.print(
+            f"[red]Error:[/red] Could not switch to profile '{profile_name}' "
+            "(profile may not exist)"
+        )
         return 1
 
 
@@ -787,16 +703,11 @@ def profiles_switch(ctx, profile_name) -> int:
 @click.pass_context
 def profiles_current(ctx) -> int:
     """Show current profile."""
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        active = cfg.get_active_profile()
-        console.print(f"Current profile: [bold]{active}[/bold]")
-        return 0
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to get current profile: {e}")
-        return 1
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    active = cfg.get_active_profile()
+    console.print(f"Current profile: [bold]{active}[/bold]")
+    return 0
 
 
 @profiles_group.command(name="export")
@@ -805,23 +716,18 @@ def profiles_current(ctx) -> int:
 @click.pass_context
 def profiles_export(ctx, profile_name, output_file) -> int:
     """Export a profile to a file."""
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        export_path = Path(output_file) if output_file else Path(f"{profile_name}.toml")
-        if cfg.export_profile(profile_name, export_path):
-            console.print(
-                f"[green]✓[/green] Exported profile '{profile_name}' to {export_path}"
-            )
-            return 0
-        else:
-            console_err.print(
-                f"[red]Error:[/red] Could not export profile '{profile_name}'"
-            )
-            return 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to export profile: {e}")
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    export_path = Path(output_file) if output_file else Path(f"{profile_name}.toml")
+    if cfg.export_profile(profile_name, export_path):
+        console.print(
+            f"[green]✓[/green] Exported profile '{profile_name}' to {export_path}"
+        )
+        return 0
+    else:
+        console_err.print(
+            f"[red]Error:[/red] Could not export profile '{profile_name}'"
+        )
         return 1
 
 
@@ -831,24 +737,19 @@ def profiles_export(ctx, profile_name, output_file) -> int:
 @click.pass_context
 def profiles_import(ctx, input_file, profile_name) -> int:
     """Import a profile from a file."""
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        import_path = Path(input_file)
-        name = profile_name or import_path.stem
-        if cfg.import_profile(name, import_path):
-            console.print(
-                f"[green]✓[/green] Imported profile '{name}' from {import_path}"
-            )
-            return 0
-        else:
-            console_err.print(
-                f"[red]Error:[/red] Could not import profile from '{input_file}'"
-            )
-            return 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import profile: {e}")
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    import_path = Path(input_file)
+    name = profile_name or import_path.stem
+    if cfg.import_profile(name, import_path):
+        console.print(
+            f"[green]✓[/green] Imported profile '{name}' from {import_path}"
+        )
+        return 0
+    else:
+        console_err.print(
+            f"[red]Error:[/red] Could not import profile from '{input_file}'"
+        )
         return 1
 
 
@@ -864,21 +765,16 @@ def presets_group(ctx) -> None:
 @click.pass_context
 def presets_list(ctx) -> int:
     """List available permission presets."""
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        presets = cfg.list_permission_presets()
-        if presets:
-            console.print("Available presets:")
-            for preset in presets:
-                console.print(f"  [green]{preset}[/green]")
-        else:
-            console.print("No custom presets defined")
-        return 0
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to list presets: {e}")
-        return 1
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    presets = cfg.list_permission_presets()
+    if presets:
+        console.print("Available presets:")
+        for preset in presets:
+            console.print(f"  [green]{preset}[/green]")
+    else:
+        console.print("No custom presets defined")
+    return 0
 
 
 @presets_group.command(name="get")
@@ -889,22 +785,17 @@ def presets_get(ctx, preset_name) -> int:
     if not preset_name:
         raise click.UsageError("PRESET_NAME is required")
 
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        permissions = cfg.get_permission_preset(preset_name)
-        if permissions is None:
-            console_err.print(f"[red]Error:[/red] Preset '{preset_name}' not found")
-            return 1
-
-        console.print(f"[yellow]Preset {preset_name}:[/yellow]")
-        for perm in permissions:
-            console.print(f"  {perm}")
-        return 0
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to get preset: {e}")
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    permissions = cfg.get_permission_preset(preset_name)
+    if permissions is None:
+        console_err.print(f"[red]Error:[/red] Preset '{preset_name}' not found")
         return 1
+
+    console.print(f"[yellow]Preset {preset_name}:[/yellow]")
+    for perm in permissions:
+        console.print(f"  {perm}")
+    return 0
 
 
 @presets_group.command(name="add")
@@ -917,16 +808,11 @@ def presets_add(ctx, preset_name, permission) -> int:
         console_err.print("[red]Error:[/red] At least one permission is required")
         return 1
 
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        cfg.add_permission_preset(preset_name, list(permission))
-        console.print(f"[green]✓[/green] Added preset: {preset_name}")
-        return 0
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to add preset: {e}")
-        return 1
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    cfg.add_permission_preset(preset_name, list(permission))
+    console.print(f"[green]✓[/green] Added preset: {preset_name}")
+    return 0
 
 
 @presets_group.command(name="remove")
@@ -934,18 +820,13 @@ def presets_add(ctx, preset_name, permission) -> int:
 @click.pass_context
 def presets_remove(ctx, preset_name) -> int:
     """Remove a permission preset."""
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        if cfg.remove_permission_preset(preset_name):
-            console.print(f"[green]✓[/green] Removed preset: {preset_name}")
-            return 0
-        else:
-            console_err.print(f"[red]Error:[/red] Preset '{preset_name}' not found")
-            return 1
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to remove preset: {e}")
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    if cfg.remove_permission_preset(preset_name):
+        console.print(f"[green]✓[/green] Removed preset: {preset_name}")
+        return 0
+    else:
+        console_err.print(f"[red]Error:[/red] Preset '{preset_name}' not found")
         return 1
 
 
@@ -971,65 +852,59 @@ def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> 
     """
     import json as json_module
 
-    try:
-        from lib.manage import WrapperManager
+    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
+    manager = _instantiate_compat(
+        WrapperManager,
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
+        emit_mode=ctx.obj.get("emit", False),
+        emit_verbose=ctx.obj.get("emit_verbose", False),
+    )
 
-        manager = _instantiate_compat(
-            WrapperManager,
-            config_dir=ctx.obj.get("config_dir"),
-            verbose=ctx.obj.get("verbose", False),
-            emit_mode=ctx.obj.get("emit", False),
-            emit_verbose=ctx.obj.get("emit_verbose", False),
-        )
+    file_type = None
+    if wrappers:
+        file_type = "wrappers"
+    elif prefs:
+        file_type = "prefs"
+    elif env:
+        file_type = "env"
+    elif show_all:
+        file_type = "all"
 
-        file_type = None
-        if wrappers:
-            file_type = "wrappers"
-        elif prefs:
-            file_type = "prefs"
-        elif env:
-            file_type = "env"
-        elif show_all:
-            file_type = "all"
+    managed_files = manager.list_managed_files(app_name, file_type)
 
-        managed_files = manager.list_managed_files(app_name, file_type)
-
-        if not managed_files:
-            if app_name:
-                console.print(f"[yellow]No managed files found for {app_name}[/yellow]")
-            else:
-                console.print("[yellow]No managed files found[/yellow]")
-            return 0
-
-        if json_output:
-            console.print(json_module.dumps(managed_files, indent=2))
-        elif paths:
-            for app_files in managed_files.values():
-                for file_info in app_files:
-                    console.print(file_info["path"])
+    if not managed_files:
+        if app_name:
+            console.print(f"[yellow]No managed files found for {app_name}[/yellow]")
         else:
-            for app, files_list in managed_files.items():
-                if app == "_aliases":
-                    for file_info in files_list:
-                        console.print(f"Aliases:    {file_info['path']}")
-                    continue
-
-                if app_name:
-                    console.print(f"[bold]Files for {app}:[/bold]")
-                    for file_info in files_list:
-                        file_type_display = file_info["type"].capitalize()
-                        console.print(f"  {file_type_display:<12} {file_info['path']}")
-                else:
-                    console.print(f"\n[bold]{app}:[/bold]")
-                    for file_info in files_list:
-                        file_type_display = file_info["type"].capitalize()
-                        console.print(f"  {file_type_display:<12} {file_info['path']}")
-
+            console.print("[yellow]No managed files found[/yellow]")
         return 0
 
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import manager: {e}")
-        raise SystemExit(1)
+    if json_output:
+        console.print(json_module.dumps(managed_files, indent=2))
+    elif paths:
+        for app_files in managed_files.values():
+            for file_info in app_files:
+                console.print(file_info["path"])
+    else:
+        for app, files_list in managed_files.items():
+            if app == "_aliases":
+                for file_info in files_list:
+                    console.print(f"Aliases:    {file_info['path']}")
+                continue
+
+            if app_name:
+                console.print(f"[bold]Files for {app}:[/bold]")
+                for file_info in files_list:
+                    file_type_display = file_info["type"].capitalize()
+                    console.print(f"  {file_type_display:<12} {file_info['path']}")
+            else:
+                console.print(f"\n[bold]{app}:[/bold]")
+                for file_info in files_list:
+                    file_type_display = file_info["type"].capitalize()
+                    console.print(f"  {file_type_display:<12} {file_info['path']}")
+
+    return 0
 
 
 @cli.command(name="manifest")
@@ -1081,43 +956,38 @@ def config(ctx, action, value) -> int:
       init          Initialize configuration file
       cron-interval Get or set cron interval (in hours)
     """
-    try:
-        from lib.config_manager import create_config_manager
-
-        cfg = create_config_manager()
-        if not action or action == "show":
-            config_path = Path(ctx.obj.get("config_dir", "")) / "config.toml"
-            if config_path.exists():
-                console.print(f"[bold]Configuration file:[/bold] {config_path}")
-                content = config_path.read_text()
-                console.print(content)
-            else:
-                console.print(
-                    f"[yellow]No configuration file found at {config_path}[/yellow]"
-                )
-                console.print("Run 'fplaunch config init' to create one")
-            return 0
-        if action == "init":
-            cfg.save_config()
-            console.print("[green]✓[/green] Configuration initialized")
-            return 0
-        if action == "cron-interval":
-            if not value:
-                interval = cfg.get_cron_interval()
-                console.print(f"Current cron interval: [bold]{interval}[/bold] hours")
-            else:
-                interval = int(value)
-                cfg.set_cron_interval(interval)
-                console.print(
-                    f"[green]✓[/green] Cron interval set to [bold]{interval}[/bold] hours"
-                )
-            return 0
-        console_err.print(f"[red]Error:[/red] Unknown action: {action}")
-        console_err.print("Valid actions: show, init, cron-interval")
-        raise SystemExit(1)
-    except ImportError as e:
-        console_err.print(f"[red]Error:[/red] Failed to import config manager: {e}")
-        raise SystemExit(1)
+    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    cfg = create_config_manager()
+    if not action or action == "show":
+        config_path = Path(ctx.obj.get("config_dir", "")) / "config.toml"
+        if config_path.exists():
+            console.print(f"[bold]Configuration file:[/bold] {config_path}")
+            content = config_path.read_text()
+            console.print(content)
+        else:
+            console.print(
+                f"[yellow]No configuration file found at {config_path}[/yellow]"
+            )
+            console.print("Run 'fplaunch config init' to create one")
+        return 0
+    if action == "init":
+        cfg.save_config()
+        console.print("[green]✓[/green] Configuration initialized")
+        return 0
+    if action == "cron-interval":
+        if not value:
+            interval = cfg.get_cron_interval()
+            console.print(f"Current cron interval: [bold]{interval}[/bold] hours")
+        else:
+            interval = int(value)
+            cfg.set_cron_interval(interval)
+            console.print(
+                f"[green]✓[/green] Cron interval set to [bold]{interval}[/bold] hours"
+            )
+        return 0
+    console_err.print(f"[red]Error:[/red] Unknown action: {action}")
+    console_err.print("Valid actions: show, init, cron-interval")
+    raise SystemExit(1)
 
 
 def main(argv: Optional[list[str]] = None) -> int:

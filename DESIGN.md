@@ -449,15 +449,9 @@ fplaunchwrapper/
 
 The hook failure modes system controls how the wrapper handles failures in pre-launch and post-run scripts.
 
-#### Configuration Options
+For the complete specification, see [`plans/hook-failure-modes-design.md`](plans/hook-failure-modes-design.md).
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `hook_failure_mode_default` | `ignore` | Default mode for all hooks |
-| `pre_launch_failure_mode_default` | (inherits) | Default for pre-launch hooks |
-| `post_launch_failure_mode_default` | (inherits) | Default for post-run hooks |
-
-#### Failure Modes
+#### Quick Reference
 
 | Mode | Behavior |
 |------|----------|
@@ -472,23 +466,6 @@ The hook failure modes system controls how the wrapper handles failures in pre-l
 | `--hook-failure MODE` | Set failure mode for this invocation |
 | `--abort-on-hook-failure` | Shorthand for `--hook-failure abort` |
 | `--ignore-hook-failure` | Shorthand for `--hook-failure ignore` |
-
-#### Wrapper Options
-
-| Option | Description |
-|--------|-------------|
-| `--fpwrapper-hook-failure MODE` | Set failure mode at runtime |
-| `--fpwrapper-abort-on-hook-failure` | Abort on hook failure |
-| `--fpwrapper-ignore-hook-failure` | Ignore hook failures |
-
-#### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `FPWRAPPER_HOOK_FAILURE` | Runtime hook failure mode override |
-| `FPWRAPPER_HOOK_FAILURE_MODE` | Exported to hook scripts (read-only) |
-
-See [`plans/hook-failure-modes-design.md`](plans/hook-failure-modes-design.md) for the full design specification.
 
 ---
 
@@ -508,3 +485,15 @@ See [`docs/DEFERRED_FEATURES_IMPLEMENTATION.md`](docs/DEFERRED_FEATURES_IMPLEMEN
 | [`plans/hook-failure-modes-design.md`](plans/hook-failure-modes-design.md) | Hook failure modes design spec |
 | [`QUICKSTART.md`](QUICKSTART.md) | Quick start guide |
 | [`examples/`](examples/) | Example scripts and configurations |
+
+---
+
+## Code Organization
+
+### Utility Modules
+
+| Module | Purpose |
+|--------|---------|
+| [`lib/paths.py`](lib/paths.py) | Centralized path resolution (config, bin, data directories) |
+| [`lib/import_utils.py`](lib/import_utils.py) | Import error handling utilities |
+| [`lib/python_utils.py`](lib/python_utils.py) | Shell/Python shared utilities (path normalization, locking) |

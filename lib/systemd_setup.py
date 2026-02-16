@@ -14,6 +14,11 @@ from typing import Any
 
 from rich.console import Console
 
+try:
+    from lib.paths import get_default_bin_dir, get_systemd_unit_dir
+except ImportError:
+    from paths import get_default_bin_dir, get_systemd_unit_dir
+
 console = Console()
 
 
@@ -27,9 +32,9 @@ class SystemdSetup:
         emit_mode: bool = False,
         emit_verbose: bool = False,
     ) -> None:
-        self.bin_dir = Path(bin_dir or (Path.home() / "bin"))
+        self.bin_dir = Path(bin_dir) if bin_dir else get_default_bin_dir()
         self.wrapper_script = wrapper_script or self._find_wrapper_script()
-        self.systemd_unit_dir = self._get_systemd_unit_dir()
+        self.systemd_unit_dir = get_systemd_unit_dir()
         self.flatpak_bin_dir = self._detect_flatpak_bin_dir()
         self.emit_mode = emit_mode
         self.emit_verbose = emit_verbose
@@ -49,14 +54,6 @@ class SystemdSetup:
                 return str(candidate)
 
         return f"{sys.executable} -m fplaunch.generate"
-
-    def _get_systemd_unit_dir(self) -> Path:
-        """Get systemd user unit directory."""
-        xdg_config_home = os.environ.get(
-            "XDG_CONFIG_HOME",
-            str(Path.home() / ".config"),
-        )
-        return Path(xdg_config_home) / "systemd" / "user"
 
     def _detect_flatpak_bin_dir(self) -> str:
         """Detect Flatpak binary directory."""

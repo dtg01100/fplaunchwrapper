@@ -44,17 +44,13 @@ fplaunch discover [QUERY]            # Alias for search
 - `--ignore-hook-failure` - Continue silently on hook failure
 
 #### Hook Failure Modes
+
 Hook scripts (pre-launch and post-launch) can be configured with failure modes:
 - `abort` - Stop the launch entirely if a hook fails (pre-launch only)
 - `warn` - Continue with a warning message (default)
 - `ignore` - Continue silently without warning
 
-The failure mode is determined by configuration hierarchy:
-1. CLI options (highest priority)
-2. Environment variable (`FPWRAPPER_HOOK_FAILURE`)
-3. Per-app configuration
-4. Global configuration default
-5. Built-in default (`warn`)
+For detailed configuration options, see [`plans/hook-failure-modes-design.md`](plans/hook-failure-modes-design.md).
 
 ### Configuration
 ```bash

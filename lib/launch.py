@@ -14,8 +14,10 @@ if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
+    from lib.paths import get_default_config_dir, resolve_bin_dir
     from lib.safety import safe_launch_check
 except ImportError:
+    from .paths import get_default_config_dir, resolve_bin_dir
     from .safety import safe_launch_check  # noqa: F401
 
 class _AppNotFoundError(Exception):
@@ -100,19 +102,13 @@ class AppLauncher:
             hook_failure_mode
         )
 
-        self.config_dir = Path(
-            config_dir or (Path.home() / ".config" / "fplaunchwrapper"),
-        )
+        self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
-        if bin_dir:
-            self.bin_dir = Path(bin_dir)
-        else:
-            bin_dir_file = self.config_dir / "bin_dir"
-            if bin_dir_file.exists():
-                self.bin_dir = Path(bin_dir_file.read_text().strip())
-            else:
-                self.bin_dir = Path.home() / "bin"
+        self.bin_dir = resolve_bin_dir(
+            explicit_dir=bin_dir,
+            config_dir=self.config_dir,
+        )
 
         self.args = args or []
 

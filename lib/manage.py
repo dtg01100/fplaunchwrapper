@@ -19,11 +19,13 @@ console = Console()
 console_err = Console(stderr=True)
 
 try:
+    from lib.paths import get_default_config_dir, resolve_bin_dir
     from lib.safety import (
         get_wrapper_id,
         is_wrapper_file,
     )
 except ImportError:
+    from .paths import get_default_config_dir, resolve_bin_dir
     from .safety import (
         get_wrapper_id,
         is_wrapper_file,
@@ -48,25 +50,12 @@ class WrapperManager:
         self.verbose = verbose
         self.emit_mode = emit_mode
         self.emit_verbose = emit_verbose
-        self.config_dir = Path(
-            config_dir or (Path.home() / ".config" / "fplaunchwrapper"),
-        )
+        self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
 
-        if bin_dir:
-            self.bin_dir = Path(bin_dir)
-        else:
-            bin_dir_file = self.config_dir / "bin_dir"
-            try:
-                if bin_dir_file.exists():
-                    bin_dir_path = bin_dir_file.read_text().strip()
-                    if bin_dir_path:
-                        self.bin_dir = Path(bin_dir_path)
-                    else:
-                        self.bin_dir = Path.home() / "bin"
-                else:
-                    self.bin_dir = Path.home() / "bin"
-            except (OSError, UnicodeDecodeError):
-                self.bin_dir = Path.home() / "bin"
+        self.bin_dir = resolve_bin_dir(
+            explicit_dir=bin_dir if isinstance(bin_dir, str) else None,
+            config_dir=self.config_dir,
+        )
 
         if not emit_mode:
             self.bin_dir.mkdir(parents=True, exist_ok=True)

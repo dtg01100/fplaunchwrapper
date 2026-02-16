@@ -366,3 +366,10 @@ if __name__ == "__main__":
         result = safe_mktemp(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
     else:
         sys.exit(1)
+
+    # Print result if not None
+    if result is None:
+        sys.exit(1)
+    if isinstance(result, bool):
+        sys.exit(0 if result else 1)
+    print(result)

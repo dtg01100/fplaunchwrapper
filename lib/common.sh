@@ -9,6 +9,29 @@ _check_python3() {
     [ "$_has_python3" = "yes" ]
 }
 
+# Get the directory containing the current script
+_get_script_dir() {
+    dirname "${BASH_SOURCE[0]}"
+}
+
+# Check if python_utils.py is available
+_has_python_utils() {
+    _check_python3 && [ -f "$(_get_script_dir)/python_utils.py" ]
+}
+
+# Call a Python utility function with arguments
+# Usage: _call_python_util <function_name> [args...]
+# Returns: 0 on success, 1 on failure or if Python not available
+_call_python_util() {
+    local func="$1"
+    shift
+    if _has_python_utils; then
+        python3 "$(_get_script_dir)/python_utils.py" "$func" "$@"
+        return $?
+    fi
+    return 1
+}
+
 # Error handling framework
 error_exit() {
     local message="$1"
@@ -210,13 +233,11 @@ canonicalize_path_no_resolve() {
     [ -n "$path" ] || return 1
     
     # Use Python utility for robust path normalization if available
-    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
-        local result
-        result=$(python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" canonicalize_path "$path" 2>/dev/null)
-        if [ -n "$result" ]; then
-            printf '%s' "$result"
-            return 0
-        fi
+    local result
+    result=$(_call_python_util canonicalize_path "$path" 2>/dev/null)
+    if [ -n "$result" ]; then
+        printf '%s' "$result"
+        return 0
     fi
     
     # Fallback to original implementation
@@ -252,13 +273,11 @@ validate_home_dir() {
     fi
     
     # Use Python utility for robust path validation if available
-    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
-        local result
-        result=$(python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" validate_home "$dir" 2>/dev/null)
-        if [ -n "$result" ]; then
-            printf '%s' "$result"
-            return 0
-        fi
+    local result
+    result=$(_call_python_util validate_home "$dir" 2>/dev/null)
+    if [ -n "$result" ]; then
+        printf '%s' "$result"
+        return 0
     fi
     
     # Fallback to original implementation
@@ -304,8 +323,8 @@ is_wrapper_file() {
     [ ! -L "$file" ] || return 1  # Reject symlinks
     
     # Use Python utility for robust content validation if available
-    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
-        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" is_wrapper_file "$file" >/dev/null 2>&1 && return 0
+    if _call_python_util is_wrapper_file "$file" >/dev/null 2>&1; then
+        return 0
     fi
     
     # Fallback to original implementation with additional safeguards
@@ -347,8 +366,8 @@ get_wrapper_id() {
     local file="$1"
     
     # Use Python utility for robust ID extraction if available
-    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
-        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" get_wrapper_id "$file" 2>/dev/null && return 0
+    if _call_python_util get_wrapper_id "$file" 2>/dev/null; then
+        return 0
     fi
     
     # Fallback to original implementation
@@ -459,8 +478,8 @@ find_executable() {
     [ -n "$cmd" ] || return 1
     
     # Use Python utility for robust path resolution if available
-    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
-        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" find_executable "$cmd" 2>/dev/null && return 0
+    if _call_python_util find_executable "$cmd" 2>/dev/null; then
+        return 0
     fi
     
     # Fallback to original implementation
@@ -491,8 +510,8 @@ safe_mktemp() {
     local dir_param="${2:-}"
     
     # Use Python utility for secure temp file creation if available
-    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
-        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" safe_mktemp "$template" "$dir_param" 2>/dev/null && return 0
+    if _call_python_util safe_mktemp "$template" "$dir_param" 2>/dev/null; then
+        return 0
     fi
     
     # Fallback to original implementation
@@ -527,8 +546,8 @@ sanitize_id_to_name() {
     local id="$1"
     
     # Use Python utility for robust name sanitization if available
-    if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
-        python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" sanitize_name "$id" 2>/dev/null && return 0
+    if _call_python_util sanitize_name "$id" 2>/dev/null; then
+        return 0
     fi
     
     # Fallback to original implementation
