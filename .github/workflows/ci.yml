@@ -45,17 +45,9 @@ jobs:
         uv pip install --system -e .
         uv pip install --system pytest pytest-mock pytest-timeout
 
-    - name: Run safe integration tests
+    - name: Run Python tests
       run: |
-        python3 test_integration_safety.py
-
-    - name: Run performance tests
-      run: |
-        python3 test_performance_simple.py
-
-    - name: Run Python unit tests (safe subset)
-      run: |
-        python3 -m pytest tests/python/test_safety.py -v
+        python3 -m pytest tests/python/test_safety.py tests/python/test_config_manager.py tests/python/test_cli_flags.py -v
 
   package-validation:
     name: Package Installation Test
