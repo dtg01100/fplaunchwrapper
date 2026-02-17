@@ -60,10 +60,13 @@ PACKAGING_TEST_RESULTS.md
 # Cache and benchmark directories
 .ruff_cache/
 .benchmarks/
+.mypy_cache/
+.crush/
 
 # Configuration files
 .bandit
 .coveragerc
+default.toml
 
 # Log files
 test_run.log

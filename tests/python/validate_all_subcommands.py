@@ -11,7 +11,8 @@ This script validates that:
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent / "lib"))
+# Add project root to path for lib imports
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from click.testing import CliRunner
 from lib.cli import cli

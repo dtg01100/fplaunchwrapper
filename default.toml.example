@@ -1,5 +1,10 @@
+# fplaunchwrapper configuration example
+# Copy this file to default.toml and customize for your system
+
 schema_version = 1
-bin_dir = "/var/home/dlafreniere/bin"
+# Directory where wrapper scripts will be generated
+# Common locations: ~/.local/bin, ~/bin
+bin_dir = "~/.local/bin"
 debug_mode = false
 log_level = "INFO"
 blocklist = []
