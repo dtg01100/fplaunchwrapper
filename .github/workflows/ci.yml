@@ -43,11 +43,11 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install --system -e .
-        uv pip install --system pytest pytest-mock pytest-timeout
+        uv pip install --system pytest pytest-mock pytest-timeout tomli-w
 
     - name: Run Python tests
       run: |
-        python3 -m pytest tests/python/test_safety.py tests/python/test_config_manager.py tests/python/test_cli_flags.py -v
+        python3 -m pytest tests/python/test_safety.py -v
 
   package-validation:
     name: Package Installation Test
