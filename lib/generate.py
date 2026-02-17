@@ -53,6 +53,9 @@ def _sanitize_id_to_name_fallback(app_id: str) -> str:
 def _validate_home_dir_fallback(path: str) -> str | None:
     return None
 
+def _get_default_config_dir_fallback() -> Path:
+    return Path.home() / ".config" / "fplaunchwrapper"
+
 class _ForbiddenNameError(Exception):
     FORBIDDEN_NAMES: frozenset[str] = frozenset()
 
@@ -70,6 +73,7 @@ is_wrapper_file: Callable[[str], bool] = _is_wrapper_file_fallback
 release_lock: Callable[[str], bool | None] = _release_lock_fallback
 sanitize_id_to_name: Callable[[str], str] = _sanitize_id_to_name_fallback
 validate_home_dir: Callable[[str], str | None] = _validate_home_dir_fallback
+get_default_config_dir: Callable[[], Path] = _get_default_config_dir_fallback
 
 ForbiddenNameError: Any = _ForbiddenNameError
 WrapperGenerationError: Any = _WrapperGenerationError

@@ -17,7 +17,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
 
 from click.testing import CliRunner
-from cli import cli
+from lib.cli import cli
 
 
 class TestSystemdCliCommand:

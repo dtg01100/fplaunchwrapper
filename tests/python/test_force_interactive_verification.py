@@ -16,7 +16,7 @@ import pytest
 # Add lib to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
 
-from generate import WrapperGenerator
+from lib.generate import WrapperGenerator
 
 
 class TestForceInteractiveFlag:

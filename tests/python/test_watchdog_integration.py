@@ -23,7 +23,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
 
 try:
-    from flatpak_monitor import (
+    from lib.flatpak_monitor import (
         WATCHDOG_AVAILABLE,
         FlatpakEventHandler,
         FlatpakMonitor,
@@ -220,7 +220,7 @@ class TestFlatpakMonitor:
         """Test start_monitoring returns False if watchdog unavailable."""
         monitor = FlatpakMonitor()
 
-        with patch("flatpak_monitor.WATCHDOG_AVAILABLE", False):
+        with patch("lib.flatpak_monitor.WATCHDOG_AVAILABLE", False):
             result = monitor.start_monitoring()
             assert result is False
 
@@ -287,7 +287,7 @@ class TestFlatpakMonitorIntegration:
         """Test the convenience function start_flatpak_monitoring."""
         callback = Mock()
 
-        with patch("flatpak_monitor.FlatpakMonitor") as mock_monitor_class:
+        with patch("lib.flatpak_monitor.FlatpakMonitor") as mock_monitor_class:
             mock_instance = MagicMock()
             mock_monitor_class.return_value = mock_instance
             mock_instance.start_monitoring.return_value = False
