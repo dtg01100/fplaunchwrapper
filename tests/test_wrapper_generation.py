@@ -104,10 +104,11 @@ exec flatpak run com.example.App "$@"
         bin_dir, config_dir = temp_dirs
         generator = WrapperGenerator(str(bin_dir), config_dir=str(config_dir))
 
-        with patch("shutil.which", return_value=None):
-            # Generator should handle missing flatpak command
-            with pytest.raises((FileNotFoundError, RuntimeError, SystemExit)):
-                generator.run_command(["flatpak", "list"], "Check Flatpak")
+        # Patch find_executable in the generate module since that's what WrapperGenerator uses
+        with patch("lib.generate.find_executable", return_value=None):
+            # Generator should handle missing flatpak command when getting installed flatpaks
+            with pytest.raises(Exception):  # WrapperGenerationError is raised
+                generator.get_installed_flatpaks()
 
 
 class TestWrapperCleanup:
@@ -181,8 +182,8 @@ exec flatpak run com.example.App "$@"
 
         WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir))
 
-        # Mock is_wrapper_file check from python_utils
-        with patch("fplaunch.python_utils.is_wrapper_file", return_value=True):
+        # Mock is_wrapper_file check from python_utils - use correct module path
+        with patch("lib.python_utils.is_wrapper_file", return_value=True):
             from lib.python_utils import is_wrapper_file
 
             assert is_wrapper_file(str(wrapper))
@@ -218,9 +219,8 @@ class TestSystemdSetup:
         """Test SystemdSetup initializes correctly."""
         bin_dir, systemd_dir = temp_systemd_dirs
 
-        with patch.object(
-            SystemdSetup, "_get_systemd_unit_dir", return_value=systemd_dir
-        ):
+        # Patch get_systemd_unit_dir at the location where it's imported/used in systemd_setup
+        with patch("lib.systemd_setup.get_systemd_unit_dir", return_value=systemd_dir):
             setup = SystemdSetup(bin_dir=str(bin_dir))
 
             assert setup.bin_dir == bin_dir
@@ -259,9 +259,8 @@ WantedBy=default.target
         # Use non-existent systemd directory
         nonexistent_dir = systemd_dir / "nonexistent"
 
-        with patch.object(
-            SystemdSetup, "_get_systemd_unit_dir", return_value=nonexistent_dir
-        ):
+        # Patch get_systemd_unit_dir to return non-existent path
+        with patch("lib.paths.get_systemd_unit_dir", return_value=nonexistent_dir):
             setup = SystemdSetup(bin_dir=str(bin_dir), emit_mode=True)
 
             # In emit mode, directories shouldn't be created
@@ -277,9 +276,7 @@ WantedBy=default.target
         with patch.object(
             SystemdSetup, "_detect_flatpak_bin_dir", return_value=mock_flatpak_dir
         ):
-            with patch.object(
-                SystemdSetup, "_get_systemd_unit_dir", return_value=systemd_dir
-            ):
+            with patch("lib.paths.get_systemd_unit_dir", return_value=systemd_dir):
                 setup = SystemdSetup(bin_dir=str(bin_dir))
                 assert setup.flatpak_bin_dir == mock_flatpak_dir
 
@@ -287,9 +284,7 @@ WantedBy=default.target
         """Test emit mode doesn't create actual systemd unit files."""
         bin_dir, systemd_dir = temp_systemd_dirs
 
-        with patch.object(
-            SystemdSetup, "_get_systemd_unit_dir", return_value=systemd_dir
-        ):
+        with patch("lib.paths.get_systemd_unit_dir", return_value=systemd_dir):
             setup = SystemdSetup(bin_dir=str(bin_dir), emit_mode=True)
 
             assert setup.emit_mode is True
@@ -349,10 +344,8 @@ class TestIntegrationScenarios:
         # Generate wrapper first
         WrapperGenerator(str(dirs["bin_dir"]), config_dir=str(dirs["config_dir"]))
 
-        # Setup systemd
-        with patch.object(
-            SystemdSetup, "_get_systemd_unit_dir", return_value=dirs["systemd_dir"]
-        ):
+        # Setup systemd - patch get_systemd_unit_dir
+        with patch("lib.paths.get_systemd_unit_dir", return_value=dirs["systemd_dir"]):
             setup = SystemdSetup(bin_dir=str(dirs["bin_dir"]), emit_mode=True)
             assert setup.bin_dir == dirs["bin_dir"]
             assert setup.emit_mode is True

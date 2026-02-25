@@ -53,6 +53,7 @@ env/
 .coverage.*
 htmlcov/
 coverage.xml
+cov_annotate/
 .tox/
 .hypothesis/
 PACKAGING_TEST_RESULTS.md

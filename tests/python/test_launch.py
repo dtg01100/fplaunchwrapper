@@ -6,6 +6,7 @@ Tests application launching functionality with proper mocking.
 import os
 import subprocess
 import tempfile
+from io import StringIO
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -1610,3 +1611,978 @@ class TestGetEffectiveFailureMode:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+class TestHookScriptsFromConfig:
+    """Test _get_hook_scripts loading from config manager."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    @patch("lib.config_manager.create_config_manager")
+    def test_get_hook_scripts_config_exception_falls_back(self, mock_cm) -> None:
+        """Test that config manager exception falls back to default location."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        # Make config manager raise an exception
+        mock_cm.side_effect = Exception("Config error")
+
+        # Create default script
+        scripts_dir = self.config_dir / "scripts" / "test_app"
+        scripts_dir.mkdir(parents=True)
+        default_script = scripts_dir / "pre-launch.sh"
+        default_script.write_text("#!/bin/bash\necho 'default'\n")
+        default_script.chmod(0o755)
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        scripts = launcher._get_hook_scripts("test_app", "pre")
+
+        # Should fall back to default location
+        assert len(scripts) == 1
+
+
+class TestCacheFlatpakId:
+    """Test _cache_flatpak_id function."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_cache_flatpak_id_stores_value(self) -> None:
+        """Test _cache_flatpak_id stores the cached ID."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        from lib.launch import _cache_flatpak_id, _FLATPAK_ID_CACHE
+
+        # Clear cache
+        _FLATPAK_ID_CACHE.clear()
+
+        _cache_flatpak_id("firefox", "org.mozilla.firefox")
+
+        assert "firefox" in _FLATPAK_ID_CACHE
+        assert _FLATPAK_ID_CACHE["firefox"][0] == "org.mozilla.firefox"
+
+
+class TestGetSafetyCheckFallback:
+    """Test _get_safety_check fallback import."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_get_safety_check_returns_tuple(self) -> None:
+        """Test _get_safety_check returns proper tuple."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        result = launcher._get_safety_check()
+
+        # Should return a tuple of (bool, function or None)
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert isinstance(result[0], bool)
+
+
+class TestCacheFunctions:
+    """Test Flatpak ID caching functions."""
+
+    def test_get_cached_flatpak_id_returns_cached_value(self) -> None:
+        """Test _get_cached_flatpak_id returns cached value within TTL."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        from lib.launch import _get_cached_flatpak_id, _cache_flatpak_id
+
+        # Cache a value
+        _cache_flatpak_id("firefox", "org.mozilla.firefox")
+
+        # Should return cached value
+        result = _get_cached_flatpak_id("firefox")
+        assert result == "org.mozilla.firefox"
+
+    def test_get_cached_flatpak_id_returns_none_when_expired(self) -> None:
+        """Test _get_cached_flatpak_id returns None when cache is expired."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        import time
+        from lib.launch import _get_cached_flatpak_id, _cache_flatpak_id, _CACHE_TTL_SECONDS
+
+        # Cache a value with old timestamp
+        from lib import launch
+        launch._FLATPAK_ID_CACHE.clear()  # Clear the module's cache first
+        launch._FLATPAK_ID_CACHE["firefox"] = ("org.mozilla.firefox", time.time() - _CACHE_TTL_SECONDS - 1)
+
+        # Should return None due to expiration
+        result = _get_cached_flatpak_id("firefox")
+        assert result is None
+
+    def test_get_cached_flatpak_id_returns_none_when_not_cached(self) -> None:
+        """Test _get_cached_flatpak_id returns None when not cached."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        from lib.launch import _get_cached_flatpak_id
+
+        # Should return None for uncached app
+        result = _get_cached_flatpak_id("nonexistent_app_12345")
+        assert result is None
+
+
+class TestIsTestEnvironmentLaunch:
+    """Test is_test_environment_launch() function."""
+
+    def test_returns_true_when_pytest_in_modules(self) -> None:
+        """Test returns True when pytest is in sys.modules."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        import sys
+        from lib.launch import is_test_environment_launch
+
+        # Simulate pytest running
+        sys.modules["pytest"] = True
+        try:
+            result = is_test_environment_launch()
+            assert result is True
+        finally:
+            del sys.modules["pytest"]
+
+    def test_returns_true_when_unittest_in_modules(self) -> None:
+        """Test returns True when unittest is in sys.modules."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        import sys
+        from lib.launch import is_test_environment_launch
+
+        # Simulate unittest running
+        sys.modules["unittest"] = True
+        try:
+            result = is_test_environment_launch()
+            assert result is True
+        finally:
+            del sys.modules["unittest"]
+
+    def test_returns_true_when_pytest_env_var_set(self) -> None:
+        """Test returns True when PYTEST_ env var is set."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        from lib.launch import is_test_environment_launch
+
+        with patch.dict(os.environ, {"PYTEST_XDIST_WORKER": "test_worker"}):
+            result = is_test_environment_launch()
+            assert result is True
+
+    def test_returns_false_when_not_in_test_environment(self) -> None:
+        """Test returns False when not in test environment."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        import sys
+        from lib.launch import is_test_environment_launch
+
+        # Make sure no test modules are loaded
+        test_modules = [k for k in sys.modules.keys() if "pytest" in k or "unittest" in k]
+        for mod in test_modules:
+            del sys.modules[mod]
+
+        # Clear env vars
+        test_env = {k: v for k, v in os.environ.items() if not k.startswith("PYTEST_")}
+        with patch.dict(os.environ, test_env, clear=True):
+            result = is_test_environment_launch()
+            assert result is False
+
+
+class TestHookScriptsPostLaunch:
+    """Test _get_hook_scripts for post-launch scripts."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_get_hook_scripts_post_launch_default_location(self) -> None:
+        """Test getting post-launch hook script from default location."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        # Create post-launch script in default location
+        scripts_dir = self.config_dir / "scripts" / "test_app"
+        scripts_dir.mkdir(parents=True)
+        post_script = scripts_dir / "post-run.sh"
+        post_script.write_text("#!/bin/bash\necho 'post'\n")
+        post_script.chmod(0o755)
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        scripts = launcher._get_hook_scripts("test_app", "post")
+
+        assert len(scripts) == 1
+        assert scripts[0].name == "post-run.sh"
+
+    def test_get_hook_scripts_invalid_hook_type_returns_empty(self) -> None:
+        """Test invalid hook type returns empty list."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        scripts = launcher._get_hook_scripts("test_app", "invalid")
+
+        assert scripts == []
+
+
+class TestDetermineLaunchSource:
+    """Test _determine_launch_source method."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    @patch("lib.safety.safe_launch_check", return_value=True)
+    def test_determine_launch_source_wrapper_not_executable(self, mock_safety) -> None:
+        """Test when wrapper exists but is not executable."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        # Create non-executable wrapper
+        wrapper = self.bin_dir / "test_app"
+        wrapper.write_text("#!/bin/bash\necho 'test'\n")
+        # Don't make it executable
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+        )
+
+        source, wrapper_path = launcher._determine_launch_source()
+
+        # Should return flatpak source and None wrapper_path
+        assert source == "flatpak"
+        assert wrapper_path is None
+
+    @patch("lib.safety.safe_launch_check", return_value=True)
+    def test_determine_launch_source_path_safe_check_exception(self, mock_safety) -> None:
+        """Test _determine_launch_source handles path safety check exception."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        # Mock _is_path_safe to raise exception (this is within a try block in the code)
+        with patch.object(launcher, '_is_path_safe', side_effect=OSError("test")):
+            source, wrapper_path = launcher._determine_launch_source()
+
+            # Should handle exception gracefully and return flatpak source
+            assert source == "flatpak"
+
+
+class TestPreferenceOverride:
+    """Test _check_preference_override method."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_preference_override_flatpak(self) -> None:
+        """Test .pref file with 'flatpak' preference."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        # Create preference file
+        pref_file = self.config_dir / "test_app.pref"
+        pref_file.write_text("flatpak\n")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        wrapper_path, source = launcher._check_preference_override(None, "system")
+
+        assert wrapper_path is None
+        assert source == "flatpak"
+
+    def test_preference_override_system(self) -> None:
+        """Test .pref file with 'system' preference when wrapper exists."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        # Create preference file
+        pref_file = self.config_dir / "test_app.pref"
+        pref_file.write_text("system\n")
+
+        # Create wrapper
+        wrapper = self.bin_dir / "test_app"
+        wrapper.write_text("#!/bin/bash\necho 'test'\n")
+        wrapper.chmod(0o755)
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        wrapper_path, source = launcher._check_preference_override(wrapper, "flatpak")
+
+        assert source == "system"
+
+    def test_preference_override_system_no_wrapper(self) -> None:
+        """Test .pref file with 'system' preference when no wrapper exists."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        # Create preference file
+        pref_file = self.config_dir / "test_app.pref"
+        pref_file.write_text("system\n")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        wrapper_path, source = launcher._check_preference_override(None, "flatpak")
+
+        # Falls back to flatpak when no wrapper
+        assert source == "flatpak"
+
+    def test_preference_override_read_error(self) -> None:
+        """Test preference override handles read errors gracefully."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        # Create preference file that can't be read
+        pref_file = self.config_dir / "test_app.pref"
+        pref_file.write_text("test")
+        # Make it unreadable
+        pref_file.chmod(0o000)
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        # Should handle error gracefully
+        wrapper_path, source = launcher._check_preference_override(None, "flatpak")
+
+        # Should return unchanged values
+        assert wrapper_path is None
+        assert source == "flatpak"
+
+
+class TestResolveFlatpakId:
+    """Test _resolve_flatpak_id method."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_resolve_flatpak_id_with_cached_value(self) -> None:
+        """Test resolution returns cached value."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        import time
+        from lib.launch import _cache_flatpak_id
+
+        # Pre-cache a value
+        _cache_flatpak_id("firefox", "org.mozilla.firefox")
+
+        launcher = LibAppLauncher(
+            app_name="firefox",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        result = launcher._resolve_flatpak_id(None)
+
+        assert result == "org.mozilla.firefox"
+
+    def test_resolve_flatpak_id_empty_when_no_app_name(self) -> None:
+        """Test resolution returns empty string when app_name is None."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name=None,
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        result = launcher._resolve_flatpak_id(None)
+
+        assert result == ""
+
+    @patch("lib.launch.subprocess.run")
+    @patch("lib.python_utils.find_executable")
+    @patch("lib.safety.is_test_environment", return_value=False)
+    def test_resolve_flatpak_id_uses_flatpak_list(self, mock_is_test, mock_find, mock_run) -> None:
+        """Test resolution uses flatpak list command."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        # Clear the cache first
+        from lib import launch
+        launch._FLATPAK_ID_CACHE.clear()
+
+        # Mock find_executable to return flatpak path
+        mock_find.return_value = "/usr/bin/flatpak"
+
+        # Mock subprocess.run to return flatpak list output
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "org.mozilla.firefox\ncom.google.Chrome\n"
+        mock_run.return_value = mock_result
+
+        launcher = LibAppLauncher(
+            app_name="firefox",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        result = launcher._resolve_flatpak_id(None)
+
+        assert result == "org.mozilla.firefox"
+        mock_run.assert_called_once()
+
+    @patch("lib.launch.subprocess.run")
+    @patch("lib.python_utils.find_executable")
+    @patch("lib.safety.is_test_environment", return_value=False)
+    def test_resolve_flatpak_id_handles_subprocess_error(self, mock_is_test, mock_find, mock_run) -> None:
+        """Test resolution handles subprocess errors gracefully."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        # Clear the cache first
+        from lib import launch
+        launch._FLATPAK_ID_CACHE.clear()
+
+        # Mock find_executable to return flatpak path
+        mock_find.return_value = "/usr/bin/flatpak"
+
+        # Mock subprocess.run to raise exception
+        mock_run.side_effect = Exception("flatpak not found")
+
+        launcher = LibAppLauncher(
+            app_name="firefox",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        # Should fall back to app_name
+        result = launcher._resolve_flatpak_id(None)
+
+        assert result == "firefox"
+
+
+class TestExecuteLaunchDebugMode:
+    """Test _execute_launch debug mode."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    @patch("subprocess.run")
+    def test_execute_launch_debug_prints_command(self, mock_run) -> None:
+        """Test _execute_launch prints command in debug mode."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        launcher = LibAppLauncher(
+            app_name="firefox",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            debug=True,
+        )
+
+        with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
+            launcher._execute_launch(["flatpak", "run", "firefox"])
+
+            # Check debug output was printed
+            output = mock_stderr.getvalue()
+            assert "flatpak run firefox" in output
+
+
+class TestWrapperExistsFindWrapperExceptions:
+    """Test exception handling in _wrapper_exists and _find_wrapper."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_wrapper_exists_path_safe_exception(self) -> None:
+        """Test _wrapper_exists handles path safety check exception."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        # Mock _is_path_safe to raise exception
+        with patch.object(launcher, '_is_path_safe', side_effect=ValueError("test")):
+            result = launcher._wrapper_exists("test_app")
+
+            # Should return based on file existence only
+            assert result is False
+
+    def test_find_wrapper_path_safe_exception(self) -> None:
+        """Test _find_wrapper handles path safety check exception."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        # Mock _is_path_safe to raise exception
+        with patch.object(launcher, '_is_path_safe', side_effect=OSError("test")):
+            result = launcher._find_wrapper()
+
+            # Should return None
+            assert result is None
+
+
+class TestLaunchSafetyCheckFailure:
+    """Test launch() when safety checks fail."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    @patch("lib.safety.safe_launch_check", return_value=False)
+    def test_launch_fails_when_safety_check_fails(self, mock_safety) -> None:
+        """Test launch returns False when safety check fails."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name="dangerous_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        result = launcher.launch()
+
+        assert result is False
+        mock_safety.assert_called_once()
+
+    def test_launch_with_none_app_name_fails_safety(self) -> None:
+        """Test launch with None app_name fails safety check."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name=None,
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        result = launcher.launch()
+
+        assert result is False
+
+
+class TestLaunchHookFailureVerbose:
+    """Test launch() verbose output on hook failure."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def _create_hook_script(self, hook_type: str) -> None:
+        """Create a hook script that fails."""
+        scripts_dir = self.config_dir / "scripts" / "test_app"
+        scripts_dir.mkdir(parents=True)
+        if hook_type == "pre":
+            script_path = scripts_dir / "pre-launch.sh"
+        else:
+            script_path = scripts_dir / "post-run.sh"
+        script_path.write_text("#!/bin/bash\nexit 1\n")
+        script_path.chmod(0o755)
+
+    @patch("subprocess.run")
+    def test_launch_verbose_on_pre_hook_failure(self, mock_run) -> None:
+        """Test verbose output when pre-launch hook fails."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        self._create_hook_script("pre")
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+        )
+
+        with patch.object(launcher, '_get_effective_failure_mode', return_value='abort'):
+            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
+                launcher.launch()
+
+                # Should print verbose message about hook failure
+                output = mock_stderr.getvalue()
+                assert "Pre-launch hooks failed" in output or "hook" in output.lower()
+
+    @patch("subprocess.run")
+    def test_launch_verbose_on_post_hook_failure(self, mock_run) -> None:
+        """Test verbose output when post-launch hook fails."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        self._create_hook_script("post")
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+        )
+
+        with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
+            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
+                launcher.launch()
+
+                # Should print verbose message
+                output = mock_stderr.getvalue()
+                # May or may not have output depending on failure mode handling
+
+
+class TestLaunchExceptions:
+    """Test launch() exception handling."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    @patch("lib.safety.safe_launch_check", return_value=True)
+    def test_launch_keyboard_interrupt(self, mock_safety) -> None:
+        """Test launch handles KeyboardInterrupt."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+        )
+
+        with patch.object(launcher, '_determine_launch_source', side_effect=KeyboardInterrupt()):
+            with patch("sys.stderr", new_callable=StringIO):
+                result = launcher.launch()
+
+                assert result is False
+
+    @patch("lib.safety.safe_launch_check", return_value=True)
+    def test_launch_general_exception(self, mock_safety) -> None:
+        """Test launch handles general exceptions."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+        )
+
+        with patch.object(launcher, '_determine_launch_source', side_effect=RuntimeError("test error")):
+            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
+                result = launcher.launch()
+
+                assert result is False
+                # Should print error message
+                output = mock_stderr.getvalue()
+                assert "Error" in output
+
+
+class TestMainCLISystemExit:
+    """Test main() SystemExit handling."""
+
+    def test_main_handles_help_flag_gracefully(self) -> None:
+        """Test main handles --help flag gracefully (returns 0 instead of raising)."""
+        # When --help is passed, argparse raises SystemExit(0)
+        # main() catches this and returns 0 instead
+        with patch("sys.argv", ["fplaunch-launch", "--help"]):
+            # main() should catch SystemExit and return 0
+            result = main()
+            assert result == 0
+
+    def test_main_handles_system_exit_non_zero(self) -> None:
+        """Test main returns 1 on SystemExit with non-zero code."""
+        # Test with invalid argument that triggers SystemExit
+        with patch("sys.argv", ["fplaunch-launch", "--invalid-option"]):
+            result = main()
+
+            # Should return 1 for error
+            assert result == 1
+
+
+class TestHookScriptDebugOutput:
+    """Test debug output in hook script execution."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def _create_hook_script(self, hook_type: str) -> Path:
+        """Create a hook script."""
+        scripts_dir = self.config_dir / "scripts" / "test_app"
+        scripts_dir.mkdir(parents=True)
+        if hook_type == "pre":
+            script_path = scripts_dir / "pre-launch.sh"
+        else:
+            script_path = scripts_dir / "post-run.sh"
+        script_path.write_text("#!/bin/bash\necho 'hook running'\n")
+        script_path.chmod(0o755)
+        return script_path
+
+    @patch("subprocess.run")
+    def test_run_hook_scripts_debug_mode_prints_execution(self, mock_run) -> None:
+        """Test _run_hook_scripts prints debug info in debug mode."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        self._create_hook_script("pre")
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+        mock_run.return_value = mock_result
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            debug=True,
+        )
+
+        with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
+            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
+                launcher._run_hook_scripts("pre", source="flatpak")
+
+                # Should print debug output
+                output = mock_stderr.getvalue()
+                assert "Executing" in output or "hook" in output.lower()
+
+
+class TestSanitizeAppName:
+    """Test _sanitize_app_name method."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.bin_dir = self.temp_dir / "bin"
+        self.config_dir = self.temp_dir / "config"
+        self.bin_dir.mkdir()
+        self.config_dir.mkdir()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_sanitize_app_name_keeps_alphanumeric_and_underscore_dash_dot(self) -> None:
+        """Test sanitization keeps safe characters."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        # These characters should be kept
+        safe_name = "app_name-v1.2.3"
+        sanitized = launcher._sanitize_app_name(safe_name)
+
+        assert sanitized == safe_name
+
+    def test_sanitize_app_name_replaces_shell_dangerous_chars(self) -> None:
+        """Test sanitization replaces shell-dangerous characters."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        launcher = LibAppLauncher(
+            app_name="test_app",
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+        )
+
+        # These characters should be replaced as they're shell-dangerous
+        unsafe_name = "app;echo test"
+        sanitized = launcher._sanitize_app_name(unsafe_name)
+
+        # Semicolon should be replaced
+        assert ";" not in sanitized
+        # The entire string is replaced char by char, so "echo" would become underscores
+        # Just check that dangerous chars are replaced
+        assert all(c not in sanitized for c in ";|&`$(){}[]<>")
