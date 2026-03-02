@@ -30,40 +30,6 @@ from lib.import_utils import ImportErrorHandler, safe_import
 import_handler = ImportErrorHandler(console_err)
 
 
-def _instantiate_compat(cls, **kwargs):
-    """Instantiate ``cls`` with best-effort compatibility across constructor signatures.
-
-    Tries keyword initialization first, then falls back to positional invocation
-    derived from the class' signature or a common argument ordering. This helps
-    support test fakes that use older or simplified constructor signatures.
-    """
-    sig = inspect.signature(cls)
-    params = list(sig.parameters.keys())
-    if params and params[0] == "self":
-        params = params[1:]
-
-    kw = {k: v for k, v in kwargs.items() if k in params}
-    try:
-        return cls(**kw)
-    except TypeError:
-        pos_vals = [kwargs.get(p) for p in params if p in kwargs]
-        for n in range(len(pos_vals), 0, -1):
-            try:
-                return cls(*pos_vals[:n])
-            except TypeError:
-                continue
-
-        ordered = ["bin_dir", "config_dir", "verbose", "emit_mode", "emit_verbose"]
-        pos2 = [kwargs[k] for k in ordered if k in kwargs]
-        for n in range(len(pos2), 0, -1):
-            try:
-                return cls(*pos2[:n])
-            except TypeError:
-                continue
-
-        raise
-
-
 def run_command(
     cmd: list[str],
     description: str = "",
@@ -163,8 +129,7 @@ def generate(ctx, bin_dir) -> int:
         bin_dir = os.path.expanduser("~/bin")
 
     WrapperGenerator = import_handler.require("lib.generate", "WrapperGenerator")
-    generator = _instantiate_compat(
-        WrapperGenerator,
+    generator = WrapperGenerator(
         bin_dir=bin_dir,
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
@@ -188,8 +153,7 @@ def list_wrappers(ctx, app_name, show_all) -> int:
       fplaunch list firefox   # Show details for firefox wrapper
     """
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = _instantiate_compat(
-        WrapperManager,
+    manager = WrapperManager(
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
         emit_mode=ctx.obj.get("emit", False),
@@ -223,8 +187,7 @@ def install(ctx, app_name, emit) -> int:
         return result.returncode
 
     WrapperGenerator = import_handler.require("lib.generate", "WrapperGenerator")
-    generator = _instantiate_compat(
-        WrapperGenerator,
+    generator = WrapperGenerator(
         bin_dir=os.path.expanduser("~/bin"),
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
@@ -243,11 +206,11 @@ def uninstall(ctx, app_name, remove_data, emit) -> int:
     """Uninstall a Flatpak application and remove its wrapper."""
     emit_mode = emit or ctx.obj.get("emit", False)
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = _instantiate_compat(
-        WrapperManager,
+    manager = WrapperManager(
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
         emit_mode=emit_mode,
+        emit_verbose=ctx.obj.get("emit_verbose", False),
     )
 
     wrapper_removed = False
@@ -325,11 +288,11 @@ def launch(
 def remove(ctx, name, force) -> int:
     """Remove a wrapper by name."""
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = _instantiate_compat(
-        WrapperManager,
+    manager = WrapperManager(
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
         emit_mode=ctx.obj.get("emit", False),
+        emit_verbose=ctx.obj.get("emit_verbose", False),
     )
     if manager.remove_wrapper(name, force=force):
         console.print(f"[green]✓[/green] Removed wrapper: {name}")
@@ -402,8 +365,7 @@ def monitor(ctx, daemon) -> int:
 def set_pref(ctx, wrapper_name, preference) -> int:
     """Set launch preference for a wrapper (system|flatpak or a Flatpak ID)."""
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = _instantiate_compat(
-        WrapperManager,
+    manager = WrapperManager(
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
         emit_mode=ctx.obj.get("emit", False),
@@ -434,11 +396,11 @@ def pref(ctx, wrapper_name, preference) -> int:
 def rm(ctx, name, force) -> int:
     """Alias for remove (delegates directly to manager implementation)."""
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = _instantiate_compat(
-        WrapperManager,
+    manager = WrapperManager(
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
         emit_mode=ctx.obj.get("emit", False),
+        emit_verbose=ctx.obj.get("emit_verbose", False),
     )
     if manager.remove_wrapper(name, force=force):
         console.print(f"[green]✓[/green] Removed wrapper: {name}")
@@ -463,12 +425,13 @@ def _run_systemd_setup(
     testing (where tests often patch methods on SystemdSetup).
     """
     SystemdSetup = import_handler.require("lib.systemd_setup", "SystemdSetup")
-    setup = _instantiate_compat(
-        SystemdSetup,
+    setup = SystemdSetup(
         bin_dir=bin_dir,
-        wrapper_script=wrapper_script,
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
         emit_mode=ctx.obj.get("emit", False),
         emit_verbose=ctx.obj.get("emit_verbose", False),
+        wrapper_script=wrapper_script,
     )
     try:
         # Prefer calling a 'run' entrypoint if present (tests patch this),
@@ -506,8 +469,9 @@ def _systemd_simple_action(ctx) -> int:
     SystemdSetup = safe_import("lib.systemd_setup", "SystemdSetup")
     if SystemdSetup is None:
         return 0
-    setup = _instantiate_compat(
-        SystemdSetup,
+    setup = SystemdSetup(
+        config_dir=ctx.obj.get("config_dir"),
+        verbose=ctx.obj.get("verbose", False),
         emit_mode=ctx.obj.get("emit", False),
         emit_verbose=ctx.obj.get("emit_verbose", False),
     )
@@ -601,10 +565,11 @@ def systemd_test(ctx, emit) -> int:
 def info(ctx, app_name) -> int:
     """Show information about a wrapper."""
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = _instantiate_compat(
-        WrapperManager,
+    manager = WrapperManager(
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
+        emit_mode=ctx.obj.get("emit", False),
+        emit_verbose=ctx.obj.get("emit_verbose", False),
     )
     success = manager.show_info(app_name)
     return 0 if success else 1
@@ -616,10 +581,11 @@ def info(ctx, app_name) -> int:
 def search(ctx, query) -> int:
     """Search or discover wrappers. Alias: discover."""
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = _instantiate_compat(
-        WrapperManager,
+    manager = WrapperManager(
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
+        emit_mode=ctx.obj.get("emit", False),
+        emit_verbose=ctx.obj.get("emit_verbose", False),
     )
     # Minimal behavior: call discover_features if available, otherwise list wrappers
     if hasattr(manager, "discover_features"):
@@ -853,8 +819,7 @@ def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> 
     import json as json_module
 
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = _instantiate_compat(
-        WrapperManager,
+    manager = WrapperManager(
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
         emit_mode=ctx.obj.get("emit", False),

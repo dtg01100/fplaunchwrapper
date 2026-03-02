@@ -310,7 +310,6 @@ class TestSafetyImportFallback:
 
     def test_safety_stub_created_on_import_error(self) -> None:
         """Test that _SafetyStub is created when lib.safety import fails."""
-        import importlib
         import sys
 
         # Save the original module if it exists
@@ -409,7 +408,6 @@ class TestCLIImportFallback:
 
     def test_main_fallback_to_lib_import_on_import_error(self) -> None:
         """Test that main() falls back to 'from lib import cli' on ImportError."""
-        import sys
 
         # We need to test the fallback path by making the relative import fail
         # but the absolute import succeed

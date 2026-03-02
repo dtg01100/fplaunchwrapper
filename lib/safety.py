@@ -16,7 +16,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 # Define fallback exception classes first
 class _SafetyError(Exception):

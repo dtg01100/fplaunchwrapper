@@ -1747,7 +1747,7 @@ class TestCacheFunctions:
             pytest.skip("LibAppLauncher class not available")
 
         import time
-        from lib.launch import _get_cached_flatpak_id, _cache_flatpak_id, _CACHE_TTL_SECONDS
+        from lib.launch import _get_cached_flatpak_id, _CACHE_TTL_SECONDS
 
         # Cache a value with old timestamp
         from lib import launch
@@ -2077,7 +2077,6 @@ class TestResolveFlatpakId:
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
-        import time
         from lib.launch import _cache_flatpak_id
 
         # Pre-cache a value

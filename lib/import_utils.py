@@ -7,8 +7,7 @@ consistently across the codebase.
 
 from __future__ import annotations
 
-import functools
-from typing import Callable, TypeVar, Any, Optional
+from typing import TypeVar, Any, Optional
 
 T = TypeVar('T')
 

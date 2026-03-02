@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Optional watchdog dependency - use Any to avoid static type conflicts
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import List
 
 WatchdogEventHandler: Any
 WatchdogObserver: Any

@@ -1057,6 +1057,9 @@ if PYDANTIC_AVAILABLE:
         pre_launch_failure_mode_default: str | None = Field(default=None)
         post_launch_failure_mode_default: str | None = Field(default=None)
 
+        if PYDANTIC_AVAILABLE:
+            model_config = {"extra": "forbid"}
+
         @field_validator("hook_failure_mode_default")
         @classmethod
         def validate_hook_failure_mode_default(cls, v):
@@ -1076,11 +1079,6 @@ if PYDANTIC_AVAILABLE:
                 msg = f"Invalid failure mode '{v}'. Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
                 raise ValueError(msg)
             return v
-
-        class Config:
-            """Configuration for Pydantic model."""
-
-            extra = "forbid"  # Forbid extra fields to maintain schema integrity
 
 
 def create_config_manager():

@@ -5,7 +5,6 @@ This module provides comprehensive test coverage for the custom exception
 classes defined in lib/exceptions.py.
 """
 
-import pytest
 
 from lib.exceptions import (
     AppNotFoundError,

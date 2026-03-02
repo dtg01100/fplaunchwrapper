@@ -9,23 +9,11 @@ PREF_FILE="$PREF_DIR/$NAME.pref"
 HOOK_DIR="$PREF_DIR/scripts/$NAME"
 PRE_SCRIPT="$HOOK_DIR/pre-launch.sh"
 POST_SCRIPT="$HOOK_DIR/post-run.sh"
-# Load configured script paths from config file if available
-CONFIG_SCRIPT_PRE=""
-CONFIG_SCRIPT_POST=""
-if command -v python3 >/dev/null 2>&1; then
-    CONFIG_SCRIPT_PRE=$(python3 -c "
-from lib.config_manager import create_config_manager
-config = create_config_manager()
-prefs = config.get_app_preferences('{wrapper_name}')
-print(prefs.pre_launch_script or '')
-" 2>/dev/null)
-    CONFIG_SCRIPT_POST=$(python3 -c "
-from lib.config_manager import create_config_manager
-config = create_config_manager()
-prefs = config.get_app_preferences('{wrapper_name}')
-print(prefs.post_launch_script or '')
-" 2>/dev/null)
-fi
+
+# Load configured script paths baked into wrapper at generation time
+CONFIG_SCRIPT_PRE="{pre_launch_script}"
+CONFIG_SCRIPT_POST="{post_launch_script}"
+
 # Use configured script path if valid
 if [ -n "$CONFIG_SCRIPT_PRE" ] && [ -x "$CONFIG_SCRIPT_PRE" ]; then
     PRE_SCRIPT="$CONFIG_SCRIPT_PRE"

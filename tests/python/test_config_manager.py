@@ -369,7 +369,6 @@ class TestGetEffectiveHookFailureMode:
     def setup_method(self) -> None:
         """Set up test environment."""
         import tempfile
-        import shutil
 
         self.temp_dir = Path(tempfile.mkdtemp())
         self.config_dir = self.temp_dir / ".config" / "fplaunchwrapper"
@@ -766,7 +765,6 @@ class TestFallbackConfig:
     def setup_method(self) -> None:
         """Set up test environment."""
         import tempfile
-        import shutil
 
         self.temp_dir = Path(tempfile.mkdtemp())
         self.config_dir = self.temp_dir / ".config" / "fplaunchwrapper"
@@ -903,7 +901,6 @@ class TestSerializeConfig:
     def setup_method(self) -> None:
         """Set up test environment."""
         import tempfile
-        import shutil
 
         self.temp_dir = Path(tempfile.mkdtemp())
 
@@ -1002,7 +999,6 @@ class TestApplyUnvalidatedConfig:
     def setup_method(self) -> None:
         """Set up test environment."""
         import tempfile
-        import shutil
 
         self.temp_dir = Path(tempfile.mkdtemp())
 
@@ -1154,7 +1150,6 @@ class TestMainFunction:
     def setup_method(self) -> None:
         """Set up test environment."""
         import tempfile
-        import shutil
 
         self.temp_dir = Path(tempfile.mkdtemp())
 
