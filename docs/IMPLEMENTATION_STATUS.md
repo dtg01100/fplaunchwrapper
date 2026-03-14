@@ -2,7 +2,7 @@
 
 ## Summary
 
-This document tracks the implementation status of features in fplaunchwrapper, including recently completed work. As of February 2026, all features have been successfully implemented with comprehensive test coverage. The project is feature-complete.
+This document tracks the implementation status of features in fplaunchwrapper, including recently completed work. As of February 2026, most features have been implemented; see TEST_COVERAGE_ANALYSIS.md for current test coverage and outstanding issues. The project is actively maintained and some items remain under review or refinement.
 
 ---
 

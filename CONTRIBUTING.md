@@ -11,11 +11,11 @@ cd fplaunchwrapper
 ## Testing
 
 ```bash
-# Run all tests
-./setup-dev.sh test
+# Set up development environment (one-time)
+./setup-dev.sh
 
-# Run Python tests
-uv run pytest tests/python/ -v
+# Run the full Python test suite
+python3 -m pytest tests/python/ -v
 
 # Run performance benchmarks
 python3 test_performance_simple.py
@@ -23,6 +23,10 @@ python3 test_performance_simple.py
 # Run safety validation
 python3 test_integration_safety.py
 ```
+
+Notes:
+- Prefer `python3 -m pytest` for consistent interpreter usage in CI and local environments.
+- Use `./setup-dev.sh` to install development dependencies when available.
 
 ## Code Quality
 

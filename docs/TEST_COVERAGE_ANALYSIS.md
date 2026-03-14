@@ -8,18 +8,20 @@
 
 ## Executive Summary
 
-This report presents a comprehensive analysis of test coverage for the fplaunchwrapper project. The analysis identified critical bugs, coverage gaps, and areas requiring immediate attention.
+Note: A newer test run was executed on 2026-03-14 during a full code review; it reported 977 tests passing and generated coverage artifacts (see files/coverage.xml and files/coverage_html). The analysis below reflects an earlier snapshot (2026-02-17) and is retained for historical context. Re-run the coverage reports to obtain the most current metrics.
+
+This report presents a comprehensive analysis of test coverage for the fplaunchwrapper project. The analysis identified critical bugs, coverage gaps, and areas requiring attention.
 
 ### Key Findings
 
 | Metric | Value |
 |--------|-------|
-| **Overall Coverage** | 67% |
+| **Snapshot Coverage (2026-02-17)** | 67% |
 | **Total Statements** | 4,194 |
 | **Missed Statements** | 1,388 |
-| **Total Tests** | 872 |
-| **Passed Tests** | 861 |
-| **Failed Tests** | 11 |
+| **Snapshot Total Tests** | 872 |
+| **Snapshot Passed Tests** | 861 |
+| **Snapshot Failed Tests** | 11 |
 
 ### Priority Issues
 

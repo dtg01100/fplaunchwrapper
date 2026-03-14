@@ -37,6 +37,13 @@ firefox  # Uses your saved preference
 
 ## Commands
 
+Available executables
+
+The project installs a main user-facing CLI and several helper standalone executables. Use the main CLI in interactive workflows and the standalone helpers when invoking specific entrypoints or from system packaging/automation.
+
+- fplaunch — primary CLI (recommended for interactive use): `fplaunch generate`, `fplaunch list`, etc.
+- fplaunch-<subcommand> — packaging-friendly helper executables (e.g., `fplaunch-generate`, `fplaunch-systemd`) that map directly to individual entry points and are sometimes referenced by packagers and man pages.
+
 ### Core
 
 ```bash

@@ -4,6 +4,10 @@ Install and use fplaunchwrapper in under 2 minutes.
 
 ## Installation
 
+Note on available installers and executables
+
+The project provides both a recommended installer (uv) and a standard pip installation. It also exposes a primary CLI (`fplaunch`) and auxiliary helper executables (`fplaunch-generate`, `fplaunch-manage`, etc.) which are useful for packaging and automation. For typical interactive use prefer the `fplaunch` CLI.
+
 ```bash
 # Install with uv (recommended)
 curl -LsSf https://astral.sh/uv/install.sh | sh
