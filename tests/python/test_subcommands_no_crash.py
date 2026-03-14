@@ -5,13 +5,8 @@ This ensures no subcommand has basic syntax errors, import failures,
 or other issues that would cause immediate crashes.
 """
 
-import sys
-from pathlib import Path
-
 import pytest
 from click.testing import CliRunner
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from lib.cli import cli
 

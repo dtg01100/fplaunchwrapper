@@ -9,7 +9,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from rich.console import Console as _Console
 from rich.progress import (
@@ -33,7 +33,6 @@ from .python_utils import (
 from .safety import (
     get_wrapper_id,
     is_wrapper_file,
-    validate_home_dir,
 )
 
 console = _Console()
@@ -360,7 +359,7 @@ class WrapperGenerator:
                 created, updated, skipped = self.generate_wrappers(apps)
                 success_count = created + updated
 
-                removed_count = self.cleanup_obsolete_wrappers(apps)
+                self.cleanup_obsolete_wrappers(apps)
                 
                 self.log(f"Generated {success_count} wrappers", "success")
                 return 0

@@ -5,7 +5,6 @@ Tests profiles, presets, install, uninstall, and manifest commands
 using Click CLI testing framework.
 """
 
-import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -13,7 +12,6 @@ from unittest.mock import Mock, patch
 import pytest
 from click.testing import CliRunner
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import lib.cli as cli_module
 
@@ -368,7 +366,11 @@ class TestManifestCLI:
         result = runner.invoke(cli_module.cli, ["manifest", "org.example.app"])
 
         # CLI may return 0 even on failure (CLI behavior), but should show error message
-        assert "error" in result.output.lower() or "failed" in result.output.lower() or result.exit_code != 0
+        assert (
+            "error" in result.output.lower()
+            or "failed" in result.output.lower()
+            or result.exit_code != 0
+        )
 
     @patch("subprocess.run")
     def test_manifest_without_app_name(self, mock_run, runner):

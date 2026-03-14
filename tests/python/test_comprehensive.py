@@ -52,7 +52,7 @@ class TestComprehensiveSuite:
         import sys
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "--help"], "CLI help command"
+            [sys.executable, "-m", "lib.cli", "--help"], "CLI help command"
         )
 
     def test_cli_config_command(self) -> None:
@@ -60,7 +60,7 @@ class TestComprehensiveSuite:
         import sys
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "config"],
+            [sys.executable, "-m", "lib.cli", "config"],
             "CLI config command",
         )
 
@@ -76,7 +76,7 @@ class TestComprehensiveSuite:
             [
                 sys.executable,
                 "-m",
-                "fplaunch.cli",
+                "lib.cli",
                 "--emit",
                 "generate",
                 str(temp_env["bin_dir"]),
@@ -88,7 +88,7 @@ class TestComprehensiveSuite:
             [
                 sys.executable,
                 "-m",
-                "fplaunch.cli",
+                "lib.cli",
                 "--emit",
                 "set-pref",
                 "firefox",
@@ -98,7 +98,7 @@ class TestComprehensiveSuite:
         )
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "--emit", "systemd"],
+            [sys.executable, "-m", "lib.cli", "--emit", "systemd"],
             "Setup-systemd emit mode",
         )
 
@@ -115,12 +115,12 @@ class TestComprehensiveSuite:
         import sys
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "--emit", "config"],
+            [sys.executable, "-m", "lib.cli", "--emit", "config"],
             "Config emit mode",
         )
 
         self.run_command_test(
-            [sys.executable, "-m", "fplaunch.cli", "--emit", "monitor"],
+            [sys.executable, "-m", "lib.cli", "--emit", "monitor"],
             "Monitor emit mode",
         )
 
@@ -134,7 +134,7 @@ class TestComprehensiveSuite:
                 [
                     sys.executable,
                     "-m",
-                    "fplaunch.cli",
+                    "lib.cli",
                     "--emit",
                     "generate",
                     "/tmp/test",
@@ -145,7 +145,7 @@ class TestComprehensiveSuite:
                 [
                     sys.executable,
                     "-m",
-                    "fplaunch.cli",
+                    "lib.cli",
                     "--emit",
                     "set-pref",
                     "test",
@@ -154,22 +154,22 @@ class TestComprehensiveSuite:
                 "set-pref --emit",
             ),
             (
-                [sys.executable, "-m", "fplaunch.cli", "--emit", "systemd"],
+                [sys.executable, "-m", "lib.cli", "--emit", "systemd"],
                 "setup-systemd --emit",
             ),
             (
-                [sys.executable, "-m", "fplaunch.cli", "--emit", "config"],
+                [sys.executable, "-m", "lib.cli", "--emit", "config"],
                 "config --emit",
             ),
             (
-                [sys.executable, "-m", "fplaunch.cli", "--emit", "monitor"],
+                [sys.executable, "-m", "lib.cli", "--emit", "monitor"],
                 "monitor --emit",
             ),
             (
                 [
                     sys.executable,
                     "-m",
-                    "fplaunch.cli",
+                    "lib.cli",
                     "--emit",
                     "generate",
                     "/tmp/test",

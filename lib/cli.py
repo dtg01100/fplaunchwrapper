@@ -3,18 +3,17 @@
 
 from __future__ import annotations
 
-import inspect
 import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-if TYPE_CHECKING:
-    pass
-
 import click
 from rich.console import Console
+
+if TYPE_CHECKING:
+    pass
 
 try:
     from . import __version__ as FPLAUNCH_VERSION
@@ -319,7 +318,7 @@ def cleanup(ctx) -> int:
     cleanup_manager = WrapperCleanup(
         bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
     )
-    return cleanup_manager.run()
+    return int(cleanup_manager.run())
 
 
 @cli.command(name="clean")  # Alias for cleanup
@@ -330,7 +329,7 @@ def clean(ctx) -> int:
     cleanup_manager = WrapperCleanup(
         bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
     )
-    return cleanup_manager.run()
+    return int(cleanup_manager.run())
 
 
 @cli.command()

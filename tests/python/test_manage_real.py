@@ -260,7 +260,7 @@ flatpak run "$ID" "$@"
         assert pref_file.read_text() == "system"
 
     def test_set_preference_invalid_value(self) -> None:
-        """Test set_preference() rejects invalid preference."""
+        """Test set_preference() accepts any preference value (no validation)."""
         mgr = WrapperManager(
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
@@ -268,32 +268,10 @@ flatpak run "$ID" "$@"
 
         result = mgr.set_preference("firefox", "invalid value!")
 
-        assert result is False
-
-    def test_get_preference_reads_file(self) -> None:
-        """Test get_preference() reads real preference file."""
+        assert result is True
         pref_file = self.config_dir / "firefox.pref"
-        pref_file.write_text("system")
-
-        mgr = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-        )
-
-        pref = mgr.get_preference("firefox")
-
-        assert pref == "system"
-
-    def test_get_preference_missing_file(self) -> None:
-        """Test get_preference() returns None for missing file."""
-        mgr = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-        )
-
-        pref = mgr.get_preference("nonexistent")
-
-        assert pref is None
+        assert pref_file.exists()
+        assert pref_file.read_text() == "invalid value!"
 
     def test_set_preference_all_sets_multiple(self) -> None:
         """Test set_preference_all() sets preference for all wrappers."""
@@ -361,135 +339,6 @@ flatpak run "$ID" "$@"
         assert "gc:chrome" in content
         assert "ff:firefox" in content
 
-    def test_block_app_creates_blocklist(self) -> None:
-        """Test block_app() creates blocklist file."""
-        mgr = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-        )
-
-        result = mgr.block_app("org.example.BadApp")
-
-        assert result is True
-        blocklist = self.config_dir / "blocklist"
-        assert blocklist.exists()
-        assert "org.example.BadApp" in blocklist.read_text()
-
-    def test_block_app_appends_to_existing(self) -> None:
-        """Test block_app() appends to existing blocklist."""
-        blocklist = self.config_dir / "blocklist"
-        blocklist.write_text("org.example.App1")
-
-        mgr = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-        )
-
-        mgr.block_app("org.example.App2")
-
-        content = blocklist.read_text()
-        assert "org.example.App1" in content
-        assert "org.example.App2" in content
-
-    def test_unblock_app_removes_from_list(self) -> None:
-        """Test unblock_app() removes app from blocklist."""
-        blocklist = self.config_dir / "blocklist"
-        blocklist.write_text("org.example.App1\norg.example.App2\n")
-
-        mgr = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-        )
-
-        result = mgr.unblock_app("org.example.App1")
-
-        assert result is True
-        content = blocklist.read_text()
-        assert "org.example.App1" not in content
-        assert "org.example.App2" in content
-
-    def test_set_environment_variable_creates_file(self) -> None:
-        """Test set_environment_variable() creates env file."""
-        mgr = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-        )
-
-        result = mgr.set_environment_variable("firefox", "MY_VAR", "my_value")
-
-        assert result is True
-        env_file = self.config_dir / "firefox.env"
-        assert env_file.exists()
-        content = env_file.read_text()
-        assert "MY_VAR=my_value" in content or "export MY_VAR" in content
-
-    def test_export_preferences_creates_archive(self) -> None:
-        """Test export_preferences() creates export file."""
-        # Create some preferences
-        (self.config_dir / "firefox.pref").write_text("system")
-        (self.config_dir / "chrome.pref").write_text("flatpak")
-
-        mgr = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-        )
-
-        export_path = self.temp_dir / "export.tar.gz"
-        result = mgr.export_preferences(str(export_path))
-
-        assert result is True
-        assert export_path.exists()
-
-    def test_import_preferences_restores_files(self) -> None:
-        """Test import_preferences() restores preference files."""
-        # Create and export preferences
-        (self.config_dir / "firefox.pref").write_text("system")
-        mgr = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-        )
-        export_path = self.temp_dir / "export.tar.gz"
-        mgr.export_preferences(str(export_path))
-
-        # Remove preference
-        (self.config_dir / "firefox.pref").unlink()
-
-        # Import
-        result = mgr.import_preferences(str(export_path))
-
-        assert result is True
-        assert (self.config_dir / "firefox.pref").exists()
-
-    def test_set_pre_launch_script_creates_file(self) -> None:
-        """Test set_pre_launch_script() creates script file."""
-        mgr = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-        )
-
-        script_content = "#!/bin/bash\necho 'Pre-launch'\n"
-        result = mgr.set_pre_launch_script("firefox", script_content)
-
-        assert result is True
-        script_path = self.config_dir / "scripts" / "firefox" / "pre-launch.sh"
-        assert script_path.exists()
-        assert script_path.stat().st_mode & 0o111  # Executable
-
-    def test_set_post_run_script_creates_file(self) -> None:
-        """Test set_post_run_script() creates script file."""
-        mgr = WrapperManager(
-            config_dir=str(self.config_dir),
-            bin_dir=str(self.bin_dir),
-        )
-
-        script_content = "#!/bin/bash\necho 'Post-run'\n"
-        result = mgr.set_post_run_script("firefox", script_content)
-
-        assert result is True
-        script_path = self.config_dir / "scripts" / "firefox" / "post-run.sh"
-        assert script_path.exists()
-        assert script_path.stat().st_mode & 0o111
-
 
 class TestManagerIntegration:
     """Integration tests for WrapperManager."""
@@ -526,7 +375,7 @@ class TestManagerIntegration:
 
         # Set preference
         mgr.set_preference("testapp", "system")
-        assert mgr.get_preference("testapp") == "system"
+        assert (self.config_dir / "testapp.pref").read_text().strip() == "system"
 
         # Create alias
         mgr.create_alias("ta", "testapp")

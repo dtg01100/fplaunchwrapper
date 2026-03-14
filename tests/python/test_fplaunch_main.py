@@ -3,13 +3,9 @@
 Tests command routing and main application logic.
 """
 
-import sys
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 try:
     import lib.fplaunch as fplaunch

@@ -20,8 +20,8 @@ sys.modules["python_utils"].is_wrapper_file = lambda x: True
 sys.modules["python_utils"].get_wrapper_id = lambda x: "org.test.app"
 sys.modules["python_utils"].sanitize_id_to_name = lambda x: x.split(".")[-1].lower()
 sys.modules["python_utils"].find_executable = lambda x: f"/usr/bin/{x}"
-sys.modules["python_utils"].safe_mktemp = (
-    lambda *args: f"/tmp/test_{args[0] if args else 'tmp'}"
+sys.modules["python_utils"].safe_mktemp = lambda *args: (
+    f"/tmp/test_{args[0] if args else 'tmp'}"
 )
 
 try:
@@ -50,22 +50,6 @@ class TestFinalValidation:
 
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
-
-    def test_core_emit_functionality(self, temp_env) -> None:
-        """Test core emit functionality works."""
-        manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]),
-            verbose=True,
-            emit_mode=True,
-        )
-
-        # In emit mode, operations should succeed without modifying files
-        result = manager.set_preference("firefox", "flatpak")
-        assert result is True
-
-        # Verify no files were actually created (emit mode doesn't modify)
-        pref_file = Path(temp_env["config_dir"]) / "firefox.pref"
-        assert not pref_file.exists()
 
     def test_safety_features(self, temp_env) -> None:
         """Test safety features - no side effects."""

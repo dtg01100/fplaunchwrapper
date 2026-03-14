@@ -19,9 +19,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-# Add lib to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
-
 try:
     from lib.flatpak_monitor import (
         WATCHDOG_AVAILABLE,

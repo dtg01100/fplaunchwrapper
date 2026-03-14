@@ -11,7 +11,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Union, Literal
+from typing import Any, Union, Literal
 
 try:
     from platformdirs import user_config_dir, user_data_dir

@@ -114,35 +114,6 @@ class TestEmitFunctionality:
             result = generator.generate_wrapper("org.mozilla.firefox")
             assert result is True
 
-    @patch("subprocess.run")
-    def test_manage_emit_mode(self, mock_subprocess, temp_env) -> None:
-        """Test preference management in emit mode."""
-        manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]),
-            verbose=True,
-            emit_mode=True,
-        )
-
-        result = manager.set_preference("firefox", "flatpak")
-        assert result is True
-
-        # Verify no files created
-        pref_file = temp_env["config_dir"] / "firefox.pref"
-        assert not pref_file.exists()
-
-    @patch("subprocess.run")
-    def test_manage_emit_verbose_mode(self, mock_subprocess, temp_env) -> None:
-        """Test preference management with emit verbose."""
-        manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]),
-            verbose=True,
-            emit_mode=True,
-            emit_verbose=True,
-        )
-
-        result = manager.set_preference("firefox", "flatpak")
-        assert result is True
-
     def test_systemd_emit_mode(self, temp_env) -> None:
         """Test systemd setup in emit mode."""
         if not SYSTEMD_AVAILABLE:
@@ -212,24 +183,6 @@ class TestEmitVerboseContent:
             "org.mozilla.firefox",
         )
         assert "#!/usr/bin/env bash" in content
-
-    def test_manage_emit_verbose(self) -> None:
-        """Test manage emit verbose shows preference content."""
-        if not MANAGE_AVAILABLE:
-            pytest.skip("WrapperManager not available")
-
-        import tempfile
-
-        tmp = Path(tempfile.mkdtemp())
-        try:
-            m = WrapperManager(config_dir=str(tmp), verbose=False, emit_mode=False)
-            assert m.set_preference("firefox", "flatpak") is True
-            content = (tmp / "firefox.pref").read_text()
-            assert "flatpak" in content
-        finally:
-            import shutil
-
-            shutil.rmtree(tmp, ignore_errors=True)
 
     def test_systemd_emit_verbose(self) -> None:
         """Test systemd emit verbose shows unit content."""

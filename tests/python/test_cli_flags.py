@@ -1,12 +1,9 @@
-import os
 import sys
 import subprocess
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
-
-sys.path.insert(0, os.path.abspath("."))
 
 import lib.manage as manage
 
@@ -32,8 +29,15 @@ def test_generate_accepts_global_flags(cli_mod, runner, monkeypatch, tmp_path):
     bin_dir.mkdir()
 
     class FakeGenerator:
-        def __init__(self, bin_dir, verbose, emit_mode, emit_verbose):
-            calls["args"] = (bin_dir, verbose, emit_mode, emit_verbose)
+        def __init__(
+            self,
+            bin_dir,
+            config_dir=None,
+            verbose=False,
+            emit_mode=False,
+            emit_verbose=False,
+        ):
+            calls["args"] = (bin_dir, config_dir, verbose, emit_mode, emit_verbose)
 
         def run(self):
             calls["run"] = True
@@ -55,7 +59,8 @@ def test_generate_accepts_global_flags(cli_mod, runner, monkeypatch, tmp_path):
     )
 
     assert result.exit_code == 0
-    assert calls["args"] == (str(bin_dir), True, True, True)
+    assert calls["args"][0] == str(bin_dir)
+    assert calls["args"][2:] == (True, True, True)
     assert calls.get("run") is True
 
 
@@ -79,7 +84,13 @@ def test_systemd_setup_alias(cli_mod, runner, monkeypatch):
 
     class FakeSystemdSetup:
         def __init__(
-            self, bin_dir=None, wrapper_script=None, emit_mode=False, emit_verbose=False
+            self,
+            bin_dir=None,
+            config_dir=None,
+            wrapper_script=None,
+            emit_mode=False,
+            emit_verbose=False,
+            **kwargs,
         ):
             calls["init"] = (emit_mode, emit_verbose)
 
@@ -165,7 +176,9 @@ def test_list_with_all_flag(cli_mod, runner, monkeypatch):
     calls = {}
 
     class FakeManager:
-        def __init__(self, config_dir, verbose):
+        def __init__(
+            self, config_dir, verbose, emit_mode=False, emit_verbose=False, **kwargs
+        ):
             calls["init"] = (config_dir, verbose)
 
         def show_info(self, app_name):
@@ -212,7 +225,7 @@ def test_manage_aliases_search_and_rm(monkeypatch):
     calls = {}
 
     class FakeManager:
-        def __init__(self, config_dir, verbose=False, emit_mode=False):
+        def __init__(self, config_dir=None, verbose=False, emit_mode=False, **kwargs):
             calls.setdefault("init", []).append((config_dir, verbose, emit_mode))
 
         def display_wrappers(self):
@@ -232,6 +245,10 @@ def test_manage_aliases_search_and_rm(monkeypatch):
         def log(self, message, level="info"):
             calls.setdefault("logs", []).append((level, message))
 
+        def list_wrappers(self):
+            calls["list_wrappers"] = True
+            return []
+
     monkeypatch.setattr("lib.manage.WrapperManager", FakeManager)
 
     original_argv = sys.argv
@@ -248,6 +265,6 @@ def test_manage_aliases_search_and_rm(monkeypatch):
         calls.clear()
         sys.argv = ["fplaunch-manage", "cleanup"]
         assert manage.main() == 0
-        assert calls.get("cleanup") == 1
+        assert calls.get("list_wrappers") == True
     finally:
         sys.argv = original_argv

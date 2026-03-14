@@ -8,11 +8,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 
-# Add the project root to the path
-import sys
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from lib.generate import WrapperGenerator
 from lib.launch import AppLauncher
 from lib.manage import WrapperManager
@@ -191,14 +186,19 @@ class TestSecurity:
 
     def test_input_sanitization_in_preference_setting(self) -> None:
         """Test input sanitization during preference setting."""
+        generator = WrapperGenerator(
+            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir), verbose=True
+        )
+        app_name = "test_app"
+        result = generator.generate_wrapper(app_name)
+        assert result is True
+
         manager = WrapperManager(config_dir=str(self.config_dir), verbose=True)
 
-        # Set a preference with a sanitized app name
         sanitized_app_name = "test_app"
         flatpak_id = "org.test.App"
         result = manager.set_preference(sanitized_app_name, flatpak_id)
 
-        # Verify the result (should succeed with sanitized app name)
         assert result is True
 
     def test_adversarial_cleanup_attempt(self) -> None:

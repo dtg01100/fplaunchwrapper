@@ -8,26 +8,24 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
-if __name__ == "__main__":
-    sys.path.insert(0, str(Path(__file__).parent.parent))
+from .paths import get_default_config_dir, resolve_bin_dir
+from .safety import safe_launch_check
 
-try:
-    from lib.paths import get_default_config_dir, resolve_bin_dir
-    from lib.safety import safe_launch_check
-except ImportError:
-    from .paths import get_default_config_dir, resolve_bin_dir
-    from .safety import safe_launch_check  # noqa: F401
 
 class _AppNotFoundError(Exception):
     pass
 
+
 class _LaunchBlockedError(Exception):
     pass
 
+
 class _LaunchError(Exception):
     pass
+
 
 AppNotFoundError = _AppNotFoundError
 LaunchBlockedError = _LaunchBlockedError
@@ -39,13 +37,12 @@ try:
         LaunchBlockedError as _LaunchBlockedErrorReal,
         LaunchError as _LaunchErrorReal,
     )
+
     AppNotFoundError = _AppNotFoundErrorReal  # type: ignore[misc,assignment]
     LaunchBlockedError = _LaunchBlockedErrorReal  # type: ignore[misc,assignment]
     LaunchError = _LaunchErrorReal  # type: ignore[misc,assignment]
 except ImportError:
     pass
-
-import time
 
 
 _FLATPAK_ID_CACHE: dict[str, tuple[str, float]] = {}

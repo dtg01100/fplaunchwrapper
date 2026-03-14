@@ -8,13 +8,8 @@ Tests ensure:
 - All group subcommands work correctly
 """
 
-import sys
-from pathlib import Path
-
 import pytest
 from click.testing import CliRunner
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from lib.cli import cli
 

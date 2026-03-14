@@ -3,14 +3,10 @@
 Tests the performance of fplaunchwrapper under load.
 """
 
-# Add the project root to the path
-import sys
 import tempfile
 import time
 from pathlib import Path
 from unittest.mock import Mock, patch
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from lib.cleanup import WrapperCleanup
 from lib.generate import WrapperGenerator

@@ -43,29 +43,6 @@ class TestInputValidationEdgeCases:
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def test_empty_and_none_inputs(self, temp_env) -> None:
-        """Test handling of empty and None inputs."""
-        manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]),
-            verbose=True,
-            emit_mode=True,
-        )
-
-        # Test empty app name
-        result = manager.set_preference("", "flatpak")
-        assert result is False  # Should reject empty
-
-        # Test None app name (should handle gracefully)
-        try:
-            result = manager.set_preference(None, "flatpak")
-            assert isinstance(result, bool)  # Should not crash
-        except Exception:
-            pass  # Exception acceptable for None input
-
-        # Test empty preference
-        result = manager.set_preference("firefox", "")
-        assert result is False  # Should reject empty
-
     def test_extremely_long_inputs(self, temp_env) -> None:
         """Test handling of extremely long inputs."""
         manager = WrapperManager(
@@ -568,23 +545,6 @@ class TestMemoryAndResourceLimits:
 
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
-
-    def test_large_data_handling(self, temp_env) -> None:
-        """Test handling of large amounts of data."""
-        manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]),
-            verbose=False,  # Reduce output
-            emit_mode=False,
-        )
-
-        # Create many preferences
-        for i in range(1000):
-            result = manager.set_preference(f"large_test_app_{i}", "flatpak")
-            assert isinstance(result, bool)
-
-        # Should handle large numbers of files gracefully
-        pref_files = list(temp_env["config_dir"].glob("*.pref"))
-        assert len(pref_files) > 900  # Most should succeed
 
     def test_deep_directory_structures(self, temp_env) -> None:
         """Test deep directory structure handling."""

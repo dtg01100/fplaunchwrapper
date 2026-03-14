@@ -8,13 +8,8 @@ Tests verify:
 - emit mode for dry-run testing
 """
 
-import os
-import sys
 from unittest.mock import patch
 import pytest
-
-# Add lib to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
 
 from click.testing import CliRunner
 from lib.cli import cli
@@ -95,12 +90,16 @@ class TestSystemdSetupMethods:
         status = setup.check_systemd_status()
 
         assert isinstance(status, dict), "Should return a dictionary"
-        assert "enabled" in status, "Should have 'enabled' key"
-        assert "active" in status, "Should have 'active' key"
-        assert "units" in status, "Should have 'units' key"
-        assert isinstance(status["enabled"], bool), "enabled should be bool"
-        assert isinstance(status["active"], bool), "active should be bool"
-        assert isinstance(status["units"], dict), "units should be dict"
+        assert "service" in status, "Should have 'service' key"
+        assert "timer" in status, "Should have 'timer' key"
+        assert isinstance(status["service"], dict), "service should be dict"
+        assert isinstance(status["timer"], dict), "timer should be dict"
+        assert "enabled" in status["service"], "service should have 'enabled' key"
+        assert "active" in status["service"], "service should have 'active' key"
+        assert "exists" in status["service"], "service should have 'exists' key"
+        assert "enabled" in status["timer"], "timer should have 'enabled' key"
+        assert "active" in status["timer"], "timer should have 'active' key"
+        assert "exists" in status["timer"], "timer should have 'exists' key"
 
     def test_check_systemd_status_with_no_systemctl(self):
         """Test check_systemd_status when systemctl is unavailable."""
@@ -110,9 +109,12 @@ class TestSystemdSetupMethods:
             setup = SystemdSetup()
             status = setup.check_systemd_status()
 
-            assert status["enabled"] is False
-            assert status["active"] is False
-            assert status["units"] == {}
+            assert status["service"]["enabled"] is False
+            assert status["service"]["active"] is False
+            assert status["service"]["exists"] is False
+            assert status["timer"]["enabled"] is False
+            assert status["timer"]["active"] is False
+            assert status["timer"]["exists"] is False
 
     def test_check_systemd_status_with_enabled_units(self):
         """Test check_systemd_status with enabled units."""
@@ -120,7 +122,7 @@ class TestSystemdSetupMethods:
 
         with patch("shutil.which", return_value="/bin/systemctl"):
             with patch("subprocess.run") as mock_run:
-                # Create a mock that returns appropriate responses based on arguments
+
                 def mock_response(args, **kwargs):
                     class MockResult:
                         def __init__(self, returncode, stdout="", stderr=""):
@@ -128,7 +130,6 @@ class TestSystemdSetupMethods:
                             self.stdout = stdout
                             self.stderr = stderr
 
-                    # Check which command is being run
                     if (
                         args[0] == "systemctl"
                         and args[1] == "--user"
@@ -141,29 +142,17 @@ class TestSystemdSetupMethods:
                         and args[2] == "is-active"
                     ):
                         return MockResult(0, stdout="active")
-                    elif (
-                        args[0] == "systemctl"
-                        and args[1] == "--user"
-                        and args[2] == "show"
-                    ):
-                        return MockResult(0, stdout="ActiveState=active")
                     else:
                         return MockResult(0, stdout="")
 
                 mock_run.side_effect = mock_response
 
                 setup = SystemdSetup()
-                status = setup.check_systemd_status()
 
-                assert status["enabled"] is True
-                assert status["active"] is True
-                assert len(status["units"]) == 3  # service, path, timer
-                for unit in [
-                    "flatpak-wrappers.service",
-                    "flatpak-wrappers.path",
-                    "flatpak-wrappers.timer",
-                ]:
-                    assert status["units"].get(unit, {}).get("enabled") is True
+                assert setup.check_systemd_status()["service"]["enabled"] is True
+                assert setup.check_systemd_status()["service"]["active"] is True
+                assert setup.check_systemd_status()["timer"]["enabled"] is True
+                assert setup.check_systemd_status()["timer"]["active"] is True
 
     def test_check_systemd_status_with_disabled_units(self):
         """Test check_systemd_status with disabled units."""
@@ -171,7 +160,6 @@ class TestSystemdSetupMethods:
 
         with patch("shutil.which", return_value="/bin/systemctl"):
             with patch("subprocess.run") as mock_run:
-                # Set up mock to return failure (1) for all calls
                 mock_run.return_value.returncode = 1
                 mock_run.return_value.stdout = b""
                 mock_run.return_value.stderr = b""
@@ -179,17 +167,10 @@ class TestSystemdSetupMethods:
                 setup = SystemdSetup()
                 status = setup.check_systemd_status()
 
-                assert status["enabled"] is False
-                assert status["active"] is False
-                all_disabled = all(
-                    status["units"].get(unit, {}).get("enabled") is False
-                    for unit in [
-                        "flatpak-wrappers.service",
-                        "flatpak-wrappers.path",
-                        "flatpak-wrappers.timer",
-                    ]
-                )
-                assert all_disabled is True
+                assert status["service"]["enabled"] is False
+                assert status["service"]["active"] is False
+                assert status["timer"]["enabled"] is False
+                assert status["timer"]["active"] is False
 
 
 class TestSystemdSetupIntegration:
@@ -214,9 +195,10 @@ class TestSystemdSetupIntegration:
         with patch("subprocess.run", side_effect=Exception("Test exception")):
             status = setup.check_systemd_status()
 
-            # Should return safe defaults on exception
-            assert status["enabled"] is False
-            assert status["active"] is False
+            assert status["service"]["enabled"] is False
+            assert status["service"]["active"] is False
+            assert status["timer"]["enabled"] is False
+            assert status["timer"]["active"] is False
 
 
 if __name__ == "__main__":

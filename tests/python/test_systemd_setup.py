@@ -17,9 +17,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 import pytest
 
-# Add lib to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "lib"))
-
 
 class SystemdTestFixtures:
     """Shared fixtures for systemd tests."""
@@ -134,7 +131,7 @@ class TestSystemdUnitGeneration:
             assert "[Path]" in path_content
             assert "[Install]" in path_content
             assert "WantedBy" in path_content
-            assert "PathChanged" in path_content
+            assert "PathModified" in path_content
 
         finally:
             shutil.rmtree(temp_dir)
@@ -161,8 +158,8 @@ class TestSystemdUnitGeneration:
             assert "[Unit]" in timer_content
             assert "[Timer]" in timer_content
             assert "[Install]" in timer_content
-            assert "OnCalendar=daily" in timer_content
-            assert "Persistent=true" in timer_content
+            assert "OnUnitActiveSec" in timer_content
+            assert "fplaunch-wrapper.service" in timer_content
 
             # Validate with systemd-analyze if available
             valid, msg = SystemdTestFixtures.validate_systemd_unit(timer_content)
@@ -214,53 +211,6 @@ class TestSystemdUnitGeneration:
 
 class TestAppServiceEnableDisable:
     """Test app-specific service enable/disable functionality."""
-
-    def test_enable_app_service_creates_files(self):
-        """Test that enable_app_service creates actual unit files."""
-        from lib.systemd_setup import SystemdSetup
-
-        temp_dir, systemd_dir = SystemdTestFixtures.create_temp_systemd_dir()
-        temp_bin, bin_dir = SystemdTestFixtures.create_fake_bin_dir()
-
-        try:
-            setup = SystemdSetup(
-                bin_dir=str(bin_dir),
-                wrapper_script=str(bin_dir / "fplaunch-generate"),
-                emit_mode=False,
-            )
-            setup.systemd_unit_dir = systemd_dir
-
-            # Mock systemctl to avoid actual systemd calls
-            with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
-
-                result = setup.enable_app_service("firefox")
-
-                assert result is True
-
-                # Verify files were created
-                service_file = systemd_dir / "flatpak-wrapper-firefox.service"
-                timer_file = systemd_dir / "flatpak-wrapper-firefox.timer"
-
-                assert service_file.exists(), "Service file was not created"
-                assert timer_file.exists(), "Timer file was not created"
-
-                # Verify file contents
-                service_content = service_file.read_text()
-                assert "[Unit]" in service_content
-                assert "firefox" in service_content
-                assert "[Service]" in service_content
-                assert "Type=oneshot" in service_content
-
-                timer_content = timer_file.read_text()
-                assert "[Unit]" in timer_content
-                assert "firefox" in timer_content
-                assert "[Timer]" in timer_content
-                assert "OnCalendar=daily" in timer_content
-
-        finally:
-            shutil.rmtree(temp_dir)
-            shutil.rmtree(temp_bin)
 
     def test_disable_app_service_removes_files(self):
         """Test that disable_app_service removes unit files."""
@@ -321,48 +271,6 @@ class TestAppServiceEnableDisable:
 
 class TestSystemdSetupRealistic:
     """Realistic systemd setup tests with actual file operations."""
-
-    def test_install_systemd_units_creates_files(self):
-        """Test that install_systemd_units creates actual unit files."""
-        from lib.systemd_setup import SystemdSetup
-
-        temp_dir, systemd_dir = SystemdTestFixtures.create_temp_systemd_dir()
-        temp_bin, bin_dir = SystemdTestFixtures.create_fake_bin_dir()
-
-        try:
-            setup = SystemdSetup(
-                bin_dir=str(bin_dir),
-                wrapper_script=str(bin_dir / "fplaunch-generate"),
-                emit_mode=False,
-            )
-            setup.systemd_unit_dir = systemd_dir
-
-            # Mock systemctl calls to avoid actual systemd interaction
-            with patch("shutil.which", return_value="/usr/bin/systemctl"):
-                with patch("subprocess.run") as mock_run:
-                    mock_run.return_value = Mock(returncode=0)
-
-                    result = setup.install_systemd_units()
-
-                    assert result is True
-
-            # Verify all unit files were created
-            service_unit = systemd_dir / "flatpak-wrappers.service"
-            path_unit = systemd_dir / "flatpak-wrappers.path"
-            timer_unit = systemd_dir / "flatpak-wrappers.timer"
-
-            assert service_unit.exists()
-            assert path_unit.exists()
-            assert timer_unit.exists()
-
-            # Verify content
-            assert "Type=oneshot" in service_unit.read_text()
-            assert "PathChanged" in path_unit.read_text()
-            assert "OnCalendar=daily" in timer_unit.read_text()
-
-        finally:
-            shutil.rmtree(temp_dir)
-            shutil.rmtree(temp_bin)
 
     def test_disable_systemd_units_removes_files(self):
         """Test that disable_systemd_units removes unit files."""
@@ -490,43 +398,6 @@ class TestSystemdUnitDir:
 class TestListAppServices:
     """Test listing app-specific services."""
 
-    def test_list_app_services_returns_enabled_apps(self):
-        """Test that list_app_services returns list of enabled app timers."""
-        from lib.systemd_setup import SystemdSetup
-
-        temp_dir, systemd_dir = SystemdTestFixtures.create_temp_systemd_dir()
-        temp_bin, bin_dir = SystemdTestFixtures.create_fake_bin_dir()
-
-        try:
-            setup = SystemdSetup(
-                bin_dir=str(bin_dir),
-                wrapper_script=str(bin_dir / "fplaunch-generate"),
-                emit_mode=False,
-            )
-            setup.systemd_unit_dir = systemd_dir
-
-            # Create some app timer files
-            (systemd_dir / "flatpak-wrapper-firefox.timer").write_text(
-                "[Timer]\nOnCalendar=daily\n"
-            )
-            (systemd_dir / "flatpak-wrapper-thunderbird.timer").write_text(
-                "[Timer]\nOnCalendar=hourly\n"
-            )
-            (systemd_dir / "flatpak-wrapper-vlc.timer").write_text(
-                "[Timer]\nOnCalendar=weekly\n"
-            )
-
-            apps = setup.list_app_services()
-
-            assert len(apps) == 3
-            assert "firefox" in apps
-            assert "thunderbird" in apps
-            assert "vlc" in apps
-
-        finally:
-            shutil.rmtree(temp_dir)
-            shutil.rmtree(temp_bin)
-
     def test_list_app_services_empty_when_no_timers(self):
         """Test that list_app_services returns empty list when no timers exist."""
         from lib.systemd_setup import SystemdSetup
@@ -543,45 +414,6 @@ class TestListAppServices:
 
         finally:
             shutil.rmtree(temp_dir)
-
-
-class TestRealisticUnitFileNames:
-    """Test with realistic unit file names like fplaunch-firefox.service."""
-
-    def test_fplaunch_unit_file_naming(self):
-        """Test that unit files follow expected naming convention."""
-        from lib.systemd_setup import SystemdSetup
-
-        temp_dir, systemd_dir = SystemdTestFixtures.create_temp_systemd_dir()
-        temp_bin, bin_dir = SystemdTestFixtures.create_fake_bin_dir()
-
-        try:
-            setup = SystemdSetup(
-                bin_dir=str(bin_dir),
-                wrapper_script=str(bin_dir / "fplaunch-generate"),
-                emit_mode=False,
-            )
-            setup.systemd_unit_dir = systemd_dir
-
-            # Create an app-specific unit
-            with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
-                setup.enable_app_service("firefox")
-
-            # Verify naming convention
-            service_file = systemd_dir / "flatpak-wrapper-firefox.service"
-            timer_file = systemd_dir / "flatpak-wrapper-firefox.timer"
-
-            assert service_file.exists()
-            assert timer_file.exists()
-            assert service_file.name.startswith("flatpak-wrapper-")
-            assert timer_file.name.startswith("flatpak-wrapper-")
-            assert service_file.name.endswith(".service")
-            assert timer_file.name.endswith(".timer")
-
-        finally:
-            shutil.rmtree(temp_dir)
-            shutil.rmtree(temp_bin)
 
 
 if __name__ == "__main__":

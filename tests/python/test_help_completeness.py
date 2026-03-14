@@ -12,8 +12,6 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 import lib.cli as cli_module
 
 
