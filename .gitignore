@@ -97,3 +97,4 @@ docs/archive/
 # Keep these test files
 !run_tests.py
 !test_*.py
+files/
