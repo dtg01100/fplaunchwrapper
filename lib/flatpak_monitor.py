@@ -514,10 +514,11 @@ def main(
     }
 
     logger.info("Starting Flatpak monitor with configuration: %s", config)
-    start_flatpak_monitoring(callback=callback_func, daemon=args.daemon, config=config)
+    monitor = start_flatpak_monitoring(callback=callback_func, daemon=args.daemon, config=config)
 
-    if not args.daemon:
-        pass
+    if not args.daemon and monitor:
+        # In non-daemon mode, wait for events until interrupted
+        monitor.wait()
 
 
 if __name__ == "__main__":

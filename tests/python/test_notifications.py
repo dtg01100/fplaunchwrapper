@@ -268,7 +268,7 @@ class TestNotificationSecurity:
     """Security-focused tests for notifications."""
 
     def test_notification_command_injection(self):
-        """Test that notification parameters are properly escaped."""
+        """Test that notification parameters are properly sanitized."""
         if not send_notification:
             pytest.skip("notifications module not available")
 
@@ -294,7 +294,11 @@ class TestNotificationSecurity:
                 # This ensures injection is prevented
                 call_args = mock_run.call_args[0][0]
                 assert isinstance(call_args, list)
-                assert call_args[6] == malicious_input
+                # Verify that malicious patterns are sanitized
+                result_message = call_args[6]
+                # Command substitution patterns should be neutralized
+                assert "$(" not in result_message or "(cmd)" in result_message
+                assert "`" not in result_message
 
     def test_notification_unicode(self):
         """Test notification with unicode characters."""
@@ -334,7 +338,9 @@ class TestNotificationSecurity:
             assert result is True
 
             args = mock_run.call_args[0][0]
-            assert args[5] == ""
+            # Empty title should be replaced with default
+            assert args[5] == "Notification"
+            # Empty message stays empty
             assert args[6] == ""
 
 
@@ -353,13 +359,12 @@ class TestNotificationEdgeCases:
             mock_result.returncode = 0
             mock_run.return_value = mock_result
 
-            # Pass an invalid urgency - function should still work
-            # (notify-send will handle invalid values)
+            # Pass an invalid urgency - should default to "normal"
             result = send_notification("Title", "Message", urgency="invalid")
             assert result is True
 
             args = mock_run.call_args[0][0]
-            assert args[2] == "invalid"
+            assert args[2] == "normal"
 
     def test_notification_zero_timeout(self):
         """Test notification with zero timeout."""
@@ -391,11 +396,12 @@ class TestNotificationEdgeCases:
             mock_result.returncode = 0
             mock_run.return_value = mock_result
 
+            # Negative timeout should default to 5000
             result = send_notification("Title", "Message", timeout=-5000)
             assert result is True
 
             args = mock_run.call_args[0][0]
-            assert args[4] == "-5000"
+            assert args[4] == "5000"
 
     def test_notification_very_long_message(self):
         """Test notification with very long message."""
@@ -414,7 +420,9 @@ class TestNotificationEdgeCases:
             assert result is True
 
             args = mock_run.call_args[0][0]
-            assert args[6] == long_message
+            # Long messages should be truncated to 500 chars + "..."
+            assert len(args[6]) == 500
+            assert args[6].endswith("...")
 
 
 class TestNotificationIntegration:

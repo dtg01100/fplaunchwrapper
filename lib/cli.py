@@ -314,9 +314,14 @@ def cleanup(ctx) -> int:
       fplaunch cleanup    # Remove orphaned wrappers
       fplaunch clean      # Alias for cleanup
     """
+    from .paths import resolve_bin_dir
+    
+    config_dir = Path(ctx.obj.get("config_dir"))
+    bin_dir = resolve_bin_dir(explicit_dir=None, config_dir=config_dir)
+    
     WrapperCleanup = import_handler.require("lib.cleanup", "WrapperCleanup")
     cleanup_manager = WrapperCleanup(
-        bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
+        bin_dir=str(bin_dir)
     )
     return int(cleanup_manager.run())
 
@@ -325,9 +330,14 @@ def cleanup(ctx) -> int:
 @click.pass_context
 def clean(ctx) -> int:
     """Clean up orphaned wrapper files and artifacts (alias for cleanup)."""
+    from .paths import resolve_bin_dir
+    
+    config_dir = Path(ctx.obj.get("config_dir"))
+    bin_dir = resolve_bin_dir(explicit_dir=None, config_dir=config_dir)
+    
     WrapperCleanup = import_handler.require("lib.cleanup", "WrapperCleanup")
     cleanup_manager = WrapperCleanup(
-        bin_dir=str(Path(ctx.obj["config_dir"]) / "bin")
+        bin_dir=str(bin_dir)
     )
     return int(cleanup_manager.run())
 
@@ -456,12 +466,11 @@ def systemd_setup_cmd(ctx, bin_dir, wrapper_script) -> int:
 
 @cli.group(name="systemd", invoke_without_command=True)
 @click.pass_context
-def systemd_group(ctx) -> None:
+def systemd_group(ctx) -> int:
     """Manage systemd user units (enable|disable|status|start|stop|restart|reload|logs|list|test)."""
     if ctx.invoked_subcommand is None:
-        _run_systemd_setup(ctx, None, None)
-        return
-    return
+        return _run_systemd_setup(ctx, None, None)
+    return 0
 
 
 def _systemd_simple_action(ctx) -> int:

@@ -230,10 +230,11 @@ class WrapperGenerator:
             return False
 
         target_flatpak_id = flatpak_id or app_id
-        
+
         # Simple validation of flatpak_id
+        # Valid Flatpak IDs use reverse-DNS notation and must start with a letter
         import re
-        if not re.match(r"^[A-Za-z0-9._-]+$", target_flatpak_id):
+        if not re.match(r"^[A-Za-z][A-Za-z0-9._-]*$", target_flatpak_id):
              if flatpak_id is not None:
                 self.log(f"Skipping invalid Flatpak ID: {target_flatpak_id}", "warning")
                 return False

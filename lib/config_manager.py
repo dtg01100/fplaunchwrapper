@@ -904,9 +904,22 @@ class EnhancedConfigManager:
                 with open(export_path, "wb") as f:
                     tomli_w.dump(content, f)
             elif isinstance(content, dict):
-                # TOML library not available - write a safe string representation
-                # so write_text receives a string (avoids type errors and preserves data).
-                export_path.write_text(str(content))
+                # TOML library not available - serialize to simple key=value format
+                # This matches the fallback format used in _save_fallback_config
+                lines = ["# fplaunchwrapper profile export (fallback format)"]
+                if "bin_dir" in content:
+                    lines.append(f"bin_dir={content['bin_dir']}")
+                if "debug_mode" in content:
+                    lines.append(f"debug_mode={content['debug_mode']}")
+                if "log_level" in content:
+                    lines.append(f"log_level={content['log_level']}")
+                if "cron_interval" in content:
+                    lines.append(f"cron_interval={content['cron_interval']}")
+                if "enable_notifications" in content:
+                    lines.append(f"enable_notifications={content['enable_notifications']}")
+                if "hook_failure_mode_default" in content:
+                    lines.append(f"hook_failure_mode_default={content['hook_failure_mode_default']}")
+                export_path.write_text("\n".join(lines) + "\n")
             else:
                 export_path.write_text(content)
 

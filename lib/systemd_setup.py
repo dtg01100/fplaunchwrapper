@@ -379,16 +379,13 @@ WantedBy=paths.target
             # Create safe service filename and ensure it resolves inside the unit directory
             safe_app_id = app_id
             service_name = f"fplaunch-{safe_app_id}.service"
-            service_path = (self.systemd_unit_dir / service_name).resolve()
+            service_path = self.systemd_unit_dir / service_name
+            
+            # Use Path.relative_to() for robust path traversal prevention
             try:
-                unit_dir_resolved = self.systemd_unit_dir.resolve()
-            except Exception:
-                self.log("Failed to resolve systemd unit directory", "error")
-                return False
-
-            # Ensure the resolved service path is within the intended systemd unit directory
-            if not str(service_path).startswith(str(unit_dir_resolved) + os.sep):
-                self.log("Service path escape detected", "error")
+                service_path.resolve().relative_to(self.systemd_unit_dir.resolve())
+            except (ValueError, Exception) as e:
+                self.log(f"Path traversal detected in app_id: {e}", "error")
                 return False
 
             # Use shlex.quote for ExecStart argument to avoid accidental unit syntax injection
@@ -437,15 +434,13 @@ ExecStart=flatpak run {exec_app}
 
             safe_app_id = app_id
             service_name = f"fplaunch-{safe_app_id}.service"
-            service_path = (self.systemd_unit_dir / service_name).resolve()
+            service_path = self.systemd_unit_dir / service_name
+            
+            # Use Path.relative_to() for robust path traversal prevention
             try:
-                unit_dir_resolved = self.systemd_unit_dir.resolve()
-            except Exception:
-                self.log("Failed to resolve systemd unit directory", "error")
-                return False
-
-            if not str(service_path).startswith(str(unit_dir_resolved) + os.sep):
-                self.log("Service path escape detected", "error")
+                service_path.resolve().relative_to(self.systemd_unit_dir.resolve())
+            except (ValueError, Exception) as e:
+                self.log(f"Path traversal detected in app_id: {e}", "error")
                 return False
 
             subprocess.run(
