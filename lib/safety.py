@@ -18,18 +18,23 @@ import sys
 from pathlib import Path
 from typing import Any
 
+
 # Define fallback exception classes first
 class _SafetyError(Exception):
     pass
 
+
 class _ForbiddenNameError(Exception):
     pass
+
 
 class _PathTraversalError(Exception):
     pass
 
+
 class _InvalidFlatpakIdError(Exception):
     pass
+
 
 # Default to fallback values
 SafetyError = _SafetyError
@@ -54,6 +59,7 @@ try:
         PathTraversalError as _PathTraversalErrorReal,
         SafetyError as _SafetyErrorReal,
     )
+
     SafetyError = _SafetyErrorReal  # type: ignore[misc,assignment]
     ForbiddenNameError = _ForbiddenNameErrorReal  # type: ignore[misc,assignment]
     PathTraversalError = _PathTraversalErrorReal  # type: ignore[misc,assignment]
@@ -70,6 +76,7 @@ try:
         sanitize_string as _sanitize_string,
         validate_home_dir as _validate_home_dir,
     )
+
     canonicalize_path_no_resolve = _canonicalize_path_no_resolve
     get_wrapper_id = _get_wrapper_id
     is_wrapper_file = _is_wrapper_file
@@ -136,7 +143,7 @@ def is_test_environment() -> bool:
         _restore_pytest_if_missing()
         return True
     if value == "false":
-        return True if explicit_test_arg else False
+        return False
 
     if explicit_test_arg:
         _restore_pytest_if_missing()

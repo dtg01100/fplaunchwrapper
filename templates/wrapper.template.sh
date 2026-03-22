@@ -404,6 +404,9 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
         ((menu_option++))
     done
     
+    # Save the base position for standard options (after custom presets)
+    standard_menu_base=$menu_option
+    
     echo "  $menu_option) Show current overrides"
     ((menu_option++))
     echo "  $menu_option) Reset to defaults"
@@ -595,12 +598,12 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
                 else
                     echo "Cancelled."
                 fi
-            elif [ "$choice" = "$((menu_option - 3))" ]; then
+            elif [ "$choice" = "$((standard_menu_base))" ]; then
                 # Show current overrides
                 echo ""
                 echo "Current overrides for $ID:"
                 flatpak override --show --user "$ID" 2>/dev/null || echo "  (using defaults)"
-            elif [ "$choice" = "$((menu_option - 2))" ]; then
+            elif [ "$choice" = "$((standard_menu_base + 1))" ]; then
                 # Reset to defaults
                 echo ""
                 echo "Current overrides:"
@@ -621,9 +624,12 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
                 else
                     echo "Reset cancelled."
                 fi
-            else
+            elif [ "$choice" = "$((standard_menu_base + 2))" ]; then
                 # Cancel
                 echo "Cancelled."
+            else
+                # Invalid choice
+                echo "Invalid option: $choice"
             fi
             ;;
     esac

@@ -59,9 +59,7 @@ class WrapperGenerator:
         # Validate inputs to avoid creating unexpected artifact paths (e.g., MagicMock reprs)
         if not isinstance(bin_dir, (str, os.PathLike)):
             raise TypeError("bin_dir must be a string or path-like object")
-        if config_dir is not None and not isinstance(
-            config_dir, (str, os.PathLike)
-        ):
+        if config_dir is not None and not isinstance(config_dir, (str, os.PathLike)):
             raise TypeError("config_dir must be a string or path-like object or None")
 
         self.bin_dir = Path(bin_dir).expanduser().resolve()
@@ -70,7 +68,7 @@ class WrapperGenerator:
         self.emit_verbose = emit_verbose
         self.lock_name = "generate"
         self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
-        
+
         # Ensure directories exist and save bin_dir (required by tests)
         if not self.emit_mode:
             self.bin_dir.mkdir(parents=True, exist_ok=True)
@@ -98,7 +96,9 @@ class WrapperGenerator:
         else:
             console.print(message)
 
-    def run_command(self, cmd: list[str], description: str = "") -> subprocess.CompletedProcess:
+    def run_command(
+        self, cmd: list[str], description: str = ""
+    ) -> subprocess.CompletedProcess:
         """Run a command and return its output."""
         if description and not self.verbose:
             with console.status(f"[bold green]{description}..."):
@@ -108,20 +108,22 @@ class WrapperGenerator:
         else:
             if description and self.verbose:
                 self.log(description, "debug")
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, check=False
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         return result
 
     def get_installed_flatpaks(self) -> list[str]:
         """Get a list of installed Flatpak application IDs."""
         self.log("Fetching installed Flatpaks...", "debug")
-        
-        flatpak_path = find_executable("flatpak") or "flatpak"
-        
+
+        flatpak_path = find_executable("flatpak")
+        if flatpak_path is None:
+            raise WrapperGenerationError(
+                "flatpak", "Failed to find flatpak executable in PATH"
+            )
+
         result = self.run_command(
             [flatpak_path, "list", "--app", "--columns=application"],
-            "Getting installed Flatpak applications"
+            "Getting installed Flatpak applications",
         )
         if result.returncode != 0:
             raise WrapperGenerationError(
@@ -139,14 +141,18 @@ class WrapperGenerator:
         # Also check system installations (required by TestWrapperGeneratorReal.test_get_installed_flatpaks_with_duplicates)
         result_system = self.run_command(
             [flatpak_path, "list", "--app", "--columns=application", "--system"],
-            "Checking system Flatpak installations"
+            "Checking system Flatpak installations",
         )
         if result_system.returncode == 0:
             stdout_system = str(result_system.stdout).strip()
             if stdout_system:
                 for line in stdout_system.split("\n"):
                     line = line.strip()
-                    if line and not line.startswith("Application ID") and line not in apps:
+                    if (
+                        line
+                        and not line.startswith("Application ID")
+                        and line not in apps
+                    ):
                         apps.append(line)
 
         return sorted(set(apps))
@@ -167,7 +173,9 @@ class WrapperGenerator:
 
     def create_wrapper_script(self, wrapper_name: str, app_id: str) -> str:
         """Create the content for a wrapper script using a template."""
-        template_path = Path(__file__).parent.parent / "templates" / "wrapper.template.sh"
+        template_path = (
+            Path(__file__).parent.parent / "templates" / "wrapper.template.sh"
+        )
         if not template_path.exists():
             # Fallback if template is not found in expected location
             # (e.g. during development/testing)
@@ -179,15 +187,18 @@ class WrapperGenerator:
 
         try:
             content = template_path.read_text()
-            
+
             # Get failure mode default and script paths from config if possible
             failure_mode = "warn"
             pre_launch_script = ""
             post_launch_script = ""
             try:
                 from .config_manager import create_config_manager
+
                 config = create_config_manager()
-                failure_mode = getattr(config.config, "hook_failure_mode_default", "warn")
+                failure_mode = getattr(
+                    config.config, "hook_failure_mode_default", "warn"
+                )
 
                 # Fetch app preferences for baking script paths
                 prefs = config.get_app_preferences(wrapper_name)
@@ -207,7 +218,9 @@ class WrapperGenerator:
             )
 
         except Exception as e:
-            raise WrapperGenerationError(app_id, f"Failed to read wrapper template: {e}") from e
+            raise WrapperGenerationError(
+                app_id, f"Failed to read wrapper template: {e}"
+            ) from e
 
     def generate_wrapper(self, app_id: str, flatpak_id: str | None = None) -> bool:
         """Generate a wrapper for a specific Flatpak app."""
@@ -234,26 +247,35 @@ class WrapperGenerator:
         # Simple validation of flatpak_id
         # Valid Flatpak IDs use reverse-DNS notation and must start with a letter
         import re
+
         if not re.match(r"^[A-Za-z][A-Za-z0-9._-]*$", target_flatpak_id):
-             if flatpak_id is not None:
+            if flatpak_id is not None:
                 self.log(f"Skipping invalid Flatpak ID: {target_flatpak_id}", "warning")
                 return False
-             target_flatpak_id = sanitize_id_to_name(app_id)
-             if not target_flatpak_id:
-                 self.log(f"Skipping invalid app ID (unsanitizable): {app_id}", "warning")
-                 return False
+            target_flatpak_id = sanitize_id_to_name(app_id)
+            if not target_flatpak_id:
+                self.log(
+                    f"Skipping invalid app ID (unsanitizable): {app_id}", "warning"
+                )
+                return False
 
         wrapper_path = self.bin_dir / wrapper_name
-        
+
         # Check for name collisions
         wrapper_existed = wrapper_path.exists()
         if wrapper_existed:
             existing_id = get_wrapper_id(str(wrapper_path))
             if existing_id is None:
-                 self.log(f"Name collision for '{wrapper_name}': existing file not a wrapper", "warning")
-                 return False
+                self.log(
+                    f"Name collision for '{wrapper_name}': existing file not a wrapper",
+                    "warning",
+                )
+                return False
             if existing_id != app_id:
-                self.log(f"Name collision for '{wrapper_name}': {existing_id} vs {app_id}", "warning")
+                self.log(
+                    f"Name collision for '{wrapper_name}': {existing_id} vs {app_id}",
+                    "warning",
+                )
                 return False
 
         try:
@@ -270,7 +292,14 @@ class WrapperGenerator:
             if self.emit_verbose:
                 self.log(f"EMIT: File content for {wrapper_path}:")
                 from rich.panel import Panel
-                console.print(Panel.fit(content, title=f"📄 {wrapper_name} wrapper script", border_style="blue"))
+
+                console.print(
+                    Panel.fit(
+                        content,
+                        title=f"📄 {wrapper_name} wrapper script",
+                        border_style="blue",
+                    )
+                )
                 print(content)
             return True
 
@@ -293,11 +322,25 @@ class WrapperGenerator:
             return 0
 
         for item in self.bin_dir.iterdir():
-            if not item.is_file():
+            # Skip directories
+            if item.is_dir():
+                continue
+
+            # Handle symlinks separately - check if they point to valid wrappers
+            is_symlink = item.is_symlink()
+            is_file = item.is_file()
+
+            # Skip if not a file and not a symlink
+            if not is_file and not is_symlink:
                 continue
 
             remove_item = False
-            if is_wrapper_file(str(item)):
+            if is_symlink:
+                # For symlinks, check if target still exists and is a valid wrapper
+                target = item.resolve()
+                if target not in installed_apps:
+                    remove_item = True
+            elif is_wrapper_file(str(item)):
                 wrapper_id = get_wrapper_id(str(item))
                 if wrapper_id and wrapper_id not in installed_apps:
                     remove_item = True
@@ -316,18 +359,19 @@ class WrapperGenerator:
                     try:
                         item.unlink()
                         removed_count += 1
-                        
+
                         # Remove associated files (required by TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_old)
                         pref_file = self.config_dir / f"{item.name}.pref"
                         if pref_file.exists():
                             pref_file.unlink()
-                            
+
                         # Update aliases (required by TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_aliases)
                         aliases_file = self.config_dir / "aliases"
                         if aliases_file.exists():
                             content = aliases_file.read_text()
                             new_content = "\n".join(
-                                line for line in content.split("\n") 
+                                line
+                                for line in content.split("\n")
                                 if not line.startswith(f"{item.name} ")
                             )
                             if new_content.strip():
@@ -361,7 +405,7 @@ class WrapperGenerator:
                 success_count = created + updated
 
                 self.cleanup_obsolete_wrappers(apps)
-                
+
                 self.log(f"Generated {success_count} wrappers", "success")
                 return 0
             finally:
@@ -377,6 +421,14 @@ class WrapperGenerator:
         updated_count = 0
         skipped_count = 0
 
+        # Pre-compute which wrappers already exist to track created vs updated
+        existing_wrappers: set[str] = set()
+        for item in self.bin_dir.iterdir():
+            if item.is_file() and is_wrapper_file(str(item)):
+                wrapper_id = get_wrapper_id(str(item))
+                if wrapper_id:
+                    existing_wrappers.add(wrapper_id)
+
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -385,12 +437,18 @@ class WrapperGenerator:
             console=console,
             disable=not self.verbose and not sys.stdout.isatty(),
         ) as progress:
-            task = progress.add_task("Generating wrappers...", total=len(installed_apps))
+            task = progress.add_task(
+                "Generating wrappers...", total=len(installed_apps)
+            )
             for app_id in installed_apps:
-                # We don't easily track created vs updated here without more logic, 
-                # but tests care about the total success count.
+                # Track if this app had a wrapper before
+                had_wrapper_before = app_id in existing_wrappers
+
                 if self.generate_wrapper(app_id):
-                    created_count += 1
+                    if had_wrapper_before:
+                        updated_count += 1
+                    else:
+                        created_count += 1
                 else:
                     skipped_count += 1
                 progress.update(task, advance=1)

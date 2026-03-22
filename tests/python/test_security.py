@@ -251,29 +251,43 @@ class TestSecurity:
         # Verify the wrapper is detected as safe
         assert is_dangerous_wrapper(injected_wrapper) is False
 
-    def test_adversarial_environment_variables(self) -> None:
+    def test_adversarial_environment_variables(self, monkeypatch) -> None:
         """Test handling adversarial environment variables."""
-        # Set an adversarial environment variable
         import os
 
-        os.environ["FPWRAPPER_TEST_ENV"] = "true"
+        # Save and restore to ensure hermeticity
+        old_env = os.environ.get("FPWRAPPER_TEST_ENV")
+        monkeypatch.setenv("FPWRAPPER_TEST_ENV", "true")
 
         # Verify the environment is detected as a test environment
         from lib.safety import is_test_environment
 
         assert is_test_environment() is True
 
-    def test_input_sanitization_in_environment_variables(self) -> None:
+        # Cleanup
+        if old_env is None:
+            monkeypatch.delenv("FPWRAPPER_TEST_ENV", raising=False)
+        else:
+            monkeypatch.setenv("FPWRAPPER_TEST_ENV", old_env)
+
+    def test_input_sanitization_in_environment_variables(self, monkeypatch) -> None:
         """Test input sanitization for environment variables."""
-        # Set a sanitized environment variable
         import os
 
-        os.environ["FPWRAPPER_TEST_ENV"] = "false"
+        # Save and restore to ensure hermeticity
+        old_env = os.environ.get("FPWRAPPER_TEST_ENV")
+        monkeypatch.setenv("FPWRAPPER_TEST_ENV", "false")
 
         # Verify the environment is not detected as a test environment
         from lib.safety import is_test_environment
 
         assert is_test_environment() is False
+
+        # Cleanup
+        if old_env is None:
+            monkeypatch.delenv("FPWRAPPER_TEST_ENV", raising=False)
+        else:
+            monkeypatch.setenv("FPWRAPPER_TEST_ENV", old_env)
 
     def test_forbidden_wrapper_name(self) -> None:
         """Test blocking of forbidden wrapper names."""

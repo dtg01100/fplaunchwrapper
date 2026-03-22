@@ -45,7 +45,12 @@ field_validator: Any
 PYDANTIC_AVAILABLE: bool
 
 try:
-    from pydantic import BaseModel as _BaseModel, Field as _Field, ValidationError as _ValidationError, field_validator as _field_validator
+    from pydantic import (
+        BaseModel as _BaseModel,
+        Field as _Field,
+        ValidationError as _ValidationError,
+        field_validator as _field_validator,
+    )
 
     BaseModel = _BaseModel
     Field = _Field
@@ -55,7 +60,7 @@ try:
 except Exception:
     # Pydantic is optional. Provide minimal shims so the module can still be
     # imported and basic fallback behavior is possible when Pydantic is absent.
-    
+
     class _RuntimeBaseModel:
         def __init__(self, *args, **kwargs):
             pass
@@ -66,6 +71,7 @@ except Exception:
     def _RuntimeFieldValidator(*args, **kwargs):
         def _decorator(fn):
             return fn
+
         return _decorator
 
     class _RuntimeValidationError(Exception):
@@ -356,6 +362,11 @@ class EnhancedConfigManager:
     ) -> None:
         """Apply validated configuration from Pydantic model."""
         self.config.bin_dir = validated_config.bin_dir
+        self.config.config_dir = validated_config.config_dir
+        self.config.data_dir = validated_config.data_dir
+        # NOTE: active_profile is NOT loaded from config/profile files
+        # because it's a global state, not a per-profile setting.
+        # It is set explicitly when switching profiles or loading the main config.
         self.config.debug_mode = validated_config.debug_mode
         self.config.log_level = validated_config.log_level
         self.config.blocklist = validated_config.blocklist
@@ -489,9 +500,13 @@ class EnhancedConfigManager:
         if gp.post_launch_script:
             data["global_preferences"]["post_launch_script"] = gp.post_launch_script
         if gp.pre_launch_failure_mode:
-            data["global_preferences"]["pre_launch_failure_mode"] = str(gp.pre_launch_failure_mode)
+            data["global_preferences"]["pre_launch_failure_mode"] = str(
+                gp.pre_launch_failure_mode
+            )
         if gp.post_launch_failure_mode:
-            data["global_preferences"]["post_launch_failure_mode"] = str(gp.post_launch_failure_mode)
+            data["global_preferences"]["post_launch_failure_mode"] = str(
+                gp.post_launch_failure_mode
+            )
 
         if self.config.app_preferences:
             data["app_preferences"] = {}
@@ -506,9 +521,13 @@ class EnhancedConfigManager:
                 if prefs.post_launch_script:
                     app_data["post_launch_script"] = prefs.post_launch_script
                 if prefs.pre_launch_failure_mode:
-                    app_data["pre_launch_failure_mode"] = str(prefs.pre_launch_failure_mode)
+                    app_data["pre_launch_failure_mode"] = str(
+                        prefs.pre_launch_failure_mode
+                    )
                 if prefs.post_launch_failure_mode:
-                    app_data["post_launch_failure_mode"] = str(prefs.post_launch_failure_mode)
+                    app_data["post_launch_failure_mode"] = str(
+                        prefs.post_launch_failure_mode
+                    )
                 data["app_preferences"][app_id] = app_data
 
         if self.config.permission_presets:
@@ -916,9 +935,13 @@ class EnhancedConfigManager:
                 if "cron_interval" in content:
                     lines.append(f"cron_interval={content['cron_interval']}")
                 if "enable_notifications" in content:
-                    lines.append(f"enable_notifications={content['enable_notifications']}")
+                    lines.append(
+                        f"enable_notifications={content['enable_notifications']}"
+                    )
                 if "hook_failure_mode_default" in content:
-                    lines.append(f"hook_failure_mode_default={content['hook_failure_mode_default']}")
+                    lines.append(
+                        f"hook_failure_mode_default={content['hook_failure_mode_default']}"
+                    )
                 export_path.write_text("\n".join(lines) + "\n")
             else:
                 export_path.write_text(content)

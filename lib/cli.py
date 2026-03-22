@@ -75,7 +75,7 @@ def use_python_backend() -> bool:
     return True
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option(
     "--emit", is_flag=True, help="Emit commands instead of executing (dry run)"
@@ -99,6 +99,18 @@ def cli(ctx, verbose, emit, emit_verbose, config_dir) -> None:
     ctx.obj["config_dir"] = config_dir or os.path.expanduser(
         "~/.config/fplaunchwrapper"
     )
+
+    # If no subcommand was invoked, show help
+    if ctx.invoked_subcommand is None:
+        if verbose:
+            console.print("[bold blue]Verbose mode enabled[/bold blue]")
+        if emit:
+            console.print(
+                "[yellow]🧪 EMIT MODE: Commands will be shown but not executed[/yellow]"
+            )
+        # Show the help message when no command is given
+        click.echo(ctx.get_help())
+        return
 
     if verbose:
         console.print("[bold blue]Verbose mode enabled[/bold blue]")
@@ -315,14 +327,12 @@ def cleanup(ctx) -> int:
       fplaunch clean      # Alias for cleanup
     """
     from .paths import resolve_bin_dir
-    
+
     config_dir = Path(ctx.obj.get("config_dir"))
     bin_dir = resolve_bin_dir(explicit_dir=None, config_dir=config_dir)
-    
+
     WrapperCleanup = import_handler.require("lib.cleanup", "WrapperCleanup")
-    cleanup_manager = WrapperCleanup(
-        bin_dir=str(bin_dir)
-    )
+    cleanup_manager = WrapperCleanup(bin_dir=str(bin_dir))
     return int(cleanup_manager.run())
 
 
@@ -331,14 +341,12 @@ def cleanup(ctx) -> int:
 def clean(ctx) -> int:
     """Clean up orphaned wrapper files and artifacts (alias for cleanup)."""
     from .paths import resolve_bin_dir
-    
+
     config_dir = Path(ctx.obj.get("config_dir"))
     bin_dir = resolve_bin_dir(explicit_dir=None, config_dir=config_dir)
-    
+
     WrapperCleanup = import_handler.require("lib.cleanup", "WrapperCleanup")
-    cleanup_manager = WrapperCleanup(
-        bin_dir=str(bin_dir)
-    )
+    cleanup_manager = WrapperCleanup(bin_dir=str(bin_dir))
     return int(cleanup_manager.run())
 
 
@@ -624,7 +632,9 @@ def profiles_group(ctx) -> None:
 @click.pass_context
 def profiles_list(ctx) -> int:
     """List available profiles."""
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     profiles = cfg.list_profiles()
     active = cfg.get_active_profile()
@@ -642,7 +652,9 @@ def profiles_list(ctx) -> int:
 @click.pass_context
 def profiles_create(ctx, profile_name, copy_from) -> int:
     """Create a new profile."""
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     if cfg.create_profile(profile_name, copy_from):
         console.print(f"[green]✓[/green] Created profile: {profile_name}")
@@ -660,7 +672,9 @@ def profiles_create(ctx, profile_name, copy_from) -> int:
 @click.pass_context
 def profiles_switch(ctx, profile_name) -> int:
     """Switch to a profile."""
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     if cfg.switch_profile(profile_name):
         console.print(f"[green]✓[/green] Switched to profile: {profile_name}")
@@ -677,7 +691,9 @@ def profiles_switch(ctx, profile_name) -> int:
 @click.pass_context
 def profiles_current(ctx) -> int:
     """Show current profile."""
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     active = cfg.get_active_profile()
     console.print(f"Current profile: [bold]{active}[/bold]")
@@ -690,7 +706,9 @@ def profiles_current(ctx) -> int:
 @click.pass_context
 def profiles_export(ctx, profile_name, output_file) -> int:
     """Export a profile to a file."""
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     export_path = Path(output_file) if output_file else Path(f"{profile_name}.toml")
     if cfg.export_profile(profile_name, export_path):
@@ -711,14 +729,14 @@ def profiles_export(ctx, profile_name, output_file) -> int:
 @click.pass_context
 def profiles_import(ctx, input_file, profile_name) -> int:
     """Import a profile from a file."""
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     import_path = Path(input_file)
     name = profile_name or import_path.stem
     if cfg.import_profile(name, import_path):
-        console.print(
-            f"[green]✓[/green] Imported profile '{name}' from {import_path}"
-        )
+        console.print(f"[green]✓[/green] Imported profile '{name}' from {import_path}")
         return 0
     else:
         console_err.print(
@@ -739,7 +757,9 @@ def presets_group(ctx) -> None:
 @click.pass_context
 def presets_list(ctx) -> int:
     """List available permission presets."""
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     presets = cfg.list_permission_presets()
     if presets:
@@ -759,7 +779,9 @@ def presets_get(ctx, preset_name) -> int:
     if not preset_name:
         raise click.UsageError("PRESET_NAME is required")
 
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     permissions = cfg.get_permission_preset(preset_name)
     if permissions is None:
@@ -782,7 +804,9 @@ def presets_add(ctx, preset_name, permission) -> int:
         console_err.print("[red]Error:[/red] At least one permission is required")
         return 1
 
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     cfg.add_permission_preset(preset_name, list(permission))
     console.print(f"[green]✓[/green] Added preset: {preset_name}")
@@ -794,7 +818,9 @@ def presets_add(ctx, preset_name, permission) -> int:
 @click.pass_context
 def presets_remove(ctx, preset_name) -> int:
     """Remove a permission preset."""
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     if cfg.remove_permission_preset(preset_name):
         console.print(f"[green]✓[/green] Removed preset: {preset_name}")
@@ -929,7 +955,9 @@ def config(ctx, action, value) -> int:
       init          Initialize configuration file
       cron-interval Get or set cron interval (in hours)
     """
-    create_config_manager = import_handler.require("lib.config_manager", "create_config_manager")
+    create_config_manager = import_handler.require(
+        "lib.config_manager", "create_config_manager"
+    )
     cfg = create_config_manager()
     if not action or action == "show":
         config_path = Path(ctx.obj.get("config_dir", "")) / "config.toml"
