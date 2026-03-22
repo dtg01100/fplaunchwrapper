@@ -5,7 +5,9 @@ Replaces fplaunch-generate bash script with Python implementation.
 
 from __future__ import annotations
 
+import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -246,8 +248,6 @@ class WrapperGenerator:
 
         # Simple validation of flatpak_id
         # Valid Flatpak IDs use reverse-DNS notation and must start with a letter
-        import re
-
         if not re.match(r"^[A-Za-z][A-Za-z0-9._-]*$", target_flatpak_id):
             if flatpak_id is not None:
                 self.log(f"Skipping invalid Flatpak ID: {target_flatpak_id}", "warning")
@@ -458,8 +458,6 @@ class WrapperGenerator:
 
 def main() -> int:
     """Command-line interface for wrapper generation."""
-    import argparse
-
     parser = argparse.ArgumentParser(
         description="Generate Flatpak application wrappers",
         formatter_class=argparse.RawDescriptionHelpFormatter,

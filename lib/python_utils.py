@@ -9,8 +9,10 @@ import contextlib
 import hashlib
 import os
 import re
+import shutil
 import sys
 import tempfile
+import time
 import unicodedata
 from pathlib import Path
 from typing import Any
@@ -19,6 +21,7 @@ try:
     from platformdirs import user_config_dir, user_data_dir
 except ImportError:
     from typing import Union, Literal
+
     # Fallback implementation with matching signatures
     def user_config_dir(
         appname: str | None = None,
@@ -252,11 +255,11 @@ def safe_mktemp(
         return None
 
 
-def acquire_lock(lock_name: str = "fplaunch", timeout_seconds: float = 30) -> bool | None:
+def acquire_lock(
+    lock_name: str = "fplaunch", timeout_seconds: float = 30
+) -> bool | None:
     """Acquire a file-based lock with timeout."""
     try:
-        from pathlib import Path
-
         config_dir = Path.home() / ".config" / "fplaunchwrapper"
         config_dir.mkdir(parents=True, exist_ok=True)
 
@@ -265,8 +268,6 @@ def acquire_lock(lock_name: str = "fplaunch", timeout_seconds: float = 30) -> bo
 
         lockfile = lock_dir / f"{lock_name}.lock"
         pidfile = lock_dir / f"{lock_name}.pid"
-
-        import time
 
         start_time = time.time()
         end_time = start_time + timeout_seconds
@@ -289,8 +290,6 @@ def acquire_lock(lock_name: str = "fplaunch", timeout_seconds: float = 30) -> bo
 def release_lock(lock_name: str = "fplaunch") -> bool | None:
     """Release a file-based lock."""
     try:
-        from pathlib import Path
-
         config_dir = Path.home() / ".config" / "fplaunchwrapper"
         lock_dir = config_dir / "locks"
         lockfile = lock_dir / f"{lock_name}.lock"
@@ -299,8 +298,6 @@ def release_lock(lock_name: str = "fplaunch") -> bool | None:
         if pidfile.exists():
             stored_pid = pidfile.read_text().strip()
             if stored_pid == str(os.getpid()):
-                import shutil
-
                 with contextlib.suppress(FileNotFoundError):
                     shutil.rmtree(lockfile)
                 with contextlib.suppress(FileNotFoundError):

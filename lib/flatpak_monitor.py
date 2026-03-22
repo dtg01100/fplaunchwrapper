@@ -5,12 +5,14 @@ Automatically detects new Flatpak installations and updates wrappers.
 
 from __future__ import annotations
 
+import argparse
 import contextlib
 import logging
 import os
 import signal
 import subprocess
 import sys
+import threading
 import time
 from typing import Any, Dict, Optional
 
@@ -45,9 +47,7 @@ Observer: Any = WatchdogObserver
 # For runtime we select a base handler that is the watchdog class when present,
 # otherwise a neutral fallback (object).
 _BaseFSHandler: Any = (
-    WatchdogEventHandler
-    if WatchdogEventHandler is not None
-    else object
+    WatchdogEventHandler if WatchdogEventHandler is not None else object
 )
 
 
@@ -71,13 +71,9 @@ class FlatpakEventHandler(_BaseFSHandler):
         self.callback = callback
         self.last_event_time = 0.0
         self.config = config or {}
-        self.cooldown_seconds: float = self.config.get(
-            "cooldown", 2
-        )
+        self.cooldown_seconds: float = self.config.get("cooldown", 2)
         self.pending_events: List[tuple[str, str]] = []
-        self.batch_window: float = self.config.get(
-            "batch_window", 1.0
-        )
+        self.batch_window: float = self.config.get("batch_window", 1.0)
         self.batch_timer: Optional[Any] = None
         self._event_lock: Optional[Any] = None
         self._init_lock()
@@ -85,8 +81,6 @@ class FlatpakEventHandler(_BaseFSHandler):
     def _init_lock(self) -> None:
         """Initialize thread lock for event queueing."""
         try:
-            import threading
-
             self._event_lock = threading.Lock()
         except ImportError:
             self._event_lock = None
@@ -148,8 +142,6 @@ class FlatpakEventHandler(_BaseFSHandler):
         if self.batch_timer is not None:
             self.batch_timer.cancel()
 
-        import threading
-
         self.batch_timer = threading.Timer(
             self.batch_window, self._flush_pending_events
         )
@@ -172,8 +164,6 @@ class FlatpakEventHandler(_BaseFSHandler):
 
         current_time = time.time()
         if current_time - self.last_event_time < self.cooldown_seconds:
-            import threading
-
             delay = self.cooldown_seconds - (current_time - self.last_event_time)
             self.batch_timer = threading.Timer(delay, self._flush_pending_events)
             if self.batch_timer is not None:
@@ -412,8 +402,6 @@ def start_flatpak_monitoring(
     monitor = FlatpakMonitor(callback=callback, config=config)
 
     if daemon:
-        import threading
-
         thread = threading.Thread(target=monitor.start_monitoring, daemon=True)
         thread.start()
         return monitor
@@ -440,8 +428,6 @@ def main(
     if skip_parse:
         start_flatpak_monitoring(callback=callback, daemon=daemon, config=config)
         return
-
-    import argparse
 
     parser = argparse.ArgumentParser(
         description="Flatpak installation monitoring service"
@@ -514,7 +500,9 @@ def main(
     }
 
     logger.info("Starting Flatpak monitor with configuration: %s", config)
-    monitor = start_flatpak_monitoring(callback=callback_func, daemon=args.daemon, config=config)
+    monitor = start_flatpak_monitoring(
+        callback=callback_func, daemon=args.daemon, config=config
+    )
 
     if not args.daemon and monitor:
         # In non-daemon mode, wait for events until interrupted

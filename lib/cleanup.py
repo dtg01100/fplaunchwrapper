@@ -12,6 +12,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,11 +20,17 @@ from rich.console import Console
 from rich.prompt import Confirm
 
 try:
-    from safety import is_wrapper_file
+    from .safety import is_wrapper_file
 
     UTILS_AVAILABLE = True
 except ImportError:
-    UTILS_AVAILABLE = False
+    try:
+        from safety import is_wrapper_file
+
+        UTILS_AVAILABLE = True
+    except ImportError:
+        is_wrapper_file = None
+        UTILS_AVAILABLE = False
 
 try:
     from lib.paths import (
@@ -64,9 +71,15 @@ class CleanupConfig:
 
     def __post_init__(self):
         """Set derived values after initialization."""
-        self.bin_dir_path = Path(self.bin_dir) if self.bin_dir else get_default_bin_dir()
-        self.config_dir_path = Path(self.config_dir) if self.config_dir else get_default_config_dir()
-        self.data_dir_path = Path(self.data_dir) if self.data_dir else get_default_data_dir()
+        self.bin_dir_path = (
+            Path(self.bin_dir) if self.bin_dir else get_default_bin_dir()
+        )
+        self.config_dir_path = (
+            Path(self.config_dir) if self.config_dir else get_default_config_dir()
+        )
+        self.data_dir_path = (
+            Path(self.data_dir) if self.data_dir else get_default_data_dir()
+        )
         self.assume_yes_effective = (
             self.assume_yes
             or self.force
@@ -177,7 +190,11 @@ class WrapperCleanup:
         try:
             target = item.readlink()
             target_path = target if target.is_absolute() else self.bin_dir / target
-            if UTILS_AVAILABLE and is_wrapper_file(str(target_path)):
+            if (
+                UTILS_AVAILABLE
+                and is_wrapper_file is not None
+                and is_wrapper_file(str(target_path))
+            ):
                 self.cleanup_items["symlinks"].append(item)
         except (OSError, RuntimeError):
             pass
@@ -385,8 +402,6 @@ class WrapperCleanup:
         try:
             self.had_errors = False
             if self.create_backup and not self.dry_run:
-                import tempfile
-
                 backup_root = self.backup_dir or Path(
                     tempfile.mkdtemp(prefix="fp_cleanup_")
                 )

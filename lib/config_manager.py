@@ -6,6 +6,7 @@ schema validation, migration, and templating.
 
 from __future__ import annotations
 
+import argparse
 import os
 import re
 import sys
@@ -1124,8 +1125,6 @@ def create_config_manager():
 
 def main() -> None:
     """Command-line interface for configuration management."""
-    import argparse
-
     parser = argparse.ArgumentParser(
         description="Manage fplaunchwrapper configuration",
         formatter_class=argparse.RawDescriptionHelpFormatter,

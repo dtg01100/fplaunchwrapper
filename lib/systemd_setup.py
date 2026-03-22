@@ -5,14 +5,15 @@ Replaces fplaunch-setup-systemd bash script with Python implementation.
 
 from __future__ import annotations
 
+import argparse
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
-import re
-import shlex
 
 from rich.console import Console
 
@@ -50,7 +51,7 @@ class SystemdSetup:
         script = shutil.which("fplaunch-generate")
         if script:
             return script
-        
+
         # Try common locations
         common_paths = [
             "/usr/bin/fplaunch-generate",
@@ -61,7 +62,7 @@ class SystemdSetup:
         for p in common_paths:
             if os.path.isfile(p) and os.access(p, os.X_OK):
                 return p
-        
+
         # Default to name only if not found
         return "fplaunch-generate"
 
@@ -127,20 +128,26 @@ WantedBy=timers.target
 
         try:
             self.systemd_unit_dir.mkdir(parents=True, exist_ok=True)
-            
+
             service_path = self.systemd_unit_dir / "fplaunch-wrapper.service"
             timer_path = self.systemd_unit_dir / "fplaunch-wrapper.timer"
-            
+
             service_path.write_text(self.generate_systemd_service())
             timer_path.write_text(self.generate_systemd_timer(cron_interval))
-            
+
             # Reload systemd
             subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
-            
+
             # Enable and start timer
-            subprocess.run(["systemctl", "--user", "enable", "--now", "fplaunch-wrapper.timer"], check=False)
-            
-            self.log(f"Systemd service and timer installed (interval: {cron_interval}h)", "success")
+            subprocess.run(
+                ["systemctl", "--user", "enable", "--now", "fplaunch-wrapper.timer"],
+                check=False,
+            )
+
+            self.log(
+                f"Systemd service and timer installed (interval: {cron_interval}h)",
+                "success",
+            )
             return True
         except Exception as e:
             self.log(f"Failed to install systemd units: {e}", "error")
@@ -162,7 +169,9 @@ WantedBy=timers.target
             True if successful, False otherwise
         """
         if self.emit_mode:
-            self.log(f"EMIT: Would install cron job with interval {cron_interval}h", "emit")
+            self.log(
+                f"EMIT: Would install cron job with interval {cron_interval}h", "emit"
+            )
             return True
 
         try:
@@ -238,7 +247,9 @@ WantedBy=paths.target
                 capture_output=True,
                 text=True,
             )
-            result["service"]["exists"] = (self.systemd_unit_dir / "fplaunch-wrapper.service").exists()
+            result["service"]["exists"] = (
+                self.systemd_unit_dir / "fplaunch-wrapper.service"
+            ).exists()
             result["service"]["enabled"] = proc.returncode == 0
 
             proc = subprocess.run(
@@ -249,7 +260,9 @@ WantedBy=paths.target
             result["service"]["active"] = proc.stdout.strip() == "active"
 
             # Check timer
-            result["timer"]["exists"] = (self.systemd_unit_dir / "fplaunch-wrapper.timer").exists()
+            result["timer"]["exists"] = (
+                self.systemd_unit_dir / "fplaunch-wrapper.timer"
+            ).exists()
             proc = subprocess.run(
                 ["systemctl", "--user", "is-enabled", "fplaunch-wrapper.timer"],
                 capture_output=True,
@@ -346,7 +359,11 @@ WantedBy=paths.target
             return units
 
         for item in self.systemd_unit_dir.iterdir():
-            if item.name.startswith("fplaunch") and item.suffix in (".service", ".timer", ".path"):
+            if item.name.startswith("fplaunch") and item.suffix in (
+                ".service",
+                ".timer",
+                ".path",
+            ):
                 units.append(item.name)
 
         return sorted(units)
@@ -372,7 +389,7 @@ WantedBy=paths.target
             self.systemd_unit_dir.mkdir(parents=True, exist_ok=True)
 
             # Validate app_id: only allow letters, digits, dot, underscore, hyphen
-            if not re.match(r'^[A-Za-z0-9._-]+$', app_id):
+            if not re.match(r"^[A-Za-z0-9._-]+$", app_id):
                 self.log(f"Invalid app_id: {app_id}", "error")
                 return False
 
@@ -380,7 +397,7 @@ WantedBy=paths.target
             safe_app_id = app_id
             service_name = f"fplaunch-{safe_app_id}.service"
             service_path = self.systemd_unit_dir / service_name
-            
+
             # Use Path.relative_to() for robust path traversal prevention
             try:
                 service_path.resolve().relative_to(self.systemd_unit_dir.resolve())
@@ -428,14 +445,14 @@ ExecStart=flatpak run {exec_app}
 
         try:
             # Validate app_id: only allow letters, digits, dot, underscore, hyphen
-            if not re.match(r'^[A-Za-z0-9._-]+$', app_id):
+            if not re.match(r"^[A-Za-z0-9._-]+$", app_id):
                 self.log(f"Invalid app_id: {app_id}", "error")
                 return False
 
             safe_app_id = app_id
             service_name = f"fplaunch-{safe_app_id}.service"
             service_path = self.systemd_unit_dir / service_name
-            
+
             # Use Path.relative_to() for robust path traversal prevention
             try:
                 service_path.resolve().relative_to(self.systemd_unit_dir.resolve())
@@ -487,8 +504,6 @@ def get_systemd_unit_dir() -> Path:
 
 def main() -> int:
     """Command-line interface for systemd setup."""
-    import argparse
-
     parser = argparse.ArgumentParser(
         description="Set up systemd units for fplaunchwrapper",
     )

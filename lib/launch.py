@@ -5,14 +5,15 @@ Replaces fplaunch-launch bash script with Python implementation.
 
 from __future__ import annotations
 
+import argparse
 import os
+import re
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 from .paths import get_default_config_dir, resolve_bin_dir
-from .safety import safe_launch_check
 
 
 class _AppNotFoundError(Exception):
@@ -65,9 +66,6 @@ def _cache_flatpak_id(app_name: str, flatpak_id: str) -> None:
 
 def is_test_environment_launch() -> bool:
     """Check if we're running in test environment for launch module."""
-    import os
-    import sys
-
     if "pytest" in sys.modules or "unittest" in sys.modules:
         return True
 
@@ -95,9 +93,7 @@ class AppLauncher:
         self.verbose = verbose
         self.debug = debug
         self.env = env
-        self.hook_failure_mode = (
-            hook_failure_mode
-        )
+        self.hook_failure_mode = hook_failure_mode
 
         self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
         self.config_dir.mkdir(parents=True, exist_ok=True)
@@ -496,8 +492,6 @@ class AppLauncher:
         Replaces dangerous shell metacharacters with underscores to prevent
         command injection attacks in hook script execution.
         """
-        import re
-
         sanitized = re.sub(r"[^a-zA-Z0-9_.-]", "_", app_name)
         return sanitized
 
@@ -589,8 +583,6 @@ class AppLauncher:
 
 def main():
     """Command-line interface for launching applications."""
-    import argparse
-
     parser = argparse.ArgumentParser(
         description="Launch Flatpak applications with preference handling",
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -5,7 +5,10 @@ Replaces fplaunch-manage bash script with Python implementation.
 
 from __future__ import annotations
 
+import argparse
 import os
+import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -174,8 +177,6 @@ class WrapperManager:
 
             scripts_dir = self.config_dir / "scripts" / name
             if scripts_dir.exists():
-                import shutil
-
                 shutil.rmtree(scripts_dir)
 
             self.log(f"Removed wrapper: {name}", "success")
@@ -246,8 +247,6 @@ class WrapperManager:
 
         # Validate alias_name for path traversal and dangerous characters
         # Alias names should be simple identifiers, not paths
-        import re
-
         if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$", alias_name):
             self.log(
                 f"Invalid alias name '{alias_name}': must be alphanumeric starting with letter",
@@ -373,8 +372,6 @@ class WrapperManager:
 
 def main() -> int:
     """Command-line interface for wrapper management."""
-    import argparse
-
     parser = argparse.ArgumentParser(
         description="Manage Flatpak application wrappers",
     )
