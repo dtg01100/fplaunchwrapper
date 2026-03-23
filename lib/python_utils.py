@@ -299,7 +299,7 @@ def release_lock(lock_name: str = "fplaunch") -> bool | None:
             stored_pid = pidfile.read_text().strip()
             if stored_pid == str(os.getpid()):
                 with contextlib.suppress(FileNotFoundError):
-                    shutil.rmtree(lockfile)
+                    lockfile.unlink()
                 with contextlib.suppress(FileNotFoundError):
                     pidfile.unlink()
                 return True
