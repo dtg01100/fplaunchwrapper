@@ -454,9 +454,11 @@ def _run_systemd_setup(
         # Prefer calling a 'run' entrypoint if present (tests patch this),
         # otherwise fall back to the more specific install helper.
         if hasattr(setup, "run"):
-            return 0 if setup.run() else 1
+            result = setup.run()
+            return 0 if result == 0 else 1
         if hasattr(setup, "install_systemd_units"):
-            return 0 if setup.install_systemd_units() else 1
+            result = setup.install_systemd_units()
+            return 0 if result == 0 else 1
         return 0
     except Exception as e:
         console_err.print(f"[red]Error:[/red] {e}")
@@ -995,8 +997,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     """Entrypoint used by console scripts. Dispatch to Click."""
     argv = argv if argv is not None else sys.argv[1:]
     try:
-        cli.main(args=argv, prog_name="fplaunch", standalone_mode=False)
-        return 0
+        result = cli.main(args=argv, prog_name="fplaunch", standalone_mode=False)
+        return result if isinstance(result, int) else 0
     except SystemExit as e:
         code = e.code
         if isinstance(code, int):

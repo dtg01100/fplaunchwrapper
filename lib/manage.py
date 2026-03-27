@@ -187,14 +187,14 @@ class WrapperManager:
 
     def set_preference(self, name: str, preference: str) -> bool:
         """Set launch preference for a wrapper."""
+        if self.emit_mode:
+            self.log(f"Would set preference for {name} to {preference}", "emit")
+            return True
+
         wrapper_path = self.bin_dir / name
         if not wrapper_path.exists():
             self.log(f"Wrapper not found: {name}", "error")
             return False
-
-        if self.emit_mode:
-            self.log(f"Would set preference for {name} to {preference}", "emit")
-            return True
 
         try:
             pref_file = self.config_dir / f"{name}.pref"

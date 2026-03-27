@@ -423,11 +423,12 @@ class WrapperGenerator:
 
         # Pre-compute which wrappers already exist to track created vs updated
         existing_wrappers: set[str] = set()
-        for item in self.bin_dir.iterdir():
-            if item.is_file() and is_wrapper_file(str(item)):
-                wrapper_id = get_wrapper_id(str(item))
-                if wrapper_id:
-                    existing_wrappers.add(wrapper_id)
+        if self.bin_dir.exists():
+            for item in self.bin_dir.iterdir():
+                if item.is_file() and is_wrapper_file(str(item)):
+                    wrapper_id = get_wrapper_id(str(item))
+                    if wrapper_id:
+                        existing_wrappers.add(wrapper_id)
 
         with Progress(
             SpinnerColumn(),
