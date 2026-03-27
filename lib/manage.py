@@ -99,8 +99,11 @@ class WrapperManager:
                                     "id": "unknown (legacy)",
                                 },
                             )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        if self.verbose:
+                            self.log(
+                                f"Warning: Could not read {item.name}: {e}", "warning"
+                            )
 
         return sorted(wrappers, key=lambda x: x["name"])
 

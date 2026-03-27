@@ -336,10 +336,13 @@ class WrapperGenerator:
 
             remove_item = False
             if is_symlink:
-                # For symlinks, check if target still exists and is a valid wrapper
                 target = item.resolve()
-                if target not in installed_apps:
+                if not target.exists():
                     remove_item = True
+                else:
+                    target_name = target.name
+                    if target_name not in installed_apps:
+                        remove_item = True
             elif is_wrapper_file(str(item)):
                 wrapper_id = get_wrapper_id(str(item))
                 if wrapper_id and wrapper_id not in installed_apps:

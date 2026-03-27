@@ -295,9 +295,9 @@ WantedBy=paths.target
 
         # Check wrapper script exists
         if not shutil.which(self.wrapper_script):
-            # Check if it's a valid path
             if not Path(self.wrapper_script).exists():
-                self.log(f"Wrapper script not found: {self.wrapper_script}", "warning")
+                self.log(f"Wrapper script not found: {self.wrapper_script}", "error")
+                return False
 
         # Check bin_dir is writable
         if self.bin_dir.exists() and not os.access(self.bin_dir, os.W_OK):

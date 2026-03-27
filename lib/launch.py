@@ -139,8 +139,12 @@ class AppLauncher:
                     and self._is_path_safe(script_path, self.config_dir)
                 ):
                     scripts.append(script_path)
-        except Exception:
-            pass
+        except Exception as e:
+            if self.verbose:
+                print(
+                    f"Warning: Failed to load hook scripts from config: {e}",
+                    file=sys.stderr,
+                )
 
         if not scripts:
             scripts_dir = self.config_dir / "scripts" / app_name

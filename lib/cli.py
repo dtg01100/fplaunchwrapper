@@ -227,8 +227,8 @@ def uninstall(ctx, app_name, remove_data, emit) -> int:
     wrapper_removed = False
     try:
         wrapper_removed = manager.remove_wrapper(app_name, force=True)
-    except Exception:
-        pass
+    except Exception as e:
+        console_err.print(f"[yellow]Warning:[/yellow] Failed to remove wrapper: {e}")
 
     cmd = ["flatpak", "uninstall", "-y"]
     if remove_data:
@@ -982,7 +982,11 @@ def config(ctx, action, value) -> int:
             interval = cfg.get_cron_interval()
             console.print(f"Current cron interval: [bold]{interval}[/bold] hours")
         else:
-            interval = int(value)
+            try:
+                interval = int(value)
+            except ValueError:
+                console_err.print(f"[red]Error:[/red] Invalid interval value: {value}")
+                return 1
             cfg.set_cron_interval(interval)
             console.print(
                 f"[green]✓[/green] Cron interval set to [bold]{interval}[/bold] hours"
