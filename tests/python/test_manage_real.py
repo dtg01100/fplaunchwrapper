@@ -260,7 +260,7 @@ flatpak run "$ID" "$@"
         assert pref_file.read_text() == "system"
 
     def test_set_preference_invalid_value(self) -> None:
-        """Test set_preference() accepts any preference value (no validation)."""
+        """Test set_preference() rejects invalid preference values."""
         mgr = WrapperManager(
             config_dir=str(self.config_dir),
             bin_dir=str(self.bin_dir),
@@ -268,10 +268,7 @@ flatpak run "$ID" "$@"
 
         result = mgr.set_preference("firefox", "invalid value!")
 
-        assert result is True
-        pref_file = self.config_dir / "firefox.pref"
-        assert pref_file.exists()
-        assert pref_file.read_text() == "invalid value!"
+        assert result is False
 
     def test_set_preference_all_sets_multiple(self) -> None:
         """Test set_preference_all() sets preference for all wrappers."""

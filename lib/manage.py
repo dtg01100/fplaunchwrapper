@@ -187,6 +187,14 @@ class WrapperManager:
 
     def set_preference(self, name: str, preference: str) -> bool:
         """Set launch preference for a wrapper."""
+        valid_preferences = {"system", "flatpak", "auto"}
+        if preference not in valid_preferences:
+            self.log(
+                f"Invalid preference '{preference}': must be one of {', '.join(sorted(valid_preferences))}",
+                "error",
+            )
+            return False
+
         if self.emit_mode:
             self.log(f"Would set preference for {name} to {preference}", "emit")
             return True

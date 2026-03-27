@@ -196,10 +196,12 @@ class TestSecurity:
         manager = WrapperManager(config_dir=str(self.config_dir), verbose=True)
 
         sanitized_app_name = "test_app"
-        flatpak_id = "org.test.App"
-        result = manager.set_preference(sanitized_app_name, flatpak_id)
+        result = manager.set_preference(sanitized_app_name, "flatpak")
 
         assert result is True
+
+        result = manager.set_preference(sanitized_app_name, "org.test.App")
+        assert result is False
 
     def test_adversarial_cleanup_attempt(self) -> None:
         """Test handling adversarial cleanup attempts."""

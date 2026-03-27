@@ -165,15 +165,13 @@ echo {wrapper}
 
         long_pref = "flatpak" * 1000
         result = manager.set_preference("test", long_pref)
-        if result:
-            pref_file = temp_env["config_dir"] / "test.pref"
-            content = pref_file.read_text()
-            assert len(content) > 1000
+        assert result is False
 
         result = manager.set_preference("test", "flatpak;rm -rf /")
-        assert result is True
+        assert result is False
 
         result = manager.set_preference("test", "flatpak_🚀")
+        assert result is False
 
         for i in range(10):
             manager.set_preference(f"rapid{i}", "flatpak")
