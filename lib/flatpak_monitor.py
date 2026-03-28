@@ -24,7 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Optional watchdog dependency - use Any to avoid static type conflicts
-from typing import List
+from typing import List  # noqa: E402
 
 WatchdogEventHandler: Any
 WatchdogObserver: Any

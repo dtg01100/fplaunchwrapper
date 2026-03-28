@@ -9,37 +9,12 @@ import contextlib
 import hashlib
 import os
 import re
-import shutil
 import sys
 import tempfile
 import time
 import unicodedata
 from pathlib import Path
 from typing import Any
-
-try:
-    from platformdirs import user_config_dir, user_data_dir
-except ImportError:
-    from typing import Union, Literal
-
-    # Fallback implementation with matching signatures
-    def user_config_dir(
-        appname: str | None = None,
-        appauthor: Union[str, Literal[False], None] = None,
-        version: str | None = None,
-        roaming: bool = False,
-        ensure_exists: bool = True,
-    ) -> str:
-        return os.path.expanduser(f"~/.config/{appname}")
-
-    def user_data_dir(
-        appname: str | None = None,
-        appauthor: Union[str, Literal[False], None] = None,
-        version: str | None = None,
-        roaming: bool = False,
-        ensure_exists: bool = True,
-    ) -> str:
-        return os.path.expanduser(f"~/.local/share/{appname}")
 
 
 def sanitize_string(input_str: str) -> str:
@@ -299,7 +274,7 @@ def release_lock(lock_name: str = "fplaunch") -> bool | None:
             stored_pid = pidfile.read_text().strip()
             if stored_pid == str(os.getpid()):
                 with contextlib.suppress(FileNotFoundError):
-                    lockfile.unlink()
+                    lockfile.rmdir()  # lockfile is a directory, not a file
                 with contextlib.suppress(FileNotFoundError):
                     pidfile.unlink()
                 return True

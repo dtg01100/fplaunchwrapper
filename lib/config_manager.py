@@ -12,29 +12,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Union, Literal
-
-try:
-    from platformdirs import user_config_dir, user_data_dir
-except ImportError:
-    # Fallback implementation with matching signatures
-    def user_config_dir(
-        appname: str | None = None,
-        appauthor: Union[str, Literal[False], None] = None,
-        version: str | None = None,
-        roaming: bool = False,
-        ensure_exists: bool = True,
-    ) -> str:
-        return os.path.expanduser(f"~/.config/{appname}")
-
-    def user_data_dir(
-        appname: str | None = None,
-        appauthor: Union[str, Literal[False], None] = None,
-        version: str | None = None,
-        roaming: bool = False,
-        ensure_exists: bool = True,
-    ) -> str:
-        return os.path.expanduser(f"~/.local/share/{appname}")
+from typing import Any
 
 
 # Pydantic is optional. Use Any for all pydantic types to avoid static type conflicts.
@@ -103,7 +81,7 @@ except Exception:
     TOML_AVAILABLE = False
 
 
-from .exceptions import (
+from .exceptions import (  # noqa: E402
     ConfigError,
     ConfigMigrationError,
     ConfigParseError,

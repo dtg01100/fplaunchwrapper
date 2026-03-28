@@ -24,7 +24,7 @@ console = Console()
 console_err = Console(stderr=True)
 
 # Import handler for consistent error messaging
-from lib.import_utils import ImportErrorHandler, safe_import
+from lib.import_utils import ImportErrorHandler, safe_import  # noqa: E402
 
 import_handler = ImportErrorHandler(console_err)
 

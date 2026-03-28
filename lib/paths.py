@@ -15,11 +15,11 @@ from typing import Optional
 
 def get_default_config_dir() -> Path:
     """Get the default fplaunchwrapper configuration directory.
-    
+
     Resolves in order:
     1. XDG_CONFIG_HOME/fplaunchwrapper if XDG_CONFIG_HOME is set
     2. ~/.config/fplaunchwrapper as fallback
-    
+
     Returns:
         Path to the configuration directory
     """
@@ -31,7 +31,7 @@ def get_default_config_dir() -> Path:
 
 def get_default_bin_dir() -> Path:
     """Get the default wrapper bin directory.
-    
+
     Returns:
         Path to ~/bin directory
     """
@@ -40,11 +40,11 @@ def get_default_bin_dir() -> Path:
 
 def get_default_data_dir() -> Path:
     """Get the default fplaunchwrapper data directory.
-    
+
     Resolves in order:
     1. XDG_DATA_HOME/fplaunchwrapper if XDG_DATA_HOME is set
     2. ~/.local/share/fplaunchwrapper as fallback
-    
+
     Returns:
         Path to the data directory
     """
@@ -56,11 +56,11 @@ def get_default_data_dir() -> Path:
 
 def get_default_cache_dir() -> Path:
     """Get the default fplaunchwrapper cache directory.
-    
+
     Resolves in order:
     1. XDG_CACHE_HOME/fplaunchwrapper if XDG_CACHE_HOME is set
     2. ~/.cache/fplaunchwrapper as fallback
-    
+
     Returns:
         Path to the cache directory
     """
@@ -72,7 +72,7 @@ def get_default_cache_dir() -> Path:
 
 def get_systemd_unit_dir() -> Path:
     """Get the systemd user unit directory.
-    
+
     Returns:
         Path to the systemd user unit directory
     """
@@ -84,10 +84,10 @@ def get_systemd_unit_dir() -> Path:
 
 def ensure_dir(path: Path) -> Path:
     """Ensure a directory exists, creating it if necessary.
-    
+
     Args:
         path: Path to the directory to ensure exists
-        
+
     Returns:
         The same path (for chaining)
     """
@@ -95,24 +95,26 @@ def ensure_dir(path: Path) -> Path:
     return path
 
 
-def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Path] = None) -> Path:
+def resolve_bin_dir(
+    explicit_dir: Optional[str] = None, config_dir: Optional[Path] = None
+) -> Path:
     """Resolve the bin directory with fallback chain.
-    
+
     Resolution order:
     1. Explicit directory if provided
     2. Read from config_dir/bin_dir file if it exists
     3. Default ~/bin
-    
+
     Args:
         explicit_dir: Explicitly provided bin directory
         config_dir: Configuration directory to read bin_dir from
-        
+
     Returns:
         Resolved bin directory path
     """
     if explicit_dir:
         return Path(explicit_dir)
-    
+
     if config_dir:
         bin_dir_file = config_dir / "bin_dir"
         try:
@@ -122,5 +124,5 @@ def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Pat
                     return Path(bin_path)
         except (OSError, UnicodeDecodeError):
             pass
-    
+
     return get_default_bin_dir()
