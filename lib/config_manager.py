@@ -1101,10 +1101,12 @@ if PYDANTIC_AVAILABLE:
         @classmethod
         def validate_hook_failure_mode_default(cls, v):
             """Validate hook failure mode values."""
-            if v is not None and v not in HOOK_FAILURE_MODES:
+            if v is None or v == "":
+                return "warn"
+            if v not in HOOK_FAILURE_MODES:
                 msg = f"Invalid failure mode '{v}'. Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
                 raise ValueError(msg)
-            return v or "warn"  # Default to "warn" if empty
+            return v
 
         @field_validator(
             "pre_launch_failure_mode_default", "post_launch_failure_mode_default"

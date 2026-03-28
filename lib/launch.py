@@ -234,7 +234,7 @@ class AppLauncher:
                     env["FPWRAPPER_EXIT_CODE"] = str(exit_code)
 
                 safe_app_name = self._sanitize_app_name(self.app_name)
-                args = [str(script_path), safe_app_name, safe_app_name, source]
+                args = [str(script_path), safe_app_name, source]
                 if hook_type == "post":
                     args.append(str(exit_code))
                 args.extend(self.args)

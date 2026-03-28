@@ -188,11 +188,28 @@ WantedBy=timers.target
             # Create crontab entry
             cron_entry = f"0 */{cron_interval} * * * {cron_script}\n"
 
-            # Check if crontab already has entry
+            # Check if crontab already has entry for this script
             result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
             existing = result.stdout if result.returncode == 0 else ""
 
-            if "fplaunch-wrapper.sh" not in existing:
+            script_already_installed = False
+            for line in existing.splitlines():
+                if line.strip() and not line.strip().startswith("#"):
+                    parts = line.split()
+                    if (
+                        len(parts) >= 7
+                        and parts[0] == "0"
+                        and parts[3] == "*/{}".format(cron_interval)
+                    ):
+                        cron_script_path = " ".join(parts[5:])
+                        if (
+                            str(cron_script) in cron_script_path
+                            or cron_script.name in cron_script_path
+                        ):
+                            script_already_installed = True
+                            break
+
+            if not script_already_installed:
                 new_cron = existing.rstrip() + "\n" + cron_entry
                 subprocess.run(["crontab", "-"], input=new_cron, text=True, check=False)
                 self.log(f"Cron job installed (interval: {cron_interval}h)", "success")

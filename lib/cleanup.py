@@ -439,7 +439,7 @@ class WrapperCleanup:
             if self.remove_data or self.remove_data is None:
                 for df in self.cleanup_items["data_files"]:
                     self._remove_file(df, f"Removing data file: {df}")
-            if (self.remove_prefs or self.remove_prefs is None) or (
+            if (self.remove_prefs or self.remove_prefs is None) and (
                 self.remove_data or self.remove_data is None
             ):
                 self._cleanup_config_dir()
