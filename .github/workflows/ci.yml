@@ -7,24 +7,8 @@ on:
     branches: [ master, main, develop ]
 
 jobs:
-  shellcheck:
-    name: Shell Script Validation
-    runs-on: ubuntu-latest
-    if: false  # Disabled - shell scripts are legacy, core functionality is Python
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run ShellCheck
-      uses: ludeeus/action-shellcheck@master
-      with:
-        scandir: '.'
-        severity: warning
-        ignore_paths: '.git .github tests/fixtures build system_detection_fix.patch'
-        ignore_names: 'README.md fplaunch_completion.bash improved_system_detection.sh optimized_system_detection.sh test_name_clashes.sh test_real_world_clashes.sh'
-
   python-tests:
-    name: Python Tests (Safe & Isolated)
+    name: Python Tests (Full Suite)
     runs-on: ubuntu-latest
 
     steps:
@@ -33,7 +17,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.8'
+        python-version: '3.12'
 
     - name: Install UV package manager
       run: |
@@ -47,7 +31,7 @@ jobs:
 
     - name: Run Python tests
       run: |
-        python3 -m pytest tests/python/test_safety.py -v
+        python3 -m pytest tests/python/ -v --timeout=300 --timeout-method=thread
 
   package-validation:
     name: Package Installation Test
@@ -58,61 +42,30 @@ jobs:
 
     - name: Test Python package installation
       run: |
-        # Test modern Python installation method
         python3 -m pip install -e .
-        python3 -c "import fplaunch; print('✅ Python package imports successfully')"
-        python3 -c "from fplaunch.generate import WrapperGenerator; print('✅ Package functionality works')"
+        python3 -c "import fplaunch; print('Python package imports successfully')"
+        python3 -c "from fplaunch.generate import WrapperGenerator; print('Package functionality works')"
 
-  shell-installation-ubuntu:
-    name: Shell Installation (Ubuntu)
+  lint-and-security:
+    name: Lint and Security Scan
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Test legacy shell installation script
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install linting dependencies
       run: |
-        # Test that the legacy install script has basic functionality (without full installation)
-        # Since we moved to Python, we just verify the script doesn't crash and has safety checks
-        CI=1 timeout 30 bash install.sh 2>&1 | head -20 || echo "✅ Install script completed or timed out safely"
-        echo "✅ Legacy install script testing completed"
+        uv pip install --system ruff bandit
 
-  shell-installation-fedora:
-    name: Shell Installation (Fedora)
-    runs-on: ubuntu-latest
-    container:
-      image: fedora:latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install dependencies
+    - name: Run ruff linter
       run: |
-        dnf install -y bash git
+        python3 -m ruff check lib/ tests/
 
-    - name: Test shell installation on Fedora
+    - name: Run bandit security scan
       run: |
-        # Create test user since containers run as root but install.sh requires non-root
-        useradd -m -s /bin/bash testuser
-        # Test that installation script runs without errors (don't actually install as root)
-        CI=1 su - testuser -c "cd /__w/fplaunchwrapper/fplaunchwrapper && bash install.sh --help >/dev/null 2>&1 && echo '✅ Install script is executable'" || echo "✅ Install script has safety checks"
-
-  shell-installation-debian:
-    name: Shell Installation (Debian)
-    runs-on: ubuntu-latest
-    container:
-      image: debian:bookworm
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install dependencies
-      run: |
-        apt-get update && apt-get install -y bash git
-
-    - name: Test shell installation on Debian
-      run: |
-        # Create test user since containers run as root but install.sh requires non-root
-        useradd -m -s /bin/bash testuser
-        # Test that installation script runs without errors (don't actually install as root)
-        CI=1 su - testuser -c "cd /__w/fplaunchwrapper/fplaunchwrapper && bash install.sh --help >/dev/null 2>&1 && echo '✅ Install script is executable'" || echo "✅ Install script has safety checks"
+        python3 -m bandit -r lib/ -c .bandit.yml -ll

@@ -375,7 +375,7 @@ class WrapperGenerator:
                             new_content = "\n".join(
                                 line
                                 for line in content.split("\n")
-                                if not line.startswith(f"{item.name} ")
+                                if not line.startswith(f"{item.name}:")
                             )
                             if new_content.strip():
                                 aliases_file.write_text(new_content)
@@ -400,7 +400,7 @@ class WrapperGenerator:
 
                 if app_count == 0:
                     self.log("No Flatpak apps found", "warning")
-                    return 1  # Required by TestGeneratorIntegration.test_full_wrapper_generation_workflow
+                    return 0
 
                 success_count = 0
                 # Using generate_wrappers alias to satisfy tests

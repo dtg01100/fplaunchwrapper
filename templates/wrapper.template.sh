@@ -24,8 +24,14 @@ fi
 # Load environment variables if present
 ENV_FILE="$PREF_DIR/$NAME.env"
 if [ -f "$ENV_FILE" ]; then
-    # shellcheck disable=SC1090
-    source "$ENV_FILE"
+    # Validate env file contains only safe KEY=value pairs before sourcing
+    # Reject files with shell special characters that could enable command injection
+    if grep -qE '^[^=]+=[^=]*$' "$ENV_FILE" && ! grep -qE '[;&|`$()]' "$ENV_FILE"; then
+        # shellcheck disable=SC1090
+        source "$ENV_FILE"
+    else
+        echo "[fplaunchwrapper] Warning: Ignoring unsafe $ENV_FILE" >&2
+    fi
 fi
 SCRIPT_BIN_DIR="{bin_dir}"
 ONE_SHOT_PREF=""

@@ -234,7 +234,9 @@ class TestWrapperGeneratorReal:
             config_dir=str(self.config_dir),
         )
 
-        with pytest.raises(WrapperGenerationError, match="Failed to get Flatpak applications"):
+        with pytest.raises(
+            WrapperGenerationError, match="Failed to get Flatpak applications"
+        ):
             gen.get_installed_flatpaks()
 
     def test_is_blocklisted_no_file(self) -> None:
@@ -476,7 +478,7 @@ class TestWrapperGeneratorReal:
 
         # Create aliases file
         aliases_file = self.config_dir / "aliases"
-        aliases_file.write_text("firefox ff\nchrome gc\n")
+        aliases_file.write_text("firefox:ff\nchrome:gc\n")
 
         # Cleanup firefox
         removed = gen.cleanup_obsolete_wrappers([])

@@ -483,82 +483,161 @@ def systemd_group(ctx) -> int:
     return 0
 
 
-def _systemd_simple_action(ctx) -> int:
+def _get_systemd_setup(ctx):
+    """Get a configured SystemdSetup instance."""
     SystemdSetup = safe_import("lib.systemd_setup", "SystemdSetup")
     if SystemdSetup is None:
-        return 0
-    setup = SystemdSetup(
+        return None
+    return SystemdSetup(
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
         emit_mode=ctx.obj.get("emit", False),
         emit_verbose=ctx.obj.get("emit_verbose", False),
     )
-    if hasattr(setup, "install_systemd_units"):
-        return 0 if setup.install_systemd_units() else 1
-    return 0
 
 
 @systemd_group.command(name="enable")
 @click.pass_context
 def systemd_enable(ctx) -> int:
     """Enable the systemd service for automatic wrapper generation."""
-    return _systemd_simple_action(ctx)
+    setup = _get_systemd_setup(ctx)
+    if setup is None:
+        console_err.print("[red]Error:[/red] systemd_setup module not available")
+        return 1
+    return 0 if setup.install_systemd_units() else 1
 
 
 @systemd_group.command(name="disable")
 @click.pass_context
 def systemd_disable(ctx) -> int:
     """Disable the systemd service."""
-    return _systemd_simple_action(ctx)
+    setup = _get_systemd_setup(ctx)
+    if setup is None:
+        console_err.print("[red]Error:[/red] systemd_setup module not available")
+        return 1
+    return 0 if setup.disable_systemd_units() else 1
 
 
 @systemd_group.command(name="status")
 @click.pass_context
 def systemd_status(ctx) -> int:
     """Show status of the systemd service."""
-    return _systemd_simple_action(ctx)
+    setup = _get_systemd_setup(ctx)
+    if setup is None:
+        console_err.print("[red]Error:[/red] systemd_setup module not available")
+        return 1
+    status = setup.check_systemd_status()
+    console.print("[bold]fplaunch-wrapper.service:[/bold]")
+    console.print(f"  Exists:   {status['service']['exists']}")
+    console.print(f"  Enabled:  {status['service']['enabled']}")
+    console.print(f"  Active:   {status['service']['active']}")
+    console.print("[bold]fplaunch-wrapper.timer:[/bold]")
+    console.print(f"  Exists:   {status['timer']['exists']}")
+    console.print(f"  Enabled:  {status['timer']['enabled']}")
+    console.print(f"  Active:   {status['timer']['active']}")
+    return 0
 
 
 @systemd_group.command(name="start")
 @click.pass_context
 def systemd_start(ctx) -> int:
     """Start the systemd service immediately."""
-    return _systemd_simple_action(ctx)
+    import subprocess
+
+    emit_mode = ctx.obj.get("emit", False)
+    if emit_mode:
+        console.print("[yellow]EMIT: Would start systemd service[/yellow]")
+        return 0
+    result = subprocess.run(
+        ["systemctl", "--user", "start", "fplaunch-wrapper.timer"], check=False
+    )
+    return 0 if result.returncode == 0 else 1
 
 
 @systemd_group.command(name="stop")
 @click.pass_context
 def systemd_stop(ctx) -> int:
     """Stop the systemd service."""
-    return _systemd_simple_action(ctx)
+    import subprocess
+
+    emit_mode = ctx.obj.get("emit", False)
+    if emit_mode:
+        console.print("[yellow]EMIT: Would stop systemd service[/yellow]")
+        return 0
+    result = subprocess.run(
+        ["systemctl", "--user", "stop", "fplaunch-wrapper.timer"], check=False
+    )
+    return 0 if result.returncode == 0 else 1
 
 
 @systemd_group.command(name="restart")
 @click.pass_context
 def systemd_restart(ctx) -> int:
     """Restart the systemd service."""
-    return _systemd_simple_action(ctx)
+    import subprocess
+
+    emit_mode = ctx.obj.get("emit", False)
+    if emit_mode:
+        console.print("[yellow]EMIT: Would restart systemd service[/yellow]")
+        return 0
+    result = subprocess.run(
+        ["systemctl", "--user", "restart", "fplaunch-wrapper.timer"], check=False
+    )
+    return 0 if result.returncode == 0 else 1
 
 
 @systemd_group.command(name="reload")
 @click.pass_context
 def systemd_reload(ctx) -> int:
     """Reload systemd daemon configuration."""
-    return _systemd_simple_action(ctx)
+    import subprocess
+
+    emit_mode = ctx.obj.get("emit", False)
+    if emit_mode:
+        console.print("[yellow]EMIT: Would reload systemd daemon[/yellow]")
+        return 0
+    result = subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
+    return 0 if result.returncode == 0 else 1
 
 
 @systemd_group.command(name="logs")
 @click.pass_context
 def systemd_logs(ctx) -> int:
     """View systemd service logs."""
-    return _systemd_simple_action(ctx)
+    import subprocess
+
+    emit_mode = ctx.obj.get("emit", False)
+    if emit_mode:
+        console.print("[yellow]EMIT: Would show systemd logs[/yellow]")
+        return 0
+    result = subprocess.run(
+        ["journalctl", "--user", "-u", "fplaunch-wrapper.service", "-n", "50"],
+        check=False,
+        text=True,
+    )
+    if result.stdout:
+        console.print(result.stdout)
+    if result.returncode != 0 and result.stderr:
+        console_err.print(result.stderr)
+    return 0 if result.returncode == 0 else 1
 
 
 @systemd_group.command(name="list")
 @click.pass_context
 def systemd_list(ctx) -> int:
     """List all managed systemd units."""
-    return _systemd_simple_action(ctx)
+    setup = _get_systemd_setup(ctx)
+    if setup is None:
+        console_err.print("[red]Error:[/red] systemd_setup module not available")
+        return 1
+    units = setup.list_all_units()
+    if units:
+        console.print("[bold]Managed systemd units:[/bold]")
+        for unit in units:
+            console.print(f"  {unit}")
+    else:
+        console.print("No fplaunchwrapper systemd units found")
+    return 0
 
 
 @systemd_group.command(name="test")
@@ -571,10 +650,20 @@ def systemd_test(ctx, emit) -> int:
     emit_mode = emit or ctx.obj.get("emit", False) if ctx.obj else False
 
     if emit_mode:
-        console.print("[yellow]EMIT: Would run systemd test[/yellow]")
+        console.print("[yellow]EMIT: Would test systemd configuration[/yellow]")
         return 0
 
-    return _systemd_simple_action(ctx)
+    setup = _get_systemd_setup(ctx)
+    if setup is None:
+        console_err.print("[red]Error:[/red] systemd_setup module not available")
+        return 1
+    status = setup.check_systemd_status()
+    prerequisites_ok = setup.check_prerequisites()
+    console.print("[bold]Systemd Configuration Test Results:[/bold]")
+    console.print(f"  Prerequisites OK: {prerequisites_ok}")
+    console.print(f"  Service exists:    {status['service']['exists']}")
+    console.print(f"  Timer exists:       {status['timer']['exists']}")
+    return 0
 
 
 @cli.command()

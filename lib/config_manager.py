@@ -1147,7 +1147,11 @@ Commands:
 
     elif args.command == "show":
         config = create_config_manager()
-        config.save_config()  # This will show the config
+        if config.config_file.exists():
+            print(config.config_file.read_text())
+        else:
+            print(f"No configuration file found at {config.config_file}")
+            print("Run 'fplaunch config init' to create one")
 
     elif args.command == "block":
         if not args.value:

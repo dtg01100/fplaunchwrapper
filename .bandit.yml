@@ -1,0 +1,17 @@
+# Bandit security scanning configuration (YAML format)
+# See: https://bandit.readthedocs.io/en/latest/config.html
+
+# Directories to exclude from scanning
+exclude_dirs:
+  - /test
+  - /tests
+  - .venv
+  - venv
+  - .git
+  - __pycache__
+
+# Skip specific tests (none by default - using # nosec in code for specific cases)
+skips: []
+
+# Assert usage settings
+assert_used: true

@@ -45,7 +45,9 @@ class DesktopEntry:
                 key, _, value = stripped.partition("=")
                 self._entries[current_section][key.strip()] = value.strip()
 
-    def get(self, key: str, section: str = "Desktop Entry", default: Optional[str] = None) -> Optional[str]:
+    def get(
+        self, key: str, section: str = "Desktop Entry", default: Optional[str] = None
+    ) -> Optional[str]:
         """Get a value from the desktop entry.
 
         Args:
@@ -58,7 +60,9 @@ class DesktopEntry:
         """
         return self._entries.get(section, {}).get(key, default)
 
-    def get_localized(self, key: str, section: str = "Desktop Entry", locale: Optional[str] = None) -> Optional[str]:
+    def get_localized(
+        self, key: str, section: str = "Desktop Entry", locale: Optional[str] = None
+    ) -> Optional[str]:
         """Get a localized value from the desktop entry.
 
         Args:
@@ -106,7 +110,7 @@ class DesktopEntry:
     @property
     def categories(self) -> list[str]:
         """Get the application categories."""
-        cats = self.get("Categories", "") or ""
+        cats = self.get("Categories") or ""
         return [c.strip() for c in cats.split(";") if c.strip()]
 
     @property
@@ -156,7 +160,9 @@ def find_desktop_files(directory: Path, recursive: bool = True) -> list[Path]:
     return list(directory.glob("*.desktop"))
 
 
-def parse_flatpak_desktop_files(flatpak_dir: Optional[Path] = None) -> dict[str, DesktopEntry]:
+def parse_flatpak_desktop_files(
+    flatpak_dir: Optional[Path] = None,
+) -> dict[str, DesktopEntry]:
     """Find and parse all Flatpak .desktop files.
 
     Args:
@@ -182,7 +188,11 @@ def parse_flatpak_desktop_files(flatpak_dir: Optional[Path] = None) -> dict[str,
 
     for search_dir in search_dirs:
         # Look in both apps and desktop dirs
-        for subdir in ["apps", "current/active/files/share/applications", "exports/share/applications"]:
+        for subdir in [
+            "apps",
+            "current/active/files/share/applications",
+            "exports/share/applications",
+        ]:
             apps_dir = search_dir / subdir
             for desktop_file in find_desktop_files(apps_dir):
                 entry = DesktopEntry(desktop_file)
@@ -195,7 +205,9 @@ def parse_flatpak_desktop_files(flatpak_dir: Optional[Path] = None) -> dict[str,
     return results
 
 
-def get_app_metadata(flatpak_id: str, desktop_entries: Optional[dict[str, DesktopEntry]] = None) -> dict[str, Any]:
+def get_app_metadata(
+    flatpak_id: str, desktop_entries: Optional[dict[str, DesktopEntry]] = None
+) -> dict[str, Any]:
     """Get metadata for a Flatpak app.
 
     Args:

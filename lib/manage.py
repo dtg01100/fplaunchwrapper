@@ -427,9 +427,8 @@ def main() -> int:
         return 1
     elif args.command == "cleanup":
         manager = WrapperManager()
-        result = manager.list_wrappers()
-        # Return count of wrappers cleaned (simplified)
-        return len(result) > 0 if result else 0
+        manager.list_wrappers()
+        return 0
     elif args.command == "set-pref":
         manager = WrapperManager()
         if manager.set_preference(args.name, args.preference):

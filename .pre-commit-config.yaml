@@ -43,7 +43,7 @@ repos:
     rev: 1.7.6
     hooks:
       - id: bandit
-        args: [--config, .bandit]
+        args: [--config, .bandit.yml]
         exclude: ^tests/
 
   # Docstring checking
