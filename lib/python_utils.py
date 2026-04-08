@@ -16,6 +16,11 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
+try:
+    from .paths import get_default_config_dir, get_lock_dir, ensure_dir
+except ImportError:
+    from lib.paths import get_default_config_dir, get_lock_dir, ensure_dir
+
 
 def sanitize_string(input_str: str) -> str:
     """Safely sanitize a string for use in Python code."""
@@ -235,11 +240,11 @@ def acquire_lock(
 ) -> bool | None:
     """Acquire a file-based lock with timeout."""
     try:
-        config_dir = Path.home() / ".config" / "fplaunchwrapper"
-        config_dir.mkdir(parents=True, exist_ok=True)
+        config_dir = get_default_config_dir()
+        ensure_dir(config_dir)
 
-        lock_dir = config_dir / "locks"
-        lock_dir.mkdir(parents=True, exist_ok=True)
+        lock_dir = get_lock_dir()
+        ensure_dir(lock_dir)
 
         lockfile = lock_dir / f"{lock_name}.lock"
         pidfile = lock_dir / f"{lock_name}.pid"
@@ -265,8 +270,7 @@ def acquire_lock(
 def release_lock(lock_name: str = "fplaunch") -> bool | None:
     """Release a file-based lock."""
     try:
-        config_dir = Path.home() / ".config" / "fplaunchwrapper"
-        lock_dir = config_dir / "locks"
+        lock_dir = get_lock_dir()
         lockfile = lock_dir / f"{lock_name}.lock"
         pidfile = lock_dir / f"{lock_name}.pid"
 

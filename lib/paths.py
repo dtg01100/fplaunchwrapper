@@ -13,20 +13,23 @@ from pathlib import Path
 from typing import Optional
 
 
-def get_default_config_dir() -> Path:
+def get_default_config_dir(app_name: str = "fplaunchwrapper") -> Path:
     """Get the default fplaunchwrapper configuration directory.
 
     Resolves in order:
-    1. XDG_CONFIG_HOME/fplaunchwrapper if XDG_CONFIG_HOME is set
-    2. ~/.config/fplaunchwrapper as fallback
+    1. XDG_CONFIG_HOME/{app_name} if XDG_CONFIG_HOME is set
+    2. ~/.config/{app_name} as fallback
+
+    Args:
+        app_name: Application name for namespacing (default: "fplaunchwrapper")
 
     Returns:
         Path to the configuration directory
     """
     xdg_config = os.environ.get("XDG_CONFIG_HOME")
     if xdg_config:
-        return Path(xdg_config) / "fplaunchwrapper"
-    return Path.home() / ".config" / "fplaunchwrapper"
+        return Path(xdg_config) / app_name
+    return Path.home() / ".config" / app_name
 
 
 def get_default_bin_dir() -> Path:
@@ -38,36 +41,42 @@ def get_default_bin_dir() -> Path:
     return Path.home() / "bin"
 
 
-def get_default_data_dir() -> Path:
+def get_default_data_dir(app_name: str = "fplaunchwrapper") -> Path:
     """Get the default fplaunchwrapper data directory.
 
     Resolves in order:
-    1. XDG_DATA_HOME/fplaunchwrapper if XDG_DATA_HOME is set
-    2. ~/.local/share/fplaunchwrapper as fallback
+    1. XDG_DATA_HOME/{app_name} if XDG_DATA_HOME is set
+    2. ~/.local/share/{app_name} as fallback
+
+    Args:
+        app_name: Application name for namespacing (default: "fplaunchwrapper")
 
     Returns:
         Path to the data directory
     """
     xdg_data = os.environ.get("XDG_DATA_HOME")
     if xdg_data:
-        return Path(xdg_data) / "fplaunchwrapper"
-    return Path.home() / ".local" / "share" / "fplaunchwrapper"
+        return Path(xdg_data) / app_name
+    return Path.home() / ".local" / "share" / app_name
 
 
-def get_default_cache_dir() -> Path:
+def get_default_cache_dir(app_name: str = "fplaunchwrapper") -> Path:
     """Get the default fplaunchwrapper cache directory.
 
     Resolves in order:
-    1. XDG_CACHE_HOME/fplaunchwrapper if XDG_CACHE_HOME is set
-    2. ~/.cache/fplaunchwrapper as fallback
+    1. XDG_CACHE_HOME/{app_name} if XDG_CACHE_HOME is set
+    2. ~/.cache/{app_name} as fallback
+
+    Args:
+        app_name: Application name for namespacing (default: "fplaunchwrapper")
 
     Returns:
         Path to the cache directory
     """
     xdg_cache = os.environ.get("XDG_CACHE_HOME")
     if xdg_cache:
-        return Path(xdg_cache) / "fplaunchwrapper"
-    return Path.home() / ".cache" / "fplaunchwrapper"
+        return Path(xdg_cache) / app_name
+    return Path.home() / ".cache" / app_name
 
 
 def get_systemd_unit_dir() -> Path:
@@ -93,6 +102,24 @@ def ensure_dir(path: Path) -> Path:
     """
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def get_lock_dir() -> Path:
+    """Get the lock directory for fplaunchwrapper.
+
+    Returns:
+        Path to the locks directory within the config directory
+    """
+    return get_default_config_dir() / "locks"
+
+
+def get_scripts_dir() -> Path:
+    """Get the scripts directory for fplaunchwrapper.
+
+    Returns:
+        Path to the scripts directory within the config directory
+    """
+    return get_default_config_dir() / "scripts"
 
 
 def resolve_bin_dir(

@@ -5,21 +5,29 @@ All notable changes to fplaunchwrapper are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.0] - 2026-04-08
 
 ### Added
 - Python 3.12 and 3.13 support in classifiers
 - MANIFEST.in for complete source distributions
 - Comprehensive .gitignore with modern Python patterns
 - Python package entry point for main fplaunch command
+- Zsh shell completion (`fplaunch_completion.zsh`)
+- Fish shell completion (`fplaunch_completion.fish`)
 
 ### Fixed
 - Entry point format in pyproject.toml for main fplaunch command
 - Shell script executable permissions in packaging
 
 ### Improved
-- Packaging configuration documentation
-- Build system organization
+- Centralized path resolution via `lib/paths.py` (reduces duplication)
+- Standardized ImportError handling via `lib/import_utils.py`
+- `lib/config_manager.py` now uses centralized path functions
+- `lib/python_utils.py` now uses centralized path functions
+- Removed legacy dead code (unused shell scripts in lib/)
+
+### Removed
+- Legacy shell scripts (alias.sh, env.sh, pref.sh, script.sh, wrapper.sh) - replaced by Python implementation
 
 ## [1.3.0] - 2025-11-26
 

@@ -89,6 +89,21 @@ from .exceptions import (  # noqa: E402
     ConfigValidationError,
 )
 
+try:
+    from .paths import (
+        get_default_config_dir,
+        get_default_data_dir,
+        get_default_cache_dir,
+        ensure_dir,
+    )
+except ImportError:
+    from lib.paths import (
+        get_default_config_dir,
+        get_default_data_dir,
+        get_default_cache_dir,
+        ensure_dir,
+    )
+
 
 # Valid hook failure modes
 HOOK_FAILURE_MODES = ("abort", "warn", "ignore")
@@ -148,15 +163,8 @@ class EnhancedConfigManager:
 
     def __init__(self, app_name="fplaunchwrapper") -> None:
         self.app_name = app_name
-        # Resolve config/data directories using XDG variables with Path.home fallback
-        xdg_config_home = os.environ.get(
-            "XDG_CONFIG_HOME", str(Path.home() / ".config")
-        )
-        xdg_data_home = os.environ.get(
-            "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
-        )
-        self.config_dir = Path(xdg_config_home) / app_name
-        self.data_dir = Path(xdg_data_home) / app_name
+        self.config_dir = get_default_config_dir(app_name)
+        self.data_dir = get_default_data_dir(app_name)
         self.config_file = self.config_dir / "config.toml"
         self.config = WrapperConfig()
         self.config.schema_version = self.CURRENT_SCHEMA_VERSION
@@ -177,11 +185,11 @@ class EnhancedConfigManager:
         }
 
         try:
-            self.config_dir.mkdir(parents=True, exist_ok=True)
+            ensure_dir(self.config_dir)
         except OSError:
             pass
         try:
-            self.data_dir.mkdir(parents=True, exist_ok=True)
+            ensure_dir(self.data_dir)
         except OSError:
             pass
 

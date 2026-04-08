@@ -7,8 +7,10 @@ include CHANGES.md
 include pyproject.toml
 include Makefile
 
-# Include bash completion
+# Include shell completions
 include fplaunch_completion.bash
+include fplaunch_completion.zsh
+include fplaunch_completion.fish
 
 # Include all documentation (except archived files)
 recursive-include docs *
