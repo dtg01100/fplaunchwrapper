@@ -97,11 +97,11 @@ fplaunch-config = "fplaunch.config_manager:main"
 fplaunch-monitor = "fplaunch.flatpak_monitor:main"
 
 [tool.setuptools]
-packages = ["fplaunch"]
-package-dir = {"fplaunch" = "lib"}
+packages = ["fplaunch", "lib"]
 
 [tool.setuptools.package-data]
-lib = ["*.py"]
+lib = ["*.py", "templates/*.sh"]
+fplaunch = ["*.py"]
 
 # Development tool configurations
 [tool.black]

@@ -12,6 +12,9 @@ include fplaunch_completion.bash
 include fplaunch_completion.zsh
 include fplaunch_completion.fish
 
+# Include templates
+recursive-include templates *
+
 # Include all documentation (except archived files)
 recursive-include docs *
 recursive-include examples *
