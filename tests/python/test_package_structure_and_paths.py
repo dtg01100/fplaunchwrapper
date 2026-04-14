@@ -196,7 +196,6 @@ class TestPathResolutionInModules:
             get_default_config_dir,
             get_default_data_dir,
             get_default_bin_dir,
-            ensure_dir,
         )
 
         config_dir = get_default_config_dir()
@@ -217,7 +216,7 @@ class TestPathResolutionInModules:
 
         from lib.config_manager import create_config_manager
 
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory():
             # Just verify that the config manager can be created
             manager = create_config_manager()
             assert manager is not None
@@ -229,7 +228,6 @@ class TestNoIncorrectPathManipulation:
 
     def test_main_entrypoint_no_sys_path_insert(self):
         """Test that lib.main_entrypoint doesn't insert lib/lib into sys.path."""
-        import lib.main_entrypoint
 
         # Check that sys.path doesn't contain any "lib/lib" paths
         for path in sys.path:

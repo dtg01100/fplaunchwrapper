@@ -5,7 +5,6 @@ Tests full CLI workflows and component interactions with ZERO side effects.
 All operations are completely isolated in temporary directories with full mocking.
 """
 
-import os
 import shutil
 import tempfile
 from pathlib import Path

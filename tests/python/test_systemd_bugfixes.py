@@ -8,7 +8,6 @@ This test file validates fixes for critical bugs found during code review:
 4. Return value semantics
 """
 
-import os
 import shutil
 import sys
 import tempfile

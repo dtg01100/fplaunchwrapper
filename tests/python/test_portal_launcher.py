@@ -5,11 +5,8 @@ Tests portal-aware launching, command construction, and subprocess interactions.
 Uses mocks for subprocess calls and external dependencies.
 """
 
-import os
 import subprocess
-from pathlib import Path
-from typing import Optional
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -20,7 +17,7 @@ class TestPortalLauncherAvailability:
     @patch("lib.portal_launcher.shutil.which")
     def test_is_portal_launcher_available_true(self, mock_which: MagicMock) -> None:
         """Test that portal launcher is available when flatpak-spawn is found."""
-        from lib.portal_launcher import FLATPAK_SPAWN_PATH, is_portal_launcher_available
+        from lib.portal_launcher import is_portal_launcher_available
 
         mock_which.return_value = "/usr/bin/flatpak-spawn"
 

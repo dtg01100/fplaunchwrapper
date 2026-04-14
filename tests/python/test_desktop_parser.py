@@ -8,10 +8,8 @@ Uses mocks for file I/O and external dependencies.
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 
 class TestDesktopEntry:
