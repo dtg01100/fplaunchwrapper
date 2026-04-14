@@ -36,7 +36,7 @@ try:
     ValidationError = _ValidationError
     field_validator = _field_validator
     PYDANTIC_AVAILABLE = True
-except Exception:
+except ImportError:
     # Pydantic is optional. Provide minimal shims so the module can still be
     # imported and basic fallback behavior is possible when Pydantic is absent.
 
@@ -44,10 +44,10 @@ except Exception:
         def __init__(self, *args, **kwargs):
             pass
 
-    def _RuntimeField(*args, **kwargs):
+    def _RuntimeField(*_args, **_kwargs):
         return None
 
-    def _RuntimeFieldValidator(*args, **kwargs):
+    def _RuntimeFieldValidator(*_args, **_kwargs):
         def _decorator(fn):
             return fn
 
@@ -73,7 +73,7 @@ try:
     import tomli_w
 
     TOML_AVAILABLE = True
-except Exception:
+except ImportError:
     # TOML support is optional. Ensure the names exist so static analysis
     # and runtime code that tests TOML_AVAILABLE can reference them safely.
     tomli = None
@@ -93,14 +93,12 @@ try:
     from .paths import (
         get_default_config_dir,
         get_default_data_dir,
-        get_default_cache_dir,
         ensure_dir,
     )
 except ImportError:
     from lib.paths import (
         get_default_config_dir,
         get_default_data_dir,
-        get_default_cache_dir,
         ensure_dir,
     )
 
@@ -326,7 +324,7 @@ class EnhancedConfigManager:
             # Update to current version
             data["schema_version"] = self.CURRENT_SCHEMA_VERSION
             return data
-        except Exception as e:
+        except (AttributeError, KeyError, TypeError, ValueError) as e:
             raise ConfigMigrationError(f"Failed to migrate configuration: {e}") from e
 
     def _parse_config_data(self, data: dict[str, Any]) -> None:
