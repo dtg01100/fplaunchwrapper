@@ -971,7 +971,7 @@ class TestRunHookScriptsFailureModes:
             pytest.skip("LibAppLauncher class not available")
 
         # Create hook script
-        script_path = self._create_hook_script("pre")
+        self._create_hook_script("pre")
 
         # Mock failed execution
         mock_result = Mock()
@@ -1048,7 +1048,7 @@ class TestRunHookScriptsFailureModes:
         )
 
         with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
-            with patch("sys.stderr") as mock_stderr:
+            with patch("sys.stderr"):
                 result = launcher._run_hook_scripts("pre", source="flatpak")
 
         # Should return False but not abort
@@ -1152,7 +1152,7 @@ class TestRunHookScriptsFailureModes:
         )
 
         with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
-            with patch("sys.stderr") as mock_stderr:
+            with patch("sys.stderr"):
                 result = launcher._run_hook_scripts("pre", source="flatpak")
 
         assert result is False
@@ -2390,7 +2390,7 @@ class TestLaunchHookFailureVerbose:
                 launcher.launch()
 
                 # Should print verbose message
-                output = mock_stderr.getvalue()
+                mock_stderr.getvalue()
                 # May or may not have output depending on failure mode handling
 
 

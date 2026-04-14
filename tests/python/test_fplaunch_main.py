@@ -301,6 +301,7 @@ class TestCommandRouting:
         assert result != 0
 
 
+@pytest.mark.skipif(fplaunch is None, reason="lib.fplaunch module not available")
 class TestSafetyImportFallback:
     """Test the safety module import fallback (lines 16-22)."""
 
@@ -399,6 +400,7 @@ class TestSafetyImportFallback:
                 sys.modules["lib.safety"] = original_safety
 
 
+@pytest.mark.skipif(fplaunch is None, reason="lib.fplaunch module not available")
 class TestCLIImportFallback:
     """Test the CLI module import fallback in main() (lines 33-43)."""
 
@@ -535,7 +537,7 @@ class TestCLIImportFallback:
             # main() should handle this gracefully
             # Since cli.main exists but is None, hasattr will return True
             # but calling it will fail - however the code checks hasattr first
-            result = fplaunch_module.main()
+            fplaunch_module.main()
 
             # The code checks hasattr(cli, "main") which will be True
             # then calls cli.main() which will fail

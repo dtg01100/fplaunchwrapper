@@ -265,6 +265,6 @@ def test_manage_aliases_search_and_rm(monkeypatch):
         calls.clear()
         sys.argv = ["fplaunch-manage", "cleanup"]
         assert manage.main() == 0
-        assert calls.get("list_wrappers") == True
+        assert calls.get("list_wrappers")
     finally:
         sys.argv = original_argv

@@ -459,8 +459,9 @@ class TestFlatpakMonitorIntegration:
         # Should discover available Flatpak directories
         # (This is internal implementation detail)
 
+    @patch("lib.flatpak_monitor.subprocess.run")
     @patch("lib.flatpak_monitor.time.sleep")
-    def test_monitor_performance_under_load(self, mock_sleep) -> None:
+    def test_monitor_performance_under_load(self, mock_sleep, mock_run) -> None:
         """Test monitor performance with many events."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")

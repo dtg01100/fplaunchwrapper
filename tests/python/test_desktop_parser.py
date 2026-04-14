@@ -538,7 +538,7 @@ class TestParseFlatpakDesktopFiles:
         mock_find.return_value = []
 
         with patch.object(Path, "exists", return_value=False):
-            result = parse_flatpak_desktop_files()
+            parse_flatpak_desktop_files()
 
         mock_find.assert_called()
 

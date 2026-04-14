@@ -46,7 +46,7 @@ class TestLaunchWithPortal:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        result = launch_with_portal("org.mozilla.firefox")
+        launch_with_portal("org.mozilla.firefox")
 
         mock_run.assert_called_once()
         cmd = mock_run.call_args[0][0]
@@ -64,7 +64,7 @@ class TestLaunchWithPortal:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        result = launch_with_portal(
+        launch_with_portal(
             "org.mozilla.firefox", args=["--private-window", "https://example.com"]
         )
 
@@ -80,7 +80,7 @@ class TestLaunchWithPortal:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        result = launch_with_portal("org.mozilla.firefox", wait=True)
+        launch_with_portal("org.mozilla.firefox", wait=True)
 
         cmd = mock_run.call_args[0][0]
         assert "--wait" in cmd
@@ -93,7 +93,7 @@ class TestLaunchWithPortal:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        result = launch_with_portal(
+        launch_with_portal(
             "org.mozilla.firefox", env_overrides={"DISPLAY": ":1"}
         )
 
@@ -110,7 +110,7 @@ class TestLaunchWithPortal:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        result = launch_with_portal("org.mozilla.firefox", cwd="/tmp")
+        launch_with_portal("org.mozilla.firefox", cwd="/tmp")
 
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs["cwd"] == "/tmp"
@@ -163,7 +163,7 @@ class TestLaunchDirect:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        result = launch_direct("org.mozilla.firefox")
+        launch_direct("org.mozilla.firefox")
 
         mock_run.assert_called_once()
         cmd = mock_run.call_args[0][0]
@@ -178,7 +178,7 @@ class TestLaunchDirect:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        result = launch_direct("org.mozilla.firefox", args=["--version"])
+        launch_direct("org.mozilla.firefox", args=["--version"])
 
         cmd = mock_run.call_args[0][0]
         assert "--version" in cmd
@@ -190,7 +190,7 @@ class TestLaunchDirect:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        result = launch_direct("org.mozilla.firefox", wait=True)
+        launch_direct("org.mozilla.firefox", wait=True)
 
         cmd = mock_run.call_args[0][0]
         assert "--wait" in cmd
@@ -202,7 +202,7 @@ class TestLaunchDirect:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        result = launch_direct(
+        launch_direct(
             "org.mozilla.firefox", env_overrides={"GTK_THEME": "dark"}
         )
 
@@ -218,7 +218,7 @@ class TestLaunchDirect:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        result = launch_direct("org.mozilla.firefox", cwd="/home/user")
+        launch_direct("org.mozilla.firefox", cwd="/home/user")
 
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs["cwd"] == "/home/user"
@@ -250,7 +250,7 @@ class TestLaunch:
         mock_available.return_value = True
         mock_portal.return_value = MagicMock(returncode=0)
 
-        result = launch("org.mozilla.firefox", use_portal=True)
+        launch("org.mozilla.firefox", use_portal=True)
 
         mock_portal.assert_called_once()
         mock_available.assert_called_once()
@@ -266,7 +266,7 @@ class TestLaunch:
         mock_available.return_value = False
         mock_direct.return_value = MagicMock(returncode=0)
 
-        result = launch("org.mozilla.firefox", use_portal=True)
+        launch("org.mozilla.firefox", use_portal=True)
 
         mock_direct.assert_called_once()
 
@@ -281,7 +281,7 @@ class TestLaunch:
         mock_available.return_value = True
         mock_direct.return_value = MagicMock(returncode=0)
 
-        result = launch("org.mozilla.firefox", use_portal=False)
+        launch("org.mozilla.firefox", use_portal=False)
 
         mock_direct.assert_called_once()
 
@@ -296,7 +296,7 @@ class TestLaunch:
         mock_available.return_value = True
         mock_portal.return_value = MagicMock(returncode=0)
 
-        result = launch(
+        launch(
             "org.mozilla.firefox",
             args=["--private"],
             env_overrides={"VAR": "value"},
@@ -324,7 +324,7 @@ class TestLaunch:
         mock_available.return_value = False
         mock_direct.return_value = MagicMock(returncode=0)
 
-        result = launch(
+        launch(
             "org.mozilla.firefox",
             args=["--version"],
             env_overrides={"DISPLAY": ":0"},
@@ -528,7 +528,7 @@ class TestErrorHandling:
 
         mock_run.return_value = MagicMock(returncode=0)
 
-        result = launch_with_portal("org.test.app", env_overrides=None)
+        launch_with_portal("org.test.app", env_overrides=None)
 
         call_kwargs = mock_run.call_args[1]
         assert "HOME" in call_kwargs["env"]
@@ -541,7 +541,7 @@ class TestErrorHandling:
 
         mock_run.return_value = MagicMock(returncode=0)
 
-        result = launch_with_portal("org.test.app", args=[])
+        launch_with_portal("org.test.app", args=[])
 
         cmd = mock_run.call_args[0][0]
         assert cmd[-1] == "org.test.app"
@@ -554,7 +554,7 @@ class TestErrorHandling:
 
         mock_run.return_value = MagicMock(returncode=0)
 
-        result = launch_with_portal(
+        launch_with_portal(
             "org.test.app",
             args=["--option=value", 'arg with "quotes"', "path/to/file"],
         )

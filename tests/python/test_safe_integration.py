@@ -15,10 +15,7 @@ import pytest
 # Import modules safely
 try:
     from lib.cleanup import WrapperCleanup
-    from lib.generate import WrapperGenerator
     from lib.launch import AppLauncher
-    from lib.manage import WrapperManager
-    from lib.systemd_setup import SystemdSetup
 
     MODULES_AVAILABLE = True
 except ImportError:
