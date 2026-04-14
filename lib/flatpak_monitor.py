@@ -9,11 +9,13 @@ import argparse
 import contextlib
 import logging
 import os
+import shutil
 import signal
 import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 logging.basicConfig(
@@ -337,11 +339,24 @@ class FlatpakMonitor:
     def _regenerate_wrappers(self) -> bool:
         """Regenerate Flatpak wrappers."""
         try:
-            script_paths = [
-                os.path.join(os.path.dirname(__file__), "..", "fplaunch-generate"),
+            # Build list of possible script locations
+            script_paths = []
+            
+            # 1. Use shutil.which to find fplaunch-generate in PATH (works when installed)
+            generate_cmd = shutil.which("fplaunch-generate")
+            if generate_cmd:
+                script_paths.append(generate_cmd)
+            
+            # 2. Add system-wide paths as fallback
+            script_paths.extend([
                 "/usr/local/bin/fplaunch-generate",
                 "/usr/bin/fplaunch-generate",
-            ]
+            ])
+            
+            # 3. Development mode: relative path from lib/
+            dev_script = Path(__file__).parent.parent / "fplaunch-generate"
+            if dev_script.exists():
+                script_paths.insert(1, str(dev_script))
 
             for script_path in script_paths:
                 if os.path.exists(script_path) and os.access(script_path, os.X_OK):

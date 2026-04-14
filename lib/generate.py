@@ -13,6 +13,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+try:
+    from importlib.resources import files as importlib_files
+    HAS_IMPORTLIB_RESOURCES = True
+except ImportError:
+    HAS_IMPORTLIB_RESOURCES = False
+
 from rich.console import Console as _Console
 from rich.progress import (
     Progress,
@@ -175,12 +181,24 @@ class WrapperGenerator:
 
     def create_wrapper_script(self, wrapper_name: str, app_id: str) -> str:
         """Create the content for a wrapper script using a template."""
-        template_path = (
-            Path(__file__).parent.parent / "templates" / "wrapper.template.sh"
-        )
+        template_path = None
+        
+        # Try multiple locations for the template file
+        # 1. When installed: use importlib.resources to find template in package data
+        if HAS_IMPORTLIB_RESOURCES:
+            try:
+                # Template should be in lib/templates when installed
+                template_file = importlib_files("lib") / "templates" / "wrapper.template.sh"
+                template_path = Path(str(template_file))
+            except (TypeError, AttributeError, FileNotFoundError):
+                template_path = None
+        
+        # 2. Development mode: templates/ at project root (Path(__file__).parent.parent)
+        if template_path is None or not template_path.exists():
+            template_path = Path(__file__).parent.parent / "templates" / "wrapper.template.sh"
+        
+        # 3. Fallback: relative path (for running from project root)
         if not template_path.exists():
-            # Fallback if template is not found in expected location
-            # (e.g. during development/testing)
             template_path = Path("templates/wrapper.template.sh")
 
         if not template_path.exists():

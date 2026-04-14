@@ -3,10 +3,7 @@
 Main entry point for all operations.
 """
 
-import os
 import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
 
 # Expose important submodules (like `safety`) as attributes on the package
 # so tests that patch `fplaunch.safety` can find them regardless of import
