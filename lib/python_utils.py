@@ -212,17 +212,7 @@ def safe_mktemp(
         if dir_param and os.path.isdir(dir_param):
             tdir = dir_param
         else:
-            for temp_dir in [
-                os.getenv("TMPDIR"),
-                os.getenv("TMP"),
-                os.getenv("TEMP"),
-                "/tmp",
-            ]:
-                if temp_dir and os.path.isdir(temp_dir):
-                    tdir = temp_dir
-                    break
-            else:
-                tdir = "/tmp"
+            tdir = tempfile.gettempdir()
 
         fd, path = tempfile.mkstemp(
             prefix=template.replace("XXXXXX", ""),
@@ -291,18 +281,15 @@ def release_lock(lock_name: str = "fplaunch") -> bool | None:
 
 def get_temp_dir() -> str:
     """Get the best available temporary directory."""
-    for temp_dir in [
-        os.getenv("TMPDIR"),
-        os.getenv("TMP"),
-        os.getenv("TEMP"),
-        os.path.join(os.path.expanduser("~"), ".cache"),
-        "/var/tmp",
-        "/tmp",
-    ]:
-        if temp_dir and os.path.isdir(temp_dir) and os.access(temp_dir, os.W_OK):
-            return temp_dir
+    temp_dir = tempfile.gettempdir()
+    if temp_dir and os.path.isdir(temp_dir) and os.access(temp_dir, os.W_OK):
+        return temp_dir
 
-    return "/tmp"
+    fallback_cache_dir = os.path.join(os.path.expanduser("~"), ".cache")
+    if os.path.isdir(fallback_cache_dir) and os.access(fallback_cache_dir, os.W_OK):
+        return fallback_cache_dir
+
+    return tempfile.gettempdir()
 
 
 if __name__ == "__main__":
