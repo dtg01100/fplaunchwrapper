@@ -407,6 +407,9 @@ class AppLauncher:
                         source = "system"
                     else:
                         source = "flatpak"
+                elif preference == "auto":
+                    # "auto" means use the default auto-detected source; no override needed.
+                    pass
         except Exception:
             pass
 

@@ -1040,13 +1040,20 @@ if PYDANTIC_AVAILABLE:
 
                 # Check if script is in a sensitive directory
                 for sensitive_dir in sensitive_dirs:
+                    # Resolve both paths so that symlinked system directories
+                    # (e.g. /root -> /var/roothome) are correctly matched.
+                    resolved_sensitive = sensitive_dir.resolve()
+                    in_sensitive = False
                     try:
-                        script_path.relative_to(sensitive_dir)
+                        script_path.relative_to(resolved_sensitive)
+                        in_sensitive = True
+                    except ValueError:
+                        # relative_to() raises ValueError when path is not under
+                        # resolved_sensitive — that is the expected "not a match" case.
+                        pass
+                    if in_sensitive:
                         msg = f"Script path is in a sensitive system directory: {v}"
                         raise ValueError(msg)
-                    except ValueError:
-                        # Not in sensitive directory, continue checking
-                        pass
 
                 # Additional check: ensure script is executable
                 if not os.access(v, os.X_OK):

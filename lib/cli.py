@@ -401,9 +401,7 @@ def set_pref(ctx, wrapper_name, preference) -> int:
 @click.pass_context
 def pref(ctx, wrapper_name, preference) -> int:
     """Alias for set-pref."""
-    # Call the same implementation as `set_pref`.
-    result: int = set_pref(ctx, wrapper_name, preference)
-    return result
+    return ctx.invoke(set_pref, wrapper_name=wrapper_name, preference=preference)
 
 
 @cli.command(name="rm")
@@ -707,8 +705,7 @@ def search(ctx, query) -> int:
 @click.pass_context
 def discover(ctx, query) -> int:
     """Alias for search."""
-    result: int = search(ctx, query)
-    return result
+    return ctx.invoke(search, query=query)
 
 
 @cli.group(name="profiles", invoke_without_command=True)

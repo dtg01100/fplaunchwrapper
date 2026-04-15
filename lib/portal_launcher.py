@@ -52,10 +52,12 @@ def launch_with_portal(
             "flatpak-spawn not found. Install flatpak-tools or use direct flatpak run."
         )
 
-    cmd = [FLATPAK_SPAWN_PATH, "--host", "flatpak", "run", flatpak_id]
+    cmd = [FLATPAK_SPAWN_PATH, "--host", "flatpak", "run"]
 
     if wait:
         cmd.append("--wait")
+
+    cmd.append(flatpak_id)
 
     if args:
         cmd.extend(args)
@@ -94,10 +96,12 @@ def launch_direct(
     Returns:
         CompletedProcess result
     """
-    cmd = ["flatpak", "run", flatpak_id]
+    cmd = ["flatpak", "run"]
 
     if wait:
         cmd.append("--wait")
+
+    cmd.append(flatpak_id)
 
     if args:
         cmd.extend(args)

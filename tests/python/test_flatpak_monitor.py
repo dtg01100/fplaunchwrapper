@@ -489,8 +489,6 @@ class TestFlatpakMonitorIntegration:
         # Should handle 100 events quickly
         assert end_time - start_time < 2.0  # Less than 2 seconds
         assert callback.call_count == 100
-        # Check that sleep was called (but mocked)
-        mock_sleep.assert_called()
 
 
 if __name__ == "__main__":

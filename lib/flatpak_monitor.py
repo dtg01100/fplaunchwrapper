@@ -313,8 +313,6 @@ class FlatpakMonitor:
         """Handle Flatpak-related file system changes."""
         logger.debug("Flatpak change detected: %s - %s", event_type, path)
 
-        time.sleep(self.config.get("debounce", 1))
-
         if self._should_regenerate_wrappers(path):
             logger.info("Regenerating Flatpak wrappers due to change: %s", path)
             success = self._regenerate_wrappers()

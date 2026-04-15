@@ -462,8 +462,8 @@ class TestCommandConstruction:
             "--host",
             "flatpak",
             "run",
-            "com.example.app",
             "--wait",
+            "com.example.app",
             "--flag",
             "value",
         ]
@@ -494,8 +494,8 @@ class TestCommandConstruction:
         assert cmd == [
             "flatpak",
             "run",
-            "com.example.app",
             "--wait",
+            "com.example.app",
             "--arg1",
         ]
         assert kwargs["cwd"] == "/work/dir"

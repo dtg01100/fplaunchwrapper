@@ -290,7 +290,7 @@ Name=Firefox Default
         path = self._create_temp_desktop_file(content)
         entry = DesktopEntry(path)
 
-        entry.get_localized("Name", locale="fr") == "Firefox Francais"
+        assert entry.get_localized("Name", locale="fr") == "Firefox Francais"
 
     @patch.dict(os.environ, {"LANG": "de_DE"})
     def test_get_localized_falls_back_to_non_localized(self) -> None:

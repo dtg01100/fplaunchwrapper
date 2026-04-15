@@ -188,7 +188,8 @@ class WrapperCleanup:
     def _handle_wrapper_symlink(self, item: Path) -> None:
         """Handle a symlink in the wrapper directory."""
         try:
-            target = item.readlink()
+            # Use os.readlink for Python 3.8 compatibility (Path.readlink added in 3.9)
+            target = Path(os.readlink(item))
             target_path = target if target.is_absolute() else self.bin_dir / target
             if (
                 UTILS_AVAILABLE

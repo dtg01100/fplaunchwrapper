@@ -197,9 +197,9 @@ WantedBy=timers.target
                 if line.strip() and not line.strip().startswith("#"):
                     parts = line.split()
                     if (
-                        len(parts) >= 7
+                        len(parts) >= 6
                         and parts[0] == "0"
-                        and parts[3] == "*/{}".format(cron_interval)
+                        and parts[1] == "*/{}".format(cron_interval)
                     ):
                         cron_script_path = " ".join(parts[5:])
                         if (
