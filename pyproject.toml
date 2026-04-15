@@ -55,6 +55,7 @@ dev = [
     "pytest-cov>=4.0.0",        # Coverage reporting
     "pytest-mock>=3.10.0",      # Mocking utilities
     "pytest-timeout>=2.2.0",    # Test timeout enforcement
+    "tomli>=2.0.0",             # TOML parsing for tests and config loading
     "ruff>=0.14.0",             # Fast Python linter and formatter
     "black>=23.0.0",            # Python code formatting
     "flake8>=6.0.0",            # Python linting

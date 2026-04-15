@@ -27,7 +27,7 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install --system -e .
-        uv pip install --system pytest pytest-mock pytest-timeout tomli-w
+        uv pip install --system pytest pytest-mock pytest-timeout tomli tomli-w
 
     - name: Run Python tests
       run: |
