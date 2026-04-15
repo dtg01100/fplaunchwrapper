@@ -123,17 +123,13 @@ class TestBashIntegration:
     def test_bash_script_execution(self, temp_bin_dir) -> None:
         """Test basic bash script execution."""
         script_path = temp_bin_dir / "test_script.sh"
-        script_path.write_text(
-            """#!/bin/bash
+        script_path.write_text("""#!/bin/bash
 echo "Hello from bash script"
 exit 0
-"""
-        )
+""")
         script_path.chmod(0o755)
 
-        result = subprocess.run(
-            [str(script_path)], check=False, capture_output=True, text=True
-        )
+        result = subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
         assert result.returncode == 0
         assert "Hello from bash script" in result.stdout
 

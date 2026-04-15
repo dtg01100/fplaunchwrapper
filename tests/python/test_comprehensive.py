@@ -51,9 +51,7 @@ class TestComprehensiveSuite:
         """Test CLI help command."""
         import sys
 
-        self.run_command_test(
-            [sys.executable, "-m", "lib.cli", "--help"], "CLI help command"
-        )
+        self.run_command_test([sys.executable, "-m", "lib.cli", "--help"], "CLI help command")
 
     def test_cli_config_command(self) -> None:
         """Test CLI config command."""
@@ -192,12 +190,14 @@ class TestComprehensiveSuite:
             sys.executable,
             "-c",
             (
-                "import sys; sys.argv = ['lib.cli','nonexistentcmd']; import lib.cli; sys.exit(lib.cli.main())"
+                "import sys; sys.argv = ['lib.cli','nonexistentcmd']; "
+                "import lib.cli; sys.exit(lib.cli.main())"
             ),
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)
         assert result.returncode != 0, (
-            f"Expected non-zero exit code for unknown command, got {result.returncode}\nstdout:{result.stdout}\nstderr:{result.stderr}"
+            f"Expected non-zero exit code for unknown command, got {result.returncode}\n"
+            f"stdout:{result.stdout}\nstderr:{result.stderr}"
         )
 
     def test_integration_workflow(self) -> None:

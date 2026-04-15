@@ -14,7 +14,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 # Pydantic is optional. Use Any for all pydantic types to avoid static type conflicts.
 # This allows the module to work whether pydantic is installed or not.
 BaseModel: Any
@@ -139,9 +138,7 @@ class WrapperConfig:
     )  # Custom permission presets
     schema_version: int = 1  # Schema version for migration purposes
     cron_interval: int = 6  # Cron interval in hours (default: 6 hours)
-    enable_notifications: bool = (
-        True  # Enable desktop notifications for update failures
-    )
+    enable_notifications: bool = True  # Enable desktop notifications for update failures
     # Global hook failure mode defaults
     hook_failure_mode_default: str = "warn"
     pre_launch_failure_mode_default: str | None = (
@@ -169,15 +166,9 @@ class EnhancedConfigManager:
 
         self.template_variables = {
             "HOME": str(Path.home()),
-            "XDG_CONFIG_HOME": os.environ.get(
-                "XDG_CONFIG_HOME", str(Path.home() / ".config")
-            ),
-            "XDG_DATA_HOME": os.environ.get(
-                "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
-            ),
-            "XDG_CACHE_HOME": os.environ.get(
-                "XDG_CACHE_HOME", str(Path.home() / ".cache")
-            ),
+            "XDG_CONFIG_HOME": os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
+            "XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share")),
+            "XDG_CACHE_HOME": os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")),
             "CONFIG_DIR": str(self.config_dir),
             "DATA_DIR": str(self.data_dir),
         }
@@ -336,15 +327,11 @@ class EnhancedConfigManager:
                 validated_config = PydanticWrapperConfig(**processed_data)
                 self._apply_validated_config(validated_config)
             except ValidationError as e:
-                raise ConfigValidationError(
-                    f"Configuration validation failed: {e}"
-                ) from e
+                raise ConfigValidationError(f"Configuration validation failed: {e}") from e
         else:
             self._apply_unvalidated_config(processed_data)
 
-    def _apply_validated_config(
-        self, validated_config: "PydanticWrapperConfig"
-    ) -> None:
+    def _apply_validated_config(self, validated_config: "PydanticWrapperConfig") -> None:
         """Apply validated configuration from Pydantic model."""
         self.config.bin_dir = validated_config.bin_dir
         self.config.config_dir = validated_config.config_dir
@@ -359,9 +346,7 @@ class EnhancedConfigManager:
         self.config.cron_interval = validated_config.cron_interval
         self.config.enable_notifications = validated_config.enable_notifications
 
-        self.config.hook_failure_mode_default = (
-            validated_config.hook_failure_mode_default
-        )
+        self.config.hook_failure_mode_default = validated_config.hook_failure_mode_default
         self.config.pre_launch_failure_mode_default = (
             validated_config.pre_launch_failure_mode_default
         )
@@ -403,15 +388,9 @@ class EnhancedConfigManager:
             "enable_notifications", self.config.enable_notifications
         )
 
-        self.config.hook_failure_mode_default = data.get(
-            "hook_failure_mode_default", "warn"
-        )
-        self.config.pre_launch_failure_mode_default = data.get(
-            "pre_launch_failure_mode_default"
-        )
-        self.config.post_launch_failure_mode_default = data.get(
-            "post_launch_failure_mode_default"
-        )
+        self.config.hook_failure_mode_default = data.get("hook_failure_mode_default", "warn")
+        self.config.pre_launch_failure_mode_default = data.get("pre_launch_failure_mode_default")
+        self.config.post_launch_failure_mode_default = data.get("post_launch_failure_mode_default")
 
         if "blocklist" in data:
             self.config.blocklist = list(data["blocklist"])
@@ -466,13 +445,9 @@ class EnhancedConfigManager:
         }
 
         if self.config.pre_launch_failure_mode_default:
-            data["pre_launch_failure_mode_default"] = (
-                self.config.pre_launch_failure_mode_default
-            )
+            data["pre_launch_failure_mode_default"] = self.config.pre_launch_failure_mode_default
         if self.config.post_launch_failure_mode_default:
-            data["post_launch_failure_mode_default"] = (
-                self.config.post_launch_failure_mode_default
-            )
+            data["post_launch_failure_mode_default"] = self.config.post_launch_failure_mode_default
 
         gp = self.config.global_preferences
         data["global_preferences"] = {
@@ -485,9 +460,7 @@ class EnhancedConfigManager:
         if gp.post_launch_script:
             data["global_preferences"]["post_launch_script"] = gp.post_launch_script
         if gp.pre_launch_failure_mode:
-            data["global_preferences"]["pre_launch_failure_mode"] = str(
-                gp.pre_launch_failure_mode
-            )
+            data["global_preferences"]["pre_launch_failure_mode"] = str(gp.pre_launch_failure_mode)
         if gp.post_launch_failure_mode:
             data["global_preferences"]["post_launch_failure_mode"] = str(
                 gp.post_launch_failure_mode
@@ -506,13 +479,9 @@ class EnhancedConfigManager:
                 if prefs.post_launch_script:
                     app_data["post_launch_script"] = prefs.post_launch_script
                 if prefs.pre_launch_failure_mode:
-                    app_data["pre_launch_failure_mode"] = str(
-                        prefs.pre_launch_failure_mode
-                    )
+                    app_data["pre_launch_failure_mode"] = str(prefs.pre_launch_failure_mode)
                 if prefs.post_launch_failure_mode:
-                    app_data["post_launch_failure_mode"] = str(
-                        prefs.post_launch_failure_mode
-                    )
+                    app_data["post_launch_failure_mode"] = str(prefs.post_launch_failure_mode)
                 data["app_preferences"][app_id] = app_data
 
         if self.config.permission_presets:
@@ -641,7 +610,8 @@ class EnhancedConfigManager:
         1. Runtime CLI override
         2. Environment variable (FPWRAPPER_HOOK_FAILURE)
         3. Per-app configuration
-        4. Global default for hook type (pre_launch_failure_mode_default or post_launch_failure_mode_default)
+        # 4. Global default for hook type (pre_launch_failure_mode_default or
+        #    post_launch_failure_mode_default)
         5. Global default (hook_failure_mode_default)
         6. Built-in default ("warn")
 
@@ -920,9 +890,7 @@ class EnhancedConfigManager:
                 if "cron_interval" in content:
                     lines.append(f"cron_interval={content['cron_interval']}")
                 if "enable_notifications" in content:
-                    lines.append(
-                        f"enable_notifications={content['enable_notifications']}"
-                    )
+                    lines.append(f"enable_notifications={content['enable_notifications']}")
                 if "hook_failure_mode_default" in content:
                     lines.append(
                         f"hook_failure_mode_default={content['hook_failure_mode_default']}"
@@ -1009,7 +977,10 @@ if PYDANTIC_AVAILABLE:
                             if char in arg and not arg.startswith(
                                 "--"
                             ):  # Allow in flags like --filesystem
-                                msg = f"Custom argument contains potentially dangerous character '{char}': {arg}"
+                                msg = (
+                                    f"Custom argument contains potentially dangerous character "
+                                    f"'{char}': {arg}"
+                                )
                                 raise ValueError(msg)
             return v
 
@@ -1099,9 +1070,7 @@ if PYDANTIC_AVAILABLE:
                 raise ValueError(msg)
             return v
 
-        @field_validator(
-            "pre_launch_failure_mode_default", "post_launch_failure_mode_default"
-        )
+        @field_validator("pre_launch_failure_mode_default", "post_launch_failure_mode_default")
         @classmethod
         def validate_optional_failure_mode(cls, v):
             """Validate optional hook failure mode values."""

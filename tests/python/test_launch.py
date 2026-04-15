@@ -151,9 +151,7 @@ class TestLaunchEdgeCases:
 
     @patch("subprocess.run")
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_launch_flatpak_with_architectures(
-        self, mock_safety, mock_subprocess
-    ) -> None:
+    def test_launch_flatpak_with_architectures(self, mock_safety, mock_subprocess) -> None:
         """Test launch with different Flatpak architectures."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
@@ -179,9 +177,7 @@ class TestLaunchEdgeCases:
 
     @patch("subprocess.run")
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_launch_environment_variable_injection(
-        self, mock_safety, mock_subprocess
-    ) -> None:
+    def test_launch_environment_variable_injection(self, mock_safety, mock_subprocess) -> None:
         """Test environment variable injection attempts are blocked."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
@@ -526,12 +522,10 @@ class TestLaunchSecurity:
         scripts_dir = self.config_dir / "scripts" / "test_app"
         scripts_dir.mkdir(parents=True, exist_ok=True)
         hook_script = scripts_dir / "pre-launch.sh"
-        hook_script.write_text(
-            """#!/bin/bash
+        hook_script.write_text("""#!/bin/bash
 echo "App name: $2" > /tmp/hook_test.log
 exit 0
-"""
-        )
+""")
         hook_script.chmod(0o755)
 
         launcher = LibAppLauncher(
@@ -556,13 +550,11 @@ exit 0
         scripts_dir = self.config_dir / "scripts" / "test_app"
         scripts_dir.mkdir(parents=True, exist_ok=True)
         hook_script = scripts_dir / "pre-launch.sh"
-        hook_script.write_text(
-            """#!/bin/bash
+        hook_script.write_text("""#!/bin/bash
 # This script would be dangerous if app name wasn't sanitized
 echo "Safe execution with app: $2"
 exit 0
-"""
-        )
+""")
         hook_script.chmod(0o755)
 
         # Test with various malicious app names
@@ -628,12 +620,10 @@ exit 0
 
         # Create a wrapper with dangerous content
         dangerous_wrapper = self.bin_dir / "dangerous_app"
-        dangerous_wrapper.write_text(
-            """#!/bin/bash
+        dangerous_wrapper.write_text("""#!/bin/bash
 flatpak run org.mozilla.firefox --new-window
 echo "This wrapper contains dangerous content"
-"""
-        )
+""")
         dangerous_wrapper.chmod(0o755)
 
         AppLauncher(
@@ -725,9 +715,9 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            assert False, (
-                f"Config manager should handle permission errors gracefully, not raise: {e}"
-            )
+            assert (
+                False
+            ), f"Config manager should handle permission errors gracefully, not raise: {e}"
         finally:
             # Restore permissions for cleanup
             try:
@@ -764,9 +754,7 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            assert False, (
-                f"Config manager should handle parse errors gracefully, not raise: {e}"
-            )
+            assert False, f"Config manager should handle parse errors gracefully, not raise: {e}"
 
     def test_config_validation_error_on_invalid_data(self) -> None:
         """Test config manager handles validation errors gracefully with fallback."""
@@ -797,9 +785,9 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            assert False, (
-                f"Config manager should handle validation errors gracefully, not raise: {e}"
-            )
+            assert (
+                False
+            ), f"Config manager should handle validation errors gracefully, not raise: {e}"
 
     def test_config_save_permission_error(self) -> None:
         """Test config manager handles save permission errors gracefully."""
@@ -824,9 +812,9 @@ class TestConfigExceptionHandling:
                 # The operation should complete without crashing
                 assert True
             except Exception as e:
-                assert False, (
-                    f"Config save should handle permission errors gracefully, not raise: {e}"
-                )
+                assert (
+                    False
+                ), f"Config save should handle permission errors gracefully, not raise: {e}"
             finally:
                 # Restore permissions for cleanup
                 try:
@@ -890,9 +878,9 @@ class TestConfigExceptionHandling:
                 # The operation should complete without crashing
                 assert True
             except Exception as e:
-                assert False, (
-                    f"Config save should handle permission errors gracefully, not raise: {e}"
-                )
+                assert (
+                    False
+                ), f"Config save should handle permission errors gracefully, not raise: {e}"
             finally:
                 # Restore permissions for cleanup
                 try:
@@ -922,6 +910,7 @@ class TestRunHookScriptsFailureModes:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def _create_hook_script(self, hook_type: str = "pre") -> Path:
@@ -958,7 +947,7 @@ class TestRunHookScriptsFailureModes:
         )
 
         # Mock _get_effective_failure_mode to return "abort"
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='abort'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
             result = launcher._run_hook_scripts("pre", source="flatpak")
 
         assert result is False
@@ -987,16 +976,20 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='abort'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
             launcher._run_hook_scripts("pre", source="flatpak")
 
         # Check that abort message was printed
         printed_output = "".join(str(call.args[0]) for call in mock_stderr.write.call_args_list)
-        assert "aborting launch" in printed_output.lower() or "pre-launch hook failed" in printed_output.lower()
+        assert (
+            "aborting launch" in printed_output.lower()
+            or "pre-launch hook failed" in printed_output.lower()
+        )
 
     @patch("subprocess.run")
     def test_post_launch_abort_mode_does_not_return_early(self, mock_run) -> None:
-        """Test post-launch hook failure with abort mode does not return early (continues processing)."""
+        """Test post-launch hook failure with abort mode does not return early
+        (continues processing)."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
@@ -1017,7 +1010,7 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='abort'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
             result = launcher._run_hook_scripts("post", exit_code=0, source="flatpak")
 
         # Post-launch with abort mode returns False (all_succeeded=False) but doesn't abort early
@@ -1047,7 +1040,7 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="warn",
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             with patch("sys.stderr"):
                 result = launcher._run_hook_scripts("pre", source="flatpak")
 
@@ -1077,7 +1070,7 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="ignore",
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='ignore'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="ignore"):
             result = launcher._run_hook_scripts("pre", source="flatpak")
 
         # Should return False (all_succeeded is False) but no error printed
@@ -1102,7 +1095,7 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='abort'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
             result = launcher._run_hook_scripts("pre", source="flatpak")
 
         assert result is False
@@ -1126,7 +1119,7 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='abort'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
             result = launcher._run_hook_scripts("post", exit_code=0, source="flatpak")
 
         # Post-launch timeout returns False (all_succeeded=False) but doesn't abort early
@@ -1151,7 +1144,7 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="warn",
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             with patch("sys.stderr"):
                 result = launcher._run_hook_scripts("pre", source="flatpak")
 
@@ -1176,7 +1169,7 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='abort'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
             result = launcher._run_hook_scripts("pre", source="flatpak")
 
         assert result is False
@@ -1200,7 +1193,7 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='abort'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
             result = launcher._run_hook_scripts("post", exit_code=0, source="flatpak")
 
         # Post-launch exception returns False (all_succeeded=False) but doesn't abort early
@@ -1225,7 +1218,7 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="warn",
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             with patch("sys.stderr"):
                 result = launcher._run_hook_scripts("pre", source="flatpak")
 
@@ -1254,13 +1247,15 @@ class TestRunHookScriptsFailureModes:
             verbose=True,
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             with patch("sys.stderr") as mock_stderr:
                 result = launcher._run_hook_scripts("pre", source="flatpak")
 
         assert result is True
         # Verify verbose output was printed
-        printed_output = "".join(str(call.args[0]) for call in mock_stderr.write.call_args_list if call.args)
+        printed_output = "".join(
+            str(call.args[0]) for call in mock_stderr.write.call_args_list if call.args
+        )
         # Check for either the hook output or the "Running pre-launch scripts" message
         assert "hook" in printed_output.lower() or mock_stderr.write.called
 
@@ -1286,7 +1281,7 @@ class TestRunHookScriptsFailureModes:
             config_dir=str(self.config_dir),
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             launcher._run_hook_scripts("pre", source="flatpak")
 
         # Check environment variables passed to subprocess.run
@@ -1320,7 +1315,7 @@ class TestRunHookScriptsFailureModes:
             config_dir=str(self.config_dir),
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             launcher._run_hook_scripts("post", exit_code=42, source="system")
 
         # Check environment variables
@@ -1547,6 +1542,7 @@ class TestGetEffectiveFailureMode:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_returns_mode_from_config_manager(self) -> None:
@@ -1627,6 +1623,7 @@ class TestHookScriptsFromConfig:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("lib.config_manager.create_config_manager")
@@ -1671,6 +1668,7 @@ class TestCacheFlatpakId:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_cache_flatpak_id_stores_value(self) -> None:
@@ -1703,6 +1701,7 @@ class TestGetSafetyCheckFallback:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_get_safety_check_returns_tuple(self) -> None:
@@ -1751,8 +1750,12 @@ class TestCacheFunctions:
 
         # Cache a value with old timestamp
         from lib import launch
+
         launch._FLATPAK_ID_CACHE.clear()  # Clear the module's cache first
-        launch._FLATPAK_ID_CACHE["firefox"] = ("org.mozilla.firefox", time.time() - _CACHE_TTL_SECONDS - 1)
+        launch._FLATPAK_ID_CACHE["firefox"] = (
+            "org.mozilla.firefox",
+            time.time() - _CACHE_TTL_SECONDS - 1,
+        )
 
         # Should return None due to expiration
         result = _get_cached_flatpak_id("firefox")
@@ -1850,6 +1853,7 @@ class TestHookScriptsPostLaunch:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_get_hook_scripts_post_launch_default_location(self) -> None:
@@ -1905,6 +1909,7 @@ class TestDetermineLaunchSource:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("lib.safety.safe_launch_check", return_value=True)
@@ -1944,7 +1949,7 @@ class TestDetermineLaunchSource:
         )
 
         # Mock _is_path_safe to raise exception (this is within a try block in the code)
-        with patch.object(launcher, '_is_path_safe', side_effect=OSError("test")):
+        with patch.object(launcher, "_is_path_safe", side_effect=OSError("test")):
             source, wrapper_path = launcher._determine_launch_source()
 
             # Should handle exception gracefully and return flatpak source
@@ -1965,6 +1970,7 @@ class TestPreferenceOverride:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_preference_override_flatpak(self) -> None:
@@ -2070,6 +2076,7 @@ class TestResolveFlatpakId:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_resolve_flatpak_id_with_cached_value(self) -> None:
@@ -2117,6 +2124,7 @@ class TestResolveFlatpakId:
 
         # Clear the cache first
         from lib import launch
+
         launch._FLATPAK_ID_CACHE.clear()
 
         # Mock find_executable to return flatpak path
@@ -2142,13 +2150,16 @@ class TestResolveFlatpakId:
     @patch("lib.launch.subprocess.run")
     @patch("lib.python_utils.find_executable")
     @patch("lib.safety.is_test_environment", return_value=False)
-    def test_resolve_flatpak_id_handles_subprocess_error(self, mock_is_test, mock_find, mock_run) -> None:
+    def test_resolve_flatpak_id_handles_subprocess_error(
+        self, mock_is_test, mock_find, mock_run
+    ) -> None:
         """Test resolution handles subprocess errors gracefully."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
         # Clear the cache first
         from lib import launch
+
         launch._FLATPAK_ID_CACHE.clear()
 
         # Mock find_executable to return flatpak path
@@ -2183,6 +2194,7 @@ class TestExecuteLaunchDebugMode:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("subprocess.run")
@@ -2224,6 +2236,7 @@ class TestWrapperExistsFindWrapperExceptions:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_wrapper_exists_path_safe_exception(self) -> None:
@@ -2238,7 +2251,7 @@ class TestWrapperExistsFindWrapperExceptions:
         )
 
         # Mock _is_path_safe to raise exception
-        with patch.object(launcher, '_is_path_safe', side_effect=ValueError("test")):
+        with patch.object(launcher, "_is_path_safe", side_effect=ValueError("test")):
             result = launcher._wrapper_exists("test_app")
 
             # Should return based on file existence only
@@ -2256,7 +2269,7 @@ class TestWrapperExistsFindWrapperExceptions:
         )
 
         # Mock _is_path_safe to raise exception
-        with patch.object(launcher, '_is_path_safe', side_effect=OSError("test")):
+        with patch.object(launcher, "_is_path_safe", side_effect=OSError("test")):
             result = launcher._find_wrapper()
 
             # Should return None
@@ -2277,6 +2290,7 @@ class TestLaunchSafetyCheckFailure:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("lib.safety.safe_launch_check", return_value=False)
@@ -2326,6 +2340,7 @@ class TestLaunchHookFailureVerbose:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def _create_hook_script(self, hook_type: str) -> None:
@@ -2358,7 +2373,7 @@ class TestLaunchHookFailureVerbose:
             verbose=True,
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='abort'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
             with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
                 launcher.launch()
 
@@ -2385,7 +2400,7 @@ class TestLaunchHookFailureVerbose:
             verbose=True,
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
                 launcher.launch()
 
@@ -2408,6 +2423,7 @@ class TestLaunchExceptions:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("lib.safety.safe_launch_check", return_value=True)
@@ -2423,7 +2439,7 @@ class TestLaunchExceptions:
             verbose=True,
         )
 
-        with patch.object(launcher, '_determine_launch_source', side_effect=KeyboardInterrupt()):
+        with patch.object(launcher, "_determine_launch_source", side_effect=KeyboardInterrupt()):
             with patch("sys.stderr", new_callable=StringIO):
                 result = launcher.launch()
 
@@ -2442,7 +2458,9 @@ class TestLaunchExceptions:
             verbose=True,
         )
 
-        with patch.object(launcher, '_determine_launch_source', side_effect=RuntimeError("test error")):
+        with patch.object(
+            launcher, "_determine_launch_source", side_effect=RuntimeError("test error")
+        ):
             with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
                 result = launcher.launch()
 
@@ -2488,6 +2506,7 @@ class TestHookScriptDebugOutput:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def _create_hook_script(self, hook_type: str) -> Path:
@@ -2523,7 +2542,7 @@ class TestHookScriptDebugOutput:
             debug=True,
         )
 
-        with patch.object(launcher, '_get_effective_failure_mode', return_value='warn'):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
                 launcher._run_hook_scripts("pre", source="flatpak")
 
@@ -2546,6 +2565,7 @@ class TestSanitizeAppName:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_sanitize_app_name_keeps_alphanumeric_and_underscore_dash_dot(self) -> None:

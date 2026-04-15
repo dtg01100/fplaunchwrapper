@@ -69,9 +69,7 @@ def test_integration_safety(isolated_home=None):
         from lib.manage import WrapperManager
 
         # Test basic instantiation with mocking
-        with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
-        ):
+        with patch("subprocess.run") as mock_run, patch("os.path.exists", return_value=True):
             mock_run.return_value = Mock(returncode=0, stdout="safe", stderr="")
 
             # Test that classes can be created safely
@@ -81,15 +79,11 @@ def test_integration_safety(isolated_home=None):
                 verbose=False,
                 emit_mode=True,
             )
-            manager = WrapperManager(
-                config_dir=str(env.config_dir), verbose=False, emit_mode=True
-            )
+            manager = WrapperManager(config_dir=str(env.config_dir), verbose=False, emit_mode=True)
             cleaner = WrapperCleanup(
                 bin_dir=str(env.bin_dir), config_dir=str(env.config_dir), dry_run=True
             )
-            launcher = AppLauncher(
-                config_dir=str(env.config_dir), bin_dir=str(env.bin_dir)
-            )
+            launcher = AppLauncher(config_dir=str(env.config_dir), bin_dir=str(env.bin_dir))
 
             # Just verify methods are callable - actual results may vary due to mocking
             assert callable(generator.generate_wrapper)
@@ -180,11 +174,7 @@ def main():
     print("\n" + "=" * 60)
     print("📊 SAFETY VALIDATION RESULTS:")
     print(f"   ✅ Passed: {passed}/{total}")
-    print(
-        f"   📈 Success Rate: {(passed / total * 100):.1f}%"
-        if total > 0
-        else "   No tests run"
-    )
+    print(f"   📈 Success Rate: {(passed / total * 100):.1f}%" if total > 0 else "   No tests run")
     if passed == total:
         print("🎉 ALL SAFETY CHECKS PASSED - Integration tests are safe!")
         return 0

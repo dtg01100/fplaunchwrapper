@@ -56,9 +56,7 @@ class SubcommandValidator:
         command_str = " ".join(command_parts) if command_parts else "main"
 
         if result.exit_code != 0:
-            self.print_failure(
-                f"'{command_str} --help' failed with exit code {result.exit_code}"
-            )
+            self.print_failure(f"'{command_str} --help' failed with exit code {result.exit_code}")
             return False
 
         if not result.output:

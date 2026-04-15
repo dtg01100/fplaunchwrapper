@@ -12,7 +12,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # 1. validate_script_path security bypass
 #    Bug: the raise ValueError inside the try-block was immediately caught by
@@ -52,9 +51,7 @@ class TestValidateScriptPathSecurityBypass:
 
         # Patch file-system checks so the sensitive-dir guard is the only thing
         # standing between us and a ValidationError.
-        with patch("os.path.isfile", return_value=True), patch(
-            "os.access", return_value=True
-        ):
+        with patch("os.path.isfile", return_value=True), patch("os.access", return_value=True):
             with pytest.raises(ValidationError) as exc_info:
                 pydantic_app_prefs_class(pre_launch_script=path)
 
@@ -63,9 +60,7 @@ class TestValidateScriptPathSecurityBypass:
     def test_user_home_script_is_accepted(self, pydantic_app_prefs_class):
         """Scripts in the user's home directory should not be rejected."""
         home = str(Path.home() / ".local" / "bin" / "pre_launch.sh")
-        with patch("os.path.isfile", return_value=True), patch(
-            "os.access", return_value=True
-        ):
+        with patch("os.path.isfile", return_value=True), patch("os.access", return_value=True):
             # Should not raise
             obj = pydantic_app_prefs_class(pre_launch_script=home)
             assert obj.pre_launch_script == home
@@ -93,9 +88,9 @@ class TestPortalLauncherWaitFlagPosition:
         cmd = mock_run.call_args[0][0]
         app_index = cmd.index("org.example.App")
         wait_index = cmd.index("--wait")
-        assert wait_index < app_index, (
-            f"--wait (index {wait_index}) must come before app ID (index {app_index})"
-        )
+        assert (
+            wait_index < app_index
+        ), f"--wait (index {wait_index}) must come before app ID (index {app_index})"
 
     @patch("lib.portal_launcher.subprocess.run")
     def test_wait_before_app_id_direct(self, mock_run: MagicMock) -> None:
@@ -108,9 +103,9 @@ class TestPortalLauncherWaitFlagPosition:
         cmd = mock_run.call_args[0][0]
         app_index = cmd.index("org.example.App")
         wait_index = cmd.index("--wait")
-        assert wait_index < app_index, (
-            f"--wait (index {wait_index}) must come before app ID (index {app_index})"
-        )
+        assert (
+            wait_index < app_index
+        ), f"--wait (index {wait_index}) must come before app ID (index {app_index})"
 
     @patch("lib.portal_launcher.subprocess.run")
     @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
@@ -124,9 +119,7 @@ class TestPortalLauncherWaitFlagPosition:
         cmd = mock_run.call_args[0][0]
         app_index = cmd.index("org.example.App")
         url_index = cmd.index("--url")
-        assert url_index > app_index, (
-            "Application arguments must appear after the app ID"
-        )
+        assert url_index > app_index, "Application arguments must appear after the app ID"
 
     @patch("lib.portal_launcher.subprocess.run")
     @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
@@ -164,9 +157,9 @@ class TestCliAliasesUseCtxInvoke:
         """fplaunch pref <wrapper> <pref> must behave like fplaunch set-pref."""
         pytest.importorskip("lib.manage")
 
-        with patch(
-            "lib.manage.WrapperManager.set_preference", return_value=True
-        ), patch("lib.manage.WrapperManager.__init__", return_value=None):
+        with patch("lib.manage.WrapperManager.set_preference", return_value=True), patch(
+            "lib.manage.WrapperManager.__init__", return_value=None
+        ):
             # Also patch the import inside cli.py
             result = self._run_cli(["pref", "firefox", "flatpak"])
 
@@ -175,9 +168,9 @@ class TestCliAliasesUseCtxInvoke:
 
     def test_discover_alias_invokes_search_logic(self, tmp_path: Path) -> None:
         """fplaunch discover must behave like fplaunch search."""
-        with patch(
-            "lib.manage.WrapperManager.display_wrappers", return_value=None
-        ), patch("lib.manage.WrapperManager.__init__", return_value=None):
+        with patch("lib.manage.WrapperManager.display_wrappers", return_value=None), patch(
+            "lib.manage.WrapperManager.__init__", return_value=None
+        ):
             result = self._run_cli(["discover"])
 
             assert result.exit_code == 0
@@ -239,9 +232,7 @@ class TestCronDuplicateDetection:
 
         # The crontab writer (-) should NOT have been called because the entry
         # already exists.
-        assert added_lines == [], (
-            "install_cron_job incorrectly added a duplicate cron entry"
-        )
+        assert added_lines == [], "install_cron_job incorrectly added a duplicate cron entry"
 
     def test_fresh_cron_is_added(self, tmp_path: Path) -> None:
         """install_cron_job must add an entry when none exists yet."""
@@ -302,9 +293,7 @@ class TestCheckPreferenceOverrideWithAuto:
         launcher = self._make_launcher(tmp_path, "auto")
         original_path = Path("/usr/bin/firefox")
 
-        result_path, result_source = launcher._check_preference_override(
-            original_path, "system"
-        )
+        result_path, result_source = launcher._check_preference_override(original_path, "system")
 
         assert result_path == original_path, "'auto' must not clear wrapper_path"
         assert result_source == "system", "'auto' must not change source"
@@ -331,9 +320,9 @@ class TestFlatpakMonitorNoSleepInCallback:
         monitor.config = {"debounce": 1}
         monitor.callback = None
 
-        with patch.object(
-            monitor, "_should_regenerate_wrappers", return_value=False
-        ), patch("lib.flatpak_monitor.time.sleep") as mock_sleep:
+        with patch.object(monitor, "_should_regenerate_wrappers", return_value=False), patch(
+            "lib.flatpak_monitor.time.sleep"
+        ) as mock_sleep:
             monitor._on_flatpak_change("modified", "/some/path")
 
             mock_sleep.assert_not_called()
@@ -349,9 +338,7 @@ class TestFlatpakMonitorNoSleepInCallback:
 class TestCleanupReadlinkCompatibility:
     """WrapperCleanup._handle_wrapper_symlink must use os.readlink."""
 
-    def test_handle_wrapper_symlink_uses_os_readlink(
-        self, tmp_path: Path
-    ) -> None:
+    def test_handle_wrapper_symlink_uses_os_readlink(self, tmp_path: Path) -> None:
         """Symlink handling must not call Path.readlink (Python 3.9+)."""
         try:
             from lib.cleanup import CleanupConfig, WrapperCleanup
@@ -369,9 +356,7 @@ class TestCleanupReadlinkCompatibility:
         cleanup = WrapperCleanup(CleanupConfig(bin_dir=str(bin_dir)))
 
         # Patch Path.readlink to raise AttributeError (simulating Python 3.8)
-        with patch.object(
-            Path, "readlink", side_effect=AttributeError("no readlink"), create=True
-        ):
+        with patch.object(Path, "readlink", side_effect=AttributeError("no readlink"), create=True):
             # Should not raise even without Path.readlink
             try:
                 cleanup._handle_wrapper_symlink(symlink)
@@ -405,10 +390,11 @@ class TestVersionConsistency:
 
         try:
             import lib
+
             module_version = lib.__version__
         except (ImportError, AttributeError):
             pytest.skip("lib.__version__ not available")
 
-        assert toml_version == module_version, (
-            f"pyproject.toml version ({toml_version}) != lib.__version__ ({module_version})"
-        )
+        assert (
+            toml_version == module_version
+        ), f"pyproject.toml version ({toml_version}) != lib.__version__ ({module_version})"

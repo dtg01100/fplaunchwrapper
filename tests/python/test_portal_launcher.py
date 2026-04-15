@@ -64,9 +64,7 @@ class TestLaunchWithPortal:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        launch_with_portal(
-            "org.mozilla.firefox", args=["--private-window", "https://example.com"]
-        )
+        launch_with_portal("org.mozilla.firefox", args=["--private-window", "https://example.com"])
 
         cmd = mock_run.call_args[0][0]
         assert "--private-window" in cmd
@@ -93,9 +91,7 @@ class TestLaunchWithPortal:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        launch_with_portal(
-            "org.mozilla.firefox", env_overrides={"DISPLAY": ":1"}
-        )
+        launch_with_portal("org.mozilla.firefox", env_overrides={"DISPLAY": ":1"})
 
         call_kwargs = mock_run.call_args[1]
         env = call_kwargs["env"]
@@ -202,9 +198,7 @@ class TestLaunchDirect:
 
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
-        launch_direct(
-            "org.mozilla.firefox", env_overrides={"GTK_THEME": "dark"}
-        )
+        launch_direct("org.mozilla.firefox", env_overrides={"GTK_THEME": "dark"})
 
         call_kwargs = mock_run.call_args[1]
         env = call_kwargs["env"]
@@ -347,9 +341,7 @@ class TestGetLaunchCommand:
 
     @patch("lib.portal_launcher.is_portal_launcher_available")
     @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_returns_portal_command_when_available(
-        self, mock_available: MagicMock
-    ) -> None:
+    def test_returns_portal_command_when_available(self, mock_available: MagicMock) -> None:
         """Test that portal command is returned when available."""
         from lib.portal_launcher import get_launch_command
 
@@ -379,9 +371,7 @@ class TestGetLaunchCommand:
         assert result[2] == "org.mozilla.firefox"
 
     @patch("lib.portal_launcher.is_portal_launcher_available")
-    def test_returns_direct_command_when_disabled(
-        self, mock_available: MagicMock
-    ) -> None:
+    def test_returns_direct_command_when_disabled(self, mock_available: MagicMock) -> None:
         """Test that direct command is returned when portal is disabled."""
         from lib.portal_launcher import get_launch_command
 
@@ -400,9 +390,7 @@ class TestGetLaunchCommand:
 
         mock_available.return_value = True
 
-        result = get_launch_command(
-            "org.mozilla.firefox", args=["--profile", "/tmp/profile"]
-        )
+        result = get_launch_command("org.mozilla.firefox", args=["--profile", "/tmp/profile"])
 
         assert "--profile" in result
         assert "/tmp/profile" in result

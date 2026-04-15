@@ -227,9 +227,7 @@ class TestSecurity:
         assert result is True
 
         # Clean up with a sanitized app name
-        cleanup = WrapperCleanup(
-            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir)
-        )
+        cleanup = WrapperCleanup(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
         cleanup_result = cleanup.cleanup_app(app_name)
 
         # Verify the result (should succeed with sanitized app name)

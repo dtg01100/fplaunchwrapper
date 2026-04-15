@@ -115,14 +115,14 @@ class TestIntegrationWorkflows:
 
     @pytest.mark.skipif(not GENERATE_AVAILABLE, reason="WrapperGenerator not available")
     @patch("subprocess.run")
-    def test_multiple_wrappers_collision_handling(
-        self, mock_subprocess, temp_env
-    ) -> None:
+    def test_multiple_wrappers_collision_handling(self, mock_subprocess, temp_env) -> None:
         """Test multiple wrappers with collision handling - replaces Test 2."""
         # Mock flatpak command returning multiple apps
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = "com.google.chrome\ncom.microsoft.edge\norg.mozilla.firefox\ncom.example.browser"
+        mock_result.stdout = (
+            "com.google.chrome\ncom.microsoft.edge\norg.mozilla.firefox\ncom.example.browser"
+        )
         mock_subprocess.return_value = mock_result
 
         generator = WrapperGenerator(

@@ -122,9 +122,7 @@ def get_scripts_dir() -> Path:
     return get_default_config_dir() / "scripts"
 
 
-def resolve_bin_dir(
-    explicit_dir: Optional[str] = None, config_dir: Optional[Path] = None
-) -> Path:
+def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Path] = None) -> Path:
     """Resolve the bin directory with fallback chain.
 
     Resolution order:

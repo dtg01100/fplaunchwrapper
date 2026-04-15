@@ -100,9 +100,7 @@ def run_performance_tests(isolated_home=None):
 
     # Test wrapper generation
     def generation_test(i):
-        with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
-        ):
+        with patch("subprocess.run") as mock_run, patch("os.path.exists", return_value=True):
             mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
             generator = WrapperGenerator(
                 bin_dir=str(env.bin_dir / f"test_{i}"),
@@ -116,17 +114,15 @@ def run_performance_tests(isolated_home=None):
 
     # Test manager operations
     def manager_test(i):
-        with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists", return_value=True
-        ), patch("pathlib.Path.home", return_value=env.home), patch(
-            "pathlib.Path.exists", return_value=True
-        ), patch("pathlib.Path.read_text", return_value=str(env.bin_dir)), patch(
+        with patch("subprocess.run") as mock_run, patch("os.path.exists", return_value=True), patch(
+            "pathlib.Path.home", return_value=env.home
+        ), patch("pathlib.Path.exists", return_value=True), patch(
+            "pathlib.Path.read_text", return_value=str(env.bin_dir)
+        ), patch(
             "pathlib.Path.is_file", return_value=True
         ):
             mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
-            manager = WrapperManager(
-                config_dir=str(env.config_dir), verbose=False, emit_mode=True
-            )
+            manager = WrapperManager(config_dir=str(env.config_dir), verbose=False, emit_mode=True)
             manager.set_preference(f"app_{i}", "flatpak")
             return manager.get_preference(f"app_{i}")
 

@@ -186,9 +186,7 @@ class TestWrapperNameConflictChecking:
             manager = WrapperManager(bin_dir=str(bin_dir), config_dir=str(config_dir))
 
             # Create alias with target validation enabled
-            result = manager.create_alias(
-                "browser", "nonexistent", validate_target=True
-            )
+            result = manager.create_alias("browser", "nonexistent", validate_target=True)
 
             # Should fail because target doesn't exist
             assert result is False
@@ -204,9 +202,7 @@ class TestWrapperNameConflictChecking:
             manager = WrapperManager(bin_dir=str(bin_dir), config_dir=str(config_dir))
 
             # Create alias without target validation (default behavior)
-            result = manager.create_alias(
-                "browser", "future-firefox", validate_target=False
-            )
+            result = manager.create_alias("browser", "future-firefox", validate_target=False)
 
             # Should succeed even though target doesn't exist yet
             assert result is True

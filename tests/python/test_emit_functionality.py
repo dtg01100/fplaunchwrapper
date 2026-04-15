@@ -176,9 +176,7 @@ class TestEmitVerboseContent:
         if not GENERATE_AVAILABLE:
             pytest.skip("WrapperGenerator not available")
 
-        content = WrapperGenerator(
-            "/tmp/test", None, True, True, True
-        ).create_wrapper_script(
+        content = WrapperGenerator("/tmp/test", None, True, True, True).create_wrapper_script(
             "firefox",
             "org.mozilla.firefox",
         )

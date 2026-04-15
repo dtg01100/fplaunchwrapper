@@ -116,9 +116,7 @@ class WrapperExistsError(WrapperError):
 class WrapperNotFoundError(WrapperError):
     """Raised when a requested wrapper cannot be found."""
 
-    def __init__(
-        self, wrapper_name: str, searched_paths: list[str] | None = None
-    ) -> None:
+    def __init__(self, wrapper_name: str, searched_paths: list[str] | None = None) -> None:
         message = f"Wrapper not found: {wrapper_name}"
         details: dict[str, Any] = {"wrapper_name": wrapper_name}
         if searched_paths:
@@ -131,9 +129,7 @@ class WrapperNotFoundError(WrapperError):
 class WrapperGenerationError(WrapperError):
     """Raised when wrapper generation fails."""
 
-    def __init__(
-        self, app_id: str, reason: str, details: dict[str, Any] | None = None
-    ) -> None:
+    def __init__(self, app_id: str, reason: str, details: dict[str, Any] | None = None) -> None:
         message = f"Failed to generate wrapper for {app_id}: {reason}"
         full_details = {"app_id": app_id, "reason": reason}
         if details:
@@ -166,9 +162,7 @@ class AppNotFoundError(LaunchError):
 class LaunchBlockedError(LaunchError):
     """Raised when a launch is blocked by safety checks."""
 
-    def __init__(
-        self, app_name: str, reason: str, details: dict[str, Any] | None = None
-    ) -> None:
+    def __init__(self, app_name: str, reason: str, details: dict[str, Any] | None = None) -> None:
         message = f"Launch blocked for {app_name}: {reason}"
         full_details = {"app_name": app_name, "reason": reason}
         if details:

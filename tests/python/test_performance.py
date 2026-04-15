@@ -139,9 +139,7 @@ class TestPerformance:
             apps.append(app_name)
 
         # Clean up all wrappers and measure performance
-        cleanup = WrapperCleanup(
-            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir)
-        )
+        cleanup = WrapperCleanup(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
         start_time = time.time()
         results = []
         for app_name in apps:
@@ -224,12 +222,8 @@ class TestPerformance:
 
     def test_scalability_mixed_operations(self) -> None:
         """Test mixed operations (generate, launch, cleanup)."""
-        generator = WrapperGenerator(
-            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir)
-        )
-        cleanup = WrapperCleanup(
-            bin_dir=str(self.bin_dir), config_dir=str(self.config_dir)
-        )
+        generator = WrapperGenerator(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
+        cleanup = WrapperCleanup(bin_dir=str(self.bin_dir), config_dir=str(self.config_dir))
 
         # Perform mixed operations
         num_operations = 20

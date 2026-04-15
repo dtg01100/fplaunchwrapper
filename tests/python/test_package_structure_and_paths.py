@@ -147,9 +147,9 @@ class TestTemplatePathResolution:
         if template_path.exists():
             content = template_path.read_text()
             assert len(content) > 0, "Template file is empty"
-            assert "#!/bin/bash" in content or "flatpak" in content.lower(), (
-                "Template doesn't look like a valid wrapper template"
-            )
+            assert (
+                "#!/bin/bash" in content or "flatpak" in content.lower()
+            ), "Template doesn't look like a valid wrapper template"
 
     def test_generate_module_can_find_template(self):
         """Test that WrapperGenerator can create wrapper scripts (uses template)."""
@@ -165,9 +165,9 @@ class TestTemplatePathResolution:
             try:
                 content = gen.create_wrapper_script("test-app", "org.test.App")
                 assert len(content) > 0, "Generated wrapper content is empty"
-                assert "flatpak" in content.lower(), (
-                    "Generated wrapper doesn't contain flatpak command"
-                )
+                assert (
+                    "flatpak" in content.lower()
+                ), "Generated wrapper doesn't contain flatpak command"
             except Exception as e:
                 pytest.fail(f"Failed to create wrapper script: {e}")
 
@@ -264,17 +264,17 @@ class TestPyprojectConfiguration:
         content = pyproject_path.read_text()
 
         # Check that both packages are declared
-        assert '"fplaunch"' in content or "'fplaunch'" in content, (
-            "pyproject.toml missing 'fplaunch' package declaration"
-        )
-        assert '"lib"' in content or "'lib'" in content, (
-            "pyproject.toml missing 'lib' package declaration"
-        )
+        assert (
+            '"fplaunch"' in content or "'fplaunch'" in content
+        ), "pyproject.toml missing 'fplaunch' package declaration"
+        assert (
+            '"lib"' in content or "'lib'" in content
+        ), "pyproject.toml missing 'lib' package declaration"
 
         # Check that package-dir mapping is NOT present (was causing issues)
-        assert 'package-dir = {"fplaunch" = "lib"}' not in content, (
-            "pyproject.toml has incorrect package-dir mapping that causes path issues"
-        )
+        assert (
+            'package-dir = {"fplaunch" = "lib"}' not in content
+        ), "pyproject.toml has incorrect package-dir mapping that causes path issues"
 
     def test_pyproject_has_entry_points(self):
         """Test that pyproject.toml has all required entry points."""
@@ -298,9 +298,7 @@ class TestPyprojectConfiguration:
         ]
 
         for entry_point in required_entry_points:
-            assert entry_point in content, (
-                f"Missing entry point in pyproject.toml: {entry_point}"
-            )
+            assert entry_point in content, f"Missing entry point in pyproject.toml: {entry_point}"
 
     def test_pyproject_includes_template_package_data(self):
         """Test that pyproject.toml includes templates in package-data."""
@@ -312,9 +310,7 @@ class TestPyprojectConfiguration:
         content = pyproject_path.read_text()
 
         # Check that templates are included in package data
-        assert "templates" in content, (
-            "pyproject.toml missing template inclusion in package-data"
-        )
+        assert "templates" in content, "pyproject.toml missing template inclusion in package-data"
 
 
 class TestInstalledEntryPoints:
@@ -364,12 +360,10 @@ class TestInstalledEntryPoints:
                 text=True,
                 timeout=10,
             )
-            assert result.returncode == 0, (
-                f"Command {command} --help failed with: {result.stderr}"
-            )
-            assert "usage" in result.stdout.lower() or "help" in result.stdout.lower(), (
-                f"Command {command} --help output doesn't look like help text"
-            )
+            assert result.returncode == 0, f"Command {command} --help failed with: {result.stderr}"
+            assert (
+                "usage" in result.stdout.lower() or "help" in result.stdout.lower()
+            ), f"Command {command} --help output doesn't look like help text"
         except subprocess.TimeoutExpired:
             pytest.skip(f"Command {command} --help timed out")
         except FileNotFoundError:
@@ -383,8 +377,7 @@ class TestRegressionPrevention:
         """Test that fplaunch/ directory has __init__.py (was missing)."""
         fplaunch_init = PROJECT_ROOT / "fplaunch" / "__init__.py"
         assert fplaunch_init.exists(), (
-            "fplaunch/__init__.py is missing. "
-            "This will cause import errors for entry points."
+            "fplaunch/__init__.py is missing. " "This will cause import errors for entry points."
         )
 
     def test_fplaunch_directory_has_all_entry_modules(self):

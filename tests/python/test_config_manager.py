@@ -186,9 +186,7 @@ class TestConfigManager:
                 setattr(config.config, key, value)
                 # Verify the value was actually set
                 actual_value = getattr(config.config, key)
-                assert actual_value == value, (
-                    f"Expected {key}={value}, got {actual_value}"
-                )
+                assert actual_value == value, f"Expected {key}={value}, got {actual_value}"
 
     @patch("pathlib.Path.home")
     def test_config_directory_paths(self, mock_home) -> None:
@@ -287,9 +285,7 @@ class TestConfigManager:
         required_attrs = ["bin_dir", "debug_mode", "log_level", "blocklist"]
 
         for attr in required_attrs:
-            assert hasattr(config.config, attr), (
-                f"Config missing required attribute: {attr}"
-            )
+            assert hasattr(config.config, attr), f"Config missing required attribute: {attr}"
 
     @patch("pathlib.Path.home")
     def test_config_migration_handling(self, mock_home) -> None:
@@ -825,10 +821,7 @@ class TestFallbackConfig:
             pytest.skip("EnhancedConfigManager class not available")
 
         self.config_file.write_text(
-            "# This is a comment\n"
-            "\n"
-            "  # Indented comment\n"
-            "bin_dir=/test/bin\n"
+            "# This is a comment\n" "\n" "  # Indented comment\n" "bin_dir=/test/bin\n"
         )
 
         with patch("pathlib.Path.home", return_value=self.temp_dir):
@@ -842,9 +835,7 @@ class TestFallbackConfig:
         if not EnhancedConfigManager:
             pytest.skip("EnhancedConfigManager class not available")
 
-        self.config_file.write_text(
-            "hook_failure_mode_default=invalid\n"
-        )
+        self.config_file.write_text("hook_failure_mode_default=invalid\n")
 
         with patch("pathlib.Path.home", return_value=self.temp_dir):
             config = EnhancedConfigManager()
@@ -1110,9 +1101,7 @@ class TestApplyUnvalidatedConfig:
             config = EnhancedConfigManager()
             data = {
                 "permission_presets": {
-                    "custom": {
-                        "permissions": ["--filesystem=home", "--device=dri"]
-                    }
+                    "custom": {"permissions": ["--filesystem=home", "--device=dri"]}
                 }
             }
 
@@ -1130,11 +1119,7 @@ class TestApplyUnvalidatedConfig:
 
         with patch("pathlib.Path.home", return_value=self.temp_dir):
             config = EnhancedConfigManager()
-            data = {
-                "permission_presets": {
-                    "custom": ["--filesystem=home", "--device=dri"]
-                }
-            }
+            data = {"permission_presets": {"custom": ["--filesystem=home", "--device=dri"]}}
 
             config._apply_unvalidated_config(data)
 

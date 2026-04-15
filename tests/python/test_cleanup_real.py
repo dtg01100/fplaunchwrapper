@@ -8,7 +8,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 # Import actual implementation
 from lib.cleanup import WrapperCleanup, main
 
@@ -35,9 +34,7 @@ class TestWrapperCleanupReal:
         (self.bin_dir / "chrome").write_text(
             "#!/usr/bin/env bash\necho 'Chrome launched'\nexit 0\n"
         )
-        (self.bin_dir / "gimp").write_text(
-            "#!/usr/bin/env bash\necho 'GIMP launched'\nexit 0\n"
-        )
+        (self.bin_dir / "gimp").write_text("#!/usr/bin/env bash\necho 'GIMP launched'\nexit 0\n")
 
         # Make them executable
         (self.bin_dir / "firefox").chmod(0o755)
@@ -281,9 +278,7 @@ class TestWrapperCleanupReal:
 
         # Should find the symlink
         # (Implementation may or may not track symlinks separately)
-        all_items = (
-            cleanup.cleanup_items["wrappers"] + cleanup.cleanup_items["symlinks"]
-        )
+        all_items = cleanup.cleanup_items["wrappers"] + cleanup.cleanup_items["symlinks"]
         assert any("firefox-link" in str(item) for item in all_items)
 
 

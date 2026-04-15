@@ -104,9 +104,7 @@ __all__ = [
 ]
 
 
-_PYTEST_MODULE_SNAPSHOT = {
-    name: module for name, module in sys.modules.items() if "pytest" in name
-}
+_PYTEST_MODULE_SNAPSHOT = {name: module for name, module in sys.modules.items() if "pytest" in name}
 
 
 def _restore_pytest_if_missing() -> None:
@@ -175,11 +173,7 @@ def validate_flatpak_id(flatpak_id: str) -> bool:
     if "." not in flatpak_id:
         return False
 
-    if (
-        flatpak_id.startswith(".")
-        or flatpak_id.startswith("-")
-        or flatpak_id.startswith("_")
-    ):
+    if flatpak_id.startswith(".") or flatpak_id.startswith("-") or flatpak_id.startswith("_"):
         return False
 
     return bool(re.match(r"^[A-Za-z][A-Za-z0-9._-]*$", flatpak_id))
@@ -212,9 +206,7 @@ def _is_direct_browser_launch(app_name: str) -> bool:
 def safe_launch_check(app_name: str, wrapper_path: str | Path | None = None) -> bool:
     """Perform safety checks before launching an application."""
     if wrapper_path:
-        wrapper_path_obj = (
-            Path(wrapper_path) if isinstance(wrapper_path, str) else wrapper_path
-        )
+        wrapper_path_obj = Path(wrapper_path) if isinstance(wrapper_path, str) else wrapper_path
         if is_dangerous_wrapper(wrapper_path_obj):
             print(
                 f"🛡️  Safety: Blocked dangerous wrapper {wrapper_path}",

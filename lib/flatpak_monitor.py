@@ -48,9 +48,7 @@ Observer: Any = WatchdogObserver
 
 # For runtime we select a base handler that is the watchdog class when present,
 # otherwise a neutral fallback (object).
-_BaseFSHandler: Any = (
-    WatchdogEventHandler if WatchdogEventHandler is not None else object
-)
+_BaseFSHandler: Any = WatchdogEventHandler if WatchdogEventHandler is not None else object
 
 
 # Systemd notify support (optional) - import at runtime via importlib to avoid
@@ -144,9 +142,7 @@ class FlatpakEventHandler(_BaseFSHandler):
         if self.batch_timer is not None:
             self.batch_timer.cancel()
 
-        self.batch_timer = threading.Timer(
-            self.batch_window, self._flush_pending_events
-        )
+        self.batch_timer = threading.Timer(self.batch_window, self._flush_pending_events)
         if self.batch_timer is not None:
             self.batch_timer.daemon = True
             self.batch_timer.start()
@@ -339,18 +335,20 @@ class FlatpakMonitor:
         try:
             # Build list of possible script locations
             script_paths = []
-            
+
             # 1. Use shutil.which to find fplaunch-generate in PATH (works when installed)
             generate_cmd = shutil.which("fplaunch-generate")
             if generate_cmd:
                 script_paths.append(generate_cmd)
-            
+
             # 2. Add system-wide paths as fallback
-            script_paths.extend([
-                "/usr/local/bin/fplaunch-generate",
-                "/usr/bin/fplaunch-generate",
-            ])
-            
+            script_paths.extend(
+                [
+                    "/usr/local/bin/fplaunch-generate",
+                    "/usr/bin/fplaunch-generate",
+                ]
+            )
+
             # 3. Development mode: relative path from lib/
             dev_script = Path(__file__).parent.parent / "fplaunch-generate"
             if dev_script.exists():
@@ -442,12 +440,8 @@ def main(
         start_flatpak_monitoring(callback=callback, daemon=daemon, config=config)
         return
 
-    parser = argparse.ArgumentParser(
-        description="Flatpak installation monitoring service"
-    )
-    parser.add_argument(
-        "-d", "--daemon", action="store_true", help="Run in background as a daemon"
-    )
+    parser = argparse.ArgumentParser(description="Flatpak installation monitoring service")
+    parser.add_argument("-d", "--daemon", action="store_true", help="Run in background as a daemon")
     parser.add_argument(
         "-c",
         "--callback",
@@ -455,9 +449,7 @@ def main(
         default=None,
         help="Callback function to execute on events (format: module:function)",
     )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose logging"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument(
         "--batch-window",
         type=float,
@@ -513,9 +505,7 @@ def main(
     }
 
     logger.info("Starting Flatpak monitor with configuration: %s", config)
-    monitor = start_flatpak_monitoring(
-        callback=callback_func, daemon=args.daemon, config=config
-    )
+    monitor = start_flatpak_monitoring(callback=callback_func, daemon=args.daemon, config=config)
 
     if not args.daemon and monitor:
         # In non-daemon mode, wait for events until interrupted

@@ -11,7 +11,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 
-
 class TestDesktopEntry:
     """Tests for DesktopEntry class."""
 
@@ -348,11 +347,9 @@ Exec=command
         """Test that extra whitespace is stripped."""
         from lib.desktop_parser import DesktopEntry
 
-        content = """
-[Desktop Entry]
-   Name  =    App With Spaces   
-   Exec  =    command    
-"""
+        content = (
+            "[Desktop Entry]\n" "   Name  =    App With Spaces   \n" "   Exec  =    command    \n"
+        )
         path = self._create_temp_desktop_file(content)
         entry = DesktopEntry(path)
 
@@ -486,9 +483,7 @@ class TestParseFlatpakDesktopFiles:
 
     @patch("lib.desktop_parser.find_desktop_files")
     @patch("lib.desktop_parser.DesktopEntry")
-    def test_parses_desktop_files_from_custom_dir(
-        self, mock_entry_class, mock_find
-    ) -> None:
+    def test_parses_desktop_files_from_custom_dir(self, mock_entry_class, mock_find) -> None:
         """Test parsing desktop files from a custom directory."""
         from lib.desktop_parser import parse_flatpak_desktop_files
 
@@ -506,9 +501,7 @@ class TestParseFlatpakDesktopFiles:
 
     @patch("lib.desktop_parser.find_desktop_files")
     @patch("lib.desktop_parser.DesktopEntry")
-    def test_uses_filename_stem_when_no_flatpak_id(
-        self, mock_entry_class, mock_find
-    ) -> None:
+    def test_uses_filename_stem_when_no_flatpak_id(self, mock_entry_class, mock_find) -> None:
         """Test fallback to filename stem when X-Flatpak is missing."""
         from lib.desktop_parser import parse_flatpak_desktop_files
 
@@ -525,9 +518,7 @@ class TestParseFlatpakDesktopFiles:
 
     @patch("lib.desktop_parser.find_desktop_files")
     @patch("lib.desktop_parser.Path")
-    def test_searches_default_locations_when_no_flatpak_dir(
-        self, mock_path, mock_find
-    ) -> None:
+    def test_searches_default_locations_when_no_flatpak_dir(self, mock_path, mock_find) -> None:
         """Test default search locations when no flatpak_dir specified."""
         from lib.desktop_parser import parse_flatpak_desktop_files
 

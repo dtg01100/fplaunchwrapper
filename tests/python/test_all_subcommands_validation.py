@@ -193,9 +193,7 @@ class TestPresetsSubcommands:
         assert "browser" in result.output.lower()
 
     def test_presets_add_with_permission(self, runner):
-        result = runner.invoke(
-            cli, ["presets", "add", "test-preset", "-p", "--socket=x11"]
-        )
+        result = runner.invoke(cli, ["presets", "add", "test-preset", "-p", "--socket=x11"])
         assert result.exit_code == 0
 
 

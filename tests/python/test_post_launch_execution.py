@@ -59,9 +59,7 @@ class TestPostLaunchScriptExecution:
         hooks_dir.mkdir(parents=True, exist_ok=True)
 
         post_script = hooks_dir / "post-run.sh"
-        post_script.write_text(
-            "#!/bin/bash\necho $FPWRAPPER_EXIT_CODE > $HOME/.test_exit_code\n"
-        )
+        post_script.write_text("#!/bin/bash\necho $FPWRAPPER_EXIT_CODE > $HOME/.test_exit_code\n")
         post_script.chmod(post_script.stat().st_mode | stat.S_IEXEC)
 
         # Verify hook directory structure
@@ -145,7 +143,7 @@ class TestPostLaunchScriptExecution:
         assert "hook_exit=$?" in wrapper_content
         assert "[fplaunchwrapper] Warning" in wrapper_content
         # Verify failure mode handling (abort/warn/ignore)
-        assert "case \"$failure_mode\"" in wrapper_content or "failure_mode" in wrapper_content
+        assert 'case "$failure_mode"' in wrapper_content or "failure_mode" in wrapper_content
 
     def test_post_launch_script_not_called_when_missing(self, temp_dirs):
         """Test that missing post-launch script doesn't cause issues."""
@@ -198,10 +196,7 @@ class TestPostLaunchScriptExecution:
         lines = wrapper_content.split("\n")
         post_launch_found = False
         for i, line in enumerate(lines):
-            if (
-                "run_post_launch_script" in line
-                and "FPWRAPPER_EXIT_CODE" in wrapper_content
-            ):
+            if "run_post_launch_script" in line and "FPWRAPPER_EXIT_CODE" in wrapper_content:
                 post_launch_found = True
                 break
 
@@ -221,9 +216,7 @@ class TestPostLaunchScriptExecution:
         assert post_launch_start != -1, "run_post_launch_script function not found"
 
         # Get function content
-        post_launch_content = wrapper_content[
-            post_launch_start : post_launch_start + 1000
-        ]
+        post_launch_content = wrapper_content[post_launch_start : post_launch_start + 1000]
 
         # Check for export statements
         assert "export FPWRAPPER_EXIT_CODE" in post_launch_content

@@ -25,8 +25,7 @@ class TestSystemdCliCommand:
 
         assert result.exit_code == 0, f"Error: {result.output}"
         assert (
-            "Manage optional systemd timer" in result.output
-            or "systemd" in result.output.lower()
+            "Manage optional systemd timer" in result.output or "systemd" in result.output.lower()
         )
 
     def test_systemd_enable_help(self):
@@ -130,17 +129,9 @@ class TestSystemdSetupMethods:
                             self.stdout = stdout
                             self.stderr = stderr
 
-                    if (
-                        args[0] == "systemctl"
-                        and args[1] == "--user"
-                        and args[2] == "is-enabled"
-                    ):
+                    if args[0] == "systemctl" and args[1] == "--user" and args[2] == "is-enabled":
                         return MockResult(0, stdout="enabled")
-                    elif (
-                        args[0] == "systemctl"
-                        and args[1] == "--user"
-                        and args[2] == "is-active"
-                    ):
+                    elif args[0] == "systemctl" and args[1] == "--user" and args[2] == "is-active":
                         return MockResult(0, stdout="active")
                     else:
                         return MockResult(0, stdout="")

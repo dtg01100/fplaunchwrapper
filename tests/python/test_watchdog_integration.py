@@ -152,9 +152,7 @@ class TestFlatpakMonitor:
 
         # These should be considered Flatpak-related
         assert monitor._should_process_event("/var/lib/flatpak/something")
-        assert monitor._should_process_event(
-            os.path.expanduser("~/.local/share/flatpak/app")
-        )
+        assert monitor._should_process_event(os.path.expanduser("~/.local/share/flatpak/app"))
         assert monitor._should_process_event(os.path.expanduser("~/.var/app/something"))
 
         # These should not be considered Flatpak-related
@@ -165,17 +163,13 @@ class TestFlatpakMonitor:
         """Test that wrappers should regenerate on exports directory changes."""
         monitor = FlatpakMonitor()
 
-        assert monitor._should_regenerate_wrappers(
-            "/var/lib/flatpak/exports/bin/com.example.App"
-        )
+        assert monitor._should_regenerate_wrappers("/var/lib/flatpak/exports/bin/com.example.App")
 
     def test_monitor_should_regenerate_on_app_changes(self):
         """Test that wrappers should regenerate on app directory changes."""
         monitor = FlatpakMonitor()
 
-        assert monitor._should_regenerate_wrappers(
-            "/var/lib/flatpak/app/com.example.App/current"
-        )
+        assert monitor._should_regenerate_wrappers("/var/lib/flatpak/app/com.example.App/current")
 
     def test_monitor_should_regenerate_on_metadata(self):
         """Test that wrappers should regenerate on metadata changes."""
@@ -254,9 +248,7 @@ class TestFlatpakMonitorIntegration:
         monitor = FlatpakMonitor(callback=callback)
 
         # Mock the filesystem events
-        with patch.object(
-            monitor, "_on_flatpak_change", wraps=monitor._on_flatpak_change
-        ):
+        with patch.object(monitor, "_on_flatpak_change", wraps=monitor._on_flatpak_change):
             monitor._on_flatpak_change("created", "/var/lib/flatpak/app/test")
 
             # Callback should be invoked

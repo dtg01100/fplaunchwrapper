@@ -98,9 +98,7 @@ class TestProfilesCLI:
             profile_file = tmp_path / "import_profile.toml"
             profile_file.write_text("[app_preferences]\n")
 
-            result = runner.invoke(
-                cli_module.cli, ["profiles", "import", str(profile_file)]
-            )
+            result = runner.invoke(cli_module.cli, ["profiles", "import", str(profile_file)])
 
             assert result.exit_code == 0 or "not found" in result.output.lower()
 
@@ -211,9 +209,7 @@ class TestInstallCLI:
 
     @patch("subprocess.run")
     @patch("lib.generate.WrapperGenerator")
-    def test_install_flatpak_success(
-        self, mock_generator, mock_run, runner, temp_config_dir
-    ):
+    def test_install_flatpak_success(self, mock_generator, mock_run, runner, temp_config_dir):
         """Test successful install of Flatpak app."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
         result = runner.invoke(
@@ -230,9 +226,7 @@ class TestInstallCLI:
 
     @patch("lib.generate.WrapperGenerator")
     @patch("lib.cli.run_command")
-    def test_install_flatpak_failure(
-        self, mock_run, mock_generator, runner, temp_config_dir
-    ):
+    def test_install_flatpak_failure(self, mock_run, mock_generator, runner, temp_config_dir):
         """Test install when flatpak install fails."""
         mock_run.return_value = Mock(returncode=1, stderr="Install failed")
         result = runner.invoke(
@@ -265,9 +259,7 @@ class TestUninstallCLI:
     @patch("lib.manage.WrapperManager")
     def test_uninstall_emit_mode(self, mock_manager, mock_run, runner):
         """Test uninstall in emit mode doesn't actually uninstall."""
-        result = runner.invoke(
-            cli_module.cli, ["uninstall", "--emit", "org.example.app"]
-        )
+        result = runner.invoke(cli_module.cli, ["uninstall", "--emit", "org.example.app"])
 
         assert result.exit_code == 0
         assert "emit" in result.output.lower()
@@ -289,9 +281,7 @@ class TestUninstallCLI:
 
     @patch("lib.cli.run_command")
     @patch("lib.generate.WrapperGenerator")
-    def test_install_flatpak_failure(
-        self, mock_generator, mock_run, runner, temp_config_dir
-    ):
+    def test_install_flatpak_failure(self, mock_generator, mock_run, runner, temp_config_dir):
         """Test install when flatpak install fails."""
         mock_run.return_value = Mock(returncode=1, stderr="Install failed")
         result = runner.invoke(
@@ -332,9 +322,7 @@ class TestManifestCLI:
     @patch("subprocess.run")
     def test_manifest_emit_mode(self, mock_run, runner):
         """Test manifest in emit mode."""
-        result = runner.invoke(
-            cli_module.cli, ["manifest", "--emit", "org.example.app"]
-        )
+        result = runner.invoke(cli_module.cli, ["manifest", "--emit", "org.example.app"])
 
         assert result.exit_code == 0
         assert "emit" in result.output.lower()

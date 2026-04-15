@@ -238,9 +238,7 @@ class TestPresetCLICommands:
         """Test that presets persist across instances."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             manager1 = EnhancedConfigManager()
-            manager1.add_permission_preset(
-                "custom", ["--device=dri", "--socket=pulseaudio"]
-            )
+            manager1.add_permission_preset("custom", ["--device=dri", "--socket=pulseaudio"])
 
             manager2 = EnhancedConfigManager()
             presets = manager2.list_permission_presets()

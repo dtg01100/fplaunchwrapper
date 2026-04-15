@@ -47,9 +47,7 @@ class TestTimerUnitStructureFix:
         setup = SystemdSetup(emit_mode=True)
         timer_content = setup.create_timer_unit()
 
-        sections = [
-            line.strip() for line in timer_content.split("\n") if line.startswith("[")
-        ]
+        sections = [line.strip() for line in timer_content.split("\n") if line.startswith("[")]
 
         assert "[Unit]" in sections
         assert "[Timer]" in sections
@@ -130,9 +128,7 @@ class TestPrerequisiteCheckingFix:
             mock_which.side_effect = lambda cmd: (
                 "/usr/bin/flatpak"
                 if cmd == "flatpak"
-                else "/usr/bin/python"
-                if cmd == "python"
-                else None
+                else "/usr/bin/python" if cmd == "python" else None
             )
 
             setup = SystemdSetup(wrapper_script="python")
@@ -166,9 +162,7 @@ class TestPrerequisiteCheckingFix:
         from lib.systemd_setup import SystemdSetup
 
         with patch("shutil.which", return_value="/usr/bin/flatpak"):
-            setup = SystemdSetup(
-                wrapper_script=f"{sys.executable} -m fplaunch.generate"
-            )
+            setup = SystemdSetup(wrapper_script=f"{sys.executable} -m fplaunch.generate")
             result = setup.check_prerequisites()
 
         assert result is True

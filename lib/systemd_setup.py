@@ -169,9 +169,7 @@ WantedBy=timers.target
             True if successful, False otherwise
         """
         if self.emit_mode:
-            self.log(
-                f"EMIT: Would install cron job with interval {cron_interval}h", "emit"
-            )
+            self.log(f"EMIT: Would install cron job with interval {cron_interval}h", "emit")
             return True
 
         try:
@@ -281,9 +279,7 @@ WantedBy=paths.target
             result["service"]["active"] = proc.stdout.strip() == "active"
 
             # Check timer
-            result["timer"]["exists"] = (
-                self.systemd_unit_dir / "fplaunch-wrapper.timer"
-            ).exists()
+            result["timer"]["exists"] = (self.systemd_unit_dir / "fplaunch-wrapper.timer").exists()
             proc = subprocess.run(
                 ["systemctl", "--user", "is-enabled", "fplaunch-wrapper.timer"],
                 capture_output=True,

@@ -117,10 +117,7 @@ class TestGeneratedLaunchers:
 
             # Should fail because flatpak app isn't actually installed
             assert result.returncode != 0
-            assert (
-                "not installed" in result.stderr.lower()
-                or "error" in result.stderr.lower()
-            )
+            assert "not installed" in result.stderr.lower() or "error" in result.stderr.lower()
 
     def test_generated_wrapper_with_invalid_args(self) -> None:
         """Test that wrappers handle invalid arguments."""
@@ -429,9 +426,7 @@ class TestNonInteractiveBehavior:
         )
 
         assert result.returncode != 0
-        assert (
-            "not installed" in result.stderr.lower() or "error" in result.stderr.lower()
-        )
+        assert "not installed" in result.stderr.lower() or "error" in result.stderr.lower()
 
     def test_non_interactive_with_one_shot_pref(self) -> None:
         """Test that one-shot preference works in non-interactive mode."""

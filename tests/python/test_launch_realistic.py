@@ -72,13 +72,11 @@ class TestRealisticApplicationLauncher:
         # Create a REAL wrapper script
         flatpak_id, app_name, _ = REAL_FLATPAK_APPS[0]
         wrapper_script = self.bin_dir / app_name
-        wrapper_script.write_text(
-            f"""#!/bin/bash
+        wrapper_script.write_text(f"""#!/bin/bash
 # Wrapper for {flatpak_id}
 # This is a realistic wrapper script
 exec flatpak run {flatpak_id} "$@"
-"""
-        )
+""")
         wrapper_script.chmod(0o755)
 
         # Verify wrapper was created and is executable
@@ -118,12 +116,10 @@ exec flatpak run {flatpak_id} "$@"
 
         flatpak_id, app_name, _ = REAL_FLATPAK_APPS[1]
         wrapper_script = self.bin_dir / app_name
-        wrapper_script.write_text(
-            f"""#!/bin/bash
+        wrapper_script.write_text(f"""#!/bin/bash
 # Wrapper for {flatpak_id}
 exec flatpak run {flatpak_id} "$@"
-"""
-        )
+""")
         wrapper_script.chmod(0o755)
 
         # Test with realistic arguments
@@ -194,9 +190,7 @@ exec flatpak run {flatpak_id} "$@"
             (125, "Error: Failed to open app", False),  # Flatpak error
         ],
     )
-    def test_launch_realistic_failure_modes(
-        self, returncode, stderr, should_succeed
-    ) -> None:
+    def test_launch_realistic_failure_modes(self, returncode, stderr, should_succeed) -> None:
         """Test launch handles realistic failure modes."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
@@ -277,12 +271,10 @@ exec flatpak run {flatpak_id} "$@"
         # Create multiple wrappers
         for flatpak_id, app_name, _ in REAL_FLATPAK_APPS[:4]:
             wrapper_script = self.bin_dir / app_name
-            wrapper_script.write_text(
-                f"""#!/bin/bash
+            wrapper_script.write_text(f"""#!/bin/bash
 # Wrapper for {flatpak_id}
 exec flatpak run {flatpak_id} "$@"
-"""
-            )
+""")
             wrapper_script.chmod(0o755)
             assert wrapper_script.exists()
 

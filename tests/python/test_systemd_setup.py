@@ -48,9 +48,7 @@ class SystemdTestFixtures:
 
         try:
             # Write content to a temporary file since systemd-analyze expects a file path
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".timer", delete=False
-            ) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".timer", delete=False) as f:
                 f.write(content)
                 temp_file = f.name
 

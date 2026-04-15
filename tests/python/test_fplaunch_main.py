@@ -383,9 +383,7 @@ class TestSafetyImportFallback:
                     assert result is True
 
                     # Also test with arguments (should still return True)
-                    result = fplaunch_module.safety.safe_launch_check(
-                        "some_arg", kwarg="value"
-                    )
+                    result = fplaunch_module.safety.safe_launch_check("some_arg", kwarg="value")
                     assert result is True
 
                 finally:

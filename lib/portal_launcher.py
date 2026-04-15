@@ -12,7 +12,6 @@ import shutil
 import subprocess
 from typing import Optional
 
-
 # Check for flatpak-spawn availability
 FLATPAK_SPAWN_PATH: Optional[str] = shutil.which("flatpak-spawn")
 

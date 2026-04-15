@@ -15,6 +15,7 @@ from typing import Any
 
 try:
     from importlib.resources import files as importlib_files
+
     HAS_IMPORTLIB_RESOURCES = True
 except ImportError:
     HAS_IMPORTLIB_RESOURCES = False
@@ -77,11 +78,12 @@ class WrapperGenerator:
         self.lock_name = "generate"
         self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
 
-        # Ensure directories exist and save bin_dir (required by tests)
+        # Ensure directories exist and save bin_dir for tests.
         if not self.emit_mode:
             self.bin_dir.mkdir(parents=True, exist_ok=True)
             self.config_dir.mkdir(parents=True, exist_ok=True)
-            # Save bin_dir to config (required by TestWrapperGeneratorReal.test_init_saves_bin_dir_to_config)
+            # Save bin_dir to config (required by
+            # TestWrapperGeneratorReal.test_init_saves_bin_dir_to_config)
             (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
 
     def is_forbidden_wrapper_name(self, name: str) -> bool:
@@ -104,15 +106,11 @@ class WrapperGenerator:
         else:
             console.print(message)
 
-    def run_command(
-        self, cmd: list[str], description: str = ""
-    ) -> subprocess.CompletedProcess:
+    def run_command(self, cmd: list[str], description: str = "") -> subprocess.CompletedProcess:
         """Run a command and return its output."""
         if description and not self.verbose:
             with console.status(f"[bold green]{description}..."):
-                result = subprocess.run(
-                    cmd, capture_output=True, text=True, check=False
-                )
+                result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         else:
             if description and self.verbose:
                 self.log(description, "debug")
@@ -125,9 +123,7 @@ class WrapperGenerator:
 
         flatpak_path = find_executable("flatpak")
         if flatpak_path is None:
-            raise WrapperGenerationError(
-                "flatpak", "Failed to find flatpak executable in PATH"
-            )
+            raise WrapperGenerationError("flatpak", "Failed to find flatpak executable in PATH")
 
         result = self.run_command(
             [flatpak_path, "list", "--app", "--columns=application"],
@@ -146,7 +142,8 @@ class WrapperGenerator:
                 if line and not line.startswith("Application ID"):
                     apps.append(line)
 
-        # Also check system installations (required by TestWrapperGeneratorReal.test_get_installed_flatpaks_with_duplicates)
+        # Also check system installations.
+        # Required by TestWrapperGeneratorReal.test_get_installed_flatpaks_with_duplicates
         result_system = self.run_command(
             [flatpak_path, "list", "--app", "--columns=application", "--system"],
             "Checking system Flatpak installations",
@@ -156,11 +153,7 @@ class WrapperGenerator:
             if stdout_system:
                 for line in stdout_system.split("\n"):
                     line = line.strip()
-                    if (
-                        line
-                        and not line.startswith("Application ID")
-                        and line not in apps
-                    ):
+                    if line and not line.startswith("Application ID") and line not in apps:
                         apps.append(line)
 
         return sorted(set(apps))
@@ -182,7 +175,7 @@ class WrapperGenerator:
     def create_wrapper_script(self, wrapper_name: str, app_id: str) -> str:
         """Create the content for a wrapper script using a template."""
         template_path = None
-        
+
         # Try multiple locations for the template file
         # 1. When installed: use importlib.resources to find template in package data
         if HAS_IMPORTLIB_RESOURCES:
@@ -192,11 +185,11 @@ class WrapperGenerator:
                 template_path = Path(str(template_file))
             except (TypeError, AttributeError, FileNotFoundError):
                 template_path = None
-        
+
         # 2. Development mode: templates/ at project root (Path(__file__).parent.parent)
         if template_path is None or not template_path.exists():
             template_path = Path(__file__).parent.parent / "templates" / "wrapper.template.sh"
-        
+
         # 3. Fallback: relative path (for running from project root)
         if not template_path.exists():
             template_path = Path("templates/wrapper.template.sh")
@@ -216,9 +209,7 @@ class WrapperGenerator:
                 from .config_manager import create_config_manager
 
                 config = create_config_manager()
-                failure_mode = getattr(
-                    config.config, "hook_failure_mode_default", "warn"
-                )
+                failure_mode = getattr(config.config, "hook_failure_mode_default", "warn")
 
                 # Fetch app preferences for baking script paths
                 prefs = config.get_app_preferences(wrapper_name)
@@ -238,9 +229,7 @@ class WrapperGenerator:
             )
 
         except Exception as e:
-            raise WrapperGenerationError(
-                app_id, f"Failed to read wrapper template: {e}"
-            ) from e
+            raise WrapperGenerationError(app_id, f"Failed to read wrapper template: {e}") from e
 
     def generate_wrapper(self, app_id: str, flatpak_id: str | None = None) -> bool:
         """Generate a wrapper for a specific Flatpak app."""
@@ -272,9 +261,7 @@ class WrapperGenerator:
                 return False
             target_flatpak_id = sanitize_id_to_name(app_id)
             if not target_flatpak_id:
-                self.log(
-                    f"Skipping invalid app ID (unsanitizable): {app_id}", "warning"
-                )
+                self.log(f"Skipping invalid app ID (unsanitizable): {app_id}", "warning")
                 return False
 
         wrapper_path = self.bin_dir / wrapper_name
@@ -381,12 +368,16 @@ class WrapperGenerator:
                         item.unlink()
                         removed_count += 1
 
-                        # Remove associated files (required by TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_old)
+                        # Remove associated files.
+                        # Required by
+                        # TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_old
                         pref_file = self.config_dir / f"{item.name}.pref"
                         if pref_file.exists():
                             pref_file.unlink()
 
-                        # Update aliases (required by TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_aliases)
+                        # Update aliases.
+                        # Required by
+                        # TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_aliases
                         aliases_file = self.config_dir / "aliases"
                         if aliases_file.exists():
                             content = aliases_file.read_text()
@@ -459,9 +450,7 @@ class WrapperGenerator:
             console=console,
             disable=not self.verbose and not sys.stdout.isatty(),
         ) as progress:
-            task = progress.add_task(
-                "Generating wrappers...", total=len(installed_apps)
-            )
+            task = progress.add_task("Generating wrappers...", total=len(installed_apps))
             for app_id in installed_apps:
                 # Track if this app had a wrapper before
                 had_wrapper_before = app_id in existing_wrappers

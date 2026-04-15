@@ -106,8 +106,7 @@ class TestInputValidationEdgeCases:
             "space in.id",  # Space
             "special@char.id",  # Special chars
             "a" * 200,  # Very long
-            "id.with.100.dots."
-            + ".".join([str(i) for i in range(100)]),  # Too many components
+            "id.with.100.dots." + ".".join([str(i) for i in range(100)]),  # Too many components
         ]
 
         for malformed_id in malformed_ids:
@@ -823,9 +822,7 @@ class TestBoundaryConditionEdgeCases:
         for value, expected_type in boundary_types:
             # Should handle unexpected types gracefully
             # Verify each value has the correct type
-            assert isinstance(value, expected_type), (
-                f"Expected {expected_type}, got {type(value)}"
-            )
+            assert isinstance(value, expected_type), f"Expected {expected_type}, got {type(value)}"
             # Verify truthiness behavior is consistent
             if value is None or value is False:
                 assert not value
@@ -864,9 +861,7 @@ class TestAdditionalSystemResourceEdgeCases:
             # (some systems may allow the write despite chmod)
             if not permission_error_caught:
                 # File was created, verify it exists
-                assert test_file.exists(), (
-                    "Expected either PermissionError or file creation"
-                )
+                assert test_file.exists(), "Expected either PermissionError or file creation"
 
     def test_extreme_file_sizes(self) -> None:
         """Test handling of extreme file sizes."""

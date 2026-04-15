@@ -109,8 +109,11 @@ class AppLauncher:
         """Get pre or post-launch hook scripts for an app.
 
         Hook scripts are looked for in:
-        1. Configured script path from config manager (pre_launch_script or post_launch_script fields)
-        2. Default location: ~/.config/fplaunchwrapper/scripts/{app_name}/pre-launch.sh or post-run.sh
+        # 1. Configured script path from config manager
+        #    (pre_launch_script or post_launch_script fields)
+        # 2. Default location:
+        #    ~/.config/fplaunchwrapper/scripts/{app_name}/pre-launch.sh or
+        #    post-run.sh
 
         Returns:
             List of executable script paths
@@ -213,7 +216,8 @@ class AppLauncher:
 
         if self.verbose:
             print(
-                f"Running {hook_type}-launch scripts for {self.app_name} (failure mode: {failure_mode})",
+                f"Running {hook_type}-launch scripts for {self.app_name} "
+                f"(failure mode: {failure_mode})",
                 file=sys.stderr,
             )
 
@@ -253,18 +257,21 @@ class AppLauncher:
                     if failure_mode == "abort":
                         if hook_type == "pre":
                             print(
-                                f"[fplaunchwrapper] Pre-launch hook failed (exit {result.returncode}), aborting launch: {script_path}",
+                                f"[fplaunchwrapper] Pre-launch hook failed "
+                                f"(exit {result.returncode}), aborting launch: {script_path}",
                                 file=sys.stderr,
                             )
                             return False
                         else:
                             print(
-                                f"[fplaunchwrapper] Post-launch hook failed (exit {result.returncode}): {script_path}",
+                                f"[fplaunchwrapper] Post-launch hook failed "
+                                f"(exit {result.returncode}): {script_path}",
                                 file=sys.stderr,
                             )
                     elif failure_mode == "warn":
                         print(
-                            f"[fplaunchwrapper] Warning: {hook_type}-launch hook failed ({script_path}): {result.stderr}",
+                            f"[fplaunchwrapper] Warning: {hook_type}-launch hook failed "
+                            f"({script_path}): {result.stderr}",
                             file=sys.stderr,
                         )
 
@@ -277,18 +284,20 @@ class AppLauncher:
                 if failure_mode == "abort":
                     if hook_type == "pre":
                         print(
-                            f"[fplaunchwrapper] Pre-launch hook timed out, aborting launch: {script_path}",
+                            f"[fplaunchwrapper] Pre-launch hook timed out, "
+                            f"aborting launch: {script_path}",
                             file=sys.stderr,
                         )
                         return False
                     else:
                         print(
-                            f"[fplaunchwrapper] Post-launch hook timed out: {script_path}",
+                            f"[fplaunchwrapper] Post-launch hook timed out: " f"{script_path}",
                             file=sys.stderr,
                         )
                 elif failure_mode == "warn":
                     print(
-                        f"[fplaunchwrapper] Warning: {hook_type}-launch hook timed out ({script_path})",
+                        f"[fplaunchwrapper] Warning: {hook_type}-launch hook timed out "
+                        f"({script_path})",
                         file=sys.stderr,
                     )
 
@@ -298,18 +307,20 @@ class AppLauncher:
                 if failure_mode == "abort":
                     if hook_type == "pre":
                         print(
-                            f"[fplaunchwrapper] Pre-launch hook error, aborting launch ({script_path}): {e}",
+                            f"[fplaunchwrapper] Pre-launch hook error, aborting launch "
+                            f"({script_path}): {e}",
                             file=sys.stderr,
                         )
                         return False
                     else:
                         print(
-                            f"[fplaunchwrapper] Post-launch hook error ({script_path}): {e}",
+                            f"[fplaunchwrapper] Post-launch hook error " f"({script_path}): {e}",
                             file=sys.stderr,
                         )
                 elif failure_mode == "warn":
                     print(
-                        f"[fplaunchwrapper] Warning: Error running {hook_type}-launch hook ({script_path}): {e}",
+                        f"[fplaunchwrapper] Warning: Error running {hook_type}-launch hook "
+                        f"({script_path}): {e}",
                         file=sys.stderr,
                     )
 
@@ -458,9 +469,7 @@ class AppLauncher:
 
         return candidate_id
 
-    def _build_launch_command(
-        self, command_id: str, wrapper_path: Path | None
-    ) -> list[str]:
+    def _build_launch_command(self, command_id: str, wrapper_path: Path | None) -> list[str]:
         """Build the command to execute for launching.
 
         Args:
@@ -554,9 +563,7 @@ class AppLauncher:
 
             if not self._run_hook_scripts("pre", source=source):
                 if self.verbose:
-                    print(
-                        f"Pre-launch hooks failed for {self.app_name}", file=sys.stderr
-                    )
+                    print(f"Pre-launch hooks failed for {self.app_name}", file=sys.stderr)
                 return False
 
             wrapper_path, source = self._check_preference_override(wrapper_path, source)
@@ -568,13 +575,9 @@ class AppLauncher:
             result = self._execute_launch(cmd)
             launch_success = result.returncode == 0
 
-            if not self._run_hook_scripts(
-                "post", exit_code=result.returncode, source=source
-            ):
+            if not self._run_hook_scripts("post", exit_code=result.returncode, source=source):
                 if self.verbose:
-                    print(
-                        f"Post-launch hooks failed for {self.app_name}", file=sys.stderr
-                    )
+                    print(f"Post-launch hooks failed for {self.app_name}", file=sys.stderr)
 
             return launch_success
 

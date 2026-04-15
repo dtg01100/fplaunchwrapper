@@ -37,12 +37,8 @@ class TestSubcommandsDoNotCrash:
     def test_commands_without_required_args_do_not_crash(self, runner, command):
         """Commands that can run without args should not crash."""
         result = runner.invoke(cli, ["--emit", command])
-        assert result.exit_code == 0, (
-            f"{command} crashed with exit code {result.exit_code}"
-        )
-        assert result.exception is None, (
-            f"{command} raised exception: {result.exception}"
-        )
+        assert result.exit_code == 0, f"{command} crashed with exit code {result.exit_code}"
+        assert result.exception is None, f"{command} raised exception: {result.exception}"
 
     @pytest.mark.parametrize(
         "command",
@@ -62,9 +58,7 @@ class TestSubcommandsDoNotCrash:
         acceptable = result.exception is None or (
             isinstance(result.exception, SystemExit) and result.exception.code == 2
         )
-        assert acceptable, (
-            f"{command} crashed with unexpected exception: {result.exception}"
-        )
+        assert acceptable, f"{command} crashed with unexpected exception: {result.exception}"
 
     def test_set_pref_without_args_fails_gracefully(self, runner):
         result = runner.invoke(cli, ["set-pref"])
@@ -121,9 +115,7 @@ class TestSubcommandsDoNotCrash:
             ("import", ["test-file.json"]),
         ],
     )
-    def test_profiles_subcommands_with_args_do_not_crash(
-        self, runner, subcommand, args
-    ):
+    def test_profiles_subcommands_with_args_do_not_crash(self, runner, subcommand, args):
         result = runner.invoke(cli, ["profiles", subcommand] + args)
         assert result.exception is None, f"profiles {subcommand} crashed with exception"
 
@@ -210,12 +202,8 @@ class TestSubcommandsDoNotCrash:
         for cmd in commands:
             result = runner.invoke(cli, cmd + ["--help"])
             cmd_str = " ".join(cmd) if cmd else "main"
-            assert result.exception is None, (
-                f"{cmd_str} --help crashed: {result.exception}"
-            )
-            assert result.exit_code == 0, (
-                f"{cmd_str} --help failed with code {result.exit_code}"
-            )
+            assert result.exception is None, f"{cmd_str} --help crashed: {result.exception}"
+            assert result.exit_code == 0, f"{cmd_str} --help failed with code {result.exit_code}"
 
     def test_emit_mode_prevents_crashes_in_destructive_commands(self, runner):
         """Emit mode should prevent actual execution and crashes."""
@@ -230,9 +218,7 @@ class TestSubcommandsDoNotCrash:
         for cmd in potentially_destructive:
             result = runner.invoke(cli, ["--emit"] + cmd)
             cmd_str = " ".join(cmd)
-            assert result.exception is None, (
-                f"{cmd_str} crashed in emit mode: {result.exception}"
-            )
+            assert result.exception is None, f"{cmd_str} crashed in emit mode: {result.exception}"
 
 
 class TestSubcommandExceptionHandling:
@@ -245,16 +231,12 @@ class TestSubcommandExceptionHandling:
 
     def test_command_with_too_many_args_fails_gracefully(self, runner):
         result = runner.invoke(cli, ["list", "arg1", "arg2", "arg3"])
-        acceptable = result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        acceptable = result.exception is None or isinstance(result.exception, SystemExit)
         assert acceptable, "Command with extra args crashed"
 
     def test_global_option_after_command_handled(self, runner):
         result = runner.invoke(cli, ["list", "--verbose"])
-        acceptable = result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        acceptable = result.exception is None or isinstance(result.exception, SystemExit)
         assert acceptable, "Global option after command crashed"
 
     def test_empty_invocation_does_not_crash(self, runner):

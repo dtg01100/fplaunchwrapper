@@ -101,9 +101,7 @@ class WrapperManager:
                             )
                     except Exception as e:
                         if self.verbose:
-                            self.log(
-                                f"Warning: Could not read {item.name}: {e}", "warning"
-                            )
+                            self.log(f"Warning: Could not read {item.name}: {e}", "warning")
 
         return sorted(wrappers, key=lambda x: x["name"])
 
@@ -193,7 +191,8 @@ class WrapperManager:
         valid_preferences = {"system", "flatpak", "auto"}
         if preference not in valid_preferences:
             self.log(
-                f"Invalid preference '{preference}': must be one of {', '.join(sorted(valid_preferences))}",
+                f"Invalid preference '{preference}': must be one of "
+                f"{', '.join(sorted(valid_preferences))}",
                 "error",
             )
             return False
@@ -313,9 +312,7 @@ class WrapperManager:
 
             # Write sorted aliases
             sorted_aliases = sorted(existing_aliases.items())
-            aliases_file.write_text(
-                "\n".join(f"{k}:{v}" for k, v in sorted_aliases) + "\n"
-            )
+            aliases_file.write_text("\n".join(f"{k}:{v}" for k, v in sorted_aliases) + "\n")
             self.log(f"Created alias: {alias_name} -> {target}", "success")
             return True
         except Exception as e:
@@ -391,9 +388,7 @@ def main() -> int:
 
     # List command
     list_parser = subparsers.add_parser("list", help="List all wrappers")
-    list_parser.add_argument(
-        "--all", "-a", action="store_true", help="List all wrappers"
-    )
+    list_parser.add_argument("--all", "-a", action="store_true", help="List all wrappers")
 
     # Search/discover command
     subparsers.add_parser("search", help="Search for wrappers")

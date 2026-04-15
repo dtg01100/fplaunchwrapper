@@ -92,9 +92,7 @@ class TestSafeIntegrationWorkflows:
             assert result is not None, "Selective cleanup should be callable"
 
             # Verify isolation - no real filesystem operations
-            assert isolated_env["temp_base"].exists(), (
-                "Temp environment should be untouched"
-            )
+            assert isolated_env["temp_base"].exists(), "Temp environment should be untouched"
 
     def test_launcher_workflow(self, isolated_env) -> None:
         """Test app launching workflow with environment setup.
@@ -108,7 +106,9 @@ class TestSafeIntegrationWorkflows:
         ) as mock_popen, patch("os.path.exists", return_value=True), patch(
             "os.environ.copy",
             return_value={},
-        ), patch("pathlib.Path.home", return_value=isolated_env["home_dir"]):
+        ), patch(
+            "pathlib.Path.home", return_value=isolated_env["home_dir"]
+        ):
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
             mock_popen.return_value = Mock()
 
@@ -140,7 +140,9 @@ class TestCLISafeIntegration:
         ) as mock_run, patch("os.path.exists", return_value=True), patch(
             "pathlib.Path.home",
             return_value=tmp_path / "home",
-        ), patch("sys.stdout"):
+        ), patch(
+            "sys.stdout"
+        ):
             mock_run.return_value = Mock(returncode=0, stdout="generated", stderr="")
 
             # This would normally call cli_main() but we can't import it safely
@@ -158,6 +160,4 @@ class TestCLISafeIntegration:
             assert result is not None, "CLI workflow should be testable"
 
             # Verify no real commands were executed
-            assert mock_run.call_count == 0, (
-                "No real commands should be executed in safe tests"
-            )
+            assert mock_run.call_count == 0, "No real commands should be executed in safe tests"

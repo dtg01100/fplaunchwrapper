@@ -81,9 +81,7 @@ class TestFlatpakMonitor:
 
     @patch("lib.flatpak_monitor.os.path.exists")
     @patch("lib.flatpak_monitor.Observer")
-    def test_monitor_directory_detection(
-        self, mock_observer_class, mock_exists
-    ) -> None:
+    def test_monitor_directory_detection(self, mock_observer_class, mock_exists) -> None:
         """Test detection of Flatpak directories to monitor."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")

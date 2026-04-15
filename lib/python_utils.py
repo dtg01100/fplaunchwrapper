@@ -120,9 +120,7 @@ def is_wrapper_file(file_path: str | Path) -> bool | None:
             return False
 
         id_value = re.search(r'ID="([^"]*)"', id_match.group())
-        return not (
-            not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1))
-        )
+        return not (not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1)))
     except (IOError, OSError, UnicodeDecodeError, re.error):
         return False
 
@@ -201,9 +199,7 @@ def find_executable(cmd: str) -> str | None:
         return None
 
 
-def safe_mktemp(
-    template: str = "tmp.XXXXXX", dir_param: str | None = None
-) -> str | None:
+def safe_mktemp(template: str = "tmp.XXXXXX", dir_param: str | None = None) -> str | None:
     """Create a secure temporary file.
 
     Returns the created temporary file path, or None on failure.
@@ -225,9 +221,7 @@ def safe_mktemp(
         return None
 
 
-def acquire_lock(
-    lock_name: str = "fplaunch", timeout_seconds: float = 30
-) -> bool | None:
+def acquire_lock(lock_name: str = "fplaunch", timeout_seconds: float = 30) -> bool | None:
     """Acquire a file-based lock with timeout."""
     try:
         config_dir = get_default_config_dir()
