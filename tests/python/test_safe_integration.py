@@ -59,7 +59,7 @@ class TestSafeIntegrationWorkflows:
         # Comprehensive cleanup - ensure nothing escapes temp directory
         try:
             shutil.rmtree(temp_base, ignore_errors=True)
-        except Exception:
+        except OSError:
             pass  # Best effort cleanup
 
     def test_cleanup_workflow(self, isolated_env) -> None:

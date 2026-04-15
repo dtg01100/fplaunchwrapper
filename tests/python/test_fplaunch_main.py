@@ -8,7 +8,8 @@ from unittest.mock import Mock, patch
 import pytest
 
 try:
-    import lib.fplaunch as fplaunch
+    from lib.main_entrypoint import main as fplaunch_main
+    fplaunch = type('Module', (), {'main': fplaunch_main})()
 except ImportError:
     fplaunch = None
 
@@ -38,7 +39,7 @@ class TestMainEntryPoint:
         mock_cli_main.return_value = 0
 
         # Import and call main
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -57,7 +58,7 @@ class TestMainEntryPoint:
         mock_instance.run.return_value = 0
         mock_wrapper_generator.return_value = mock_instance
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -73,7 +74,7 @@ class TestMainEntryPoint:
 
         mock_set_preference.return_value = True
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -89,7 +90,7 @@ class TestMainEntryPoint:
 
         mock_launch.return_value = True
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -105,7 +106,7 @@ class TestMainEntryPoint:
 
         mock_run.return_value = 0
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -121,7 +122,7 @@ class TestMainEntryPoint:
 
         mock_setup_service.return_value = 0
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -139,7 +140,7 @@ class TestMainEntryPoint:
         mock_config = Mock()
         mock_create_config.return_value = mock_config
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -155,7 +156,7 @@ class TestMainEntryPoint:
 
         mock_monitor_main.return_value = 0
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -168,7 +169,7 @@ class TestMainEntryPoint:
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -181,7 +182,7 @@ class TestMainEntryPoint:
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -195,7 +196,7 @@ class TestMainEntryPoint:
             pytest.skip("fplaunch module not available")
 
         # Mock version handling if it exists
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -212,7 +213,7 @@ class TestMainEntryPoint:
 
         mock_run.return_value = 0
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -226,7 +227,7 @@ class TestMainEntryPoint:
             pytest.skip("fplaunch module not available")
 
         # Help is handled by Click, should exit with 0
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -275,7 +276,7 @@ class TestCommandRouting:
         if not fplaunch:
             pytest.skip("fplaunch module not available")
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -293,7 +294,7 @@ class TestCommandRouting:
         # Mock import error
         mock_import.side_effect = ImportError("Module not found")
 
-        from lib.fplaunch import main
+        from lib.main_entrypoint import main
 
         result = main()
 
@@ -301,22 +302,22 @@ class TestCommandRouting:
         assert result != 0
 
 
-@pytest.mark.skipif(fplaunch is None, reason="lib.fplaunch module not available")
+@pytest.mark.skipif(fplaunch is None, reason="lib.main_entrypoint module not available")
 class TestSafetyImportFallback:
-    """Test the safety module import fallback (lines 16-22)."""
+    """Test the safety module import fallback in main_entrypoint (lines 16-22)."""
 
     def test_safety_stub_created_on_import_error(self) -> None:
         """Test that _SafetyStub is created when lib.safety import fails."""
         import sys
 
         # Save the original module if it exists
-        original_fplaunch = sys.modules.get("lib.fplaunch")
+        original_main_entrypoint = sys.modules.get("lib.main_entrypoint")
         original_safety = sys.modules.get("lib.safety")
 
         try:
             # Remove the modules from cache to force re-import
-            if "lib.fplaunch" in sys.modules:
-                del sys.modules["lib.fplaunch"]
+            if "lib.main_entrypoint" in sys.modules:
+                del sys.modules["lib.main_entrypoint"]
             if "lib.safety" in sys.modules:
                 del sys.modules["lib.safety"]
 
@@ -331,13 +332,13 @@ class TestSafetyImportFallback:
                     delattr(lib, "safety")
 
                 try:
-                    # Re-import fplaunch to trigger fallback
-                    import lib.fplaunch as fplaunch_module
+                    # Re-import main_entrypoint to trigger fallback
+                    import lib.main_entrypoint as main_entrypoint_module
 
                     # Verify that safety attribute exists and is a stub
-                    assert hasattr(fplaunch_module, "safety")
+                    assert hasattr(main_entrypoint_module, "safety")
                     # The safety object should have safe_launch_check method
-                    assert hasattr(fplaunch_module.safety, "safe_launch_check")
+                    assert hasattr(main_entrypoint_module.safety, "safe_launch_check")
 
                 finally:
                     # Restore lib.safety if it existed
@@ -346,8 +347,8 @@ class TestSafetyImportFallback:
 
         finally:
             # Restore original modules
-            if original_fplaunch is not None:
-                sys.modules["lib.fplaunch"] = original_fplaunch
+            if original_main_entrypoint is not None:
+                sys.modules["lib.main_entrypoint"] = original_main_entrypoint
             if original_safety is not None:
                 sys.modules["lib.safety"] = original_safety
 
@@ -356,13 +357,13 @@ class TestSafetyImportFallback:
         import sys
 
         # Save the original module if it exists
-        original_fplaunch = sys.modules.get("lib.fplaunch")
+        original_main_entrypoint = sys.modules.get("lib.main_entrypoint")
         original_safety = sys.modules.get("lib.safety")
 
         try:
             # Remove the modules from cache to force re-import
-            if "lib.fplaunch" in sys.modules:
-                del sys.modules["lib.fplaunch"]
+            if "lib.main_entrypoint" in sys.modules:
+                del sys.modules["lib.main_entrypoint"]
             if "lib.safety" in sys.modules:
                 del sys.modules["lib.safety"]
 
@@ -375,15 +376,15 @@ class TestSafetyImportFallback:
                     delattr(lib, "safety")
 
                 try:
-                    # Re-import fplaunch to trigger fallback
-                    import lib.fplaunch as fplaunch_module
+                    # Re-import main_entrypoint to trigger fallback
+                    import lib.main_entrypoint as main_entrypoint_module
 
                     # Call safe_launch_check and verify it returns True
-                    result = fplaunch_module.safety.safe_launch_check()
+                    result = main_entrypoint_module.safety.safe_launch_check("test_app")
                     assert result is True
 
-                    # Also test with arguments (should still return True)
-                    result = fplaunch_module.safety.safe_launch_check("some_arg", kwarg="value")
+                    # Also test with wrapper_path argument (should still return True)
+                    result = main_entrypoint_module.safety.safe_launch_check("test_app", "/tmp/test_wrapper")
                     assert result is True
 
                 finally:
@@ -392,13 +393,13 @@ class TestSafetyImportFallback:
 
         finally:
             # Restore original modules
-            if original_fplaunch is not None:
-                sys.modules["lib.fplaunch"] = original_fplaunch
+            if original_main_entrypoint is not None:
+                sys.modules["lib.main_entrypoint"] = original_main_entrypoint
             if original_safety is not None:
                 sys.modules["lib.safety"] = original_safety
 
 
-@pytest.mark.skipif(fplaunch is None, reason="lib.fplaunch module not available")
+@pytest.mark.skipif(fplaunch is None, reason="lib.main_entrypoint module not available")
 class TestCLIImportFallback:
     """Test the CLI module import fallback in main() (lines 33-43)."""
 
@@ -420,7 +421,7 @@ class TestCLIImportFallback:
             real_cli.main = mock_main
 
             # Now test main() - it should use the already imported cli
-            from lib.fplaunch import main
+            from lib.main_entrypoint import main
 
             result = main()
 
@@ -436,48 +437,56 @@ class TestCLIImportFallback:
     def test_main_returns_1_when_cli_has_no_main(self) -> None:
         """Test that main() returns 1 when cli module has no main attribute."""
         import sys
+        from lib import cli as real_cli
+
+        original_main = getattr(real_cli, "main", None)
+        if original_main is None:
+            pytest.skip("cli.main not available")
+
+        # Save state for restoration
+        original_main_entrypoint = sys.modules.get("lib.main_entrypoint")
 
         try:
-            # Import cli and temporarily remove main
-            from lib import cli as real_cli
-
-            original_main = real_cli.main
+            # Temporarily remove main
             delattr(real_cli, "main")
 
-            # Remove fplaunch from cache to force re-import
-            if "lib.fplaunch" in sys.modules:
-                del sys.modules["lib.fplaunch"]
+            # Call main directly - it will try to import cli
+            # Since we deleted cli.main, it should return 1
+            from lib.main_entrypoint import main
 
-            # Re-import and test
-            import lib.fplaunch as fplaunch_module
+            # Remove main_entrypoint from cache so it re-evaluates
+            if "lib.main_entrypoint" in sys.modules:
+                del sys.modules["lib.main_entrypoint"]
+
+            # Re-import
+            import lib.main_entrypoint
 
             # Call main - should return 1 since cli has no main
-            result = fplaunch_module.main()
+            result = lib.main_entrypoint.main()
 
             assert result == 1
 
-            # Restore main
-            real_cli.main = original_main
-
         finally:
-            # Ensure cli.main is restored
-            if "lib.cli" in sys.modules:
-                cli_module = sys.modules["lib.cli"]
-                if not hasattr(cli_module, "main") and "original_main" in dir():
-                    cli_module.main = original_main
+            # Restore main
+            if original_main is not None:
+                real_cli.main = original_main
+
+            # Restore sys.modules state
+            if original_main_entrypoint is not None:
+                sys.modules["lib.main_entrypoint"] = original_main_entrypoint
 
     def test_main_returns_1_on_both_imports_failing(self) -> None:
         """Test that main() returns 1 when both import paths fail."""
         import sys
 
         # Save original modules
-        original_fplaunch = sys.modules.get("lib.fplaunch")
+        original_main_entrypoint = sys.modules.get("lib.main_entrypoint")
         original_cli = sys.modules.get("lib.cli")
 
         try:
             # Remove modules from cache
-            if "lib.fplaunch" in sys.modules:
-                del sys.modules["lib.fplaunch"]
+            if "lib.main_entrypoint" in sys.modules:
+                del sys.modules["lib.main_entrypoint"]
             if "lib.cli" in sys.modules:
                 del sys.modules["lib.cli"]
 
@@ -492,11 +501,11 @@ class TestCLIImportFallback:
                     delattr(lib, "cli")
 
                 try:
-                    # Re-import fplaunch
-                    import lib.fplaunch as fplaunch_module
+                    # Re-import main_entrypoint
+                    import lib.main_entrypoint as main_entrypoint_module
 
                     # Call main - should return 1 since both imports fail
-                    result = fplaunch_module.main()
+                    result = main_entrypoint_module.main()
 
                     assert result == 1
 
@@ -507,50 +516,52 @@ class TestCLIImportFallback:
 
         finally:
             # Restore original modules
-            if original_fplaunch is not None:
-                sys.modules["lib.fplaunch"] = original_fplaunch
+            if original_main_entrypoint is not None:
+                sys.modules["lib.main_entrypoint"] = original_main_entrypoint
             if original_cli is not None:
                 sys.modules["lib.cli"] = original_cli
 
     def test_main_attribute_error_on_cli_main(self) -> None:
         """Test handling of AttributeError when cli.main doesn't exist."""
         import sys
+        from lib import cli as real_cli
+
+        original_main = getattr(real_cli, "main", None)
+        if original_main is None:
+            pytest.skip("cli.main not available")
+
+        # Save state for restoration
+        original_main_entrypoint = sys.modules.get("lib.main_entrypoint")
 
         try:
-            # Import cli and replace main with something that will cause AttributeError
-            from lib import cli as real_cli
-
-            original_main = real_cli.main
-
             # Set main to None to simulate it not being callable
             real_cli.main = None  # type: ignore
 
-            # Remove fplaunch from cache
-            if "lib.fplaunch" in sys.modules:
-                del sys.modules["lib.fplaunch"]
+            # Remove main_entrypoint from cache
+            if "lib.main_entrypoint" in sys.modules:
+                del sys.modules["lib.main_entrypoint"]
 
-            # Re-import
-            import lib.fplaunch as fplaunch_module
+            # Re-import main_entrypoint
+            import lib.main_entrypoint
 
-            # main() should handle this gracefully
-            # Since cli.main exists but is None, hasattr will return True
-            # but calling it will fail - however the code checks hasattr first
-            fplaunch_module.main()
-
-            # The code checks hasattr(cli, "main") which will be True
-            # then calls cli.main() which will fail
-            # But since we're mocking, let's just verify the behavior
-            # This test documents the expected behavior
-
-            # Restore main
-            real_cli.main = original_main
+            # main() should handle this gracefully since hasattr check comes first
+            result = lib.main_entrypoint.main()
+            # When cli.main is None, hasattr returns True but call fails
+            # The code returns 1 in this case
+            assert result == 1
 
         except (TypeError, AttributeError):
             # If the call fails, that's expected behavior
-            # Restore and pass
-            if "lib.cli" in sys.modules:
-                cli_module = sys.modules["lib.cli"]
-                cli_module.main = original_main
+            pass
+
+        finally:
+            # Restore main
+            if original_main is not None:
+                real_cli.main = original_main
+
+            # Restore sys.modules state
+            if original_main_entrypoint is not None:
+                sys.modules["lib.main_entrypoint"] = original_main_entrypoint
 
     def test_main_fallback_import_path_success(self) -> None:
         """Test the fallback import path (lines 38-41) succeeds.
@@ -560,31 +571,31 @@ class TestCLIImportFallback:
         import builtins
         import sys
 
-        original_fplaunch = sys.modules.get("lib.fplaunch")
+        original_main_entrypoint = sys.modules.get("lib.main_entrypoint")
         original_import = builtins.__import__
 
-        def mock_import(name, globals=None, locals=None, fromlist=(), level=0):
+        def mock_import(name, _globals=None, _locals=None, fromlist=(), level=0):
             """Custom import that fails relative import for cli but allows absolute."""
             # Fail the relative import of cli (level=1 means relative import)
             if name == "lib.cli" or (fromlist and "cli" in str(fromlist)):
                 if level > 0:  # This is a relative import
                     raise ImportError("Simulated relative import failure")
             # For absolute imports, use the real import
-            return original_import(name, globals, locals, fromlist, level)
+            return original_import(name, _globals, _locals, fromlist, level)
 
         try:
-            # Remove fplaunch from cache
-            if "lib.fplaunch" in sys.modules:
-                del sys.modules["lib.fplaunch"]
+            # Remove main_entrypoint from cache
+            if "lib.main_entrypoint" in sys.modules:
+                del sys.modules["lib.main_entrypoint"]
 
             with patch.object(builtins, "__import__", side_effect=mock_import):
-                # Re-import fplaunch - this will use our mock import
-                import lib.fplaunch as fplaunch_module  # noqa: F401
+                # Re-import main_entrypoint - this will use our mock import
+                import lib.main_entrypoint as main_entrypoint_module  # noqa: F401
 
             # Now call main - it should use the fallback import path
             # Since we can't easily control the import inside main(),
             # we verify the module was imported correctly
-            from lib.fplaunch import main
+            from lib.main_entrypoint import main
 
             # The main function should still work via fallback
             result = main()
@@ -593,8 +604,8 @@ class TestCLIImportFallback:
         finally:
             # Restore
             builtins.__import__ = original_import
-            if original_fplaunch is not None:
-                sys.modules["lib.fplaunch"] = original_fplaunch
+            if original_main_entrypoint is not None:
+                sys.modules["lib.main_entrypoint"] = original_main_entrypoint
 
     def test_main_fallback_cli_no_main_returns_1(self) -> None:
         """Test fallback path returns 1 when cli has no main attribute.
@@ -604,13 +615,13 @@ class TestCLIImportFallback:
         import sys
 
         # Save original modules
-        original_fplaunch = sys.modules.get("lib.fplaunch")
+        original_main_entrypoint = sys.modules.get("lib.main_entrypoint")
         original_cli = sys.modules.get("lib.cli")
 
         try:
             # Remove modules from cache
-            if "lib.fplaunch" in sys.modules:
-                del sys.modules["lib.fplaunch"]
+            if "lib.main_entrypoint" in sys.modules:
+                del sys.modules["lib.main_entrypoint"]
             if "lib.cli" in sys.modules:
                 del sys.modules["lib.cli"]
 
@@ -621,18 +632,18 @@ class TestCLIImportFallback:
                 delattr(mock_cli, "main")
 
             with patch.dict("sys.modules", {"lib.cli": mock_cli, "cli": mock_cli}):
-                # Re-import fplaunch
-                import lib.fplaunch as fplaunch_module
+                # Re-import main_entrypoint
+                import lib.main_entrypoint as main_entrypoint_module
 
                 # Call main - should return 1 since cli has no main
-                result = fplaunch_module.main()
+                result = main_entrypoint_module.main()
 
                 assert result == 1
 
         finally:
             # Restore original modules
-            if original_fplaunch is not None:
-                sys.modules["lib.fplaunch"] = original_fplaunch
+            if original_main_entrypoint is not None:
+                sys.modules["lib.main_entrypoint"] = original_main_entrypoint
             if original_cli is not None:
                 sys.modules["lib.cli"] = original_cli
 
@@ -646,13 +657,13 @@ class TestCLIImportFallback:
         import types
 
         # Save original modules
-        original_fplaunch = sys.modules.get("lib.fplaunch")
+        original_main_entrypoint = sys.modules.get("lib.main_entrypoint")
         original_cli = sys.modules.get("lib.cli")
 
         try:
-            # Remove fplaunch from cache to force re-import
-            if "lib.fplaunch" in sys.modules:
-                del sys.modules["lib.fplaunch"]
+            # Remove main_entrypoint from cache to force re-import
+            if "lib.main_entrypoint" in sys.modules:
+                del sys.modules["lib.main_entrypoint"]
 
             # Create a mock cli module WITHOUT a main function
             mock_cli = types.ModuleType("lib.cli")
@@ -665,7 +676,7 @@ class TestCLIImportFallback:
             class FailingRelativeImporter:
                 """Meta path finder that fails relative imports for cli."""
 
-                def find_spec(self, fullname, path, target=None):
+                def find_spec(self, fullname, path, _target=None):
                     if fullname == "lib.cli" and path is not None:
                         raise ImportError("Simulated relative import failure")
                     return None
@@ -674,11 +685,11 @@ class TestCLIImportFallback:
             sys.meta_path.insert(0, importer)
 
             try:
-                # Re-import fplaunch
-                import lib.fplaunch as fplaunch_module
+                # Re-import main_entrypoint
+                import lib.main_entrypoint as main_entrypoint_module
 
                 # Call main - should use fallback path and return 1
-                result = fplaunch_module.main()
+                result = main_entrypoint_module.main()
 
                 assert result == 1
 
@@ -687,8 +698,8 @@ class TestCLIImportFallback:
 
         finally:
             # Restore original modules
-            if original_fplaunch is not None:
-                sys.modules["lib.fplaunch"] = original_fplaunch
+            if original_main_entrypoint is not None:
+                sys.modules["lib.main_entrypoint"] = original_main_entrypoint
             if original_cli is not None:
                 sys.modules["lib.cli"] = original_cli
             elif "lib.cli" in sys.modules and sys.modules["lib.cli"] is mock_cli:

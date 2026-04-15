@@ -119,13 +119,13 @@ class TestFlatpakMonitor:
         monitor = FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
 
         # Simulate file creation
-        monitor._on_change(mock_event)
+        monitor._on_change(mock_event)  # noqa: W0212
 
         # Should call callback for app creation
         callback.assert_called_once()
 
     @patch("watchdog.events.FileSystemEvent")
-    def test_event_handler_file_deleted(self, mock_event_class) -> None:
+    def test_event_handler_file_deleted(self, _mock_event_class) -> None:
         """Test handling of file deletion events."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
@@ -140,13 +140,13 @@ class TestFlatpakMonitor:
         monitor = FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
 
         # Simulate file deletion
-        monitor._on_change(mock_event)
+        monitor._on_change(mock_event)  # noqa: W0212
 
         # Should call callback for app removal
         callback.assert_called_once()
 
     @patch("watchdog.events.FileSystemEvent")
-    def test_event_handler_directory_changes_ignored(self, mock_event_class) -> None:
+    def test_event_handler_directory_changes_ignored(self, _mock_event_class) -> None:
         """Test that directory changes are ignored."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")

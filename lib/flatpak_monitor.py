@@ -38,7 +38,7 @@ try:
     from watchdog.observers import Observer as WatchdogObserver
 
     WATCHDOG_AVAILABLE = True
-except Exception:
+except (ImportError, AttributeError):
     # Use Any for fallback to avoid type conflicts
     WatchdogEventHandler = None
     WatchdogObserver = None
@@ -60,7 +60,7 @@ import importlib  # noqa: E402
 try:
     _systemd_daemon = importlib.import_module("systemd.daemon")
     SYSTEMD_NOTIFY_AVAILABLE = True
-except Exception:
+except (ImportError, ModuleNotFoundError):
     _systemd_daemon = None  # type: ignore[assignment]
     SYSTEMD_NOTIFY_AVAILABLE = False
 
@@ -217,7 +217,7 @@ class FlatpakMonitor:
                 logger.debug("Systemd notify sent: %s", status)
                 if status == "READY=1":
                     self._systemd_notify_sent = True
-            except Exception as e:
+            except OSError as e:
                 logger.warning("Failed to send systemd notify: %s", e)
 
     def start_monitoring(self) -> bool:
@@ -250,7 +250,7 @@ class FlatpakMonitor:
             logger.info("Flatpak monitor started successfully")
             return True
 
-        except Exception as e:
+        except OSError as e:
             logger.error("Failed to start Flatpak monitor: %s", e)
             return False
 
@@ -359,11 +359,11 @@ class FlatpakMonitor:
         except subprocess.TimeoutExpired:
             logger.error("Wrapper regeneration timed out")
             return False
-        except Exception as e:
+        except OSError as e:
             logger.error("Failed to regenerate wrappers: %s", e)
             return False
 
-    def _signal_handler(self, signum: int, frame: object) -> None:
+    def _signal_handler(self, signum: int, _frame: object) -> None:
         """Handle shutdown signals."""
         logger.info("Received signal %d, stopping monitor", signum)
         self.stop_monitoring()
@@ -466,7 +466,7 @@ def main(
             module_name, func_name = args.callback.split(":")
             module = __import__(module_name)
             callback_func = getattr(module, func_name)
-        except Exception as e:
+        except (ValueError, AttributeError) as e:
             logger.error("Failed to load callback %s: %s", args.callback, e)
             sys.exit(1)
 
