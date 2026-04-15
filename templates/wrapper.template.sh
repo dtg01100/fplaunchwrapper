@@ -744,10 +744,21 @@ if [ "$1" = "--fpwrapper-run-unrestricted" ]; then
     fi
 fi
 
+# Load preference
+if [ -f "$PREF_FILE" ]; then
+    PREF=$(cat "$PREF_FILE")
+else
+    PREF=""
+fi
+
 # Non-interactive bypass
 if ! is_interactive; then
     if [ -n "$ONE_SHOT_PREF" ]; then
         run_single_launch "$ONE_SHOT_PREF" "$@"
+    fi
+
+    if [ -n "$PREF" ]; then
+        run_single_launch "$PREF" "$@"
     fi
 
     # Find next executable in PATH
@@ -772,12 +783,6 @@ if ! is_interactive; then
 fi
 
 # For now, just run the interactive logic
-
-# Load preference
-if [ -f "$PREF_FILE" ]; then
-    PREF=$(cat "$PREF_FILE")
-else
-    PREF=""
 fi
 
 # Check for system command
