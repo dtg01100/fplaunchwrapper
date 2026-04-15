@@ -175,6 +175,10 @@ WantedBy=timers.target
             return True
 
         try:
+            if shutil.which("crontab") is None:
+                self.log("Cron is not available on this system", "error")
+                return False
+
             cron_dir = Path.home() / ".config" / "cron"
             cron_dir.mkdir(parents=True, exist_ok=True)
 
@@ -515,7 +519,7 @@ ExecStart=flatpak run {exec_app}
 
 def get_systemd_unit_dir() -> Path:
     """Get the directory for user systemd units."""
-    xdg_config_home = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
     return Path(xdg_config_home) / "systemd" / "user"
 
 

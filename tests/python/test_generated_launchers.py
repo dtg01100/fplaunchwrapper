@@ -733,6 +733,7 @@ class TestPreferenceScenarios:
             capture_output=True,
             text=True,
             stdin=subprocess.DEVNULL,
+            env={**os.environ, "PATH": f"{self.bin_dir}:{os.environ['PATH']}"},
         )
 
         assert result.returncode == 0
