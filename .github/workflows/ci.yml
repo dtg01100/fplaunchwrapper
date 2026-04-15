@@ -30,6 +30,11 @@ jobs:
         uv pip install --system pytest pytest-mock pytest-timeout tomli tomli-w
 
     - name: Run Python tests
+      env:
+        HOME: ${{ runner.temp }}
+        XDG_CONFIG_HOME: ''
+        XDG_DATA_HOME: ''
+        XDG_CACHE_HOME: ''
       run: |
         python3 -m pytest tests/python/ -v --timeout=300 --timeout-method=thread
 
