@@ -250,7 +250,9 @@ class FlatpakMonitor:
             logger.info("Flatpak monitor started successfully")
             return True
 
-        except OSError as e:
+        except (OSError, RuntimeError, Exception) as e:
+            # Catch a broad range since observer.start() can raise various errors
+            # RuntimeError covers threading issues, Exception catches any other failures
             logger.error("Failed to start Flatpak monitor: %s", e)
             return False
 
