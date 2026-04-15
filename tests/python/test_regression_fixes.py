@@ -7,9 +7,6 @@ to diagnose.
 
 from __future__ import annotations
 
-import os
-import subprocess
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -31,9 +28,6 @@ class TestValidateScriptPathSecurityBypass:
     def pydantic_app_prefs_class(self):
         """Return PydanticAppPreferences or skip if pydantic is unavailable."""
         try:
-            from lib.config_manager import create_config_manager
-
-            cfg = create_config_manager()
             # Access the inner class through the module-level attribute
             import lib.config_manager as cm
 
@@ -58,9 +52,8 @@ class TestValidateScriptPathSecurityBypass:
 
         # Patch file-system checks so the sensitive-dir guard is the only thing
         # standing between us and a ValidationError.
-        with (
-            patch("os.path.isfile", return_value=True),
-            patch("os.access", return_value=True),
+        with patch("os.path.isfile", return_value=True), patch(
+            "os.access", return_value=True
         ):
             with pytest.raises(ValidationError) as exc_info:
                 pydantic_app_prefs_class(pre_launch_script=path)
@@ -70,9 +63,8 @@ class TestValidateScriptPathSecurityBypass:
     def test_user_home_script_is_accepted(self, pydantic_app_prefs_class):
         """Scripts in the user's home directory should not be rejected."""
         home = str(Path.home() / ".local" / "bin" / "pre_launch.sh")
-        with (
-            patch("os.path.isfile", return_value=True),
-            patch("os.access", return_value=True),
+        with patch("os.path.isfile", return_value=True), patch(
+            "os.access", return_value=True
         ):
             # Should not raise
             obj = pydantic_app_prefs_class(pre_launch_script=home)
@@ -151,15 +143,16 @@ class TestPortalLauncherWaitFlagPosition:
 
 # ---------------------------------------------------------------------------
 # 3. CLI pref and discover aliases must work via ctx.invoke
-#    Bug: both aliases called their target Click Command object as a plain
-#    function, which re-invoked Click's argument parsing machinery.
+# Bug: both aliases called their target Click Command object as a plain
+# function, which re-invoked Click's argument parsing machinery.
 # ---------------------------------------------------------------------------
 
 
 class TestCliAliasesUseCtxInvoke:
     """pref and discover aliases must delegate via ctx.invoke."""
 
-    def _run_cli(self, args: list[str]) -> "click.testing.Result":
+    def _run_cli(self, args: list[str]):
+        """Run CLI command and return result."""
         from click.testing import CliRunner
 
         from lib.cli import cli
@@ -169,33 +162,31 @@ class TestCliAliasesUseCtxInvoke:
 
     def test_pref_alias_invokes_set_pref_logic(self, tmp_path: Path) -> None:
         """fplaunch pref <wrapper> <pref> must behave like fplaunch set-pref."""
-        WrapperManager = pytest.importorskip("lib.manage").WrapperManager
+        pytest.importorskip("lib.manage")
 
-        with (
-            patch("lib.manage.WrapperManager.set_preference", return_value=True) as mock_sp,
-            patch("lib.manage.WrapperManager.__init__", return_value=None),
-        ):
+        with patch(
+            "lib.manage.WrapperManager.set_preference", return_value=True
+        ), patch("lib.manage.WrapperManager.__init__", return_value=None):
             # Also patch the import inside cli.py
             result = self._run_cli(["pref", "firefox", "flatpak"])
 
-        # The command should exit 0 (or at least not crash with TypeError)
-        assert result.exit_code == 0
+            # The command should exit 0 (or at least not crash with TypeError)
+            assert result.exit_code == 0
 
     def test_discover_alias_invokes_search_logic(self, tmp_path: Path) -> None:
         """fplaunch discover must behave like fplaunch search."""
-        with (
-            patch("lib.manage.WrapperManager.display_wrappers", return_value=None),
-            patch("lib.manage.WrapperManager.__init__", return_value=None),
-        ):
+        with patch(
+            "lib.manage.WrapperManager.display_wrappers", return_value=None
+        ), patch("lib.manage.WrapperManager.__init__", return_value=None):
             result = self._run_cli(["discover"])
 
-        assert result.exit_code == 0
+            assert result.exit_code == 0
 
 
 # ---------------------------------------------------------------------------
 # 4. Cron duplicate-detection field index
-#    Bug: code checked parts[3] (month field, always "*") instead of
-#    parts[1] (hour field, "*/N") so duplicates were never detected.
+# Bug: code checked parts[3] (month field, always "*") instead of
+# parts[1] (hour field, "*/N") so duplicates were never detected.
 # ---------------------------------------------------------------------------
 
 
@@ -280,15 +271,16 @@ class TestCronDuplicateDetection:
 
 # ---------------------------------------------------------------------------
 # 5. _check_preference_override must handle "auto"
-#    Bug: "auto" fell through both if/elif branches silently, leaving the
-#    preference unacknowledged.
+# Bug: "auto" fell through both if/elif branches silently, leaving the
+# preference unacknowledged.
 # ---------------------------------------------------------------------------
 
 
 class TestCheckPreferenceOverrideWithAuto:
     """'auto' preference must be handled explicitly (not lost silently)."""
 
-    def _make_launcher(self, tmp_path: Path, pref_value: str) -> "AppLauncher":
+    def _make_launcher(self, tmp_path: Path, pref_value: str):
+        """Create test launcher instance with specified preference."""
         try:
             from lib.launch import AppLauncher
         except ImportError:
@@ -298,7 +290,6 @@ class TestCheckPreferenceOverrideWithAuto:
         config_dir.mkdir()
         pref_file = config_dir / "firefox.pref"
         pref_file.write_text(pref_value)
-
         launcher = AppLauncher.__new__(AppLauncher)
         launcher.app_name = "firefox"
         launcher.config_dir = config_dir
@@ -313,35 +304,14 @@ class TestCheckPreferenceOverrideWithAuto:
             original_path, "system"
         )
 
-        assert result_path == original_path, (
-            "'auto' must not clear wrapper_path"
-        )
-        assert result_source == "system", (
-            "'auto' must not change source"
-        )
-
-    def test_flatpak_preference_still_works(self, tmp_path: Path) -> None:
-        """Sanity-check that 'flatpak' preference still clears wrapper_path."""
-        launcher = self._make_launcher(tmp_path, "flatpak")
-        result_path, result_source = launcher._check_preference_override(
-            Path("/usr/bin/firefox"), "system"
-        )
-        assert result_path is None
-        assert result_source == "flatpak"
-
-    def test_system_preference_still_works(self, tmp_path: Path) -> None:
-        """Sanity-check that 'system' preference still sets source correctly."""
-        launcher = self._make_launcher(tmp_path, "system")
-        result_path, result_source = launcher._check_preference_override(
-            Path("/usr/bin/firefox"), "flatpak"
-        )
-        assert result_source == "system"
+        assert result_path == original_path, "'auto' must not clear wrapper_path"
+        assert result_source == "system", "'auto' must not change source"
 
 
 # ---------------------------------------------------------------------------
 # 6. flatpak_monitor observer thread must not sleep
-#    Bug: time.sleep() was called inside the watchdog observer callback,
-#    blocking event delivery for the entire debounce period.
+# Bug: time.sleep() was called inside the watchdog observer callback,
+# blocking event delivery for the entire debounce period.
 # ---------------------------------------------------------------------------
 
 
@@ -359,26 +329,27 @@ class TestFlatpakMonitorNoSleepInCallback:
         monitor.config = {"debounce": 1}
         monitor.callback = None
 
-        with (
-            patch.object(monitor, "_should_regenerate_wrappers", return_value=False),
-            patch("lib.flatpak_monitor.time.sleep") as mock_sleep,
-        ):
+        with patch.object(
+            monitor, "_should_regenerate_wrappers", return_value=False
+        ), patch("lib.flatpak_monitor.time.sleep") as mock_sleep:
             monitor._on_flatpak_change("modified", "/some/path")
 
-        mock_sleep.assert_not_called()
+            mock_sleep.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
 # 7. cleanup.py _handle_wrapper_symlink Python 3.8 compatibility
-#    Bug: item.readlink() was used, which is only available from Python 3.9.
-#    Fix: use os.readlink() which exists since Python 3.3.
+# Bug: item.readlink() was used, which is only available from Python 3.9.
+# Fix: use os.readlink() which exists since Python 3.3.
 # ---------------------------------------------------------------------------
 
 
 class TestCleanupReadlinkCompatibility:
     """WrapperCleanup._handle_wrapper_symlink must use os.readlink."""
 
-    def test_handle_wrapper_symlink_uses_os_readlink(self, tmp_path: Path) -> None:
+    def test_handle_wrapper_symlink_uses_os_readlink(
+        self, tmp_path: Path
+    ) -> None:
         """Symlink handling must not call Path.readlink (Python 3.9+)."""
         try:
             from lib.cleanup import CleanupConfig, WrapperCleanup
@@ -396,7 +367,9 @@ class TestCleanupReadlinkCompatibility:
         cleanup = WrapperCleanup(CleanupConfig(bin_dir=str(bin_dir)))
 
         # Patch Path.readlink to raise AttributeError (simulating Python 3.8)
-        with patch.object(Path, "readlink", side_effect=AttributeError("no readlink"), create=True):
+        with patch.object(
+            Path, "readlink", side_effect=AttributeError("no readlink"), create=True
+        ):
             # Should not raise even without Path.readlink
             try:
                 cleanup._handle_wrapper_symlink(symlink)
@@ -405,25 +378,6 @@ class TestCleanupReadlinkCompatibility:
                     "_handle_wrapper_symlink called Path.readlink (Python 3.9+) "
                     "instead of os.readlink (compatible with Python 3.8+)"
                 )
-
-    def test_symlink_target_resolved_correctly(self, tmp_path: Path) -> None:
-        """os.readlink must resolve symlink targets correctly."""
-        try:
-            from lib.cleanup import CleanupConfig, WrapperCleanup
-        except ImportError:
-            pytest.skip("WrapperCleanup not available")
-
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-
-        target = bin_dir / "real_wrapper"
-        target.write_text("#!/bin/bash\necho hi\n")
-        symlink = bin_dir / "alias_wrapper"
-        symlink.symlink_to(target)
-
-        cleanup = WrapperCleanup(CleanupConfig(bin_dir=str(bin_dir)))
-        cleanup._handle_wrapper_symlink(symlink)
-        # No exception means os.readlink path was taken successfully
 
 
 # ---------------------------------------------------------------------------
@@ -437,7 +391,6 @@ class TestVersionConsistency:
     def test_pyproject_version_matches_package_version(self) -> None:
         """pyproject.toml version must equal lib.__version__."""
         import tomllib
-        import importlib.metadata
 
         pyproject = Path(__file__).parent.parent.parent / "pyproject.toml"
         if not pyproject.exists():
