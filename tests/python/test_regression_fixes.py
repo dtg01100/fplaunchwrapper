@@ -233,8 +233,9 @@ class TestCronDuplicateDetection:
                 result.stdout = ""
             return result
 
-        with patch("subprocess.run", side_effect=fake_run):
-            setup.install_cron_job(cron_interval=cron_interval)
+        with patch("shutil.which", return_value="/usr/bin/crontab"):
+            with patch("subprocess.run", side_effect=fake_run):
+                setup.install_cron_job(cron_interval=cron_interval)
 
         # The crontab writer (-) should NOT have been called because the entry
         # already exists.
@@ -262,8 +263,9 @@ class TestCronDuplicateDetection:
                 result.stdout = ""
             return result
 
-        with patch("subprocess.run", side_effect=fake_run):
-            setup.install_cron_job(cron_interval=6)
+        with patch("shutil.which", return_value="/usr/bin/crontab"):
+            with patch("subprocess.run", side_effect=fake_run):
+                setup.install_cron_job(cron_interval=6)
 
         assert added_lines, "install_cron_job must write a cron entry when none exists"
         assert "fplaunch" in added_lines[0] or "regenerate" in added_lines[0]
