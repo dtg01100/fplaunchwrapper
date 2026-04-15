@@ -59,7 +59,7 @@ _fplaunch_manage() {
 
     # If we're completing the first argument (command)
     if [ "$cword" -eq 1 ]; then
-        COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
+        mapfile -t COMPREPLY < <(compgen -W "$commands" -- "$cur")
         return
     fi
 
@@ -70,44 +70,44 @@ _fplaunch_manage() {
         # Commands that take a wrapper name as second argument
         remove|remove-pref|list-env|remove-script|remove-post-script|info|launch)
             if [ "$cword" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "$(_fplaunch_wrappers)" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "$(_fplaunch_wrappers)" -- "$cur")
             fi
             ;;
         
         # set-pref: wrapper name, then system|flatpak
         set-pref)
             if [ "$cword" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "$(_fplaunch_wrappers)" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "$(_fplaunch_wrappers)" -- "$cur")
             elif [ "$cword" -eq 3 ]; then
-                COMPREPLY=( $(compgen -W "system flatpak" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "system flatpak" -- "$cur")
             fi
             ;;
         
         # set-pref-all: system|flatpak
         set-pref-all)
             if [ "$cword" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "system flatpak" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "system flatpak" -- "$cur")
             fi
             ;;
         
         # set-env: wrapper name, var name, value (no completion for value)
         set-env)
             if [ "$cword" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "$(_fplaunch_wrappers)" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "$(_fplaunch_wrappers)" -- "$cur")
             fi
             ;;
         
         # remove-env: wrapper name, var name
         remove-env)
             if [ "$cword" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "$(_fplaunch_wrappers)" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "$(_fplaunch_wrappers)" -- "$cur")
             fi
             ;;
         
         # set-script/set-post-script: wrapper name, then file path
         set-script|set-post-script)
             if [ "$cword" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "$(_fplaunch_wrappers)" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "$(_fplaunch_wrappers)" -- "$cur")
             elif [ "$cword" -eq 3 ]; then
                 _filedir
             fi
@@ -116,14 +116,14 @@ _fplaunch_manage() {
         # set-alias: wrapper name, then alias name
         set-alias)
             if [ "$cword" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "$(_fplaunch_wrappers)" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "$(_fplaunch_wrappers)" -- "$cur")
             fi
             ;;
         
         # remove-alias: alias name
         remove-alias)
             if [ "$cword" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "$(_fplaunch_aliases)" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "$(_fplaunch_aliases)" -- "$cur")
             fi
             ;;
         
@@ -131,8 +131,9 @@ _fplaunch_manage() {
         block)
             if [ "$cword" -eq 2 ]; then
                 if command -v flatpak >/dev/null 2>&1; then
-                    local flatpak_ids=$(flatpak list --app --columns=application 2>/dev/null)
-                    COMPREPLY=( $(compgen -W "$flatpak_ids" -- "$cur") )
+                    local flatpak_ids
+                    flatpak_ids=$(flatpak list --app --columns=application 2>/dev/null)
+                    mapfile -t COMPREPLY < <(compgen -W "$flatpak_ids" -- "$cur")
                 fi
             fi
             ;;
@@ -140,16 +141,16 @@ _fplaunch_manage() {
         # unblock: blocked IDs
         unblock)
             if [ "$cword" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "$(_fplaunch_blocked)" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "$(_fplaunch_blocked)" -- "$cur")
             fi
             ;;
         
         # manifest: wrapper name, then remote|local
         manifest)
             if [ "$cword" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "$(_fplaunch_wrappers)" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "$(_fplaunch_wrappers)" -- "$cur")
             elif [ "$cword" -eq 3 ]; then
-                COMPREPLY=( $(compgen -W "remote local" -- "$cur") )
+                mapfile -t COMPREPLY < <(compgen -W "remote local" -- "$cur")
             fi
             ;;
         
@@ -189,7 +190,7 @@ _fplaunch_cleanup() {
             _filedir -d
             ;;
         *)
-            COMPREPLY=( $(compgen -W "-y --yes --dry-run --bin-dir -h --help" -- "$cur") )
+            mapfile -t COMPREPLY < <(compgen -W "-y --yes --dry-run --bin-dir -h --help" -- "$cur")
             ;;
     esac
 }

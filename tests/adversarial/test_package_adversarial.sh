@@ -317,7 +317,7 @@ EOF
     # Test 1: Try to execute malicious postinst
     local output
     output=$("$test_home/malicious-postinst" 2>&1 || true)
-    if [ $? -ne 0 ]; then
+    if ! "$test_home/malicious-postinst" > /dev/null 2>&1; then
         defense "Malicious postinst script execution blocked"
     else
         fail "Malicious postinst script execution not blocked"

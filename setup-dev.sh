@@ -148,6 +148,7 @@ setup_dev_environment() {
     fi
 
     # Activate virtual environment
+    # shellcheck disable=SC1091
     source .venv/bin/activate
 
     # Install development dependencies

@@ -20,11 +20,11 @@ sudo mkdir -p "$CHROOT_DIR"
 # Download and extract Fedora base system
 echo "Downloading Fedora container image..."
 FEDORA_IMAGE="fedora:latest"
-CONTAINER_ID=$(sudo docker create $FEDORA_IMAGE)
+CONTAINER_ID=$(sudo docker create "$FEDORA_IMAGE")
 
 echo "Extracting filesystem..."
-sudo docker export $CONTAINER_ID | sudo tar -C "$CHROOT_DIR" -xf -
-sudo docker rm $CONTAINER_ID
+sudo docker export "$CONTAINER_ID" | sudo tar -C "$CHROOT_DIR" -xf -
+sudo docker rm "$CONTAINER_ID"
 
 # Copy project files into chroot
 echo "Copying project files..."
@@ -50,7 +50,7 @@ bash packaging/build-rpm.sh "$1"
 if [ -f *.rpm ]; then
     cp *.rpm /build/
     echo "RPM package copied to /build/"
-    ls -lh /build/*.rpm
+    ls -lh ./*.rpm
 fi
 INNEREOF
 
