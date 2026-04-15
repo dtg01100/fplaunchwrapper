@@ -13,9 +13,7 @@ project_root = Path(__file__).parent.parent
 
 
 @pytest.fixture(autouse=True)
-def mock_flatpak_binary(
-    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
-):
+def mock_flatpak_binary(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch):
     """Provide a mock flatpak binary to prevent real flatpak execution during tests.
 
     This fixture creates a fake flatpak script that logs calls instead of executing
@@ -35,7 +33,7 @@ def mock_flatpak_binary(
     flatpak_log = mock_bin_dir / "flatpak_calls.log"
 
     # Create the mock flatpak script
-    flatpak_script = f'''#!/bin/sh
+    flatpak_script = f"""#!/bin/sh
 # Mock flatpak binary for testing - prevents real flatpak execution
 
 # Log all calls for debugging
@@ -90,7 +88,7 @@ case "$1" in
 		exit 1
 		;;
 esac
-'''
+"""
 
     flatpak_path.write_text(flatpak_script)
     flatpak_path.chmod(0o755)
@@ -105,9 +103,7 @@ esac
 
 
 @pytest.fixture
-def isolated_home(
-    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
-):
+def isolated_home(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch):
     """Provide an isolated HOME/XDG layout and convenience paths.
 
     Yields a SimpleNamespace with:

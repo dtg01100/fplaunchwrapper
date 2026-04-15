@@ -30,9 +30,7 @@ class TestWrapperGenerator:
     def test_generator_initialization(self, temp_dirs):
         """Test WrapperGenerator initializes correctly."""
         bin_dir, config_dir = temp_dirs
-        generator = WrapperGenerator(
-            str(bin_dir), config_dir=str(config_dir), verbose=True
-        )
+        generator = WrapperGenerator(str(bin_dir), config_dir=str(config_dir), verbose=True)
 
         assert generator.bin_dir == bin_dir
         assert generator.config_dir == config_dir
@@ -48,9 +46,7 @@ class TestWrapperGenerator:
         new_bin = bin_dir / "nonexistent"
         new_config = config_dir / "nonexistent"
 
-        generator = WrapperGenerator(
-            str(new_bin), config_dir=str(new_config), emit_mode=True
-        )
+        generator = WrapperGenerator(str(new_bin), config_dir=str(new_config), emit_mode=True)
 
         assert generator.emit_mode is True
         assert not new_bin.exists()
@@ -192,9 +188,7 @@ exec flatpak run com.example.App "$@"
         """Test force mode skips user confirmation."""
         bin_dir, config_dir, data_dir = temp_cleanup_dirs
 
-        cleanup = WrapperCleanup(
-            bin_dir=str(bin_dir), config_dir=str(config_dir), force=True
-        )
+        cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), force=True)
 
         assert cleanup.assume_yes is True
         assert cleanup.force is True
@@ -273,9 +267,7 @@ WantedBy=default.target
         # Mock flatpak detection
         mock_flatpak_dir = "/home/user/.local/share/flatpak/exports/bin"
 
-        with patch.object(
-            SystemdSetup, "_detect_flatpak_bin_dir", return_value=mock_flatpak_dir
-        ):
+        with patch.object(SystemdSetup, "_detect_flatpak_bin_dir", return_value=mock_flatpak_dir):
             with patch("lib.paths.get_systemd_unit_dir", return_value=systemd_dir):
                 setup = SystemdSetup(bin_dir=str(bin_dir))
                 assert setup.flatpak_bin_dir == mock_flatpak_dir
@@ -323,9 +315,7 @@ class TestIntegrationScenarios:
         dirs = integrated_env
 
         # Generate wrapper
-        generator = WrapperGenerator(
-            str(dirs["bin_dir"]), config_dir=str(dirs["config_dir"])
-        )
+        generator = WrapperGenerator(str(dirs["bin_dir"]), config_dir=str(dirs["config_dir"]))
         assert generator.bin_dir.exists()
 
         # Cleanup

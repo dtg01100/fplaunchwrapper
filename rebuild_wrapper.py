@@ -24,21 +24,13 @@ def rebuild_wrapper_script():
         old_full_method = match.group()
 
         # Extract the shell script part without f prefix
-        shell_script_part = old_full_method.split('return f"""', 1)[1].rsplit('"""', 1)[
-            0
-        ]
+        shell_script_part = old_full_method.split('return f"""', 1)[1].rsplit('"""', 1)[0]
 
         # Create a template with placeholders
-        shell_script_template = shell_script_part.replace(
-            "{wrapper_name}", "{wrapper_name}"
-        )
+        shell_script_template = shell_script_part.replace("{wrapper_name}", "{wrapper_name}")
         shell_script_template = shell_script_template.replace("{app_id}", "{app_id}")
-        shell_script_template = shell_script_template.replace(
-            "{self.config_dir}", "{config_dir}"
-        )
-        shell_script_template = shell_script_template.replace(
-            "{self.bin_dir}", "{bin_dir}"
-        )
+        shell_script_template = shell_script_template.replace("{self.config_dir}", "{config_dir}")
+        shell_script_template = shell_script_template.replace("{self.bin_dir}", "{bin_dir}")
 
         # Build the new method that uses .format() instead of f-strings
         new_full_method = f'''    def create_wrapper_script(self, wrapper_name: str, app_id: str) -> str:
