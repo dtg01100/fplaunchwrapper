@@ -21,27 +21,23 @@ try:
 except ImportError:
     from lib.paths import get_default_config_dir, get_lock_dir, ensure_dir
 
+# Constants for file operations
+MAX_FILE_SIZE = 100_000  # 100KB limit for config files
+BUFFER_SIZE = 8192
+DEFAULT_LOCK_TIMEOUT = 30.0
+
+# Regex pattern for sanitizing strings - matches special characters that need escaping
+_SANITIZE_PATTERN = re.compile(r'([\\"\'$`();&|<>\t\n\r])')
+
 
 def sanitize_string(input_str: str) -> str:
-    """Safely sanitize a string for use in Python code."""
+    """Safely sanitize a string for use in Python code.
+
+    Uses regex substitution for efficiency over sequential .replace() calls.
+    """
     if not input_str:
         return ""
-
-    sanitized = input_str.replace("\\", "\\\\")
-    sanitized = sanitized.replace('"', '\\"')
-    sanitized = sanitized.replace("'", "\\'")
-    sanitized = sanitized.replace("$", "\\$")
-    sanitized = sanitized.replace("`", "\\`")
-    sanitized = sanitized.replace("(", "\\(")
-    sanitized = sanitized.replace(")", "\\)")
-    sanitized = sanitized.replace(";", "\\;")
-    sanitized = sanitized.replace("&", "\\&")
-    sanitized = sanitized.replace("|", "\\|")
-    sanitized = sanitized.replace("<", "\\<")
-    sanitized = sanitized.replace(">", "\\>")
-    sanitized = sanitized.replace("\n", "\\n")
-    sanitized = sanitized.replace("\r", "\\r")
-    return sanitized.replace("\t", "\\t")
+    return _SANITIZE_PATTERN.sub(r"\\\1", input_str)
 
 
 def canonicalize_path_no_resolve(path: str | Path) -> Path | None:
@@ -98,11 +94,11 @@ def is_wrapper_file(file_path: str | Path) -> bool | None:
             return False
 
         size = os.path.getsize(file_path)
-        if size > 100000:  # 100KB limit
+        if size > MAX_FILE_SIZE:
             return False
 
         with open(file_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(min(8192, size))
+            content = f.read(min(BUFFER_SIZE, size))
 
         if any(ord(c) < 32 and c not in "\t\n\r" for c in content):
             return False
@@ -132,7 +128,7 @@ def get_wrapper_id(file_path: str | Path) -> str | None:
     """
     try:
         with open(file_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(8192)
+            content = f.read(BUFFER_SIZE)
 
         id_match = re.search(r'^ID="([^"]*)"', content, re.MULTILINE)
         if id_match:
@@ -223,7 +219,9 @@ def safe_mktemp(template: str = "tmp.XXXXXX", dir_param: str | None = None) -> s
         return None
 
 
-def acquire_lock(lock_name: str = "fplaunch", timeout_seconds: float = 30) -> bool | None:
+def acquire_lock(
+    lock_name: str = "fplaunch", timeout_seconds: float = DEFAULT_LOCK_TIMEOUT
+) -> bool | None:
     """Acquire a file-based lock with timeout."""
     try:
         config_dir = get_default_config_dir()

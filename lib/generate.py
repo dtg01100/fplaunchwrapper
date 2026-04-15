@@ -39,16 +39,16 @@ from .python_utils import (
     release_lock,
     sanitize_id_to_name,
 )
+from .logging_utils import LoggingMixin
 from .safety import (
     get_wrapper_id,
     is_wrapper_file,
 )
 
 console = _Console()
-console_err = _Console(stderr=True)
 
 
-class WrapperGenerator:
+class WrapperGenerator(LoggingMixin):
     """Generates Flatpak application wrappers."""
 
     def __init__(
@@ -89,22 +89,6 @@ class WrapperGenerator:
     def is_forbidden_wrapper_name(self, name: str) -> bool:
         """Check if a wrapper name collides with basic system commands."""
         return name.lower() in ForbiddenNameError.FORBIDDEN_NAMES
-
-    def log(self, message: str, level: str = "info") -> None:
-        """Log a message to stdout or stderr based on level."""
-        if not self.verbose and level == "debug":
-            return
-
-        if level == "error":
-            console_err.print(f"[red]ERROR:[/red] {message}")
-        elif level == "warning":
-            console_err.print(f"[yellow]WARN:[/yellow] {message}")
-        elif level == "success":
-            console.print(f"[green]✓[/green] {message}")
-        elif level == "emit":
-            console.print(f"[blue]EMIT:[/blue] {message}")
-        else:
-            console.print(message)
 
     def run_command(self, cmd: list[str], description: str = "") -> subprocess.CompletedProcess:
         """Run a command and return its output."""
@@ -174,28 +158,32 @@ class WrapperGenerator:
 
     def create_wrapper_script(self, wrapper_name: str, app_id: str) -> str:
         """Create the content for a wrapper script using a template."""
-        template_path = None
+        # Search for template in multiple locations
+        candidates = []
 
-        # Try multiple locations for the template file
         # 1. When installed: use importlib.resources to find template in package data
         if HAS_IMPORTLIB_RESOURCES:
             try:
-                # Template should be in lib/templates when installed
                 template_file = importlib_files("lib") / "templates" / "wrapper.template.sh"
-                template_path = Path(str(template_file))
+                candidates.append(Path(str(template_file)))
             except (TypeError, AttributeError, FileNotFoundError):
-                template_path = None
+                pass
 
-        # 2. Development mode: templates/ at project root (Path(__file__).parent.parent)
-        if template_path is None or not template_path.exists():
-            template_path = Path(__file__).parent.parent / "templates" / "wrapper.template.sh"
+        # 2. Development mode: templates/ at project root
+        candidates.append(Path(__file__).parent.parent / "templates" / "wrapper.template.sh")
 
         # 3. Fallback: relative path (for running from project root)
-        if not template_path.exists():
-            template_path = Path("templates/wrapper.template.sh")
+        candidates.append(Path("templates/wrapper.template.sh"))
 
-        if not template_path.exists():
-            msg = f"Wrapper template file not found: {template_path}"
+        # Find first existing path
+        template_path = None
+        for candidate in candidates:
+            if candidate.exists():
+                template_path = candidate
+                break
+
+        if template_path is None:
+            msg = f"Wrapper template file not found: {candidates[0]}"
             raise WrapperGenerationError(app_id, msg)
 
         try:

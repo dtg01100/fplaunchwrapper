@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import re
 import shlex
 import shutil
 import subprocess
@@ -15,15 +14,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
-
+from .logging_utils import LoggingMixin
 from .paths import get_default_bin_dir
-
-console = Console()
-console_err = Console(stderr=True)
+from .validation import check_path_traversal, validate_app_id
 
 
-class SystemdSetup:
+class SystemdSetup(LoggingMixin):
     """Set up systemd units for automatic wrapper management."""
 
     def __init__(
@@ -77,19 +73,6 @@ class SystemdSetup:
             if os.path.isdir(p):
                 return p
         return ""
-
-    def log(self, message: str, level: str = "info") -> None:
-        """Log a message to appropriate stream."""
-        if level == "error":
-            console_err.print(f"[red]ERROR:[/red] {message}")
-        elif level == "warning":
-            console_err.print(f"[yellow]WARN:[/yellow] {message}")
-        elif level == "success":
-            console.print(f"[green]✓[/green] {message}")
-        elif level in ["info", "emit"]:
-            console.print(message)
-        else:
-            console.print(message)
 
     def generate_systemd_service(self) -> str:
         """Generate content for the systemd service file."""
@@ -394,8 +377,9 @@ WantedBy=paths.target
         Returns:
             True if successful, False otherwise
         """
-        if not app_id or not app_id.strip():
-            self.log("Empty app_id provided", "error")
+        valid, error = validate_app_id(app_id)
+        if not valid:
+            self.log(error, "error")
             return False
 
         if self.emit_mode:
@@ -405,21 +389,14 @@ WantedBy=paths.target
         try:
             self.systemd_unit_dir.mkdir(parents=True, exist_ok=True)
 
-            # Validate app_id: only allow letters, digits, dot, underscore, hyphen
-            if not re.match(r"^[A-Za-z0-9._-]+$", app_id):
-                self.log(f"Invalid app_id: {app_id}", "error")
-                return False
-
-            # Create safe service filename and ensure it resolves inside the unit directory
             safe_app_id = app_id
             service_name = f"fplaunch-{safe_app_id}.service"
             service_path = self.systemd_unit_dir / service_name
 
             # Use Path.relative_to() for robust path traversal prevention
-            try:
-                service_path.resolve().relative_to(self.systemd_unit_dir.resolve())
-            except (ValueError, Exception) as e:
-                self.log(f"Path traversal detected in app_id: {e}", "error")
+            safe, error = check_path_traversal(service_path, self.systemd_unit_dir)
+            if not safe:
+                self.log(f"Path traversal detected in app_id: {error}", "error")
                 return False
 
             # Use shlex.quote for ExecStart argument to avoid accidental unit syntax injection
@@ -452,8 +429,9 @@ ExecStart=flatpak run {exec_app}
         Returns:
             True if successful, False otherwise
         """
-        if not app_id or not app_id.strip():
-            self.log("Empty app_id provided", "error")
+        valid, error = validate_app_id(app_id)
+        if not valid:
+            self.log(error, "error")
             return False
 
         if self.emit_mode:
@@ -461,20 +439,14 @@ ExecStart=flatpak run {exec_app}
             return True
 
         try:
-            # Validate app_id: only allow letters, digits, dot, underscore, hyphen
-            if not re.match(r"^[A-Za-z0-9._-]+$", app_id):
-                self.log(f"Invalid app_id: {app_id}", "error")
-                return False
-
             safe_app_id = app_id
             service_name = f"fplaunch-{safe_app_id}.service"
             service_path = self.systemd_unit_dir / service_name
 
             # Use Path.relative_to() for robust path traversal prevention
-            try:
-                service_path.resolve().relative_to(self.systemd_unit_dir.resolve())
-            except (ValueError, Exception) as e:
-                self.log(f"Path traversal detected in app_id: {e}", "error")
+            safe, error = check_path_traversal(service_path, self.systemd_unit_dir)
+            if not safe:
+                self.log(f"Path traversal detected in app_id: {error}", "error")
                 return False
 
             subprocess.run(

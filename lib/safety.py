@@ -18,7 +18,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 # Define fallback exception classes first
 # These are used when the real exceptions from .exceptions cannot be imported
 # (e.g., if there's a circular import or the exceptions module has errors)
@@ -75,7 +74,7 @@ sanitize_string: Any = None
 validate_home_dir: Any = None
 UTILS_IMPORTED = False
 
-# Try to import and override with real implementations
+# Try to import real implementations and override fallbacks if available
 try:
     from .exceptions import (
         ForbiddenNameError as _ForbiddenNameErrorReal,
@@ -84,11 +83,13 @@ try:
         SafetyError as _SafetyErrorReal,
     )
 
+    # Override with real implementations when available
     SafetyError = _SafetyErrorReal  # type: ignore[misc,assignment]
     ForbiddenNameError = _ForbiddenNameErrorReal  # type: ignore[misc,assignment]
     PathTraversalError = _PathTraversalErrorReal  # type: ignore[misc,assignment]
     InvalidFlatpakIdError = _InvalidFlatpakIdErrorReal  # type: ignore[misc,assignment]
 except ImportError:
+    # Exceptions not available - fallbacks already set above
     pass
 
 try:

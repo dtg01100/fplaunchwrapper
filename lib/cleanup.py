@@ -19,6 +19,8 @@ from pathlib import Path
 from rich.console import Console
 from rich.prompt import Confirm
 
+from .logging_utils import LoggingMixin
+
 try:
     from .safety import is_wrapper_file
 
@@ -82,7 +84,7 @@ class CleanupConfig:
         self.verbose_effective = bool(self.verbose) if self.verbose is not None else False
 
 
-class WrapperCleanup:
+class WrapperCleanup(LoggingMixin):
     """Clean up Flatpak wrapper artifacts.
 
     Extended to support additional testing flags used by the test suite.

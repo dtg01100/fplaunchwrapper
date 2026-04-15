@@ -13,20 +13,17 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
 from rich.table import Table
 
+from .logging_utils import LoggingMixin, console
 from .paths import get_default_config_dir, resolve_bin_dir
 from .safety import (
     get_wrapper_id,
     is_wrapper_file,
 )
 
-console = Console()
-console_err = Console(stderr=True)
 
-
-class WrapperManager:
+class WrapperManager(LoggingMixin):
     """Manages Flatpak application wrappers."""
 
     def __init__(
@@ -51,24 +48,6 @@ class WrapperManager:
         if not emit_mode:
             self.bin_dir.mkdir(parents=True, exist_ok=True)
             self.config_dir.mkdir(parents=True, exist_ok=True)
-
-    def log(self, message: str, level: str = "info") -> None:
-        """Log a message to stdout or stderr based on level.
-
-        Error and warning messages go to stderr.
-        Info and success messages go to stdout.
-        Always prints regardless of verbose mode.
-        """
-        if level == "error":
-            console_err.print(f"[red]ERROR:[/red] {message}")
-        elif level == "warning":
-            console_err.print(f"[yellow]WARN:[/yellow] {message}")
-        elif level == "success":
-            console.print(f"[green]✓[/green] {message}")
-        elif level in ["info", "emit"]:
-            console.print(message)
-        else:
-            console.print(message)
 
     def list_wrappers(self) -> list[dict[str, str]]:
         """List all installed wrappers."""

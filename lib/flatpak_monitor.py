@@ -16,7 +16,9 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
+
+from .validation import should_process_event
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,7 +28,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Optional watchdog dependency - use Any to avoid static type conflicts
-from typing import List  # noqa: E402
 
 WatchdogEventHandler: Any
 WatchdogObserver: Any
@@ -87,42 +88,25 @@ class FlatpakEventHandler(_BaseFSHandler):
 
     def on_created(self, event) -> None:
         """Called when a new file/directory is created."""
-        if self._should_process_event(event.src_path):
+        if should_process_event(event.src_path):
             self._queue_event("created", event.src_path)
 
     def on_deleted(self, event) -> None:
         """Called when a file/directory is deleted."""
-        if self._should_process_event(event.src_path):
+        if should_process_event(event.src_path):
             self._queue_event("deleted", event.src_path)
 
     def on_modified(self, event) -> None:
         """Called when a file/directory is modified."""
-        if self._should_process_event(event.src_path):
+        if should_process_event(event.src_path):
             self._queue_event("modified", event.src_path)
 
     def on_moved(self, event) -> None:
         """Called when a file/directory is moved."""
-        if self._should_process_event(event.src_path):
+        if should_process_event(event.src_path):
             self._queue_event("moved", event.src_path)
-        if self._should_process_event(event.dest_path):
+        if should_process_event(event.dest_path):
             self._queue_event("moved", event.dest_path)
-
-    def _should_process_event(self, path) -> bool:
-        """Determine if we should process this event."""
-        path_str = str(path)
-
-        flatpak_paths = [
-            "/var/lib/flatpak",
-            "/home",
-            os.path.expanduser("~/.local/share/flatpak"),
-            os.path.expanduser("~/.var/app"),
-        ]
-
-        for flatpak_path in flatpak_paths:
-            if path_str.startswith(flatpak_path):
-                return True
-
-        return False
 
     def _queue_event(self, event_type, path) -> None:
         """Queue event for batching instead of processing immediately."""
@@ -218,6 +202,13 @@ class FlatpakMonitor:
 
         return paths
 
+    def _should_process_event(self, path: str | object) -> bool:
+        """Determine if we should process this event.
+
+        Delegates to the module-level should_process_event() function.
+        """
+        return should_process_event(path)
+
     def _send_systemd_notify(self, status: str = "READY=1") -> None:
         """Send notification to systemd."""
         if SYSTEMD_NOTIFY_AVAILABLE and _systemd_daemon is not None:
@@ -285,25 +276,8 @@ class FlatpakMonitor:
         path = getattr(event, "src_path", "")
         event_type = getattr(event, "event_type", "modified")
 
-        if self._should_process_event(path):
+        if should_process_event(path):
             self._on_flatpak_change(event_type, path)
-
-    def _should_process_event(self, path: str | object) -> bool:
-        """Determine if we should process this event."""
-        path_str = str(path)
-
-        flatpak_paths = [
-            "/var/lib/flatpak",
-            "/home",
-            os.path.expanduser("~/.local/share/flatpak"),
-            os.path.expanduser("~/.var/app"),
-        ]
-
-        for flatpak_path in flatpak_paths:
-            if path_str.startswith(flatpak_path):
-                return True
-
-        return False
 
     def _on_flatpak_change(self, event_type: str, path: str) -> None:
         """Handle Flatpak-related file system changes."""
