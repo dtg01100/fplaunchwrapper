@@ -457,6 +457,7 @@ class AppLauncher:
                     ],
                     capture_output=True,
                     text=True,
+                    timeout=30,
                 )
                 if res.returncode == 0:
                     for line in res.stdout.strip().splitlines():

@@ -184,7 +184,8 @@ def find_executable(cmd: str) -> str | None:
     try:
         if "/" in cmd:
             if os.path.isfile(cmd) and os.access(cmd, os.X_OK):
-                return os.path.abspath(cmd)
+                # Resolve symlinks to prevent symlink attacks
+                return os.path.realpath(cmd)
             return None
 
         for path_dir in os.getenv("PATH", "").split(":"):
@@ -192,7 +193,8 @@ def find_executable(cmd: str) -> str | None:
                 continue
             exe_path = os.path.join(path_dir, cmd)
             if os.path.isfile(exe_path) and os.access(exe_path, os.X_OK):
-                return os.path.abspath(exe_path)
+                # Resolve symlinks to prevent symlink attacks
+                return os.path.realpath(exe_path)
 
         return None
     except (TypeError, OSError, AttributeError):

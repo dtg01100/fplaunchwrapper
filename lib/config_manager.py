@@ -274,6 +274,8 @@ class EnhancedConfigManager:
                     tomli_w.dump(data, f)
             else:
                 self._save_fallback_config()
+            # Set restrictive permissions: owner read/write only
+            os.chmod(self.config_file, 0o600)
         except OSError as e:
             raise ConfigPermissionError(
                 f"Cannot write configuration file {self.config_file}: {e}"

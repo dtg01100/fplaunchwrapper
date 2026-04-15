@@ -20,19 +20,43 @@ from typing import Any
 
 
 # Define fallback exception classes first
+# These are used when the real exceptions from .exceptions cannot be imported
+# (e.g., if there's a circular import or the exceptions module has errors)
+
+
 class _SafetyError(Exception):
+    """Fallback safety error for when .exceptions cannot be loaded.
+
+    Raised when a safety check fails (input validation, path traversal, etc.)
+    """
+
     pass
 
 
 class _ForbiddenNameError(Exception):
+    """Fallback forbidden name error for when .exceptions cannot be loaded.
+
+    Raised when an app name or ID contains forbidden characters or patterns.
+    """
+
     pass
 
 
 class _PathTraversalError(Exception):
+    """Fallback path traversal error for when .exceptions cannot be loaded.
+
+    Raised when a path attempt escapes the allowed directory boundaries.
+    """
+
     pass
 
 
 class _InvalidFlatpakIdError(Exception):
+    """Fallback invalid Flatpak ID error for when .exceptions cannot be loaded.
+
+    Raised when a Flatpak ID does not match the expected format pattern.
+    """
+
     pass
 
 
