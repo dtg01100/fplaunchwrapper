@@ -450,10 +450,6 @@ class TestCLIImportFallback:
             # Temporarily remove main
             delattr(real_cli, "main")
 
-            # Call main directly - it will try to import cli
-            # Since we deleted cli.main, it should return 1
-            from lib.main_entrypoint import main
-
             # Remove main_entrypoint from cache so it re-evaluates
             if "lib.main_entrypoint" in sys.modules:
                 del sys.modules["lib.main_entrypoint"]
