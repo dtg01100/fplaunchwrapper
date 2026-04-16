@@ -138,7 +138,9 @@ class WrapperConfig:
     )  # Custom permission presets
     schema_version: int = 1  # Schema version for migration purposes
     cron_interval: int = 6  # Cron interval in hours (default: 6 hours)
-    enable_notifications: bool = True  # Enable desktop notifications for update failures
+    enable_notifications: bool = (
+        True  # Enable desktop notifications for update failures
+    )
     # Global hook failure mode defaults
     hook_failure_mode_default: str = "warn"
     pre_launch_failure_mode_default: str | None = (
@@ -166,9 +168,15 @@ class EnhancedConfigManager:
 
         self.template_variables = {
             "HOME": str(Path.home()),
-            "XDG_CONFIG_HOME": os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
-            "XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share")),
-            "XDG_CACHE_HOME": os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")),
+            "XDG_CONFIG_HOME": os.environ.get(
+                "XDG_CONFIG_HOME", str(Path.home() / ".config")
+            ),
+            "XDG_DATA_HOME": os.environ.get(
+                "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+            ),
+            "XDG_CACHE_HOME": os.environ.get(
+                "XDG_CACHE_HOME", str(Path.home() / ".cache")
+            ),
             "CONFIG_DIR": str(self.config_dir),
             "DATA_DIR": str(self.data_dir),
         }
@@ -329,11 +337,15 @@ class EnhancedConfigManager:
                 validated_config = PydanticWrapperConfig(**processed_data)
                 self._apply_validated_config(validated_config)
             except ValidationError as e:
-                raise ConfigValidationError(f"Configuration validation failed: {e}") from e
+                raise ConfigValidationError(
+                    f"Configuration validation failed: {e}"
+                ) from e
         else:
             self._apply_unvalidated_config(processed_data)
 
-    def _apply_validated_config(self, validated_config: "PydanticWrapperConfig") -> None:
+    def _apply_validated_config(
+        self, validated_config: "PydanticWrapperConfig"
+    ) -> None:
         """Apply validated configuration from Pydantic model."""
         self.config.bin_dir = validated_config.bin_dir
         self.config.config_dir = validated_config.config_dir
@@ -348,7 +360,9 @@ class EnhancedConfigManager:
         self.config.cron_interval = validated_config.cron_interval
         self.config.enable_notifications = validated_config.enable_notifications
 
-        self.config.hook_failure_mode_default = validated_config.hook_failure_mode_default
+        self.config.hook_failure_mode_default = (
+            validated_config.hook_failure_mode_default
+        )
         self.config.pre_launch_failure_mode_default = (
             validated_config.pre_launch_failure_mode_default
         )
@@ -390,9 +404,15 @@ class EnhancedConfigManager:
             "enable_notifications", self.config.enable_notifications
         )
 
-        self.config.hook_failure_mode_default = data.get("hook_failure_mode_default", "warn")
-        self.config.pre_launch_failure_mode_default = data.get("pre_launch_failure_mode_default")
-        self.config.post_launch_failure_mode_default = data.get("post_launch_failure_mode_default")
+        self.config.hook_failure_mode_default = data.get(
+            "hook_failure_mode_default", "warn"
+        )
+        self.config.pre_launch_failure_mode_default = data.get(
+            "pre_launch_failure_mode_default"
+        )
+        self.config.post_launch_failure_mode_default = data.get(
+            "post_launch_failure_mode_default"
+        )
 
         if "blocklist" in data:
             self.config.blocklist = list(data["blocklist"])
@@ -447,9 +467,13 @@ class EnhancedConfigManager:
         }
 
         if self.config.pre_launch_failure_mode_default:
-            data["pre_launch_failure_mode_default"] = self.config.pre_launch_failure_mode_default
+            data["pre_launch_failure_mode_default"] = (
+                self.config.pre_launch_failure_mode_default
+            )
         if self.config.post_launch_failure_mode_default:
-            data["post_launch_failure_mode_default"] = self.config.post_launch_failure_mode_default
+            data["post_launch_failure_mode_default"] = (
+                self.config.post_launch_failure_mode_default
+            )
 
         gp = self.config.global_preferences
         data["global_preferences"] = {
@@ -462,7 +486,9 @@ class EnhancedConfigManager:
         if gp.post_launch_script:
             data["global_preferences"]["post_launch_script"] = gp.post_launch_script
         if gp.pre_launch_failure_mode:
-            data["global_preferences"]["pre_launch_failure_mode"] = str(gp.pre_launch_failure_mode)
+            data["global_preferences"]["pre_launch_failure_mode"] = str(
+                gp.pre_launch_failure_mode
+            )
         if gp.post_launch_failure_mode:
             data["global_preferences"]["post_launch_failure_mode"] = str(
                 gp.post_launch_failure_mode
@@ -481,9 +507,13 @@ class EnhancedConfigManager:
                 if prefs.post_launch_script:
                     app_data["post_launch_script"] = prefs.post_launch_script
                 if prefs.pre_launch_failure_mode:
-                    app_data["pre_launch_failure_mode"] = str(prefs.pre_launch_failure_mode)
+                    app_data["pre_launch_failure_mode"] = str(
+                        prefs.pre_launch_failure_mode
+                    )
                 if prefs.post_launch_failure_mode:
-                    app_data["post_launch_failure_mode"] = str(prefs.post_launch_failure_mode)
+                    app_data["post_launch_failure_mode"] = str(
+                        prefs.post_launch_failure_mode
+                    )
                 data["app_preferences"][app_id] = app_data
 
         if self.config.permission_presets:
@@ -892,7 +922,9 @@ class EnhancedConfigManager:
                 if "cron_interval" in content:
                     lines.append(f"cron_interval={content['cron_interval']}")
                 if "enable_notifications" in content:
-                    lines.append(f"enable_notifications={content['enable_notifications']}")
+                    lines.append(
+                        f"enable_notifications={content['enable_notifications']}"
+                    )
                 if "hook_failure_mode_default" in content:
                     lines.append(
                         f"hook_failure_mode_default={content['hook_failure_mode_default']}"
@@ -990,13 +1022,35 @@ if PYDANTIC_AVAILABLE:
         @classmethod
         def validate_script_path(cls, v):
             if v:
+                # Substitute template variables before checking existence
+                # This handles paths like ${HOME}/scripts/pre-launch.sh
+                from pathlib import Path
+                import os
+
+                substituted = v
+                for var_name, var_value in [
+                    ("HOME", str(Path.home())),
+                    (
+                        "XDG_CONFIG_HOME",
+                        os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
+                    ),
+                    (
+                        "XDG_DATA_HOME",
+                        os.environ.get(
+                            "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+                        ),
+                    ),
+                ]:
+                    substituted = substituted.replace(f"${{{var_name}}}", var_value)
+                    substituted = substituted.replace(f"${var_name}", var_value)
+
                 # Check if script file exists after template substitution
-                if not os.path.isfile(v):
-                    msg = f"Script file does not exist: {v}"
+                if not os.path.isfile(substituted):
+                    msg = f"Script file does not exist: {v} (resolved: {substituted})"
                     raise ValueError(msg)
 
                 # Security check: ensure script path doesn't access sensitive locations
-                script_path = Path(v).resolve()
+                script_path = Path(substituted).resolve()
 
                 # Define sensitive directories that scripts should not access
                 sensitive_dirs = [
@@ -1029,8 +1083,10 @@ if PYDANTIC_AVAILABLE:
                         raise ValueError(msg)
 
                 # Additional check: ensure script is executable
-                if not os.access(v, os.X_OK):
-                    msg = f"Script file is not executable: {v}"
+                if not os.access(substituted, os.X_OK):
+                    msg = (
+                        f"Script file is not executable: {v} (resolved: {substituted})"
+                    )
                     raise ValueError(msg)
 
             return v
@@ -1072,7 +1128,9 @@ if PYDANTIC_AVAILABLE:
                 raise ValueError(msg)
             return v
 
-        @field_validator("pre_launch_failure_mode_default", "post_launch_failure_mode_default")
+        @field_validator(
+            "pre_launch_failure_mode_default", "post_launch_failure_mode_default"
+        )
         @classmethod
         def validate_optional_failure_mode(cls, v):
             """Validate optional hook failure mode values."""
