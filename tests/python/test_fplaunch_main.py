@@ -9,7 +9,8 @@ import pytest
 
 try:
     from lib.main_entrypoint import main as fplaunch_main
-    fplaunch = type('Module', (), {'main': fplaunch_main})()
+
+    fplaunch = type("Module", (), {"main": fplaunch_main})()
 except ImportError:
     fplaunch = None
 
@@ -384,7 +385,9 @@ class TestSafetyImportFallback:
                     assert result is True
 
                     # Also test with wrapper_path argument (should still return True)
-                    result = main_entrypoint_module.safety.safe_launch_check("test_app", "/tmp/test_wrapper")
+                    result = main_entrypoint_module.safety.safe_launch_check(
+                        "test_app", "/tmp/test_wrapper"
+                    )
                     assert result is True
 
                 finally:

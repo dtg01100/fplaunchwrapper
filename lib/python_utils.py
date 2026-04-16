@@ -171,7 +171,7 @@ def sanitize_id_to_name(id_str: str) -> str:
     except (TypeError, AttributeError, UnicodeDecodeError, re.error):
         try:
             return f"app-{hashlib.sha256(id_str.encode('utf-8')).hexdigest()[:8]}"
-        except Exception:
+        except (TypeError, AttributeError, UnicodeDecodeError):
             return "app-fallback"
 
 
@@ -222,7 +222,11 @@ def safe_mktemp(template: str = "tmp.XXXXXX", dir_param: str | None = None) -> s
 def acquire_lock(
     lock_name: str = "fplaunch", timeout_seconds: float = DEFAULT_LOCK_TIMEOUT
 ) -> bool | None:
-    """Acquire a file-based lock with timeout."""
+    """Acquire a file-based lock with timeout.
+
+    Uses a file-based lock with PID tracking for stale lock detection.
+    Lock is stored as a file containing the PID of the holding process.
+    """
     try:
         config_dir = get_default_config_dir()
         ensure_dir(config_dir)
@@ -238,16 +242,55 @@ def acquire_lock(
 
         while time.time() < end_time:
             try:
+                if lockfile.exists():
+                    _cleanup_stale_lock(lockfile, pidfile)
+
                 lockfile.mkdir(parents=True, exist_ok=False)
                 pidfile.write_text(str(os.getpid()))
                 return True
             except FileExistsError:
+                if _cleanup_stale_lock(lockfile, pidfile):
+                    continue
                 time.sleep(0.1)
                 continue
 
         return False  # Timeout
 
     except (IOError, OSError, PermissionError, RuntimeError):
+        return False
+
+
+def _cleanup_stale_lock(lockfile: Path, pidfile: Path) -> bool:
+    """Check if lock is stale and clean it up if the process is dead.
+
+    Returns True if lock was cleaned up, False otherwise.
+    """
+    try:
+        if not pidfile.exists():
+            with contextlib.suppress(OSError):
+                lockfile.rmdir()
+            return True
+
+        try:
+            stored_pid = int(pidfile.read_text().strip())
+        except (ValueError, OSError):
+            with contextlib.suppress(OSError):
+                lockfile.rmdir()
+                pidfile.unlink(missing_ok=True)
+            return True
+
+        try:
+            os.kill(stored_pid, 0)
+            return False
+        except OSError:
+            pass
+
+        with contextlib.suppress(OSError):
+            lockfile.rmdir()
+            pidfile.unlink(missing_ok=True)
+        return True
+
+    except (OSError, ValueError, IOError):
         return False
 
 

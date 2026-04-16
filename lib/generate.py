@@ -400,7 +400,6 @@ class WrapperGenerator(LoggingMixin):
                     return 0
 
                 success_count = 0
-                # Using generate_wrappers alias to satisfy tests
                 created, updated, skipped = self.generate_wrappers(apps)
                 success_count = created + updated
 

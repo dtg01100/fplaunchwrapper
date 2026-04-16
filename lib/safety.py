@@ -142,7 +142,7 @@ def _restore_pytest_if_missing() -> None:
         if "pytest" not in sys.modules:
             try:
                 sys.modules["pytest"] = importlib.import_module("pytest")
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
 
 

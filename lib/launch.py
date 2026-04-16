@@ -181,7 +181,7 @@ class AppLauncher:
                 self.app_name or "", hook_type, self.hook_failure_mode
             )
             return mode
-        except Exception:
+        except (ImportError, OSError):
             pass
 
         env_mode = os.environ.get("FPWRAPPER_HOOK_FAILURE")
@@ -390,7 +390,7 @@ class AppLauncher:
                         file=sys.stderr,
                     )
                 return source, None
-        except Exception:
+        except (OSError, ValueError):
             pass
 
         if wrapper_path:
@@ -421,7 +421,7 @@ class AppLauncher:
                 elif preference == "auto":
                     # "auto" means use the default auto-detected source; no override needed.
                     pass
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             pass
 
         return wrapper_path, source
@@ -535,7 +535,7 @@ class AppLauncher:
         try:
             if not self._is_path_safe(wrapper_path, self.bin_dir):
                 return False
-        except Exception:
+        except (OSError, ValueError):
             pass
         return wrapper_path.exists() and os.access(wrapper_path, os.X_OK)
 

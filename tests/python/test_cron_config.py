@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Test script to verify cron interval configuration functionality"""
 
+import pytest
 from lib.config_manager import create_config_manager
 from lib.systemd_setup import SystemdSetup
 
@@ -22,11 +23,9 @@ def test_config_manager():
     assert retrieved == new_interval, "Should retrieve the set value"
 
     # Test minimum interval validation
-    try:
+    with pytest.raises(ValueError):
         config.set_cron_interval(0)
-        assert False, "Should raise ValueError for interval < 1"
-    except ValueError as e:
-        print(f"Correctly raised ValueError for interval < 1: {e}")
+    # If we reach here, exception was raised as expected
 
     # Reset to default
     config.set_cron_interval(6)

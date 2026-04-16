@@ -715,9 +715,7 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            assert (
-                False
-            ), f"Config manager should handle permission errors gracefully, not raise: {e}"
+            pytest.fail(f"Config manager should handle permission errors gracefully, not raise: {e}")
         finally:
             # Restore permissions for cleanup
             try:
@@ -754,7 +752,7 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            assert False, f"Config manager should handle parse errors gracefully, not raise: {e}"
+            pytest.fail(f"Config manager should handle parse errors gracefully, not raise: {e}")
 
     def test_config_validation_error_on_invalid_data(self) -> None:
         """Test config manager handles validation errors gracefully with fallback."""
@@ -785,9 +783,7 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            assert (
-                False
-            ), f"Config manager should handle validation errors gracefully, not raise: {e}"
+            pytest.fail(f"Config manager should handle validation errors gracefully, not raise: {e}")
 
     def test_config_save_permission_error(self) -> None:
         """Test config manager handles save permission errors gracefully."""
@@ -810,7 +806,7 @@ class TestConfigExceptionHandling:
                 # This should not raise an exception, just fail silently
                 config_manager.save_config()
                 # The operation should complete without crashing
-                assert True
+                assert isinstance(config_manager, EnhancedConfigManager)
             except Exception as e:
                 assert (
                     False
@@ -876,7 +872,7 @@ class TestConfigExceptionHandling:
                 # This should not raise an exception, just handle the error gracefully
                 config_manager.save_config()
                 # The operation should complete without crashing
-                assert True
+                assert isinstance(config_manager, EnhancedConfigManager)
             except Exception as e:
                 assert (
                     False

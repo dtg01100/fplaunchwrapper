@@ -25,8 +25,10 @@ fi
 ENV_FILE="$PREF_DIR/$NAME.env"
 if [ -f "$ENV_FILE" ]; then
     # Validate env file contains only safe KEY=value pairs before sourcing
-    # Reject files with shell special characters that could enable command injection
-    if grep -qE '^[^=]+=[^=]*$' "$ENV_FILE" && ! grep -qE '[;&|`$()]' "$ENV_FILE"; then
+    # Reject files with dangerous characters that could enable command injection
+    # Only allow: alphanumeric, underscore, hyphen, dot in KEY; safe chars in VALUE
+    if grep -qE '^[A-Za-z_][A-Za-z0-9_.-]*=[^=]*$' "$ENV_FILE" && \
+       ! grep -qE '[\;&|`$(){{}}[\]<>!#*? ]' "$ENV_FILE"; then
         # shellcheck disable=SC1090
         source "$ENV_FILE"
     else
