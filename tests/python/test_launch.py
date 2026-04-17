@@ -151,7 +151,9 @@ class TestLaunchEdgeCases:
 
     @patch("subprocess.run")
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_launch_flatpak_with_architectures(self, mock_safety, mock_subprocess) -> None:
+    def test_launch_flatpak_with_architectures(
+        self, mock_safety, mock_subprocess
+    ) -> None:
         """Test launch with different Flatpak architectures."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
@@ -177,7 +179,9 @@ class TestLaunchEdgeCases:
 
     @patch("subprocess.run")
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_launch_environment_variable_injection(self, mock_safety, mock_subprocess) -> None:
+    def test_launch_environment_variable_injection(
+        self, mock_safety, mock_subprocess
+    ) -> None:
         """Test environment variable injection attempts are blocked."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
@@ -715,7 +719,9 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            pytest.fail(f"Config manager should handle permission errors gracefully, not raise: {e}")
+            pytest.fail(
+                f"Config manager should handle permission errors gracefully, not raise: {e}"
+            )
         finally:
             # Restore permissions for cleanup
             try:
@@ -752,7 +758,9 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            pytest.fail(f"Config manager should handle parse errors gracefully, not raise: {e}")
+            pytest.fail(
+                f"Config manager should handle parse errors gracefully, not raise: {e}"
+            )
 
     def test_config_validation_error_on_invalid_data(self) -> None:
         """Test config manager handles validation errors gracefully with fallback."""
@@ -783,7 +791,9 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            pytest.fail(f"Config manager should handle validation errors gracefully, not raise: {e}")
+            pytest.fail(
+                f"Config manager should handle validation errors gracefully, not raise: {e}"
+            )
 
     def test_config_save_permission_error(self) -> None:
         """Test config manager handles save permission errors gracefully."""
@@ -808,9 +818,9 @@ class TestConfigExceptionHandling:
                 # The operation should complete without crashing
                 assert isinstance(config_manager, EnhancedConfigManager)
             except Exception as e:
-                assert (
-                    False
-                ), f"Config save should handle permission errors gracefully, not raise: {e}"
+                assert False, (
+                    f"Config save should handle permission errors gracefully, not raise: {e}"
+                )
             finally:
                 # Restore permissions for cleanup
                 try:
@@ -874,9 +884,9 @@ class TestConfigExceptionHandling:
                 # The operation should complete without crashing
                 assert isinstance(config_manager, EnhancedConfigManager)
             except Exception as e:
-                assert (
-                    False
-                ), f"Config save should handle permission errors gracefully, not raise: {e}"
+                assert False, (
+                    f"Config save should handle permission errors gracefully, not raise: {e}"
+                )
             finally:
                 # Restore permissions for cleanup
                 try:
@@ -943,14 +953,18 @@ class TestRunHookScriptsFailureModes:
         )
 
         # Mock _get_effective_failure_mode to return "abort"
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
+        with patch.object(
+            launcher, "_get_effective_failure_mode", return_value="abort"
+        ):
             result = launcher._run_hook_scripts("pre", source="flatpak")
 
         assert result is False
 
     @patch("subprocess.run")
     @patch("sys.stderr")
-    def test_pre_launch_abort_mode_prints_abort_message(self, mock_stderr, mock_run) -> None:
+    def test_pre_launch_abort_mode_prints_abort_message(
+        self, mock_stderr, mock_run
+    ) -> None:
         """Test pre-launch hook failure with abort mode prints correct message."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
@@ -972,11 +986,15 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
+        with patch.object(
+            launcher, "_get_effective_failure_mode", return_value="abort"
+        ):
             launcher._run_hook_scripts("pre", source="flatpak")
 
         # Check that abort message was printed
-        printed_output = "".join(str(call.args[0]) for call in mock_stderr.write.call_args_list)
+        printed_output = "".join(
+            str(call.args[0]) for call in mock_stderr.write.call_args_list
+        )
         assert (
             "aborting launch" in printed_output.lower()
             or "pre-launch hook failed" in printed_output.lower()
@@ -1006,7 +1024,9 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
+        with patch.object(
+            launcher, "_get_effective_failure_mode", return_value="abort"
+        ):
             result = launcher._run_hook_scripts("post", exit_code=0, source="flatpak")
 
         # Post-launch with abort mode returns False (all_succeeded=False) but doesn't abort early
@@ -1066,7 +1086,9 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="ignore",
         )
 
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="ignore"):
+        with patch.object(
+            launcher, "_get_effective_failure_mode", return_value="ignore"
+        ):
             result = launcher._run_hook_scripts("pre", source="flatpak")
 
         # Should return False (all_succeeded is False) but no error printed
@@ -1091,7 +1113,9 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
+        with patch.object(
+            launcher, "_get_effective_failure_mode", return_value="abort"
+        ):
             result = launcher._run_hook_scripts("pre", source="flatpak")
 
         assert result is False
@@ -1115,7 +1139,9 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
+        with patch.object(
+            launcher, "_get_effective_failure_mode", return_value="abort"
+        ):
             result = launcher._run_hook_scripts("post", exit_code=0, source="flatpak")
 
         # Post-launch timeout returns False (all_succeeded=False) but doesn't abort early
@@ -1165,7 +1191,9 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
+        with patch.object(
+            launcher, "_get_effective_failure_mode", return_value="abort"
+        ):
             result = launcher._run_hook_scripts("pre", source="flatpak")
 
         assert result is False
@@ -1189,7 +1217,9 @@ class TestRunHookScriptsFailureModes:
             hook_failure_mode="abort",
         )
 
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
+        with patch.object(
+            launcher, "_get_effective_failure_mode", return_value="abort"
+        ):
             result = launcher._run_hook_scripts("post", exit_code=0, source="flatpak")
 
         # Post-launch exception returns False (all_succeeded=False) but doesn't abort early
@@ -1290,7 +1320,9 @@ class TestRunHookScriptsFailureModes:
         assert env["FPWRAPPER_HOOK_FAILURE_MODE"] == "warn"
 
     @patch("subprocess.run")
-    def test_environment_variables_post_launch_includes_exit_code(self, mock_run) -> None:
+    def test_environment_variables_post_launch_includes_exit_code(
+        self, mock_run
+    ) -> None:
         """Test that FPWRAPPER_EXIT_CODE is set for post-launch hooks."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
@@ -1389,7 +1421,9 @@ class TestMainCLIArgumentParsing:
 
     def test_config_dir_option(self) -> None:
         """Test --config-dir option is parsed correctly."""
-        with patch("sys.argv", ["fplaunch-launch", "--config-dir", "/custom/config", "firefox"]):
+        with patch(
+            "sys.argv", ["fplaunch-launch", "--config-dir", "/custom/config", "firefox"]
+        ):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1403,7 +1437,9 @@ class TestMainCLIArgumentParsing:
 
     def test_bin_dir_option(self) -> None:
         """Test --bin-dir option is parsed correctly."""
-        with patch("sys.argv", ["fplaunch-launch", "--bin-dir", "/custom/bin", "firefox"]):
+        with patch(
+            "sys.argv", ["fplaunch-launch", "--bin-dir", "/custom/bin", "firefox"]
+        ):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1417,7 +1453,9 @@ class TestMainCLIArgumentParsing:
 
     def test_hook_failure_abort(self) -> None:
         """Test --hook-failure abort is parsed correctly."""
-        with patch("sys.argv", ["fplaunch-launch", "--hook-failure", "abort", "firefox"]):
+        with patch(
+            "sys.argv", ["fplaunch-launch", "--hook-failure", "abort", "firefox"]
+        ):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1431,7 +1469,9 @@ class TestMainCLIArgumentParsing:
 
     def test_hook_failure_warn(self) -> None:
         """Test --hook-failure warn is parsed correctly."""
-        with patch("sys.argv", ["fplaunch-launch", "--hook-failure", "warn", "firefox"]):
+        with patch(
+            "sys.argv", ["fplaunch-launch", "--hook-failure", "warn", "firefox"]
+        ):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1445,7 +1485,9 @@ class TestMainCLIArgumentParsing:
 
     def test_hook_failure_ignore(self) -> None:
         """Test --hook-failure ignore is parsed correctly."""
-        with patch("sys.argv", ["fplaunch-launch", "--hook-failure", "ignore", "firefox"]):
+        with patch(
+            "sys.argv", ["fplaunch-launch", "--hook-failure", "ignore", "firefox"]
+        ):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1459,7 +1501,9 @@ class TestMainCLIArgumentParsing:
 
     def test_abort_on_hook_failure_shorthand(self) -> None:
         """Test --abort-on-hook-failure shorthand is parsed correctly."""
-        with patch("sys.argv", ["fplaunch-launch", "--abort-on-hook-failure", "firefox"]):
+        with patch(
+            "sys.argv", ["fplaunch-launch", "--abort-on-hook-failure", "firefox"]
+        ):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1487,7 +1531,10 @@ class TestMainCLIArgumentParsing:
 
     def test_app_args_passed_correctly(self) -> None:
         """Test that app arguments are passed correctly."""
-        with patch("sys.argv", ["fplaunch-launch", "firefox", "--new-window", "--private-window"]):
+        with patch(
+            "sys.argv",
+            ["fplaunch-launch", "firefox", "--new-window", "--private-window"],
+        ):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1573,7 +1620,9 @@ class TestGetEffectiveFailureMode:
             config_dir=str(self.config_dir),
         )
 
-        with patch("lib.config_manager.create_config_manager", side_effect=ImportError()):
+        with patch(
+            "lib.config_manager.create_config_manager", side_effect=ImportError()
+        ):
             with patch.dict(os.environ, {"FPWRAPPER_HOOK_FAILURE": "abort"}):
                 result = launcher._get_effective_failure_mode("pre")
 
@@ -1590,7 +1639,9 @@ class TestGetEffectiveFailureMode:
             config_dir=str(self.config_dir),
         )
 
-        with patch("lib.config_manager.create_config_manager", side_effect=ImportError()):
+        with patch(
+            "lib.config_manager.create_config_manager", side_effect=ImportError()
+        ):
             # Clear any existing env var
             env = os.environ.copy()
             if "FPWRAPPER_HOOK_FAILURE" in env:
@@ -1824,7 +1875,9 @@ class TestIsTestEnvironmentLaunch:
         from lib.launch import is_test_environment_launch
 
         # Make sure no test modules are loaded
-        test_modules = [k for k in sys.modules.keys() if "pytest" in k or "unittest" in k]
+        test_modules = [
+            k for k in sys.modules.keys() if "pytest" in k or "unittest" in k
+        ]
         for mod in test_modules:
             del sys.modules[mod]
 
@@ -1933,7 +1986,9 @@ class TestDetermineLaunchSource:
         assert wrapper_path is None
 
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_determine_launch_source_path_safe_check_exception(self, mock_safety) -> None:
+    def test_determine_launch_source_path_safe_check_exception(
+        self, mock_safety
+    ) -> None:
         """Test _determine_launch_source handles path safety check exception."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
@@ -2113,7 +2168,9 @@ class TestResolveFlatpakId:
     @patch("lib.launch.subprocess.run")
     @patch("lib.python_utils.find_executable")
     @patch("lib.safety.is_test_environment", return_value=False)
-    def test_resolve_flatpak_id_uses_flatpak_list(self, mock_is_test, mock_find, mock_run) -> None:
+    def test_resolve_flatpak_id_uses_flatpak_list(
+        self, mock_is_test, mock_find, mock_run
+    ) -> None:
         """Test resolution uses flatpak list command."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
@@ -2161,8 +2218,8 @@ class TestResolveFlatpakId:
         # Mock find_executable to return flatpak path
         mock_find.return_value = "/usr/bin/flatpak"
 
-        # Mock subprocess.run to raise exception
-        mock_run.side_effect = Exception("flatpak not found")
+        # Mock subprocess.run to raise OSError (realistic error)
+        mock_run.side_effect = OSError("flatpak not found")
 
         launcher = LibAppLauncher(
             app_name="firefox",
@@ -2369,7 +2426,9 @@ class TestLaunchHookFailureVerbose:
             verbose=True,
         )
 
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
+        with patch.object(
+            launcher, "_get_effective_failure_mode", return_value="abort"
+        ):
             with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
                 launcher.launch()
 
@@ -2435,7 +2494,9 @@ class TestLaunchExceptions:
             verbose=True,
         )
 
-        with patch.object(launcher, "_determine_launch_source", side_effect=KeyboardInterrupt()):
+        with patch.object(
+            launcher, "_determine_launch_source", side_effect=KeyboardInterrupt()
+        ):
             with patch("sys.stderr", new_callable=StringIO):
                 result = launcher.launch()
 

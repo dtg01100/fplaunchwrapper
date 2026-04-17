@@ -27,7 +27,7 @@ def launch_with_portal(
     env_overrides: Optional[dict[str, str]] = None,
     cwd: Optional[str] = None,
     wait: bool = False,
-) -> subprocess.CompletedProcess:
+) -> subprocess.CompletedProcess[str]:
     """Launch a Flatpak application via flatpak-spawn with portal support.
 
     flatpak-spawn forwards portal requests (file picker, etc.) to the host,
@@ -80,7 +80,7 @@ def launch_direct(
     env_overrides: Optional[dict[str, str]] = None,
     cwd: Optional[str] = None,
     wait: bool = False,
-) -> subprocess.CompletedProcess:
+) -> subprocess.CompletedProcess[str]:
     """Launch a Flatpak application directly with flatpak run.
 
     This is the fallback when flatpak-spawn is not available.
@@ -125,7 +125,7 @@ def launch(
     cwd: Optional[str] = None,
     wait: bool = False,
     use_portal: bool = True,
-) -> subprocess.CompletedProcess:
+) -> subprocess.CompletedProcess[str]:
     """Launch a Flatpak application.
 
     Args:
@@ -162,6 +162,7 @@ def get_launch_command(
         Command as list of strings
     """
     if use_portal and is_portal_launcher_available():
+        assert FLATPAK_SPAWN_PATH is not None  # Checked by is_portal_launcher_available
         cmd = [FLATPAK_SPAWN_PATH, "--host", "flatpak", "run", flatpak_id]
     else:
         cmd = ["flatpak", "run", flatpak_id]

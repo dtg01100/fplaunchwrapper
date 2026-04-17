@@ -217,6 +217,16 @@ def get_app_metadata(
     Returns:
         Dictionary with app metadata (name, icon, categories, comment)
     """
+    if not flatpak_id or not isinstance(flatpak_id, str):
+        return {
+            "name": "Unknown",
+            "comment": None,
+            "icon": None,
+            "categories": [],
+            "terminal": False,
+            "exec": None,
+        }
+
     if desktop_entries is None:
         desktop_entries = parse_flatpak_desktop_files()
 

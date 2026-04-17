@@ -90,11 +90,15 @@ class WrapperGenerator(LoggingMixin):
         """Check if a wrapper name collides with basic system commands."""
         return name.lower() in ForbiddenNameError.FORBIDDEN_NAMES
 
-    def run_command(self, cmd: list[str], description: str = "") -> subprocess.CompletedProcess:
+    def run_command(
+        self, cmd: list[str], description: str = ""
+    ) -> subprocess.CompletedProcess:
         """Run a command and return its output."""
         if description and not self.verbose:
             with console.status(f"[bold green]{description}..."):
-                result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+                result = subprocess.run(
+                    cmd, capture_output=True, text=True, check=False
+                )
         else:
             if description and self.verbose:
                 self.log(description, "debug")
@@ -107,7 +111,9 @@ class WrapperGenerator(LoggingMixin):
 
         flatpak_path = find_executable("flatpak")
         if flatpak_path is None:
-            raise WrapperGenerationError("flatpak", "Failed to find flatpak executable in PATH")
+            raise WrapperGenerationError(
+                "flatpak", "Failed to find flatpak executable in PATH"
+            )
 
         result = self.run_command(
             [flatpak_path, "list", "--app", "--columns=application"],
@@ -137,7 +143,11 @@ class WrapperGenerator(LoggingMixin):
             if stdout_system:
                 for line in stdout_system.split("\n"):
                     line = line.strip()
-                    if line and not line.startswith("Application ID") and line not in apps:
+                    if (
+                        line
+                        and not line.startswith("Application ID")
+                        and line not in apps
+                    ):
                         apps.append(line)
 
         return sorted(set(apps))
@@ -164,13 +174,17 @@ class WrapperGenerator(LoggingMixin):
         # 1. When installed: use importlib.resources to find template in package data
         if HAS_IMPORTLIB_RESOURCES:
             try:
-                template_file = importlib_files("lib") / "templates" / "wrapper.template.sh"
+                template_file = (
+                    importlib_files("lib") / "templates" / "wrapper.template.sh"
+                )
                 candidates.append(Path(str(template_file)))
             except (TypeError, AttributeError, FileNotFoundError):
                 pass
 
         # 2. Development mode: templates/ at project root
-        candidates.append(Path(__file__).parent.parent / "templates" / "wrapper.template.sh")
+        candidates.append(
+            Path(__file__).parent.parent / "templates" / "wrapper.template.sh"
+        )
 
         # 3. Fallback: relative path (for running from project root)
         candidates.append(Path("templates/wrapper.template.sh"))
@@ -197,7 +211,9 @@ class WrapperGenerator(LoggingMixin):
                 from .config_manager import create_config_manager
 
                 config = create_config_manager()
-                failure_mode = getattr(config.config, "hook_failure_mode_default", "warn")
+                failure_mode = getattr(
+                    config.config, "hook_failure_mode_default", "warn"
+                )
 
                 # Fetch app preferences for baking script paths
                 prefs = config.get_app_preferences(wrapper_name)
@@ -217,7 +233,9 @@ class WrapperGenerator(LoggingMixin):
             )
 
         except Exception as e:
-            raise WrapperGenerationError(app_id, f"Failed to read wrapper template: {e}") from e
+            raise WrapperGenerationError(
+                app_id, f"Failed to read wrapper template: {e}"
+            ) from e
 
     def generate_wrapper(self, app_id: str, flatpak_id: str | None = None) -> bool:
         """Generate a wrapper for a specific Flatpak app."""
@@ -243,13 +261,19 @@ class WrapperGenerator(LoggingMixin):
 
         # Simple validation of flatpak_id
         # Valid Flatpak IDs use reverse-DNS notation and must start with a letter
-        if not re.match(r"^[A-Za-z][A-Za-z0-9._-]*$", target_flatpak_id):
+        # and contain at least one dot (e.g., org.mozilla.firefox)
+        if (
+            not re.match(r"^[A-Za-z][A-Za-z0-9._-]*$", target_flatpak_id)
+            or "." not in target_flatpak_id
+        ):
             if flatpak_id is not None:
                 self.log(f"Skipping invalid Flatpak ID: {target_flatpak_id}", "warning")
                 return False
             target_flatpak_id = sanitize_id_to_name(app_id)
             if not target_flatpak_id:
-                self.log(f"Skipping invalid app ID (unsanitizable): {app_id}", "warning")
+                self.log(
+                    f"Skipping invalid app ID (unsanitizable): {app_id}", "warning"
+                )
                 return False
 
         wrapper_path = self.bin_dir / wrapper_name
@@ -333,8 +357,8 @@ class WrapperGenerator(LoggingMixin):
                 if not target.exists():
                     remove_item = True
                 else:
-                    target_name = target.name
-                    if target_name not in installed_apps:
+                    wrapper_id = get_wrapper_id(str(target))
+                    if wrapper_id and wrapper_id not in installed_apps:
                         remove_item = True
             elif is_wrapper_file(str(item)):
                 wrapper_id = get_wrapper_id(str(item))
@@ -437,7 +461,9 @@ class WrapperGenerator(LoggingMixin):
             console=console,
             disable=not self.verbose and not sys.stdout.isatty(),
         ) as progress:
-            task = progress.add_task("Generating wrappers...", total=len(installed_apps))
+            task = progress.add_task(
+                "Generating wrappers...", total=len(installed_apps)
+            )
             for app_id in installed_apps:
                 # Track if this app had a wrapper before
                 had_wrapper_before = app_id in existing_wrappers

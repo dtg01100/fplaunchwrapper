@@ -464,6 +464,7 @@ class EnhancedConfigManager:
             "cron_interval": self.config.cron_interval,
             "enable_notifications": self.config.enable_notifications,
             "hook_failure_mode_default": self.config.hook_failure_mode_default,
+            "active_profile": self.config.active_profile,
         }
 
         if self.config.pre_launch_failure_mode_default:
@@ -897,6 +898,7 @@ class EnhancedConfigManager:
             True if successful, False otherwise
         """
         try:
+            content: dict[str, Any] | str
             if profile_name == "default":
                 content = self._serialize_config()
             else:
@@ -904,7 +906,14 @@ class EnhancedConfigManager:
                 profile_file = profiles_dir / f"{profile_name}.toml"
                 if not profile_file.exists():
                     return False
-                content = profile_file.read_text()
+                profile_text = profile_file.read_text()
+                if TOML_AVAILABLE:
+                    try:
+                        content = tomli.loads(profile_text)
+                    except ValueError:
+                        content = profile_text
+                else:
+                    content = profile_text
 
             if TOML_AVAILABLE and isinstance(content, dict):
                 with open(export_path, "wb") as f:

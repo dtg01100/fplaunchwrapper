@@ -83,7 +83,7 @@ def validate_home_dir(dir_path: str | Path) -> str | None:
         return None
 
 
-def is_wrapper_file(file_path: str | Path) -> bool | None:
+def is_wrapper_file(file_path: str | Path) -> bool:
     """Check if a file is a valid wrapper script."""
     try:
         if not os.path.isfile(file_path):
@@ -116,7 +116,9 @@ def is_wrapper_file(file_path: str | Path) -> bool | None:
             return False
 
         id_value = re.search(r'ID="([^"]*)"', id_match.group())
-        return not (not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1)))
+        return not (
+            not id_value or not re.match(r"^[A-Za-z0-9._-]+$", id_value.group(1))
+        )
     except (IOError, OSError, UnicodeDecodeError, re.error):
         return False
 
@@ -197,7 +199,9 @@ def find_executable(cmd: str) -> str | None:
         return None
 
 
-def safe_mktemp(template: str = "tmp.XXXXXX", dir_param: str | None = None) -> str | None:
+def safe_mktemp(
+    template: str = "tmp.XXXXXX", dir_param: str | None = None
+) -> str | None:
     """Create a secure temporary file.
 
     Returns the created temporary file path, or None on failure.
@@ -208,11 +212,15 @@ def safe_mktemp(template: str = "tmp.XXXXXX", dir_param: str | None = None) -> s
         else:
             tdir = tempfile.gettempdir()
 
-        fd, path = tempfile.mkstemp(
-            prefix=template.replace("XXXXXX", ""),
-            dir=tdir,
-            suffix="" if "XXXXXX" not in template else Path(template).suffix,
-        )
+        if "XXXXXX" in template:
+            parts = template.split("XXXXXX", 1)
+            prefix = parts[0] if parts[0] else None
+            suffix = parts[1] if len(parts) > 1 else ""
+        else:
+            prefix = template
+            suffix = ""
+
+        fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=tdir)
         os.close(fd)
         return path
     except (IOError, OSError, ValueError):
@@ -243,14 +251,13 @@ def acquire_lock(
         while time.time() < end_time:
             try:
                 if lockfile.exists():
-                    _cleanup_stale_lock(lockfile, pidfile)
+                    if _cleanup_stale_lock(lockfile, pidfile):
+                        continue
 
                 lockfile.mkdir(parents=True, exist_ok=False)
                 pidfile.write_text(str(os.getpid()))
                 return True
             except FileExistsError:
-                if _cleanup_stale_lock(lockfile, pidfile):
-                    continue
                 time.sleep(0.1)
                 continue
 

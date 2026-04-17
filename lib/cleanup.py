@@ -27,8 +27,9 @@ try:
     UTILS_AVAILABLE = True
 except ImportError:
     try:
-        from safety import is_wrapper_file
+        from safety import is_wrapper_file as safety_is_wrapper_file
 
+        is_wrapper_file = safety_is_wrapper_file
         UTILS_AVAILABLE = True
     except ImportError:
         is_wrapper_file = None
@@ -73,15 +74,23 @@ class CleanupConfig:
 
     def __post_init__(self):
         """Set derived values after initialization."""
-        self.bin_dir_path = Path(self.bin_dir) if self.bin_dir else get_default_bin_dir()
+        self.bin_dir_path = (
+            Path(self.bin_dir) if self.bin_dir else get_default_bin_dir()
+        )
         self.config_dir_path = (
             Path(self.config_dir) if self.config_dir else get_default_config_dir()
         )
-        self.data_dir_path = Path(self.data_dir) if self.data_dir else get_default_data_dir()
-        self.assume_yes_effective = (
-            self.assume_yes or self.force or (os.environ.get("FPWRAPPER_FORCE") is not None)
+        self.data_dir_path = (
+            Path(self.data_dir) if self.data_dir else get_default_data_dir()
         )
-        self.verbose_effective = bool(self.verbose) if self.verbose is not None else False
+        self.assume_yes_effective = (
+            self.assume_yes
+            or self.force
+            or (os.environ.get("FPWRAPPER_FORCE") is not None)
+        )
+        self.verbose_effective = (
+            bool(self.verbose) if self.verbose is not None else False
+        )
 
 
 class WrapperCleanup(LoggingMixin):
@@ -97,11 +106,8 @@ class WrapperCleanup(LoggingMixin):
             config: Configuration object containing all cleanup parameters.
                    If None, default configuration is used.
         """
-        # Handle backward compatibility: if individual params are passed, create config from them
         if kwargs:
             config = CleanupConfig(**kwargs)
-        else:
-            config = config
 
         self.config = config or CleanupConfig()
 
@@ -121,7 +127,9 @@ class WrapperCleanup(LoggingMixin):
         self.remove_data = self.config.remove_data
         self.remove_systemd = self.config.remove_systemd
         self.create_backup = self.config.create_backup
-        self.backup_dir = Path(self.config.backup_dir) if self.config.backup_dir else None
+        self.backup_dir = (
+            Path(self.config.backup_dir) if self.config.backup_dir else None
+        )
 
         self.cleanup_items: dict[str, list] = {
             "wrappers": [],
@@ -231,7 +239,7 @@ class WrapperCleanup(LoggingMixin):
         if self.systemd_unit_dir.exists():
             # Find all systemd units related to fplaunchwrapper
             # This includes the main flatpak-wrappers units and any app-specific units
-            for unit_path in self.systemd_unit_dir.glob("*flatpak*"):
+            for unit_path in self.systemd_unit_dir.glob("*fplaunch*"):
                 if unit_path.is_file() and unit_path.suffix in [
                     ".service",
                     ".path",
@@ -287,7 +295,11 @@ class WrapperCleanup(LoggingMixin):
                 # Look for any cron entries related to fplaunchwrapper
                 cron_lines = []
                 for line in str(result.stdout).split("\n"):
-                    if "fplaunch" in line and line.strip() and not line.strip().startswith("#"):
+                    if (
+                        "fplaunch" in line
+                        and line.strip()
+                        and not line.strip().startswith("#")
+                    ):
                         cron_lines.append(line.strip())
 
                 if cron_lines:
@@ -391,7 +403,9 @@ class WrapperCleanup(LoggingMixin):
         try:
             self.had_errors = False
             if self.create_backup and not self.dry_run:
-                backup_root = self.backup_dir or Path(tempfile.mkdtemp(prefix="fp_cleanup_"))
+                backup_root = self.backup_dir or Path(
+                    tempfile.mkdtemp(prefix="fp_cleanup_")
+                )
                 with contextlib.suppress(Exception):
                     for f in self.cleanup_items["wrappers"]:
                         dst = backup_root / "wrappers" / f.name
@@ -452,9 +466,9 @@ class WrapperCleanup(LoggingMixin):
                         systemctl_path,
                         "--user",
                         "stop",
-                        "flatpak-wrappers.path",
-                        "flatpak-wrappers.timer",
-                        "flatpak-wrappers.service",
+                        "fplaunch-wrapper.path",
+                        "fplaunch-wrapper.timer",
+                        "fplaunch-wrapper.service",
                     ],
                     check=False,
                     capture_output=True,
@@ -465,9 +479,9 @@ class WrapperCleanup(LoggingMixin):
                         systemctl_path,
                         "--user",
                         "disable",
-                        "flatpak-wrappers.path",
-                        "flatpak-wrappers.timer",
-                        "flatpak-wrappers.service",
+                        "fplaunch-wrapper.path",
+                        "fplaunch-wrapper.timer",
+                        "fplaunch-wrapper.service",
                     ],
                     check=False,
                     capture_output=True,
@@ -501,7 +515,9 @@ class WrapperCleanup(LoggingMixin):
                     if result.returncode == 0:
                         current_cron = result.stdout
                         new_cron = "\n".join(
-                            line for line in current_cron.split("\n") if "fplaunch" not in line
+                            line
+                            for line in current_cron.split("\n")
+                            if "fplaunch" not in line
                         )
                         subprocess.run(
                             [crontab_path, "-"],
@@ -692,7 +708,9 @@ This removes:
 
     parser.add_argument("--config-dir", help="Override configuration directory")
 
-    parser.add_argument("--force", action="store_true", help="Force non-interactive cleanup")
+    parser.add_argument(
+        "--force", action="store_true", help="Force non-interactive cleanup"
+    )
 
     try:
         args = parser.parse_args()
