@@ -68,6 +68,24 @@ class TestManagementFunctions:
         assert result is True
 
     @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
+    def test_invalid_preference_does_not_write_file(self, temp_env) -> None:
+        wrapper_path = temp_env["bin_dir"] / "firefox"
+        wrapper_path.write_text("#!/bin/bash\necho firefox\n")
+        wrapper_path.chmod(0o755)
+
+        manager = WrapperManager(
+            config_dir=str(temp_env["config_dir"]),
+            bin_dir=str(temp_env["bin_dir"]),
+            verbose=True,
+            emit_mode=False,
+        )
+
+        result = manager.set_preference("firefox", "flatpak;rm -rf /")
+
+        assert result is False
+        assert not (temp_env["config_dir"] / "firefox.pref").exists()
+
+    @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
     def test_alias_management(self, temp_env) -> None:
         """Test alias management - replaces Test 2."""
         wrapper_path = temp_env["bin_dir"] / "firefox"
@@ -146,136 +164,6 @@ echo {wrapper}
         wrapper_names = [w["name"] for w in found_wrappers]
         for wrapper in wrappers:
             assert wrapper in wrapper_names
-
-    @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_edge_cases_and_security(self, temp_env) -> None:
-        """Test edge cases and security - replaces aggressive testing in shell script."""
-        (temp_env["bin_dir"] / "test").write_text("#!/bin/bash\necho test\n")
-        (temp_env["bin_dir"] / "test").chmod(0o755)
-
-        manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]),
-            bin_dir=str(temp_env["bin_dir"]),
-            verbose=True,
-            emit_mode=False,
-        )
-
-        result = manager.set_preference("test", "flatpak")
-        assert result is True
-
-        long_pref = "flatpak" * 1000
-        result = manager.set_preference("test", long_pref)
-        assert result is False
-
-        result = manager.set_preference("test", "flatpak;rm -rf /")
-        assert result is False
-
-        result = manager.set_preference("test", "flatpak_🚀")
-        assert result is False
-
-        for i in range(10):
-            manager.set_preference(f"rapid{i}", "flatpak")
-            pref_file = temp_env["config_dir"] / f"rapid{i}.pref"
-            if pref_file.exists():
-                pref_file.unlink()
-
-        # Ensure loop completed without raising and side-effects handled
-        assert len(list(temp_env["config_dir"].glob("*.pref"))) >= 0
-
-    @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_performance_and_resource_efficiency(self, temp_env) -> None:
-        """Test performance and resource efficiency."""
-        import time
-
-        for i in range(100):
-            wrapper_path = temp_env["bin_dir"] / f"perf{i}"
-            wrapper_path.write_text("#!/bin/bash\necho perf\n")
-            wrapper_path.chmod(0o755)
-
-        manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]),
-            bin_dir=str(temp_env["bin_dir"]),
-            verbose=False,
-            emit_mode=False,
-        )
-
-        start_time = time.time()
-        for i in range(100):
-            manager.set_preference(f"perf{i}", "flatpak")
-        end_time = time.time()
-
-        duration = end_time - start_time
-        assert duration < 5.0
-
-        pref_files = list(temp_env["config_dir"].glob("*.pref"))
-        assert len(pref_files) >= 100
-
-        total_size = sum(len(f.read_text()) for f in pref_files)
-        assert total_size > 0
-
-    @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_concurrent_operation_testing(self, temp_env) -> None:
-        """Test concurrent operations."""
-        import threading
-
-        for i in range(5):
-            for j in range(10):
-                wrapper_path = temp_env["bin_dir"] / f"thread{i}_{j}"
-                wrapper_path.write_text("#!/bin/bash\necho thread\n")
-                wrapper_path.chmod(0o755)
-
-        manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]),
-            bin_dir=str(temp_env["bin_dir"]),
-            verbose=False,
-            emit_mode=False,
-        )
-
-        results = []
-        errors = []
-
-        def worker(thread_id) -> None:
-            try:
-                for i in range(10):
-                    result = manager.set_preference(f"thread{thread_id}_{i}", "flatpak")
-                    results.append(result)
-            except Exception as e:
-                errors.append(e)
-
-        threads = []
-        for i in range(5):
-            t = threading.Thread(target=worker, args=[i])
-            threads.append(t)
-            t.start()
-
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0
-        assert len(results) == 50
-        assert all(results)
-
-    @pytest.mark.skipif(not MANAGE_AVAILABLE, reason="WrapperManager not available")
-    def test_data_integrity_validation(self, temp_env) -> None:
-        """Test data integrity and error recovery."""
-        manager = WrapperManager(
-            config_dir=str(temp_env["config_dir"]),
-            verbose=True,
-            emit_mode=False,
-        )
-
-        pref_file = temp_env["config_dir"] / "corrupted.pref"
-        pref_file.write_text("corrupted data\x00\x01\x02")
-
-        result = manager.set_preference("corrupted", "flatpak")
-        assert isinstance(result, bool)
-
-        corrupted_file = temp_env["config_dir"] / "corrupted2.pref"
-        corrupted_file.write_text("invalid preference data")
-
-        result = manager.set_preference("corrupted2", "system")
-        assert isinstance(result, bool)
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

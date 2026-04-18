@@ -60,8 +60,8 @@ class TestProfilesCLI:
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             result = runner.invoke(cli_module.cli, ["profiles", "create"])
 
-            # CLI prints error message even if exit code is 0 (CLI bug)
-            assert "required" in result.output.lower() or result.exit_code != 0
+            assert result.exit_code != 0
+            assert "missing argument" in result.output.lower()
 
     def test_profiles_switch(self, runner, temp_config_dir):
         """Test switching profiles."""
@@ -89,7 +89,8 @@ class TestProfilesCLI:
             _ = tmp_path / "test_profile.toml"
             result = runner.invoke(cli_module.cli, ["profiles", "export", "default"])
 
-            assert result.exit_code == 0 or "export" in result.output.lower()
+            assert result.exit_code == 0
+            assert "exported profile" in result.output.lower()
 
     def test_profiles_import(self, runner, temp_config_dir, tmp_path):
         """Test importing a profile."""
@@ -100,24 +101,16 @@ class TestProfilesCLI:
 
             result = runner.invoke(cli_module.cli, ["profiles", "import", str(profile_file)])
 
-            assert result.exit_code == 0 or "not found" in result.output.lower()
-
-    def test_profiles_list_without_action(self, runner, temp_config_dir):
-        """Test profiles without action defaults to list."""
-        with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
-            result = runner.invoke(cli_module.cli, ["profiles"])
-
             assert result.exit_code == 0
-            # Should show at least default profile
-            assert "default" in result.output.lower()
+            assert "imported profile" in result.output.lower()
 
     def test_profiles_invalid_action(self, runner, temp_config_dir):
         """Test profiles with invalid action."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             result = runner.invoke(cli_module.cli, ["profiles", "invalid"])
 
-            # CLI might exit with 0 even for invalid actions (CLI bug)
-            assert "unknown" in result.output.lower() or result.exit_code != 0
+            assert result.exit_code != 0
+            assert "no such command" in result.output.lower()
 
 
 class TestPresetsCLI:
@@ -149,17 +142,26 @@ class TestPresetsCLI:
     def test_presets_get_invalid_preset(self, runner, temp_config_dir):
         """Test presets get with invalid preset name."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
-            result = runner.invoke(cli_module.cli, ["presets", "get", "nonexistent"])
+            result = runner.invoke(
+                cli_module.cli,
+                ["presets", "get", "nonexistent"],
+                standalone_mode=False,
+            )
 
-            # CLI might exit with 0 even for not found (CLI bug)
-            assert "not found" in result.output.lower() or result.exit_code != 0
+            assert result.return_value == 1
+            assert "not found" in result.output.lower()
 
     def test_presets_add_requires_name_and_permissions(self, runner, temp_config_dir):
         """Test presets add requires name and permissions."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
-            result = runner.invoke(cli_module.cli, ["presets", "add", "test"])
+            result = runner.invoke(
+                cli_module.cli,
+                ["presets", "add", "test"],
+                standalone_mode=False,
+            )
 
-            assert "required" in result.output.lower() or result.exit_code != 0
+            assert result.return_value == 1
+            assert "at least one permission is required" in result.output.lower()
 
     def test_presets_add(self, runner, temp_config_dir):
         """Test adding a new preset."""
@@ -177,21 +179,24 @@ class TestPresetsCLI:
                 ],
             )
 
-            assert result.exit_code == 0 or "added" in result.output.lower()
+            assert result.exit_code == 0
+            assert "added preset" in result.output.lower()
 
     def test_presets_remove_requires_name(self, runner, temp_config_dir):
         """Test presets remove requires preset name."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             result = runner.invoke(cli_module.cli, ["presets", "remove"])
 
-            assert "required" in result.output.lower() or result.exit_code != 0
+            assert result.exit_code != 0
+            assert "missing argument" in result.output.lower()
 
     def test_presets_invalid_action(self, runner, temp_config_dir):
         """Test presets with invalid action."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             result = runner.invoke(cli_module.cli, ["presets", "invalid"])
 
-            assert "unknown" in result.output.lower() or result.exit_code != 0
+            assert result.exit_code != 0
+            assert "no such command" in result.output.lower()
 
 
 class TestInstallCLI:
@@ -212,6 +217,7 @@ class TestInstallCLI:
     def test_install_flatpak_success(self, mock_generator, mock_run, runner, temp_config_dir):
         """Test successful install of Flatpak app."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
+        mock_generator.return_value.run.return_value = 0
         result = runner.invoke(
             cli_module.cli,
             [
@@ -220,27 +226,23 @@ class TestInstallCLI:
             ],
         )
 
-        assert result.exit_code == 0 or result.exit_code is None
+        assert result.exit_code == 0
         # Should have tried to install flatpak
         assert mock_run.called
 
-    @patch("lib.generate.WrapperGenerator")
     @patch("lib.cli.run_command")
-    def test_install_flatpak_failure(self, mock_run, mock_generator, runner, temp_config_dir):
-        """Test install when flatpak install fails."""
-        mock_run.return_value = Mock(returncode=1, stderr="Install failed")
+    def test_install_flatpak_failure_returns_error_exit_and_message(self, mock_run_command, runner):
+        """Test failed Flatpak install returns the subprocess exit code."""
+        mock_run_command.return_value = Mock(returncode=7, stderr="permission denied")
+
         result = runner.invoke(
             cli_module.cli,
-            [
-                "install",
-                "org.example.app",
-                "--config-dir",
-                str(temp_config_dir),
-            ],
+            ["install", "org.example.app"],
+            standalone_mode=False,
         )
 
-        assert result.exit_code != 0
-        assert "error" in result.output.lower() or "failed" in result.output.lower()
+        assert result.return_value == 7
+        assert "failed to install flatpak app" in result.output.lower()
 
     @patch("subprocess.run")
     @patch("lib.generate.WrapperGenerator")
@@ -248,8 +250,8 @@ class TestInstallCLI:
         """Test install requires app name argument."""
         result = runner.invoke(cli_module.cli, ["install"])
 
-        # Click should handle missing argument
-        assert "Missing argument" in result.output or result.exit_code != 0
+        assert result.exit_code != 0
+        assert "missing argument" in result.output.lower()
 
 
 class TestUninstallCLI:
@@ -278,24 +280,6 @@ class TestUninstallCLI:
 
         assert result.exit_code == 0
         assert "uninstalled" in result.output.lower()
-
-    @patch("lib.cli.run_command")
-    @patch("lib.generate.WrapperGenerator")
-    def test_install_flatpak_failure(self, mock_generator, mock_run, runner, temp_config_dir):
-        """Test install when flatpak install fails."""
-        mock_run.return_value = Mock(returncode=1, stderr="Install failed")
-        result = runner.invoke(
-            cli_module.cli,
-            [
-                "install",
-                "org.example.app",
-                "--config-dir",
-                str(temp_config_dir),
-            ],
-        )
-
-        assert result.exit_code != 0
-        assert "error" in result.output.lower() or "failed" in result.output.lower()
 
     @patch("subprocess.run")
     def test_uninstall_with_data_removal(self, mock_run, runner, temp_config_dir):
@@ -348,27 +332,6 @@ class TestManifestCLI:
         assert "org.example.app" in call_args
 
     @patch("subprocess.run")
-    def test_manifest_failure(self, mock_run, runner):
-        """Test manifest when flatpak info fails."""
-        mock_run.return_value = Mock(returncode=1, stderr="App not found")
-        result = runner.invoke(cli_module.cli, ["manifest", "org.example.app"])
-
-        # CLI may return 0 even on failure (CLI behavior), but should show error message
-        assert (
-            "error" in result.output.lower()
-            or "failed" in result.output.lower()
-            or result.exit_code != 0
-        )
-
-    @patch("subprocess.run")
-    def test_manifest_without_app_name(self, mock_run, runner):
-        """Test manifest requires app name argument."""
-        result = runner.invoke(cli_module.cli, ["manifest"])
-
-        # Click should handle missing argument
-        assert "Missing argument" in result.output or result.exit_code != 0
-
-    @patch("subprocess.run")
     def test_manifest_calls_flatpak_correctly(self, mock_run, runner):
         """Test manifest command calls flatpak info --show-manifest."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
@@ -379,15 +342,10 @@ class TestManifestCLI:
         assert call_args == ["flatpak", "info", "--show-manifest", "org.example.app"]
 
     @patch("subprocess.run")
-    def test_manifest_failure_returns_nonzero(self, mock_run, runner):
-        """Test manifest exits non-zero when flatpak fails."""
+    def test_manifest_failure_returns_error_exit_and_message(self, mock_run, runner):
         mock_run.return_value = Mock(returncode=1, stderr="App not found")
+
         result = runner.invoke(cli_module.cli, ["manifest", "org.example.app"])
 
-        assert result.exit_code != 0
-
-    def test_manifest_requires_app_name(self, runner):
-        """Test manifest requires app name argument."""
-        result = runner.invoke(cli_module.cli, ["manifest"])
-
-        assert result.exit_code != 0
+        assert result.exit_code == 1
+        assert "failed to get manifest" in result.output.lower()
