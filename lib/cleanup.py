@@ -116,12 +116,10 @@ class WrapperCleanup(LoggingMixin):
         self.force = self.config.force
         self.interactive = self.config.interactive
         self.verbose = self.config.verbose_effective
-
         self.bin_dir = self.config.bin_dir_path
         self.config_dir = self.config.config_dir_path
         self.data_dir = self.config.data_dir_path
         self.systemd_unit_dir = self._get_systemd_unit_dir()
-
         self.remove_wrappers = self.config.remove_wrappers
         self.remove_prefs = self.config.remove_prefs
         self.remove_data = self.config.remove_data
@@ -130,6 +128,7 @@ class WrapperCleanup(LoggingMixin):
         self.backup_dir = (
             Path(self.config.backup_dir) if self.config.backup_dir else None
         )
+        self.had_errors: bool = False
 
         self.cleanup_items: dict[str, list] = {
             "wrappers": [],
@@ -197,15 +196,14 @@ class WrapperCleanup(LoggingMixin):
                 and is_wrapper_file(str(target_path))
             ):
                 self.cleanup_items["symlinks"].append(item)
-        except (OSError, RuntimeError):
-            pass
+        except (OSError, RuntimeError) as e:
+            self.log(f"Could not read symlink {item}: {e}", level="debug")
 
     def _scan_man_pages(self) -> None:
         """Scan for man pages in standard locations."""
         man_dir = Path.home() / ".local" / "share" / "man"
         if not man_dir.exists():
             return
-
         for manpage in man_dir.glob("man1/fplaunch-*.1"):
             self.cleanup_items["man_pages"].append(manpage)
         for manpage in man_dir.glob("man7/fplaunchwrapper.*"):

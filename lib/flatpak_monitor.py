@@ -151,10 +151,12 @@ class FlatpakEventHandler(_BaseFSHandler):
         current_time = time.time()
         if current_time - self.last_event_time < self.cooldown_seconds:
             delay = self.cooldown_seconds - (current_time - self.last_event_time)
-            self.batch_timer = threading.Timer(delay, self._flush_pending_events)
+            # Cancel existing timer before creating new one to prevent race condition
             if self.batch_timer is not None:
-                self.batch_timer.daemon = True
-                self.batch_timer.start()
+                self.batch_timer.cancel()
+            self.batch_timer = threading.Timer(delay, self._flush_pending_events)
+            self.batch_timer.daemon = True
+            self.batch_timer.start()
             logger.debug("Cooldown active, rescheduling flush in %.1fs", delay)
             return
 
@@ -265,7 +267,7 @@ class FlatpakMonitor:
         if self.observer and self.running:
             logger.info("Stopping Flatpak monitor")
             self.observer.stop()
-            self.observer.join()
+            self.observer.join(timeout=5)
             self.running = False
             logger.info("Flatpak monitor stopped")
 

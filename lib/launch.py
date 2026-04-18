@@ -6,6 +6,7 @@ Replaces fplaunch-launch bash script with Python implementation.
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import re
 import subprocess
@@ -14,6 +15,8 @@ import time
 from pathlib import Path
 
 from .paths import get_default_config_dir, resolve_bin_dir
+
+logger = logging.getLogger(__name__)
 
 
 class _AppNotFoundError(Exception):
@@ -436,7 +439,6 @@ class AppLauncher:
 
         if self.app_name is None:
             return ""
-
         cached = _get_cached_flatpak_id(self.app_name)
         if cached:
             return cached
@@ -465,8 +467,8 @@ class AppLauncher:
                             candidate_id = line
                             _cache_flatpak_id(self.app_name, candidate_id)
                             break
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to find flatpak ID: %s", e)
 
         return candidate_id
 

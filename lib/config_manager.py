@@ -1033,9 +1033,6 @@ if PYDANTIC_AVAILABLE:
             if v:
                 # Substitute template variables before checking existence
                 # This handles paths like ${HOME}/scripts/pre-launch.sh
-                from pathlib import Path
-                import os
-
                 substituted = v
                 for var_name, var_value in [
                     ("HOME", str(Path.home())),
