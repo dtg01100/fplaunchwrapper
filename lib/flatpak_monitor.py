@@ -34,12 +34,11 @@ __all__ = [
 ]
 
 # Optional watchdog dependency - use Any to avoid static type conflicts
-
 WATCHDOG_AVAILABLE: bool
 
 try:
-    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler
-    from watchdog.observers import Observer as WatchdogObserver
+    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler  # noqa: N816
+    from watchdog.observers import Observer as WatchdogObserver  # noqa: N816
 
     WATCHDOG_AVAILABLE = True
 except (ImportError, AttributeError):
