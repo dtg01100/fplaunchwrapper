@@ -71,20 +71,37 @@ class WrapperGenerator(LoggingMixin):
         if config_dir is not None and not isinstance(config_dir, (str, os.PathLike)):
             raise TypeError("config_dir must be a string or path-like object or None")
 
-        self.bin_dir = Path(bin_dir).expanduser().resolve()
+        self.bin_dir = self._safe_resolve_bin_dir(bin_dir)
         self.verbose = verbose
         self.emit_mode = emit_mode
         self.emit_verbose = emit_verbose
         self.lock_name = "generate"
         self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
 
-        # Ensure directories exist and save bin_dir for tests.
         if not self.emit_mode:
             self.bin_dir.mkdir(parents=True, exist_ok=True)
             self.config_dir.mkdir(parents=True, exist_ok=True)
-            # Save bin_dir to config (required by
-            # TestWrapperGeneratorReal.test_init_saves_bin_dir_to_config)
             (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
+
+    def _safe_resolve_bin_dir(self, bin_dir: str | Path) -> Path:
+        """Resolve bin_dir with symlink and boundary validation.
+
+        Resolves symlinks but only enforces home directory boundaries for
+        paths that start with ~ (which could be symlink attack vectors).
+        Absolute paths are resolved but not restricted to home.
+        """
+        user_home = Path.home()
+        bin_str = str(bin_dir)
+
+        if bin_str.startswith("~"):
+            resolved = Path(bin_dir).expanduser().resolve()
+            try:
+                resolved.relative_to(user_home)
+            except ValueError:
+                resolved = user_home / "bin"
+            return resolved
+
+        return Path(bin_dir).expanduser().resolve()
 
     def is_forbidden_wrapper_name(self, name: str) -> bool:
         """Check if a wrapper name collides with basic system commands."""
@@ -215,12 +232,14 @@ class WrapperGenerator(LoggingMixin):
                     config.config, "hook_failure_mode_default", "warn",
                 )
 
-                # Fetch app preferences for baking script paths
                 prefs = config.get_app_preferences(wrapper_name)
                 pre_launch_script = prefs.pre_launch_script or ""
                 post_launch_script = prefs.post_launch_script or ""
             except (ImportError, Exception):
                 pass
+
+            def _format_escape(s: str) -> str:
+                return s.replace("{", "{{").replace("}", "}}")
 
             return content.format(
                 wrapper_name=wrapper_name,
@@ -228,8 +247,8 @@ class WrapperGenerator(LoggingMixin):
                 config_dir=str(self.config_dir),
                 bin_dir=str(self.bin_dir),
                 hook_failure_mode_default=failure_mode,
-                pre_launch_script=pre_launch_script,
-                post_launch_script=post_launch_script,
+                pre_launch_script=_format_escape(pre_launch_script),
+                post_launch_script=_format_escape(post_launch_script),
             )
 
         except Exception as e:

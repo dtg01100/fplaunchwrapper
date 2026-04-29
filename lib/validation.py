@@ -92,7 +92,7 @@ def check_path_traversal(path: Path, base_dir: Path) -> tuple[bool, str]:
         # Verify the path is within base_dir
         resolved_path.relative_to(resolved_base)
         return True, ""
-    except ValueError as e:
+    except (ValueError, OSError) as e:
         return False, f"Path traversal detected: {e}"
 
 

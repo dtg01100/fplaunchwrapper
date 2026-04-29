@@ -71,10 +71,8 @@ try:
 
     TOML_AVAILABLE = True
 except ImportError:
-    # TOML support is optional. Ensure the names exist so static analysis
-    # and runtime code that tests TOML_AVAILABLE can reference them safely.
-    tomli = None
-    tomli_w = None
+    tomli = None  # type: ignore[assignment]
+    tomli_w = None  # type: ignore[assignment]
     TOML_AVAILABLE = False
 
 
@@ -204,9 +202,10 @@ class EnhancedConfigManager:
             self._create_default_config()
 
     def _substitute_variables(self, value: str) -> str:
-        """Substitute template variables in a string.
+        r"""Substitute template variables in a string.
 
         Variables are in the format ${VARIABLE_NAME} or $VARIABLE_NAME.
+        Escaped dollar signs (\$) are preserved as literal $.
 
         Args:
             value: String containing variables to substitute
@@ -214,14 +213,16 @@ class EnhancedConfigManager:
         Returns:
             String with variables substituted
         """
+        escaped_placeholder = "\x00ESCAPED_DOLLAR\x00"
+        value = value.replace("\\$", escaped_placeholder)
 
         def replace_variable(match) -> str:
             var_name = match.group(1) or match.group(2) or ""
             replacement = self.template_variables.get(var_name, match.group(0))
             return str(replacement) if replacement is not None else match.group(0)
 
-        # Handle ${VARIABLE} and $VARIABLE formats in sequence
-        return re.sub(r"\$([A-Za-z0-9_]+|\{[A-Za-z0-9_]+\})", replace_variable, value)
+        result = re.sub(r"\$([A-Za-z0-9_]+|\{[A-Za-z0-9_]+\})", replace_variable, value)
+        return result.replace(escaped_placeholder, "$")
 
     def _process_config_value(self, value: Any) -> Any:
         """Process configuration value with variable substitution.
@@ -743,7 +744,7 @@ class EnhancedConfigManager:
         preset_lower = preset_name.lower()
         if preset_lower in self.BUILTIN_PRESETS:
             return self.BUILTIN_PRESETS[preset_lower]
-        return self.config.permission_presets.get(preset_name)
+        return self.config.permission_presets.get(preset_lower)
 
     def add_permission_preset(self, preset_name: str, permissions: list[str]) -> None:
         """Add or update a permission preset.
@@ -994,32 +995,23 @@ if PYDANTIC_AVAILABLE:
         def validate_custom_args(cls, v):
             """Validate custom arguments for security."""
             if v:
+                dangerous_chars = [";", "&", "|", "`", "$", "(", ")", "<", ">", '"', "'", "\\"]
                 for arg in v:
                     if isinstance(arg, str):
-                        # Check for dangerous shell metacharacters that could be used for injection
-                        dangerous_chars = [
-                            ";",
-                            "&",
-                            "|",
-                            "`",
-                            "$",
-                            "(",
-                            ")",
-                            "<",
-                            ">",
-                            '"',
-                            "'",
-                            "\\",
-                        ]
-                        for char in dangerous_chars:
-                            if char in arg and not arg.startswith(
-                                "--",
-                            ):  # Allow in flags like --filesystem
-                                msg = (
-                                    f"Custom argument contains potentially dangerous character "
-                                    f"'{char}': {arg}"
-                                )
-                                raise ValueError(msg)
+                        if arg.startswith("--"):
+                            if "=" in arg:
+                                key, value = arg.split("=", 1)
+                                for char in dangerous_chars:
+                                    if char in value:
+                                        raise ValueError(
+                                            f"Custom argument value contains dangerous character '{char}': {arg}"
+                                        )
+                        else:
+                            for char in dangerous_chars:
+                                if char in arg:
+                                    raise ValueError(
+                                        f"Custom argument contains dangerous character '{char}': {arg}"
+                                    )
             return v
 
         @field_validator("pre_launch_script", "post_launch_script")

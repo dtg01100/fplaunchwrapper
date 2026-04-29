@@ -32,14 +32,17 @@ def run_command(
     description: str = "",
     show_output: bool = True,
     emit_mode: bool = False,
-) -> subprocess.CompletedProcess[str]:
-    """Run a subprocess command, optionally showing a Rich status message."""
+) -> subprocess.CompletedProcess[str] | None:
+    """Run a subprocess command, optionally showing a Rich status message.
+
+    Returns None in emit mode to indicate no actual execution occurred.
+    """
     if emit_mode:
         cmd_str = " ".join(cmd)
         console.print(f"[cyan]📋 EMIT:[/cyan] {cmd_str}")
         if description:
             console.print(f"[dim]   Purpose: {description}[/dim]")
-        return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+        return None
 
     if description:
         with console.status(f"[bold green]{description}..."):
@@ -66,11 +69,6 @@ def find_fplaunch_script(script_name: str) -> Optional[Path]:
         if p.exists() and p.is_file() and os.access(p, os.X_OK):
             return p
     return None
-
-
-def use_python_backend() -> bool:
-    """Indicate whether Python backend should be used (always True here)."""
-    return True
 
 
 @click.group(invoke_without_command=True)
@@ -192,11 +190,12 @@ def install(ctx: click.Context, app_name: str, emit: bool) -> int:
         f"Installing Flatpak app: {app_name}",
         emit_mode=emit_mode,
     )
-    if result.returncode != 0:
+    if result is None or result.returncode != 0:
+        err_msg = result.stderr if result else "Command failed in emit mode"
         console_err.print(
-            f"[red]Error:[/red] Failed to install Flatpak app: {result.stderr}",
+            f"[red]Error:[/red] Failed to install Flatpak app: {err_msg}",
         )
-        return result.returncode
+        return result.returncode if result else 1
 
     WrapperGenerator = import_handler.require("lib.generate", "WrapperGenerator")
     generator = WrapperGenerator(
@@ -238,11 +237,12 @@ def uninstall(ctx: click.Context, app_name: str, remove_data: bool, emit: bool) 
     result = run_command(
         cmd, f"Uninstalling Flatpak app: {app_name}", emit_mode=emit_mode,
     )
-    if result.returncode != 0:
+    if result is None or result.returncode != 0:
+        err_msg = result.stderr if result else "Command failed in emit mode"
         console_err.print(
-            f"[red]Error:[/red] Failed to uninstall Flatpak app: {result.stderr}",
+            f"[red]Error:[/red] Failed to uninstall Flatpak app: {err_msg}",
         )
-        return result.returncode
+        return result.returncode if result else 1
 
     console.print(
         f"[green]✓[/green] Uninstalled {app_name} "
@@ -449,14 +449,12 @@ def _run_systemd_setup(
         wrapper_script=wrapper_script,
     )
     try:
-        # Prefer calling a 'run' entrypoint if present (tests patch this),
-        # otherwise fall back to the more specific install helper.
         if hasattr(setup, "run"):
             result = setup.run()
             return 0 if result == 0 else 1
         if hasattr(setup, "install_systemd_units"):
             result = setup.install_systemd_units()
-            return 0 if result == 0 else 1
+            return 0 if result else 1
         return 0
     except Exception as e:
         console_err.print(f"[red]Error:[/red] {e}")
@@ -476,12 +474,11 @@ def systemd_setup_cmd(
 
 @cli.group(name="systemd", invoke_without_command=True)
 @click.pass_context
-def systemd_group(ctx: click.Context) -> int:
+def systemd_group(ctx: click.Context) -> None:
     """Manage systemd user units (enable|disable|status|start|stop|restart|
     reload|logs|list|test)."""
     if ctx.invoked_subcommand is None:
-        return _run_systemd_setup(ctx, None, None)
-    return 0
+        _run_systemd_setup(ctx, None, None)
 
 
 def _get_systemd_setup(ctx: click.Context) -> Any:
@@ -543,8 +540,6 @@ def systemd_status(ctx: click.Context) -> int:
 @click.pass_context
 def systemd_start(ctx: click.Context) -> int:
     """Start the systemd service immediately."""
-    import subprocess
-
     emit_mode = ctx.obj.get("emit", False)
     if emit_mode:
         console.print("[yellow]EMIT: Would start systemd service[/yellow]")
@@ -559,8 +554,6 @@ def systemd_start(ctx: click.Context) -> int:
 @click.pass_context
 def systemd_stop(ctx: click.Context) -> int:
     """Stop the systemd service."""
-    import subprocess
-
     emit_mode = ctx.obj.get("emit", False)
     if emit_mode:
         console.print("[yellow]EMIT: Would stop systemd service[/yellow]")
@@ -575,8 +568,6 @@ def systemd_stop(ctx: click.Context) -> int:
 @click.pass_context
 def systemd_restart(ctx: click.Context) -> int:
     """Restart the systemd service."""
-    import subprocess
-
     emit_mode = ctx.obj.get("emit", False)
     if emit_mode:
         console.print("[yellow]EMIT: Would restart systemd service[/yellow]")
@@ -589,10 +580,8 @@ def systemd_restart(ctx: click.Context) -> int:
 
 @systemd_group.command(name="reload")
 @click.pass_context
-def systemd_reload(ctx) -> int:
+def systemd_reload(ctx: click.Context) -> int:
     """Reload systemd daemon configuration."""
-    import subprocess
-
     emit_mode = ctx.obj.get("emit", False)
     if emit_mode:
         console.print("[yellow]EMIT: Would reload systemd daemon[/yellow]")
@@ -603,10 +592,8 @@ def systemd_reload(ctx) -> int:
 
 @systemd_group.command(name="logs")
 @click.pass_context
-def systemd_logs(ctx) -> int:
+def systemd_logs(ctx: click.Context) -> int:
     """View systemd service logs."""
-    import subprocess
-
     emit_mode = ctx.obj.get("emit", False)
     if emit_mode:
         console.print("[yellow]EMIT: Would show systemd logs[/yellow]")
@@ -1016,7 +1003,7 @@ def manifest(ctx, app_name, emit) -> int:
             show_output=True,
             emit_mode=emit_mode,
         )
-        if result.returncode != 0:
+        if result is None or result.returncode != 0:
             console_err.print(
                 f"[red]Error:[/red] Failed to get manifest for {app_name}",
             )

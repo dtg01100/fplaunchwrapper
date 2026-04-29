@@ -359,7 +359,7 @@ WantedBy=paths.target
             return units
 
         for item in self.systemd_unit_dir.iterdir():
-            if item.name.startswith("fplaunch") and item.suffix in (
+            if item.name.startswith("fplaunch-") and item.suffix in (
                 ".service",
                 ".timer",
                 ".path",

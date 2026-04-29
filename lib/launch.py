@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -50,21 +51,30 @@ except ImportError:
 
 
 _FLATPAK_ID_CACHE: dict[str, tuple[str, float]] = {}
-_CACHE_TTL_SECONDS = float(os.environ.get("FPWRAPPER_CACHE_TTL", 300))
+_CACHE_TTL_ENV = os.environ.get("FPWRAPPER_CACHE_TTL", "300")
+try:
+    _CACHE_TTL_SECONDS = float(_CACHE_TTL_ENV)
+    if _CACHE_TTL_SECONDS <= 0:
+        _CACHE_TTL_SECONDS = 300.0
+except ValueError:
+    _CACHE_TTL_SECONDS = 300.0
+_CACHE_LOCK = threading.Lock()
 
 
 def _get_cached_flatpak_id(app_name: str) -> str | None:
     """Get a cached Flatpak ID if still valid."""
-    if app_name in _FLATPAK_ID_CACHE:
-        cached_id, cached_time = _FLATPAK_ID_CACHE[app_name]
-        if time.time() - cached_time < _CACHE_TTL_SECONDS:
-            return cached_id
+    with _CACHE_LOCK:
+        if app_name in _FLATPAK_ID_CACHE:
+            cached_id, cached_time = _FLATPAK_ID_CACHE[app_name]
+            if time.time() - cached_time < _CACHE_TTL_SECONDS:
+                return cached_id
     return None
 
 
 def _cache_flatpak_id(app_name: str, flatpak_id: str) -> None:
     """Cache a Flatpak ID resolution."""
-    _FLATPAK_ID_CACHE[app_name] = (flatpak_id, time.time())
+    with _CACHE_LOCK:
+        _FLATPAK_ID_CACHE[app_name] = (flatpak_id, time.time())
 
 
 def is_test_environment_launch() -> bool:
@@ -444,8 +454,8 @@ class AppLauncher:
                 elif preference == "auto":
                     # "auto" means use the default auto-detected source; no override needed.
                     pass
-        except (OSError, UnicodeDecodeError):
-            pass
+        except (OSError, UnicodeDecodeError) as e:
+            logger.warning("Could not read preference file: %s", e)
 
         return wrapper_path, source
 
@@ -537,12 +547,15 @@ class AppLauncher:
         """Check if a path is safely within a base directory.
 
         Prevents path traversal attacks by ensuring the path doesn't
-        escape the intended directory.
+        escape the intended directory. Resolves symlinks to handle
+        symlink-based escape attempts.
         """
         try:
-            path.relative_to(base_dir)
+            resolved_path = path.resolve()
+            resolved_base = base_dir.resolve()
+            resolved_path.relative_to(resolved_base)
             return True
-        except ValueError:
+        except (ValueError, OSError):
             return False
 
     def _wrapper_exists(self, app_name: str | None = None) -> bool:

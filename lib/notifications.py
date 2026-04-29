@@ -33,7 +33,7 @@ def _sanitize_notification_text(text: str) -> str:
     text = text.replace("`", "")
 
     # Remove dollar signs followed by parentheses or braces (command substitution)
-    text = re.sub(r"\$\(", "(cmd)", text)
+    text = re.sub(r"\$\(", "(", text)
     text = re.sub(r"\$\{", "{", text)
 
     # Limit length to prevent buffer overflow attacks

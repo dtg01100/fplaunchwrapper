@@ -405,21 +405,32 @@ class WrapperCleanup(LoggingMixin):
                 backup_root = self.backup_dir or Path(
                     tempfile.mkdtemp(prefix="fp_cleanup_"),
                 )
-                with contextlib.suppress(Exception):
-                    for f in self.cleanup_items["wrappers"]:
+                backup_errors = []
+                for f in self.cleanup_items["wrappers"]:
+                    try:
                         dst = backup_root / "wrappers" / f.name
                         dst.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(f, dst)
-                with contextlib.suppress(Exception):
-                    for f in self.cleanup_items["preferences"]:
+                    except (OSError, IOError) as e:
+                        backup_errors.append(f"Failed to backup wrapper {f}: {e}")
+                for f in self.cleanup_items["preferences"]:
+                    try:
                         dst = backup_root / "preferences" / f.name
                         dst.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(f, dst)
-                with contextlib.suppress(Exception):
-                    for f in self.cleanup_items["data_files"][:1000]:
+                    except (OSError, IOError) as e:
+                        backup_errors.append(f"Failed to backup preference {f}: {e}")
+                for f in self.cleanup_items["data_files"][:1000]:
+                    try:
                         dst = backup_root / "data" / f.name
                         dst.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(f, dst)
+                    except (OSError, IOError) as e:
+                        backup_errors.append(f"Failed to backup data file {f}: {e}")
+                if backup_errors:
+                    for err in backup_errors:
+                        self.log(err, "warning")
+                    self.had_errors = True
 
             if self.remove_systemd or self.remove_systemd is None:
                 self._cleanup_systemd_units()
@@ -437,7 +448,7 @@ class WrapperCleanup(LoggingMixin):
                 for pref in self.cleanup_items["preferences"]:
                     self._remove_file(pref, f"Removing preference: {pref}")
             if self.remove_data or self.remove_data is None:
-                for df in self.cleanup_items["data_files"]:
+                for df in self.cleanup_items["data_files"][:1000]:
                     self._remove_file(df, f"Removing data file: {df}")
             if (self.remove_prefs or self.remove_prefs is None) and (
                 self.remove_data or self.remove_data is None
@@ -571,7 +582,7 @@ class WrapperCleanup(LoggingMixin):
     def _cleanup_config_dir(self) -> None:
         """Remove configuration directory."""
         if self.cleanup_items["config_dir"]:
-            config_dir = self.cleanup_items["config_dir"][0]  # It's now a list
+            config_dir = self.cleanup_items["config_dir"][0]
             self._remove_directory(
                 config_dir,
                 f"Removing config directory: {config_dir}",
@@ -650,7 +661,7 @@ class WrapperCleanup(LoggingMixin):
 
     def cleanup_app(self, app_id: str) -> bool:
         """Clean up a specific app wrapper."""
-        from lib.python_utils import sanitize_id_to_name
+        from .python_utils import sanitize_id_to_name
 
         safe_name = sanitize_id_to_name(app_id)
         wrapper_path = self.bin_dir / safe_name

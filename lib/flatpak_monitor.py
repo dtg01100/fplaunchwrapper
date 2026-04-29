@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import importlib
 import logging
 import os
 import shutil
@@ -40,8 +41,8 @@ WatchdogObserver: Any
 WATCHDOG_AVAILABLE: bool
 
 try:
-    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler  # type: ignore[no-redef]
-    from watchdog.observers import Observer as WatchdogObserver  # type: ignore[no-redef]
+    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler
+    from watchdog.observers import Observer as WatchdogObserver
 
     WATCHDOG_AVAILABLE = True
 except (ImportError, AttributeError):
@@ -63,7 +64,6 @@ _BaseFSHandler: Any = (
 # Systemd notify support (optional) - import at runtime via importlib to avoid
 # static import resolution errors in environments where systemd Python
 # bindings aren't installed.
-import importlib  # noqa: E402
 
 try:
     _systemd_daemon = importlib.import_module("systemd.daemon")
@@ -169,10 +169,12 @@ class FlatpakEventHandler(_BaseFSHandler):
         self.last_event_time = current_time
 
         if self.callback:
-            with contextlib.suppress(Exception):
-                logger.debug("Flushing %d batched events", len(self.pending_events))
-                for event_type, path in self.pending_events:
+            logger.debug("Flushing %d batched events", len(self.pending_events))
+            for event_type, path in self.pending_events:
+                try:
                     self.callback(event_type, path)
+                except Exception as e:
+                    logger.error("Callback failed for %s %s: %s", event_type, path, e)
 
         self.pending_events = []
         self.batch_timer = None
@@ -483,9 +485,9 @@ def main(
     if args.callback:
         try:
             module_name, func_name = args.callback.split(":")
-            module = __import__(module_name)
+            module = importlib.import_module(module_name)
             callback_func = getattr(module, func_name)
-        except (ValueError, AttributeError) as e:
+        except (ValueError, ImportError, AttributeError) as e:
             logger.error("Failed to load callback %s: %s", args.callback, e)
             sys.exit(1)
 

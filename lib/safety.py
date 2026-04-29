@@ -101,8 +101,11 @@ try:
     sanitize_string = _sanitize_string
     validate_home_dir = _validate_home_dir
     UTILS_IMPORTED = True
-except ImportError:
-    pass
+except ImportError as e:
+    raise RuntimeError(
+        f"Failed to import python_utils: {e}. "
+        "Safety utilities are required for this module to function."
+    ) from e
 
 __all__ = [
     "ForbiddenNameError",
