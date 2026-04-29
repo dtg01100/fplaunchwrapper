@@ -70,12 +70,16 @@ jobs:
 
     - name: Install linting dependencies
       run: |
-        uv pip install --system ruff bandit
+        uv pip install --system ruff bandit mypy
 
     - name: Run ruff linter
       run: |
-        python3 -m ruff check lib/ tests/
+        python3 -m ruff check lib/ tests/ --output-format=concise
 
     - name: Run bandit security scan
       run: |
         python3 -m bandit -r lib/ -c .bandit.yml -ll
+
+    - name: Run mypy type checker
+      run: |
+        python3 -m mypy lib/ --ignore-missing-imports --follow-imports=skip

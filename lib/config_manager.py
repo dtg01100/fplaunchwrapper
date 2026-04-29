@@ -134,7 +134,7 @@ class WrapperConfig:
     log_level: str = "INFO"
     active_profile: str = "default"  # Current active profile
     permission_presets: dict[str, list[str]] = field(
-        default_factory=dict
+        default_factory=dict,
     )  # Custom permission presets
     schema_version: int = 1  # Schema version for migration purposes
     cron_interval: int = 6  # Cron interval in hours (default: 6 hours)
@@ -169,13 +169,13 @@ class EnhancedConfigManager:
         self.template_variables = {
             "HOME": str(Path.home()),
             "XDG_CONFIG_HOME": os.environ.get(
-                "XDG_CONFIG_HOME", str(Path.home() / ".config")
+                "XDG_CONFIG_HOME", str(Path.home() / ".config"),
             ),
             "XDG_DATA_HOME": os.environ.get(
-                "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+                "XDG_DATA_HOME", str(Path.home() / ".local" / "share"),
             ),
             "XDG_CACHE_HOME": os.environ.get(
-                "XDG_CACHE_HOME", str(Path.home() / ".cache")
+                "XDG_CACHE_HOME", str(Path.home() / ".cache"),
             ),
             "CONFIG_DIR": str(self.config_dir),
             "DATA_DIR": str(self.data_dir),
@@ -222,11 +222,8 @@ class EnhancedConfigManager:
             replacement = self.template_variables.get(var_name, match.group(0))
             return str(replacement) if replacement is not None else match.group(0)
 
-        # Handle ${VARIABLE} format
-        value = re.sub(r"\$\{([A-Za-z0-9_]+)\}", replace_variable, value)
-        # Handle $VARIABLE format
-        value = re.sub(r"\$([A-Za-z0-9_]+)", replace_variable, value)
-        return value
+        # Handle ${VARIABLE} and $VARIABLE formats in sequence
+        return re.sub(r"\$([A-Za-z0-9_]+|\{[A-Za-z0-9_]+\})", replace_variable, value)
 
     def _process_config_value(self, value: Any) -> Any:
         """Process configuration value with variable substitution.
@@ -241,9 +238,9 @@ class EnhancedConfigManager:
         """
         if isinstance(value, str):
             return self._substitute_variables(value)
-        elif isinstance(value, list):
+        if isinstance(value, list):
             return [self._process_config_value(v) for v in value]
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             return {k: self._process_config_value(v) for k, v in value.items()}
         return value
 
@@ -252,7 +249,7 @@ class EnhancedConfigManager:
         if self.config_file.exists():
             try:
                 if TOML_AVAILABLE:
-                    with open(self.config_file, "rb") as f:
+                    with Path(self.config_file).open("rb") as f:
                         data = tomli.load(f)
                     data = self._migrate_config(data)
                     self._parse_config_data(data)
@@ -260,15 +257,15 @@ class EnhancedConfigManager:
                     self._load_fallback_config()
             except OSError as e:
                 raise ConfigPermissionError(
-                    f"Cannot read configuration file {self.config_file}: {e}"
+                    f"Cannot read configuration file {self.config_file}: {e}",
                 ) from e
             except (ValueError, KeyError) as e:
                 raise ConfigParseError(
-                    f"Invalid configuration format in {self.config_file}: {e}"
+                    f"Invalid configuration format in {self.config_file}: {e}",
                 ) from e
             except ValidationError as e:
                 raise ConfigValidationError(
-                    f"Configuration validation failed for {self.config_file}: {e}"
+                    f"Configuration validation failed for {self.config_file}: {e}",
                 ) from e
         else:
             self._create_default_config()
@@ -278,15 +275,15 @@ class EnhancedConfigManager:
         try:
             if TOML_AVAILABLE:
                 data = self._serialize_config()
-                with open(self.config_file, "wb") as f:
+                with Path(self.config_file).open("wb") as f:
                     tomli_w.dump(data, f)
             else:
                 self._save_fallback_config()
             # Set restrictive permissions: owner read/write only
-            os.chmod(self.config_file, 0o600)
+            Path(self.config_file).chmod(0o600)
         except OSError as e:
             raise ConfigPermissionError(
-                f"Cannot write configuration file {self.config_file}: {e}"
+                f"Cannot write configuration file {self.config_file}: {e}",
             ) from e
         except (ValueError, TypeError) as e:
             raise ConfigParseError(f"Failed to serialize configuration: {e}") from e
@@ -338,13 +335,13 @@ class EnhancedConfigManager:
                 self._apply_validated_config(validated_config)
             except ValidationError as e:
                 raise ConfigValidationError(
-                    f"Configuration validation failed: {e}"
+                    f"Configuration validation failed: {e}",
                 ) from e
         else:
             self._apply_unvalidated_config(processed_data)
 
     def _apply_validated_config(
-        self, validated_config: "PydanticWrapperConfig"
+        self, validated_config: "PydanticWrapperConfig",
     ) -> None:
         """Apply validated configuration from Pydantic model."""
         self.config.bin_dir = validated_config.bin_dir
@@ -401,17 +398,17 @@ class EnhancedConfigManager:
         self.config.log_level = data.get("log_level", self.config.log_level)
         self.config.cron_interval = data.get("cron_interval", self.config.cron_interval)
         self.config.enable_notifications = data.get(
-            "enable_notifications", self.config.enable_notifications
+            "enable_notifications", self.config.enable_notifications,
         )
 
         self.config.hook_failure_mode_default = data.get(
-            "hook_failure_mode_default", "warn"
+            "hook_failure_mode_default", "warn",
         )
         self.config.pre_launch_failure_mode_default = data.get(
-            "pre_launch_failure_mode_default"
+            "pre_launch_failure_mode_default",
         )
         self.config.post_launch_failure_mode_default = data.get(
-            "post_launch_failure_mode_default"
+            "post_launch_failure_mode_default",
         )
 
         if "blocklist" in data:
@@ -423,7 +420,7 @@ class EnhancedConfigManager:
                 for preset_name, preset_data in presets_data.items():
                     if isinstance(preset_data, dict) and "permissions" in preset_data:
                         self.config.permission_presets[preset_name] = list(
-                            preset_data["permissions"]
+                            preset_data["permissions"],
                         )
                     elif isinstance(preset_data, list):
                         # Support direct list format
@@ -488,11 +485,11 @@ class EnhancedConfigManager:
             data["global_preferences"]["post_launch_script"] = gp.post_launch_script
         if gp.pre_launch_failure_mode:
             data["global_preferences"]["pre_launch_failure_mode"] = str(
-                gp.pre_launch_failure_mode
+                gp.pre_launch_failure_mode,
             )
         if gp.post_launch_failure_mode:
             data["global_preferences"]["post_launch_failure_mode"] = str(
-                gp.post_launch_failure_mode
+                gp.post_launch_failure_mode,
             )
 
         if self.config.app_preferences:
@@ -509,11 +506,11 @@ class EnhancedConfigManager:
                     app_data["post_launch_script"] = prefs.post_launch_script
                 if prefs.pre_launch_failure_mode:
                     app_data["pre_launch_failure_mode"] = str(
-                        prefs.pre_launch_failure_mode
+                        prefs.pre_launch_failure_mode,
                     )
                 if prefs.post_launch_failure_mode:
                     app_data["post_launch_failure_mode"] = str(
-                        prefs.post_launch_failure_mode
+                        prefs.post_launch_failure_mode,
                     )
                 data["app_preferences"][app_id] = app_data
 
@@ -524,7 +521,7 @@ class EnhancedConfigManager:
 
     def _create_default_config(self) -> None:
         """Create default configuration."""
-        self.config.bin_dir = os.path.expanduser("~/bin")
+        self.config.bin_dir = str(Path.home() / "bin")
         self.config.config_dir = str(self.config_dir)
         self.config.data_dir = str(self.data_dir)
         self.config.debug_mode = False
@@ -597,7 +594,7 @@ class EnhancedConfigManager:
             self.config_file.write_text("\n".join(lines) + "\n")
         except OSError as e:
             raise ConfigPermissionError(
-                f"Cannot write configuration file {self.config_file}: {e}"
+                f"Cannot write configuration file {self.config_file}: {e}",
             ) from e
 
     def get_app_preferences(self, app_id: str) -> AppPreferences:
@@ -635,7 +632,7 @@ class EnhancedConfigManager:
         return app_id in self.config.blocklist
 
     def get_effective_hook_failure_mode(
-        self, app_id: str, hook_type: str, runtime_override: str | None = None
+        self, app_id: str, hook_type: str, runtime_override: str | None = None,
     ) -> str:
         """Get the effective hook failure mode for an app.
 
@@ -847,7 +844,7 @@ class EnhancedConfigManager:
             if profile_file.exists():
                 try:
                     if TOML_AVAILABLE:
-                        with open(profile_file, "rb") as f:
+                        with Path(profile_file).open("rb") as f:
                             data = tomli.load(f)
                         self._parse_config_data(data)
                     return True
@@ -916,7 +913,7 @@ class EnhancedConfigManager:
                     content = profile_text
 
             if TOML_AVAILABLE and isinstance(content, dict):
-                with open(export_path, "wb") as f:
+                with Path(export_path).open("wb") as f:
                     tomli_w.dump(content, f)
             elif isinstance(content, dict):
                 # TOML library not available - serialize to simple key=value format
@@ -932,11 +929,11 @@ class EnhancedConfigManager:
                     lines.append(f"cron_interval={content['cron_interval']}")
                 if "enable_notifications" in content:
                     lines.append(
-                        f"enable_notifications={content['enable_notifications']}"
+                        f"enable_notifications={content['enable_notifications']}",
                     )
                 if "hook_failure_mode_default" in content:
                     lines.append(
-                        f"hook_failure_mode_default={content['hook_failure_mode_default']}"
+                        f"hook_failure_mode_default={content['hook_failure_mode_default']}",
                     )
                 export_path.write_text("\n".join(lines) + "\n")
             else:
@@ -1018,7 +1015,7 @@ if PYDANTIC_AVAILABLE:
                         ]
                         for char in dangerous_chars:
                             if char in arg and not arg.startswith(
-                                "--"
+                                "--",
                             ):  # Allow in flags like --filesystem
                                 msg = (
                                     f"Custom argument contains potentially dangerous character "
@@ -1043,7 +1040,7 @@ if PYDANTIC_AVAILABLE:
                     (
                         "XDG_DATA_HOME",
                         os.environ.get(
-                            "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+                            "XDG_DATA_HOME", str(Path.home() / ".local" / "share"),
                         ),
                     ),
                 ]:
@@ -1051,7 +1048,7 @@ if PYDANTIC_AVAILABLE:
                     substituted = substituted.replace(f"${var_name}", var_value)
 
                 # Check if script file exists after template substitution
-                if not os.path.isfile(substituted):
+                if not Path(substituted).is_file():
                     msg = f"Script file does not exist: {v} (resolved: {substituted})"
                     raise ValueError(msg)
 
@@ -1113,7 +1110,7 @@ if PYDANTIC_AVAILABLE:
         schema_version: int = Field(default=1, ge=0)
         cron_interval: int = Field(default=6, ge=1)  # Minimum 1 hour interval
         enable_notifications: bool = Field(
-            default=True
+            default=True,
         )  # Enable desktop notifications for update failures
         # Global hook failure mode defaults
         hook_failure_mode_default: str = Field(default="warn")
@@ -1135,7 +1132,7 @@ if PYDANTIC_AVAILABLE:
             return v
 
         @field_validator(
-            "pre_launch_failure_mode_default", "post_launch_failure_mode_default"
+            "pre_launch_failure_mode_default", "post_launch_failure_mode_default",
         )
         @classmethod
         def validate_optional_failure_mode(cls, v):

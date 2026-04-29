@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 """Focused edge case tests for project-specific python utilities."""
-
-from pathlib import Path
-
 import pytest
 
 try:
     from lib.python_utils import (
-        canonicalize_path_no_resolve,
         sanitize_id_to_name,
         sanitize_string,
-        validate_home_dir,
     )
 
     UTILS_AVAILABLE = True

@@ -17,12 +17,23 @@ mkdir -p "$BUILD_DIR"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
 TARBALL_DIR="${PACKAGE_NAME}-${VERSION}"
 mkdir -p "$BUILD_DIR/SOURCES/$TARBALL_DIR"
 
+# Copy scripts - use installed scripts if available
+copy_scripts() {
+    local dest="$1"
+    for script in fplaunch-generate fplaunch-cleanup fplaunch-setup-systemd; do
+        if command -v "$script" &> /dev/null; then
+            cp "$(which "$script")" "$dest/"
+            chmod +x "$dest/$script"
+        fi
+    done
+}
+
+copy_scripts "$BUILD_DIR/SOURCES/$TARBALL_DIR"
+
 cp -r \
-    fplaunch-generate \
-    fplaunch-setup-systemd \
-    fplaunch-cleanup \
-    manage_wrappers.sh \
     fplaunch_completion.bash \
+    fplaunch_completion.zsh \
+    fplaunch_completion.fish \
     docs/ \
     lib/ \
     examples/ \

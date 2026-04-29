@@ -107,6 +107,7 @@ fplaunch = ["*.py"]
 # Development tool configurations
 [tool.black]
 line-length = 100
+max_line_length = 100
 target-version = ['py38']
 include = '\.pyi?$'
 extend-exclude = '''
@@ -207,15 +208,48 @@ module = [
     "watchdog.*",
     "pydantic.*",
     "tomli.*",
-    "psutil.*",
     "click.*",
     "rich.*",
-    "structlog.*",
-    "validators.*",
-    "dbus.*",
-    "xvfbwrapper.*",
-    "fplaunch.*",
-    "safety",
 ]
 ignore_missing_imports = true
 
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+    ".venv",
+    ".tox",
+]
+
+[tool.ruff.lint]
+# Enable specific linter plugins with targeted rules
+# Using conservative defaults that catch real bugs without excessive noise
+select = [
+    "E",        # pycodestyle errors
+    "F",        # Pyflakes
+    "W",        # pycodestyle warnings
+    "B",        # flake8-bugbear
+    "A",        # flake8-builtins
+    "RET",      # flake8-return
+]
+ignore = [
+    "E501",     # line too long (handled by formatter)
+    "E203",     # whitespace before ':' (conflicts with black)
+    "E701",     # multiple statements on one line (sometimes needed)
+    "E702",     # multiple statements on one line (sometimes needed)
+    "E101",     # indentation contains mixed spaces and tabs (legacy issue)
+    "B008",     # do not perform function calls in argument defaults
+    "B017",     # Do not assert blind exceptions (tests often need this)
+    "B007",     # Loop control variable not used (intentional in some tests)
+    "B011",     # Do not assert False (tests use this pattern intentionally)
+    "RET501",   # explicitly return None (sometimes intentional)
+    "RET502",   # implicitly return None (sometimes intentional)
+    "RET505",   # unnecessary elif after return (sometimes clearer)
+    "F401",     # imported but unused (tests may import for availability)
+]

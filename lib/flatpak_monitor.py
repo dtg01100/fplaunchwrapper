@@ -27,6 +27,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "FlatpakEventHandler",
+    "FlatpakMonitor",
+    "start_flatpak_monitoring",
+]
+
 # Optional watchdog dependency - use Any to avoid static type conflicts
 
 WatchdogEventHandler: Any
@@ -129,7 +135,7 @@ class FlatpakEventHandler(_BaseFSHandler):
             self.batch_timer.cancel()
 
         self.batch_timer = threading.Timer(
-            self.batch_window, self._flush_pending_events
+            self.batch_window, self._flush_pending_events,
         )
         if self.batch_timer is not None:
             self.batch_timer.daemon = True
@@ -195,15 +201,15 @@ class FlatpakMonitor:
         """Get paths that should be monitored for Flatpak changes."""
         paths: list[str] = []
 
-        if os.path.exists("/var/lib/flatpak"):
+        if Path("/var/lib/flatpak").exists():
             paths.append("/var/lib/flatpak")
 
-        user_flatpak = os.path.expanduser("~/.local/share/flatpak")
-        if os.path.exists(user_flatpak):
+        user_flatpak = str(Path("~/.local/share/flatpak").expanduser())
+        if Path(user_flatpak).exists():
             paths.append(user_flatpak)
 
-        user_app_data = os.path.expanduser("~/.var/app")
-        if os.path.exists(user_app_data):
+        user_app_data = str(Path("~/.var/app").expanduser())
+        if Path(user_app_data).exists():
             paths.append(user_app_data)
 
         return paths
@@ -236,11 +242,11 @@ class FlatpakMonitor:
             self.observer = Observer() if Observer is not None else None
 
             event_handler = FlatpakEventHandler(
-                callback=self._on_flatpak_change, config=self.config
+                callback=self._on_flatpak_change, config=self.config,
             )
 
             for path in self.watch_paths:
-                if os.path.exists(path) and self.observer is not None:
+                if Path(path).exists() and self.observer is not None:
                     self.observer.schedule(event_handler, path, recursive=True)
                     logger.info("Watching path: %s", path)
 
@@ -328,7 +334,7 @@ class FlatpakMonitor:
                 [
                     "/usr/local/bin/fplaunch-generate",
                     "/usr/bin/fplaunch-generate",
-                ]
+                ],
             )
 
             # 3. Development mode: relative path from lib/
@@ -337,7 +343,7 @@ class FlatpakMonitor:
                 script_paths.insert(1, str(dev_script))
 
             for script_path in script_paths:
-                if os.path.exists(script_path) and os.access(script_path, os.X_OK):
+                if Path(script_path).exists() and os.access(script_path, os.X_OK):
                     logger.debug("Running wrapper regeneration script: %s", script_path)
                     result = subprocess.run(
                         [script_path],
@@ -353,13 +359,12 @@ class FlatpakMonitor:
                             str(result.stdout).strip(),
                         )
                         return True
-                    else:
-                        logger.error(
-                            "Wrapper regeneration failed with code %d: %s",
-                            result.returncode,
-                            result.stderr.strip(),
-                        )
-                        return False
+                    logger.error(
+                        "Wrapper regeneration failed with code %d: %s",
+                        result.returncode,
+                        result.stderr.strip(),
+                    )
+                    return False
 
             logger.error("fplaunch-generate script not found")
             return False
@@ -389,7 +394,7 @@ class FlatpakMonitor:
 
 
 def start_flatpak_monitoring(
-    callback: Any = None, daemon: bool = False, config: Optional[Dict[str, Any]] = None
+    callback: Any = None, daemon: bool = False, config: Optional[Dict[str, Any]] = None,
 ) -> FlatpakMonitor:
     """Start Flatpak monitoring (convenience function)."""
     monitor = FlatpakMonitor(callback=callback, config=config)
@@ -423,10 +428,10 @@ def main(
         return
 
     parser = argparse.ArgumentParser(
-        description="Flatpak installation monitoring service"
+        description="Flatpak installation monitoring service",
     )
     parser.add_argument(
-        "-d", "--daemon", action="store_true", help="Run in background as a daemon"
+        "-d", "--daemon", action="store_true", help="Run in background as a daemon",
     )
     parser.add_argument(
         "-c",
@@ -436,7 +441,7 @@ def main(
         help="Callback function to execute on events (format: module:function)",
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose logging"
+        "-v", "--verbose", action="store_true", help="Enable verbose logging",
     )
     parser.add_argument(
         "--batch-window",
@@ -494,7 +499,7 @@ def main(
 
     logger.info("Starting Flatpak monitor with configuration: %s", config)
     monitor = start_flatpak_monitoring(
-        callback=callback_func, daemon=args.daemon, config=config
+        callback=callback_func, daemon=args.daemon, config=config,
     )
 
     if not args.daemon and monitor:

@@ -50,7 +50,7 @@ except ImportError:
 
 
 _FLATPAK_ID_CACHE: dict[str, tuple[str, float]] = {}
-_CACHE_TTL_SECONDS = 300
+_CACHE_TTL_SECONDS = float(os.environ.get("FPWRAPPER_CACHE_TTL", 300))
 
 
 def _get_cached_flatpak_id(app_name: str) -> str | None:
@@ -145,7 +145,8 @@ class AppLauncher:
                     and self._is_path_safe(script_path, self.config_dir)
                 ):
                     scripts.append(script_path)
-        except Exception as e:
+        except (ImportError, OSError, Exception) as e:
+            # Catch config-related errors gracefully and fall back to default paths
             if self.verbose:
                 print(
                     f"Warning: Failed to load hook scripts from config: {e}",
@@ -181,7 +182,7 @@ class AppLauncher:
 
             config = create_config_manager()
             mode: str = config.get_effective_hook_failure_mode(
-                self.app_name or "", hook_type, self.hook_failure_mode
+                self.app_name or "", hook_type, self.hook_failure_mode,
             )
             return mode
         except (ImportError, OSError):
@@ -194,7 +195,7 @@ class AppLauncher:
         return "warn"
 
     def _run_hook_scripts(
-        self, hook_type: str, exit_code: int = 0, source: str = "flatpak"
+        self, hook_type: str, exit_code: int = 0, source: str = "flatpak",
     ) -> bool:
         """Run pre or post-launch hook scripts.
 
@@ -265,12 +266,11 @@ class AppLauncher:
                                 file=sys.stderr,
                             )
                             return False
-                        else:
-                            print(
-                                f"[fplaunchwrapper] Post-launch hook failed "
-                                f"(exit {result.returncode}): {script_path}",
-                                file=sys.stderr,
-                            )
+                        print(
+                            f"[fplaunchwrapper] Post-launch hook failed "
+                            f"(exit {result.returncode}): {script_path}",
+                            file=sys.stderr,
+                        )
                     elif failure_mode == "warn":
                         print(
                             f"[fplaunchwrapper] Warning: {hook_type}-launch hook failed "
@@ -292,11 +292,10 @@ class AppLauncher:
                             file=sys.stderr,
                         )
                         return False
-                    else:
-                        print(
-                            f"[fplaunchwrapper] Post-launch hook timed out: " f"{script_path}",
-                            file=sys.stderr,
-                        )
+                    print(
+                        f"[fplaunchwrapper] Post-launch hook timed out: {script_path}",
+                        file=sys.stderr,
+                    )
                 elif failure_mode == "warn":
                     print(
                         f"[fplaunchwrapper] Warning: {hook_type}-launch hook timed out "
@@ -304,7 +303,7 @@ class AppLauncher:
                         file=sys.stderr,
                     )
 
-            except Exception as e:
+            except OSError as e:
                 all_succeeded = False
 
                 if failure_mode == "abort":
@@ -315,15 +314,36 @@ class AppLauncher:
                             file=sys.stderr,
                         )
                         return False
-                    else:
-                        print(
-                            f"[fplaunchwrapper] Post-launch hook error " f"({script_path}): {e}",
-                            file=sys.stderr,
-                        )
+                    print(
+                        f"[fplaunchwrapper] Post-launch hook error ({script_path}): {e}",
+                        file=sys.stderr,
+                    )
                 elif failure_mode == "warn":
                     print(
                         f"[fplaunchwrapper] Warning: Error running {hook_type}-launch hook "
                         f"({script_path}): {e}",
+                        file=sys.stderr,
+                    )
+
+            except Exception as e:
+                # Catch unexpected errors (e.g., from mocks in tests)
+                all_succeeded = False
+                error_msg = f"Unexpected error running {hook_type}-launch hook ({script_path}): {e}"
+                if failure_mode == "abort":
+                    if hook_type == "pre":
+                        print(
+                            f"[fplaunchwrapper] Pre-launch hook error, aborting launch: "
+                            f"{error_msg}",
+                            file=sys.stderr,
+                        )
+                        return False
+                    print(
+                        f"[fplaunchwrapper] Post-launch hook error: {error_msg}",
+                        file=sys.stderr,
+                    )
+                elif failure_mode == "warn":
+                    print(
+                        f"[fplaunchwrapper] Warning: {error_msg}",
                         file=sys.stderr,
                     )
 
@@ -402,7 +422,7 @@ class AppLauncher:
         return source, wrapper_path
 
     def _check_preference_override(
-        self, wrapper_path: Path | None, source: str
+        self, wrapper_path: Path | None, source: str,
     ) -> tuple[Path | None, str]:
         """Check for preference file override.
 
@@ -511,8 +531,7 @@ class AppLauncher:
         Replaces dangerous shell metacharacters with underscores to prevent
         command injection attacks in hook script execution.
         """
-        sanitized = re.sub(r"[^a-zA-Z0-9_.-]", "_", app_name)
-        return sanitized
+        return re.sub(r"[^a-zA-Z0-9_.-]", "_", app_name)
 
     def _is_path_safe(self, path: Path, base_dir: Path) -> bool:
         """Check if a path is safely within a base directory.

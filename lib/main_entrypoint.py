@@ -9,7 +9,7 @@ import sys
 # so tests that patch `fplaunch.safety` can find them regardless of import
 # ordering or package installation details.
 try:
-    from . import safety  # noqa: F401
+    from . import safety
 except (ImportError, AttributeError):
 
     class _SafetyStub:
@@ -27,16 +27,14 @@ def main():
 
         if hasattr(cli, "main"):
             return cli.main()
-        else:
-            return 1
+        return 1
     except (ImportError, AttributeError):
         try:
             from lib import cli
 
             if hasattr(cli, "main"):
                 return cli.main()
-            else:
-                return 1
+            return 1
         except (ImportError, AttributeError):
             return 1
 

@@ -56,37 +56,25 @@ class FplaunchError(Exception):
 class ConfigError(FplaunchError):
     """Base exception for configuration-related errors."""
 
-    pass
-
 
 class ConfigFileNotFoundError(ConfigError):
     """Raised when a configuration file cannot be found."""
-
-    pass
 
 
 class ConfigParseError(ConfigError):
     """Raised when configuration parsing fails."""
 
-    pass
-
 
 class ConfigValidationError(ConfigError):
     """Raised when configuration validation fails."""
-
-    pass
 
 
 class ConfigMigrationError(ConfigError):
     """Raised when configuration migration fails."""
 
-    pass
-
 
 class ConfigPermissionError(ConfigError):
     """Raised when configuration file permissions are incorrect."""
-
-    pass
 
 
 # ============================================================================
@@ -96,8 +84,6 @@ class ConfigPermissionError(ConfigError):
 
 class WrapperError(FplaunchError):
     """Base exception for wrapper-related errors."""
-
-    pass
 
 
 class WrapperExistsError(WrapperError):
@@ -147,8 +133,6 @@ class WrapperGenerationError(WrapperError):
 class LaunchError(FplaunchError):
     """Base exception for application launch errors."""
 
-    pass
-
 
 class AppNotFoundError(LaunchError):
     """Raised when an application cannot be found (neither system nor Flatpak)."""
@@ -179,8 +163,6 @@ class LaunchBlockedError(LaunchError):
 
 class SafetyError(FplaunchError):
     """Base exception for safety-related errors."""
-
-    pass
 
 
 class ForbiddenNameError(SafetyError):
@@ -347,7 +329,7 @@ class ForbiddenNameError(SafetyError):
             "openssl",
             "gpg",
             "ssh-keygen",
-        ]
+        ],
     )
 
     def __init__(self, name: str, is_builtin: bool = True) -> None:

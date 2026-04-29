@@ -29,16 +29,12 @@ class _SafetyError(Exception):
     Raised when a safety check fails (input validation, path traversal, etc.)
     """
 
-    pass
-
 
 class _ForbiddenNameError(Exception):
     """Fallback forbidden name error for when .exceptions cannot be loaded.
 
     Raised when an app name or ID contains forbidden characters or patterns.
     """
-
-    pass
 
 
 class _PathTraversalError(Exception):
@@ -47,16 +43,12 @@ class _PathTraversalError(Exception):
     Raised when a path attempt escapes the allowed directory boundaries.
     """
 
-    pass
-
 
 class _InvalidFlatpakIdError(Exception):
     """Fallback invalid Flatpak ID error for when .exceptions cannot be loaded.
 
     Raised when a Flatpak ID does not match the expected format pattern.
     """
-
-    pass
 
 
 # Default to fallback values
@@ -113,19 +105,19 @@ except ImportError:
     pass
 
 __all__ = [
+    "ForbiddenNameError",
+    "InvalidFlatpakIdError",
+    "PathTraversalError",
+    "SafetyError",
     "canonicalize_path_no_resolve",
     "get_wrapper_id",
     "is_test_environment",
     "is_wrapper_file",
+    "safe_launch_check",
     "sanitize_id_to_name",
     "sanitize_string",
     "validate_flatpak_id",
     "validate_home_dir",
-    "safe_launch_check",
-    "SafetyError",
-    "ForbiddenNameError",
-    "PathTraversalError",
-    "InvalidFlatpakIdError",
 ]
 
 

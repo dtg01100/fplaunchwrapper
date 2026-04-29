@@ -78,7 +78,7 @@ class WrapperManager(LoggingMixin):
                                     "id": "unknown (legacy)",
                                 },
                             )
-                    except Exception as e:
+                    except OSError as e:
                         if self.verbose:
                             self.log(f"Warning: Could not read {item.name}: {e}", "warning")
 
@@ -161,7 +161,7 @@ class WrapperManager(LoggingMixin):
 
             self.log(f"Removed wrapper: {name}", "success")
             return True
-        except Exception as e:
+        except OSError as e:
             self.log(f"Failed to remove {name}: {e}", "error")
             return False
 
@@ -190,7 +190,7 @@ class WrapperManager(LoggingMixin):
             pref_file.write_text(preference)
             self.log(f"Preference for {name} set to {preference}", "success")
             return True
-        except Exception as e:
+        except OSError as e:
             self.log(f"Failed to set preference: {e}", "error")
             return False
 
@@ -294,7 +294,7 @@ class WrapperManager(LoggingMixin):
             aliases_file.write_text("\n".join(f"{k}:{v}" for k, v in sorted_aliases) + "\n")
             self.log(f"Created alias: {alias_name} -> {target}", "success")
             return True
-        except Exception as e:
+        except OSError as e:
             self.log(f"Failed to create alias: {e}", "error")
             return False
 
@@ -394,21 +394,21 @@ def main() -> int:
         manager = WrapperManager()
         manager.discover_features()
         return 0
-    elif args.command == "rm":
+    if args.command == "rm":
         manager = WrapperManager()
         if manager.remove_wrapper(args.name, force=args.force):
             return 0
         return 1
-    elif args.command == "cleanup":
+    if args.command == "cleanup":
         manager = WrapperManager()
         manager.list_wrappers()
         return 0
-    elif args.command == "set-pref":
+    if args.command == "set-pref":
         manager = WrapperManager()
         if manager.set_preference(args.name, args.preference):
             return 0
         return 1
-    elif args.command == "list" or args.command is None:
+    if args.command == "list" or args.command is None:
         manager = WrapperManager()
         manager.display_wrappers()
         return 0

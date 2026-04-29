@@ -48,7 +48,7 @@ def notify_send_available() -> bool:
     """Check if notify-send command is available on the system."""
     try:
         result = subprocess.run(
-            ["which", "notify-send"], check=False, capture_output=True, text=True
+            ["which", "notify-send"], check=False, capture_output=True, text=True,
         )
         return result.returncode == 0
     except Exception:
@@ -148,6 +148,6 @@ if __name__ == "__main__":
         elif sys.argv[1] == "test-failure":
             print("Testing failure notification...")
             success = send_update_failure_notification(
-                "Connection timeout when checking for updates"
+                "Connection timeout when checking for updates",
             )
             print(f"Failure notification sent successfully: {success}")

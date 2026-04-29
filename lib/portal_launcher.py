@@ -48,7 +48,7 @@ def launch_with_portal(
     """
     if not FLATPAK_SPAWN_PATH:
         raise FileNotFoundError(
-            "flatpak-spawn not found. Install flatpak-tools or use direct flatpak run."
+            "flatpak-spawn not found. Install flatpak-tools or use direct flatpak run.",
         )
 
     cmd = [FLATPAK_SPAWN_PATH, "--host", "flatpak", "run"]

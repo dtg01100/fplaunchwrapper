@@ -60,19 +60,29 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential devscripts debhelper rpm texinfo
     
+    - name: Install package in editable mode
+      run: |
+        pip install -e .
+
     - name: Build Debian package
       run: |
         ./packaging/build-deb.sh ${{ steps.version.outputs.VERSION }}
-    
+
     - name: Build RPM package
       run: |
         ./packaging/build-rpm.sh ${{ steps.version.outputs.VERSION }}
-    
+
     - name: Create tarball
       run: |
         VERSION=${{ steps.version.outputs.VERSION }}
         mkdir -p fplaunchwrapper-$VERSION
-        cp -r *.sh *.bash fplaunch-* lib/ examples/ README.md RELEASE_*.md fplaunchwrapper-$VERSION/
+        # Use the installed scripts or generate from package
+        for script in fplaunch-generate fplaunch-cleanup fplaunch-setup-systemd; do
+            if command -v $script &> /dev/null; then
+                cp $(which $script) fplaunchwrapper-$VERSION/
+            fi
+        done
+        cp -r lib/ examples/ README.md RELEASE_*.md CHANGES.md fplaunchwrapper-$VERSION/
         tar -czf fplaunchwrapper-$VERSION.tar.gz fplaunchwrapper-$VERSION
     
     - name: Generate release notes

@@ -91,13 +91,13 @@ class WrapperGenerator(LoggingMixin):
         return name.lower() in ForbiddenNameError.FORBIDDEN_NAMES
 
     def run_command(
-        self, cmd: list[str], description: str = ""
+        self, cmd: list[str], description: str = "",
     ) -> subprocess.CompletedProcess:
         """Run a command and return its output."""
         if description and not self.verbose:
             with console.status(f"[bold green]{description}..."):
                 result = subprocess.run(
-                    cmd, capture_output=True, text=True, check=False
+                    cmd, capture_output=True, text=True, check=False,
                 )
         else:
             if description and self.verbose:
@@ -112,7 +112,7 @@ class WrapperGenerator(LoggingMixin):
         flatpak_path = find_executable("flatpak")
         if flatpak_path is None:
             raise WrapperGenerationError(
-                "flatpak", "Failed to find flatpak executable in PATH"
+                "flatpak", "Failed to find flatpak executable in PATH",
             )
 
         result = self.run_command(
@@ -121,7 +121,7 @@ class WrapperGenerator(LoggingMixin):
         )
         if result.returncode != 0:
             raise WrapperGenerationError(
-                "flatpak", f"Failed to get Flatpak applications: {result.stderr}"
+                "flatpak", f"Failed to get Flatpak applications: {result.stderr}",
             )
 
         apps = []
@@ -162,7 +162,7 @@ class WrapperGenerator(LoggingMixin):
             content = blocklist_file.read_text()
             blocklisted = {line.strip() for line in content.split("\n") if line.strip()}
             return app_id in blocklisted
-        except Exception as e:
+        except OSError as e:
             self.log(f"Failed to read blocklist: {e}", "warning")
             return False
 
@@ -183,7 +183,7 @@ class WrapperGenerator(LoggingMixin):
 
         # 2. Development mode: templates/ at project root
         candidates.append(
-            Path(__file__).parent.parent / "templates" / "wrapper.template.sh"
+            Path(__file__).parent.parent / "templates" / "wrapper.template.sh",
         )
 
         # 3. Fallback: relative path (for running from project root)
@@ -212,7 +212,7 @@ class WrapperGenerator(LoggingMixin):
 
                 config = create_config_manager()
                 failure_mode = getattr(
-                    config.config, "hook_failure_mode_default", "warn"
+                    config.config, "hook_failure_mode_default", "warn",
                 )
 
                 # Fetch app preferences for baking script paths
@@ -234,7 +234,7 @@ class WrapperGenerator(LoggingMixin):
 
         except Exception as e:
             raise WrapperGenerationError(
-                app_id, f"Failed to read wrapper template: {e}"
+                app_id, f"Failed to read wrapper template: {e}",
             ) from e
 
     def generate_wrapper(self, app_id: str, flatpak_id: str | None = None) -> bool:
@@ -272,7 +272,7 @@ class WrapperGenerator(LoggingMixin):
             target_flatpak_id = sanitize_id_to_name(app_id)
             if not target_flatpak_id:
                 self.log(
-                    f"Skipping invalid app ID (unsanitizable): {app_id}", "warning"
+                    f"Skipping invalid app ID (unsanitizable): {app_id}", "warning",
                 )
                 return False
 
@@ -315,7 +315,7 @@ class WrapperGenerator(LoggingMixin):
                         content,
                         title=f"📄 {wrapper_name} wrapper script",
                         border_style="blue",
-                    )
+                    ),
                 )
                 print(content)
             return True
@@ -402,7 +402,7 @@ class WrapperGenerator(LoggingMixin):
                                 aliases_file.write_text(new_content)
                             else:
                                 aliases_file.unlink()
-                    except Exception as e:
+                    except OSError as e:
                         self.log(f"Failed to remove {item.name}: {e}", "warning")
 
         return removed_count
@@ -434,7 +434,7 @@ class WrapperGenerator(LoggingMixin):
             finally:
                 if not self.emit_mode:
                     release_lock(self.lock_name)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             self.log(f"Generation failed: {e}", "error")
             return 1
 
@@ -462,7 +462,7 @@ class WrapperGenerator(LoggingMixin):
             disable=not self.verbose and not sys.stdout.isatty(),
         ) as progress:
             task = progress.add_task(
-                "Generating wrappers...", total=len(installed_apps)
+                "Generating wrappers...", total=len(installed_apps),
             )
             for app_id in installed_apps:
                 # Track if this app had a wrapper before
@@ -490,7 +490,7 @@ def main() -> int:
     parser.add_argument(
         "bin_dir",
         nargs="?",
-        default=os.path.expanduser("~/bin"),
+        default=str(Path("~/bin").expanduser()),
         help="Directory to store wrappers (default: ~/bin)",
     )
 
@@ -515,7 +515,7 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    bin_dir = args.bin_dir or os.path.expanduser("~/bin")
+    bin_dir = args.bin_dir or str(Path("~/bin").expanduser())
 
     generator = WrapperGenerator(
         bin_dir=bin_dir,

@@ -13,13 +13,35 @@ echo "Building Debian package for $PACKAGE_NAME version $VERSION"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/${PACKAGE_NAME}_${VERSION}"
 
-# Copy source files
+# Copy source files - use installed scripts or generate stubs
+copy_scripts() {
+    local dest="$1"
+    # Copy installed fplaunch-* scripts if they exist (from editable install)
+    for script in fplaunch-generate fplaunch-cleanup fplaunch-setup-systemd; do
+        if command -v "$script" &> /dev/null; then
+            cp "$(which "$script")" "$dest/"
+            chmod +x "$dest/$script"
+        fi
+    done
+
+    # Also look in common locations
+    for script in fplaunch-generate fplaunch-cleanup fplaunch-setup-systemd; do
+        for path in "./$script" "$HOME/.local/bin/$script" "$HOME/.cargo/bin/$script"; do
+            if [ -f "$path" ] && [ ! -f "$dest/$script" ]; then
+                cp "$path" "$dest/"
+                chmod +x "$dest/$script"
+            fi
+        done
+    done
+}
+
+copy_scripts "$BUILD_DIR/${PACKAGE_NAME}_${VERSION}"
+
+# Copy other files
 cp -r \
-    fplaunch-generate \
-    fplaunch-setup-systemd \
-    fplaunch-cleanup \
-    manage_wrappers.sh \
     fplaunch_completion.bash \
+    fplaunch_completion.zsh \
+    fplaunch_completion.fish \
     lib/ \
     docs/ \
     examples/ \

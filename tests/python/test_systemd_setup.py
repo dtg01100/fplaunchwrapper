@@ -227,18 +227,18 @@ class TestAppServiceEnableDisable:
             # First enable the service to create files
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value = Mock(returncode=0)
-                setup.enable_app_service("firefox")
+                setup.enable_app_service("org.example.firefox")
 
             # Now disable it
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value = Mock(returncode=0)
-                result = setup.disable_app_service("firefox")
+                result = setup.disable_app_service("org.example.firefox")
 
             assert result is True
 
             # Verify files were removed
-            service_file = systemd_dir / "flatpak-wrapper-firefox.service"
-            timer_file = systemd_dir / "flatpak-wrapper-firefox.timer"
+            service_file = systemd_dir / "fplaunch-org.example.firefox.service"
+            timer_file = systemd_dir / "fplaunch-org.example.firefox.timer"
 
             assert not service_file.exists(), "Service file was not removed"
             assert not timer_file.exists(), "Timer file was not removed"

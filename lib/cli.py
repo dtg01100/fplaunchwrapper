@@ -7,13 +7,11 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 import click
 from rich.console import Console
 
-if TYPE_CHECKING:
-    pass
 
 try:
     from . import __version__ as FPLAUNCH_VERSION
@@ -46,11 +44,11 @@ def run_command(
     if description:
         with console.status(f"[bold green]{description}..."):
             result = subprocess.run(
-                cmd, check=False, capture_output=not show_output, text=True
+                cmd, check=False, capture_output=not show_output, text=True,
             )
     else:
         result = subprocess.run(
-            cmd, check=False, capture_output=not show_output, text=True
+            cmd, check=False, capture_output=not show_output, text=True,
         )
 
     return result
@@ -78,10 +76,10 @@ def use_python_backend() -> bool:
 @click.group(invoke_without_command=True)
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option(
-    "--emit", is_flag=True, help="Emit commands instead of executing (dry run)"
+    "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
 )
 @click.option(
-    "--emit-verbose", is_flag=True, help="Show detailed file contents in emit mode"
+    "--emit-verbose", is_flag=True, help="Show detailed file contents in emit mode",
 )
 @click.option(
     "--config-dir",
@@ -102,9 +100,7 @@ def cli(
     ctx.obj["verbose"] = bool(verbose)
     ctx.obj["emit"] = bool(emit)
     ctx.obj["emit_verbose"] = bool(emit_verbose)
-    ctx.obj["config_dir"] = config_dir or os.path.expanduser(
-        "~/.config/fplaunchwrapper"
-    )
+    ctx.obj["config_dir"] = config_dir or Path("~/.config/fplaunchwrapper").expanduser()
 
     # If no subcommand was invoked, show help
     if ctx.invoked_subcommand is None:
@@ -112,7 +108,7 @@ def cli(
             console.print("[bold blue]Verbose mode enabled[/bold blue]")
         if emit:
             console.print(
-                "[yellow]🧪 EMIT MODE: Commands will be shown but not executed[/yellow]"
+                "[yellow]🧪 EMIT MODE: Commands will be shown but not executed[/yellow]",
             )
         # Show the help message when no command is given
         click.echo(ctx.get_help())
@@ -122,14 +118,14 @@ def cli(
         console.print("[bold blue]Verbose mode enabled[/bold blue]")
     if emit:
         console.print(
-            "[yellow]🧪 EMIT MODE: Commands will be shown but not executed[/yellow]"
+            "[yellow]🧪 EMIT MODE: Commands will be shown but not executed[/yellow]",
         )
 
 
 @cli.command()
 @click.argument("bin_dir", required=False)
 @click.pass_context
-def generate(ctx: click.Context, bin_dir: str | None) -> int:
+def generate(ctx: click.Context, bin_dir: str | Path | None) -> int:
     """Generate Flatpak application wrappers.
 
     Creates wrapper scripts for all installed Flatpak applications,
@@ -143,7 +139,7 @@ def generate(ctx: click.Context, bin_dir: str | None) -> int:
       fplaunch -v generate           # Verbose output
     """
     if not bin_dir:
-        bin_dir = os.path.expanduser("~/bin")
+        bin_dir = Path("~/bin").expanduser()
 
     WrapperGenerator = import_handler.require("lib.generate", "WrapperGenerator")
     generator = WrapperGenerator(
@@ -180,9 +176,8 @@ def list_wrappers(ctx: click.Context, app_name: str | None, show_all: bool) -> i
     if app_name:
         success = manager.show_info(app_name)
         return 0 if success else 1
-    else:
-        manager.display_wrappers()
-        return 0
+    manager.display_wrappers()
+    return 0
 
 
 @cli.command()
@@ -199,13 +194,13 @@ def install(ctx: click.Context, app_name: str, emit: bool) -> int:
     )
     if result.returncode != 0:
         console_err.print(
-            f"[red]Error:[/red] Failed to install Flatpak app: {result.stderr}"
+            f"[red]Error:[/red] Failed to install Flatpak app: {result.stderr}",
         )
         return result.returncode
 
     WrapperGenerator = import_handler.require("lib.generate", "WrapperGenerator")
     generator = WrapperGenerator(
-        bin_dir=os.path.expanduser("~/bin"),
+        bin_dir=Path("~/bin").expanduser(),
         config_dir=ctx.obj.get("config_dir"),
         verbose=ctx.obj.get("verbose", False),
         emit_mode=emit_mode,
@@ -241,17 +236,17 @@ def uninstall(ctx: click.Context, app_name: str, remove_data: bool, emit: bool) 
         cmd.append("--delete-data")
     cmd.append(app_name)
     result = run_command(
-        cmd, f"Uninstalling Flatpak app: {app_name}", emit_mode=emit_mode
+        cmd, f"Uninstalling Flatpak app: {app_name}", emit_mode=emit_mode,
     )
     if result.returncode != 0:
         console_err.print(
-            f"[red]Error:[/red] Failed to uninstall Flatpak app: {result.stderr}"
+            f"[red]Error:[/red] Failed to uninstall Flatpak app: {result.stderr}",
         )
         return result.returncode
 
     console.print(
         f"[green]✓[/green] Uninstalled {app_name} "
-        f"(wrapper: {'removed' if wrapper_removed else 'not found'})"
+        f"(wrapper: {'removed' if wrapper_removed else 'not found'})",
     )
 
     return 0
@@ -279,7 +274,7 @@ def uninstall(ctx: click.Context, app_name: str, remove_data: bool, emit: bool) 
 )
 @click.pass_context
 def launch(
-    ctx, app_name, hook_failure, abort_on_hook_failure, ignore_hook_failure
+    ctx, app_name, hook_failure, abort_on_hook_failure, ignore_hook_failure,
 ) -> int:
     """Launch a Flatpak application via its wrapper.
 
@@ -315,9 +310,8 @@ def remove(ctx: click.Context, name: str, force: bool) -> int:
     if manager.remove_wrapper(name, force=force):
         console.print(f"[green]✓[/green] Removed wrapper: {name}")
         return 0
-    else:
-        console_err.print(f"[red]Error:[/red] Failed to remove wrapper: {name}")
-        return 1
+    console_err.print(f"[red]Error:[/red] Failed to remove wrapper: {name}")
+    return 1
 
 
 @cli.command()
@@ -371,7 +365,7 @@ def monitor(ctx: click.Context, daemon: bool) -> int:
     # In emit mode we should not start background threads or block the CLI.
     if ctx.obj.get("emit", False):
         console.print(
-            "[yellow]EMIT: Would start Flatpak monitor (no-op in emit mode)[/yellow]"
+            "[yellow]EMIT: Would start Flatpak monitor (no-op in emit mode)[/yellow]",
         )
         return 0
 
@@ -427,13 +421,12 @@ def rm(ctx: click.Context, name: str, force: bool) -> int:
     if manager.remove_wrapper(name, force=force):
         console.print(f"[green]✓[/green] Removed wrapper: {name}")
         return 0
-    else:
-        console_err.print(f"[red]Error:[/red] Failed to remove wrapper: {name}")
-        return 1
+    console_err.print(f"[red]Error:[/red] Failed to remove wrapper: {name}")
+    return 1
 
 
 def _run_systemd_setup(
-    ctx, bin_dir: str | None = None, wrapper_script: str | None = None
+    ctx, bin_dir: str | None = None, wrapper_script: str | None = None,
 ) -> int:
     """Underlying systemd setup implementation.
 
@@ -475,7 +468,7 @@ def _run_systemd_setup(
 @click.argument("wrapper_script", required=False)
 @click.pass_context
 def systemd_setup_cmd(
-    ctx: click.Context, bin_dir: str | None, wrapper_script: str | None
+    ctx: click.Context, bin_dir: str | None, wrapper_script: str | None,
 ) -> int:
     """Install/enable systemd units for automatic wrapper generation."""
     return _run_systemd_setup(ctx, bin_dir, wrapper_script)
@@ -557,7 +550,7 @@ def systemd_start(ctx: click.Context) -> int:
         console.print("[yellow]EMIT: Would start systemd service[/yellow]")
         return 0
     result = subprocess.run(
-        ["systemctl", "--user", "start", "fplaunch-wrapper.timer"], check=False
+        ["systemctl", "--user", "start", "fplaunch-wrapper.timer"], check=False,
     )
     return 0 if result.returncode == 0 else 1
 
@@ -573,7 +566,7 @@ def systemd_stop(ctx: click.Context) -> int:
         console.print("[yellow]EMIT: Would stop systemd service[/yellow]")
         return 0
     result = subprocess.run(
-        ["systemctl", "--user", "stop", "fplaunch-wrapper.timer"], check=False
+        ["systemctl", "--user", "stop", "fplaunch-wrapper.timer"], check=False,
     )
     return 0 if result.returncode == 0 else 1
 
@@ -589,7 +582,7 @@ def systemd_restart(ctx: click.Context) -> int:
         console.print("[yellow]EMIT: Would restart systemd service[/yellow]")
         return 0
     result = subprocess.run(
-        ["systemctl", "--user", "restart", "fplaunch-wrapper.timer"], check=False
+        ["systemctl", "--user", "restart", "fplaunch-wrapper.timer"], check=False,
     )
     return 0 if result.returncode == 0 else 1
 
@@ -650,7 +643,7 @@ def systemd_list(ctx) -> int:
 
 @systemd_group.command(name="test")
 @click.option(
-    "--emit", is_flag=True, help="Emit commands instead of executing (dry run)"
+    "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
 )
 @click.pass_context
 def systemd_test(ctx, emit) -> int:
@@ -732,7 +725,7 @@ def profiles_group(ctx: click.Context) -> None:
 def profiles_list(ctx: click.Context) -> int:
     """List available profiles."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     profiles = cfg.list_profiles()
@@ -752,18 +745,17 @@ def profiles_list(ctx: click.Context) -> int:
 def profiles_create(ctx, profile_name, copy_from) -> int:
     """Create a new profile."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     if cfg.create_profile(profile_name, copy_from):
         console.print(f"[green]✓[/green] Created profile: {profile_name}")
         return 0
-    else:
-        console_err.print(
-            f"[red]Error:[/red] Could not create profile '{profile_name}' "
-            "(may already exist or invalid name)"
-        )
-        return 1
+    console_err.print(
+        f"[red]Error:[/red] Could not create profile '{profile_name}' "
+        "(may already exist or invalid name)",
+    )
+    return 1
 
 
 @profiles_group.command(name="switch")
@@ -772,18 +764,17 @@ def profiles_create(ctx, profile_name, copy_from) -> int:
 def profiles_switch(ctx, profile_name) -> int:
     """Switch to a profile."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     if cfg.switch_profile(profile_name):
         console.print(f"[green]✓[/green] Switched to profile: {profile_name}")
         return 0
-    else:
-        console_err.print(
-            f"[red]Error:[/red] Could not switch to profile '{profile_name}' "
-            "(profile may not exist)"
-        )
-        return 1
+    console_err.print(
+        f"[red]Error:[/red] Could not switch to profile '{profile_name}' "
+        "(profile may not exist)",
+    )
+    return 1
 
 
 @profiles_group.command(name="current")
@@ -791,7 +782,7 @@ def profiles_switch(ctx, profile_name) -> int:
 def profiles_current(ctx) -> int:
     """Show current profile."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     active = cfg.get_active_profile()
@@ -806,20 +797,19 @@ def profiles_current(ctx) -> int:
 def profiles_export(ctx, profile_name, output_file) -> int:
     """Export a profile to a file."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     export_path = Path(output_file) if output_file else Path(f"{profile_name}.toml")
     if cfg.export_profile(profile_name, export_path):
         console.print(
-            f"[green]✓[/green] Exported profile '{profile_name}' to {export_path}"
+            f"[green]✓[/green] Exported profile '{profile_name}' to {export_path}",
         )
         return 0
-    else:
-        console_err.print(
-            f"[red]Error:[/red] Could not export profile '{profile_name}'"
-        )
-        return 1
+    console_err.print(
+        f"[red]Error:[/red] Could not export profile '{profile_name}'",
+    )
+    return 1
 
 
 @profiles_group.command(name="import")
@@ -829,7 +819,7 @@ def profiles_export(ctx, profile_name, output_file) -> int:
 def profiles_import(ctx, input_file, profile_name) -> int:
     """Import a profile from a file."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     import_path = Path(input_file)
@@ -837,11 +827,10 @@ def profiles_import(ctx, input_file, profile_name) -> int:
     if cfg.import_profile(name, import_path):
         console.print(f"[green]✓[/green] Imported profile '{name}' from {import_path}")
         return 0
-    else:
-        console_err.print(
-            f"[red]Error:[/red] Could not import profile from '{input_file}'"
-        )
-        return 1
+    console_err.print(
+        f"[red]Error:[/red] Could not import profile from '{input_file}'",
+    )
+    return 1
 
 
 @cli.group(name="presets", invoke_without_command=True)
@@ -857,7 +846,7 @@ def presets_group(ctx) -> None:
 def presets_list(ctx) -> int:
     """List available permission presets."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     presets = cfg.list_permission_presets()
@@ -879,7 +868,7 @@ def presets_get(ctx, preset_name) -> int:
         raise click.UsageError("PRESET_NAME is required")
 
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     permissions = cfg.get_permission_preset(preset_name)
@@ -904,7 +893,7 @@ def presets_add(ctx, preset_name, permission) -> int:
         return 1
 
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     cfg.add_permission_preset(preset_name, list(permission))
@@ -918,15 +907,14 @@ def presets_add(ctx, preset_name, permission) -> int:
 def presets_remove(ctx, preset_name) -> int:
     """Remove a permission preset."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     if cfg.remove_permission_preset(preset_name):
         console.print(f"[green]✓[/green] Removed preset: {preset_name}")
         return 0
-    else:
-        console_err.print(f"[red]Error:[/red] Preset '{preset_name}' not found")
-        return 1
+    console_err.print(f"[red]Error:[/red] Preset '{preset_name}' not found")
+    return 1
 
 
 @cli.command(name="files")
@@ -1030,7 +1018,7 @@ def manifest(ctx, app_name, emit) -> int:
         )
         if result.returncode != 0:
             console_err.print(
-                f"[red]Error:[/red] Failed to get manifest for {app_name}"
+                f"[red]Error:[/red] Failed to get manifest for {app_name}",
             )
             raise click.exceptions.Exit(code=1)
         return 0
@@ -1055,7 +1043,7 @@ def config(ctx, action, value) -> int:
       cron-interval Get or set cron interval (in hours)
     """
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager"
+        "lib.config_manager", "create_config_manager",
     )
     cfg = create_config_manager()
     if not action or action == "show":
@@ -1066,7 +1054,7 @@ def config(ctx, action, value) -> int:
             console.print(content)
         else:
             console.print(
-                f"[yellow]No configuration file found at {config_path}[/yellow]"
+                f"[yellow]No configuration file found at {config_path}[/yellow]",
             )
             console.print("Run 'fplaunch config init' to create one")
         return 0
@@ -1086,7 +1074,7 @@ def config(ctx, action, value) -> int:
                 return 1
             cfg.set_cron_interval(interval)
             console.print(
-                f"[green]✓[/green] Cron interval set to [bold]{interval}[/bold] hours"
+                f"[green]✓[/green] Cron interval set to [bold]{interval}[/bold] hours",
             )
         return 0
     console_err.print(f"[red]Error:[/red] Unknown action: {action}")

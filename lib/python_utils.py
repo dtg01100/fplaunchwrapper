@@ -22,9 +22,10 @@ except ImportError:
     from lib.paths import get_default_config_dir, get_lock_dir, ensure_dir
 
 # Constants for file operations
-MAX_FILE_SIZE = 100_000  # 100KB limit for config files
-BUFFER_SIZE = 8192
-DEFAULT_LOCK_TIMEOUT = 30.0
+# Can be overridden via environment variables for testing/customization
+MAX_FILE_SIZE = int(os.environ.get("FPWRAPPER_MAX_FILE_SIZE", 100_000))  # 100KB limit
+BUFFER_SIZE = int(os.environ.get("FPWRAPPER_BUFFER_SIZE", 8192))
+DEFAULT_LOCK_TIMEOUT = float(os.environ.get("FPWRAPPER_LOCK_TIMEOUT", 30.0))
 
 # Regex pattern for sanitizing strings - matches special characters that need escaping
 _SANITIZE_PATTERN = re.compile(r'([\\"\'$`();&|<>\t\n\r])')
@@ -46,12 +47,12 @@ def canonicalize_path_no_resolve(path: str | Path) -> Path | None:
         path_str = str(path)
 
         if path_str.startswith("~"):
-            path_str = os.path.expanduser(path_str)
+            path_str = str(Path(path_str).expanduser())
 
-        if not os.path.isabs(path_str):
-            path_str = os.path.abspath(path_str)
+        if not Path(path_str).is_absolute():
+            path_str = str(Path(path_str).resolve())
 
-        return Path(os.path.normpath(path_str))
+        return Path(Path(path_str).resolve())
 
     except (TypeError, ValueError, OSError):
         return None
@@ -67,16 +68,16 @@ def validate_home_dir(dir_path: str | Path) -> str | None:
         dir_str = str(dir_path)
 
         if dir_str.startswith("~"):
-            dir_str = os.path.expanduser(dir_str)
+            dir_str = str(Path(dir_str).expanduser())
 
-        abs_dir = os.path.abspath(dir_str)
+        abs_dir = str(Path(dir_str).resolve())
 
-        if os.path.islink(abs_dir):
-            abs_dir = os.path.realpath(abs_dir)
+        if Path(abs_dir).is_symlink():
+            abs_dir = str(Path(abs_dir).resolve())
 
-        home = os.path.expanduser("~")
+        home = str(Path.home())
         if abs_dir == home or abs_dir.startswith(home + os.sep):
-            return abs_dir
+            return str(abs_dir)
 
         return None
     except (TypeError, ValueError, OSError):
@@ -86,18 +87,18 @@ def validate_home_dir(dir_path: str | Path) -> str | None:
 def is_wrapper_file(file_path: str | Path) -> bool:
     """Check if a file is a valid wrapper script."""
     try:
-        if not os.path.isfile(file_path):
+        if not Path(file_path).is_file():
             return False
         if not os.access(file_path, os.R_OK):
             return False
-        if os.path.islink(file_path):
+        if Path(file_path).is_symlink():
             return False
 
-        size = os.path.getsize(file_path)
+        size = Path(file_path).stat().st_size
         if size > MAX_FILE_SIZE:
             return False
 
-        with open(file_path, encoding="utf-8", errors="ignore") as f:
+        with Path(file_path).open(encoding="utf-8", errors="ignore") as f:
             content = f.read(min(BUFFER_SIZE, size))
 
         if any(ord(c) < 32 and c not in "\t\n\r" for c in content):
@@ -129,7 +130,7 @@ def get_wrapper_id(file_path: str | Path) -> str | None:
     Returns the ID string when found, otherwise returns None.
     """
     try:
-        with open(file_path, encoding="utf-8", errors="ignore") as f:
+        with Path(file_path).open(encoding="utf-8", errors="ignore") as f:
             content = f.read(BUFFER_SIZE)
 
         id_match = re.search(r'^ID="([^"]*)"', content, re.MULTILINE)
@@ -148,7 +149,7 @@ def get_wrapper_id(file_path: str | Path) -> str | None:
 def sanitize_id_to_name(id_str: str) -> str:
     """Sanitize a Flatpak ID to a safe name."""
     try:
-        name = id_str.split(".")[-1].lower()
+        name = id_str.rsplit(".", maxsplit=1)[-1].lower()
 
         try:
             name = unicodedata.normalize("NFKD", name)
@@ -181,18 +182,18 @@ def find_executable(cmd: str) -> str | None:
     """Find an executable in PATH with security checks."""
     try:
         if "/" in cmd:
-            if os.path.isfile(cmd) and os.access(cmd, os.X_OK):
+            if Path(cmd).is_file() and os.access(cmd, os.X_OK):
                 # Resolve symlinks to prevent symlink attacks
-                return os.path.realpath(cmd)
+                return str(Path(cmd).resolve())
             return None
 
         for path_dir in os.getenv("PATH", "").split(":"):
             if not path_dir:
                 continue
-            exe_path = os.path.join(path_dir, cmd)
-            if os.path.isfile(exe_path) and os.access(exe_path, os.X_OK):
+            exe_path = str(Path(path_dir) / cmd)
+            if Path(exe_path).is_file() and os.access(exe_path, os.X_OK):
                 # Resolve symlinks to prevent symlink attacks
-                return os.path.realpath(exe_path)
+                return str(Path(exe_path).resolve())
 
         return None
     except (TypeError, OSError, AttributeError):
@@ -200,14 +201,14 @@ def find_executable(cmd: str) -> str | None:
 
 
 def safe_mktemp(
-    template: str = "tmp.XXXXXX", dir_param: str | None = None
+    template: str = "tmp.XXXXXX", dir_param: str | None = None,
 ) -> str | None:
     """Create a secure temporary file.
 
     Returns the created temporary file path, or None on failure.
     """
     try:
-        if dir_param and os.path.isdir(dir_param):
+        if dir_param and Path(dir_param).is_dir():
             tdir = dir_param
         else:
             tdir = tempfile.gettempdir()
@@ -228,7 +229,7 @@ def safe_mktemp(
 
 
 def acquire_lock(
-    lock_name: str = "fplaunch", timeout_seconds: float = DEFAULT_LOCK_TIMEOUT
+    lock_name: str = "fplaunch", timeout_seconds: float = DEFAULT_LOCK_TIMEOUT,
 ) -> bool | None:
     """Acquire a file-based lock with timeout.
 
@@ -258,6 +259,9 @@ def acquire_lock(
                 pidfile.write_text(str(os.getpid()))
                 return True
             except FileExistsError:
+                time.sleep(0.1)
+                continue
+            except OSError:
                 time.sleep(0.1)
                 continue
 
@@ -326,11 +330,11 @@ def release_lock(lock_name: str = "fplaunch") -> bool | None:
 def get_temp_dir() -> str:
     """Get the best available temporary directory."""
     temp_dir = tempfile.gettempdir()
-    if temp_dir and os.path.isdir(temp_dir) and os.access(temp_dir, os.W_OK):
+    if temp_dir and Path(temp_dir).is_dir() and os.access(temp_dir, os.W_OK):
         return temp_dir
 
-    fallback_cache_dir = os.path.join(os.path.expanduser("~"), ".cache")
-    if os.path.isdir(fallback_cache_dir) and os.access(fallback_cache_dir, os.W_OK):
+    fallback_cache_dir = str(Path.home() / ".cache")
+    if Path(fallback_cache_dir).is_dir() and os.access(fallback_cache_dir, os.W_OK):
         return fallback_cache_dir
 
     return tempfile.gettempdir()

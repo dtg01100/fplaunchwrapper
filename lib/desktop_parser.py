@@ -11,6 +11,13 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 
+__all__ = [
+    "DesktopEntry",
+    "find_desktop_files",
+    "parse_flatpak_desktop_files",
+    "get_app_metadata",
+]
+
 
 class DesktopEntry:
     """Represents a parsed .desktop file entry."""
@@ -46,7 +53,7 @@ class DesktopEntry:
                 self._entries[current_section][key.strip()] = value.strip()
 
     def get(
-        self, key: str, section: str = "Desktop Entry", default: Optional[str] = None
+        self, key: str, section: str = "Desktop Entry", default: Optional[str] = None,
     ) -> Optional[str]:
         """Get a value from the desktop entry.
 
@@ -61,7 +68,7 @@ class DesktopEntry:
         return self._entries.get(section, {}).get(key, default)
 
     def get_localized(
-        self, key: str, section: str = "Desktop Entry", locale: Optional[str] = None
+        self, key: str, section: str = "Desktop Entry", locale: Optional[str] = None,
     ) -> Optional[str]:
         """Get a localized value from the desktop entry.
 
@@ -206,7 +213,7 @@ def parse_flatpak_desktop_files(
 
 
 def get_app_metadata(
-    flatpak_id: str, desktop_entries: Optional[dict[str, DesktopEntry]] = None
+    flatpak_id: str, desktop_entries: Optional[dict[str, DesktopEntry]] = None,
 ) -> dict[str, Any]:
     """Get metadata for a Flatpak app.
 
@@ -244,7 +251,7 @@ def get_app_metadata(
 
     # Fallback: construct from ID
     return {
-        "name": flatpak_id.split(".")[-1].replace("-", " ").title(),
+        "name": flatpak_id.rsplit(".", maxsplit=1)[-1].replace("-", " ").title(),
         "comment": None,
         "icon": flatpak_id,
         "categories": [],

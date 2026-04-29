@@ -46,7 +46,7 @@ class ImportErrorHandler:
         except ImportError as e:
             desc = f"{module}.{name}" if name else module
             self.console_err.print(f"[red]Error:[/red] Failed to import {desc}: {e}")
-            raise SystemExit(1)
+            raise SystemExit(1) from e
 
 
 def safe_import(module: str, name: Optional[str] = None, default: Any = None) -> Any:

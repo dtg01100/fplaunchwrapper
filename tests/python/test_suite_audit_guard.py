@@ -34,7 +34,8 @@ def test_keeper_suite_anchor_name_tripwire_matches_textually():
         contents = (test_dir / filename).read_text(encoding="utf-8")
         for test_name in test_names:
             assert f"def {test_name}" in contents, (
-                f"lightweight textual tripwire expected {filename} to retain anchor name {test_name}"
+                "lightweight textual tripwire expected "
+                f"{filename} to retain anchor name {test_name}"
             )
 
 

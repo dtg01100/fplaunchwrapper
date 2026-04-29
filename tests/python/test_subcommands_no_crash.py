@@ -155,16 +155,23 @@ class TestSubcommandImportErrors:
         def fake_require(module_name, symbol_name):
             return required_symbols[(module_name, symbol_name)]
 
-        with patch.object(cli_module.import_handler, "require", side_effect=fake_require) as mock_require, patch.object(
+        mock_req = patch.object(
+            cli_module.import_handler, "require", side_effect=fake_require
+        )
+        mock_run = patch.object(
             cli_module,
             "run_command",
-            return_value=subprocess.CompletedProcess(args=["flatpak"], returncode=0, stdout="", stderr=""),
-        ):
+            return_value=subprocess.CompletedProcess(
+                args=["flatpak"], returncode=0, stdout="", stderr=""
+            ),
+        )
+        with mock_req as mock_require, mock_run:
             for argv, expected in commands:
                 result = runner.invoke(cli, argv, standalone_mode=False)
                 assert result.return_value == 0, f"{argv!r} did not dispatch cleanly"
 
-        assert mock_require.call_args_list == [call(*expected) for _, expected in commands]
+        expected_calls = [call(*exp) for _, exp in commands]
+        assert mock_require.call_args_list == expected_calls
 
 
 if __name__ == "__main__":

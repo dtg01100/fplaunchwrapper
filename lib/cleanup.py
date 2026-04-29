@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -402,7 +403,7 @@ class WrapperCleanup(LoggingMixin):
             self.had_errors = False
             if self.create_backup and not self.dry_run:
                 backup_root = self.backup_dir or Path(
-                    tempfile.mkdtemp(prefix="fp_cleanup_")
+                    tempfile.mkdtemp(prefix="fp_cleanup_"),
                 )
                 with contextlib.suppress(Exception):
                     for f in self.cleanup_items["wrappers"]:
@@ -707,7 +708,7 @@ This removes:
     parser.add_argument("--config-dir", help="Override configuration directory")
 
     parser.add_argument(
-        "--force", action="store_true", help="Force non-interactive cleanup"
+        "--force", action="store_true", help="Force non-interactive cleanup",
     )
 
     try:

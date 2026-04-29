@@ -98,3 +98,7 @@ docs/archive/
 !run_tests.py
 !test_*.py
 files/
+
+# CLIO (managed automatically)
+.clio/*
+!.clio/instructions.md

@@ -52,11 +52,11 @@ class SystemdSetup(LoggingMixin):
         common_paths = [
             "/usr/bin/fplaunch-generate",
             "/usr/local/bin/fplaunch-generate",
-            os.path.expanduser("~/bin/fplaunch-generate"),
-            os.path.expanduser("~/.local/bin/fplaunch-generate"),
+            str(Path("~/bin/fplaunch-generate").expanduser()),
+            str(Path("~/.local/bin/fplaunch-generate").expanduser()),
         ]
         for p in common_paths:
-            if os.path.isfile(p) and os.access(p, os.X_OK):
+            if Path(p).is_file() and os.access(p, os.X_OK):
                 return p
 
         # Default to name only if not found
@@ -67,10 +67,10 @@ class SystemdSetup(LoggingMixin):
         # Common locations
         paths = [
             "/var/lib/flatpak/exports/bin",
-            os.path.expanduser("~/.local/share/flatpak/exports/bin"),
+            str(Path("~/.local/share/flatpak/exports/bin").expanduser()),
         ]
         for p in paths:
-            if os.path.isdir(p):
+            if Path(p).is_dir():
                 return p
         return ""
 
@@ -487,7 +487,7 @@ ExecStart=flatpak run {exec_app}
 
 def get_systemd_unit_dir() -> Path:
     """Get the directory for user systemd units."""
-    xdg_config_home = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
     return Path(xdg_config_home) / "systemd" / "user"
 
 
