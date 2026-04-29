@@ -487,7 +487,11 @@ ExecStart=flatpak run {exec_app}
 
 def get_systemd_unit_dir() -> Path:
     """Get the directory for user systemd units."""
-    xdg_config_home = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
+    xdg_config = os.environ.get("XDG_CONFIG_HOME", "")
+    if xdg_config:
+        xdg_config_home = xdg_config
+    else:
+        xdg_config_home = str(Path.home() / ".config")
     return Path(xdg_config_home) / "systemd" / "user"
 
 
