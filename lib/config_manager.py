@@ -63,9 +63,7 @@ except ImportError:
 
 
 # TOML support is optional. Use Any for static analysis.
-tomli: Any
-tomli_w: Any
-TOML_AVAILABLE: bool
+TOML_AVAILABLE = False  # type: bool
 
 try:
     import tomli

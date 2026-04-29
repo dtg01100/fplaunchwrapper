@@ -35,8 +35,6 @@ __all__ = [
 
 # Optional watchdog dependency - use Any to avoid static type conflicts
 
-WatchdogEventHandler: Any
-WatchdogObserver: Any
 WATCHDOG_AVAILABLE: bool
 
 try:

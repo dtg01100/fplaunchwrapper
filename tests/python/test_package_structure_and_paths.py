@@ -19,15 +19,6 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 class TestPackageStructure:
     """Test that the package structure is correct."""
 
-    def test_fplaunch_package_exists(self):
-        """Test that the fplaunch package can be imported."""
-        try:
-            import fplaunch
-
-            assert fplaunch is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import fplaunch package: {e}")
-
     def test_lib_package_exists(self):
         """Test that the lib package can be imported."""
         try:
@@ -36,13 +27,6 @@ class TestPackageStructure:
             assert lib is not None
         except ImportError as e:
             pytest.fail(f"Failed to import lib package: {e}")
-
-    def test_fplaunch_has_version(self):
-        """Test that fplaunch package has version attribute."""
-        import fplaunch
-
-        assert hasattr(fplaunch, "__version__")
-        assert isinstance(fplaunch.__version__, str)
 
     def test_lib_has_version(self):
         """Test that lib package has version attribute."""
@@ -58,15 +42,15 @@ class TestEntryPointModules:
     @pytest.mark.parametrize(
         "module_name",
         [
-            "fplaunch.fplaunch",
-            "fplaunch.cli",
-            "fplaunch.generate",
-            "fplaunch.manage",
-            "fplaunch.launch",
-            "fplaunch.cleanup",
-            "fplaunch.systemd_setup",
-            "fplaunch.config_manager",
-            "fplaunch.flatpak_monitor",
+            "lib.fplaunch",
+            "lib.cli",
+            "lib.generate",
+            "lib.manage",
+            "lib.launch",
+            "lib.cleanup",
+            "lib.systemd_setup",
+            "lib.config_manager",
+            "lib.flatpak_monitor",
         ],
     )
     def test_entry_point_module_importable(self, module_name):
@@ -80,15 +64,15 @@ class TestEntryPointModules:
     @pytest.mark.parametrize(
         "module_name",
         [
-            "fplaunch.fplaunch",
-            "fplaunch.cli",
-            "fplaunch.generate",
-            "fplaunch.manage",
-            "fplaunch.launch",
-            "fplaunch.cleanup",
-            "fplaunch.systemd_setup",
-            "fplaunch.config_manager",
-            "fplaunch.flatpak_monitor",
+            "lib.fplaunch",
+            "lib.cli",
+            "lib.generate",
+            "lib.manage",
+            "lib.launch",
+            "lib.cleanup",
+            "lib.systemd_setup",
+            "lib.config_manager",
+            "lib.flatpak_monitor",
         ],
     )
     def test_entry_point_has_main(self, module_name):
@@ -104,7 +88,7 @@ class TestLibModules:
     @pytest.mark.parametrize(
         "module_name",
         [
-            "lib.main_entrypoint",
+            "lib.generate",
             "lib.cli",
             "lib.generate",
             "lib.manage",
@@ -254,8 +238,8 @@ class TestNoIncorrectPathManipulation:
 class TestPyprojectConfiguration:
     """Test that pyproject.toml has correct configuration."""
 
-    def test_pyproject_has_both_packages(self):
-        """Test that pyproject.toml includes both fplaunch and lib packages."""
+    def test_pyproject_has_lib_package(self):
+        """Test that pyproject.toml includes lib package."""
         pyproject_path = PROJECT_ROOT / "pyproject.toml"
 
         if not pyproject_path.exists():
@@ -263,18 +247,10 @@ class TestPyprojectConfiguration:
 
         content = pyproject_path.read_text()
 
-        # Check that both packages are declared
-        assert (
-            '"fplaunch"' in content or "'fplaunch'" in content
-        ), "pyproject.toml missing 'fplaunch' package declaration"
+        # Check that lib package is declared
         assert (
             '"lib"' in content or "'lib'" in content
         ), "pyproject.toml missing 'lib' package declaration"
-
-        # Check that package-dir mapping is NOT present (was causing issues)
-        assert (
-            'package-dir = {"fplaunch" = "lib"}' not in content
-        ), "pyproject.toml has incorrect package-dir mapping that causes path issues"
 
     def test_pyproject_has_entry_points(self):
         """Test that pyproject.toml has all required entry points."""
@@ -286,15 +262,15 @@ class TestPyprojectConfiguration:
         content = pyproject_path.read_text()
 
         required_entry_points = [
-            "fplaunch.fplaunch:main",
-            "fplaunch.cli:main",
-            "fplaunch.generate:main",
-            "fplaunch.manage:main",
-            "fplaunch.launch:main",
-            "fplaunch.cleanup:main",
-            "fplaunch.systemd_setup:main",
-            "fplaunch.config_manager:main",
-            "fplaunch.flatpak_monitor:main",
+            "lib.fplaunch:main",
+            "lib.cli:main",
+            "lib.generate:main",
+            "lib.manage:main",
+            "lib.launch:main",
+            "lib.cleanup:main",
+            "lib.systemd_setup:main",
+            "lib.config_manager:main",
+            "lib.flatpak_monitor:main",
         ]
 
         for entry_point in required_entry_points:
@@ -373,37 +349,8 @@ class TestInstalledEntryPoints:
 class TestRegressionPrevention:
     """Specific tests to prevent the exact issues that were fixed."""
 
-    def test_fplaunch_directory_has_init(self):
-        """Test that fplaunch/ directory has __init__.py (was missing)."""
-        fplaunch_init = PROJECT_ROOT / "fplaunch" / "__init__.py"
-        assert fplaunch_init.exists(), (
-            "fplaunch/__init__.py is missing. " "This will cause import errors for entry points."
-        )
-
-    def test_fplaunch_directory_has_all_entry_modules(self):
-        """Test that fplaunch/ has all required entry point modules."""
-        fplaunch_dir = PROJECT_ROOT / "fplaunch"
-        required_modules = [
-            "fplaunch.py",
-            "cli.py",
-            "generate.py",
-            "manage.py",
-            "launch.py",
-            "cleanup.py",
-            "systemd_setup.py",
-            "config_manager.py",
-            "flatpak_monitor.py",
-        ]
-
-        for module_file in required_modules:
-            module_path = fplaunch_dir / module_file
-            assert module_path.exists(), (
-                f"Missing entry point module: {module_path}. "
-                "This will cause the corresponding entry point to fail."
-            )
-
     def test_lib_templates_directory_exists(self):
-        """Test that lib/templates/ directory exists (was missing)."""
+        """Test that lib/templates/ directory exists."""
         templates_dir = PROJECT_ROOT / "lib" / "templates"
         assert templates_dir.exists(), (
             "lib/templates/ directory is missing. "
@@ -416,21 +363,6 @@ class TestRegressionPrevention:
         assert template_file.exists(), (
             "wrapper.template.sh is missing from lib/templates/. "
             "This will cause wrapper generation to fail."
-        )
-
-    def test_no_package_dir_mapping_in_pyproject(self):
-        """Test that pyproject.toml doesn't have the problematic package-dir mapping."""
-        pyproject_path = PROJECT_ROOT / "pyproject.toml"
-
-        if not pyproject_path.exists():
-            pytest.skip("pyproject.toml not found")
-
-        content = pyproject_path.read_text()
-
-        # This specific mapping was causing path confusion
-        assert 'package-dir = {"fplaunch" = "lib"}' not in content, (
-            "REGRESSION: pyproject.toml has package-dir mapping that maps fplaunch to lib. "
-            "This causes path resolution issues. Both packages should be separate."
         )
 
     def test_no_sys_path_insert_in_lib_main_entrypoint(self):

@@ -395,7 +395,7 @@ class WrapperCleanup(LoggingMixin):
         if self.assume_yes or not self.interactive:
             return True
 
-        return Confirm.ask("Proceed with cleanup?")
+        return bool(Confirm.ask("Proceed with cleanup?"))
 
     def perform_cleanup(self) -> bool:
         """Perform the actual cleanup."""

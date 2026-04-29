@@ -9,7 +9,7 @@ import sys
 # so tests that patch `fplaunch.safety` can find them regardless of import
 # ordering or package installation details.
 try:
-    from . import safety
+    from .safety import is_wrapper_file as safe_launch_check
 except (ImportError, AttributeError):
 
     class _SafetyStub:
@@ -23,20 +23,13 @@ except (ImportError, AttributeError):
 def main():
     """Main entry point."""
     try:
-        from . import cli
+        from .cli import main as cli_main
 
-        if hasattr(cli, "main"):
-            return cli.main()
+        if cli_main is not None:
+            return cli_main()
         return 1
     except (ImportError, AttributeError):
-        try:
-            from lib import cli
-
-            if hasattr(cli, "main"):
-                return cli.main()
-            return 1
-        except (ImportError, AttributeError):
-            return 1
+        return 1
 
 
 if __name__ == "__main__":
