@@ -48,7 +48,7 @@ jobs:
     - name: Test Python package installation
       run: |
         python3 -m pip install -e .
-        python3 -c "import fplaunch; print('Python package imports successfully')"
+        python3 -c "import lib; print('Python package imports successfully')"
         python3 -c "from lib.generate import WrapperGenerator; print('Package functionality works')"
 
   lint-and-security:
