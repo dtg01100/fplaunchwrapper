@@ -17,7 +17,7 @@ except (ImportError, AttributeError):
         def safe_launch_check(_app_name, _wrapper_path=None):
             return True
 
-    safety = _SafetyStub()  # type: ignore[assignment]
+    safety = _SafetyStub()
 
 
 def main():
