@@ -40,12 +40,11 @@ WatchdogObserver: Any
 WATCHDOG_AVAILABLE: bool
 
 try:
-    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler
-    from watchdog.observers import Observer as WatchdogObserver
-
+    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler  # type: ignore[no-redef]
+    from watchdog.observers import Observer as WatchdogObserver  # type: ignore[no-redef]
     WATCHDOG_AVAILABLE = True
 except (ImportError, AttributeError):
-    pass  # watchdog not available, use None defaults
+    WATCHDOG_AVAILABLE = False
 
 # Runtime observer class (None when watchdog not present)
 Observer: Any = WatchdogObserver

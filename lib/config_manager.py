@@ -71,8 +71,8 @@ try:
 
     TOML_AVAILABLE = True
 except ImportError:
-    tomli = None  # type: ignore[assignment]
-    tomli_w = None  # type: ignore[assignment]
+    tomli = None
+    tomli_w = None
     TOML_AVAILABLE = False
 
 
