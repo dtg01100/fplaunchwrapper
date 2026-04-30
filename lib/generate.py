@@ -32,7 +32,7 @@ from .exceptions import (
     ForbiddenNameError,
     WrapperGenerationError,
 )
-from .paths import get_default_config_dir
+from .paths import get_default_config_dir, ensure_dir
 from .python_utils import (
     acquire_lock,
     find_executable,
@@ -79,8 +79,8 @@ class WrapperGenerator(LoggingMixin):
         self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
 
         if not self.emit_mode:
-            self.bin_dir.mkdir(parents=True, exist_ok=True)
-            self.config_dir.mkdir(parents=True, exist_ok=True)
+            ensure_dir(self.bin_dir)
+            ensure_dir(self.config_dir)
             (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
 
     def _safe_resolve_bin_dir(self, bin_dir: str | Path) -> Path:

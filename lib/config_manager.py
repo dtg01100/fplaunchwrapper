@@ -799,7 +799,7 @@ class EnhancedConfigManager:
 
         profiles_dir = self.config_dir / "profiles"
         try:
-            profiles_dir.mkdir(parents=True, exist_ok=True)
+            ensure_dir(profiles_dir)
             profile_file = profiles_dir / f"{profile_name}.toml"
 
             if profile_file.exists():
@@ -957,7 +957,7 @@ class EnhancedConfigManager:
 
         try:
             profiles_dir = self.config_dir / "profiles"
-            profiles_dir.mkdir(parents=True, exist_ok=True)
+            ensure_dir(profiles_dir)
 
             if profile_name == "default":
                 return False  # Can't overwrite default profile

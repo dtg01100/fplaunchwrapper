@@ -16,7 +16,7 @@ from typing import Any
 from rich.table import Table
 
 from .logging_utils import LoggingMixin, console
-from .paths import get_default_config_dir, resolve_bin_dir
+from .paths import get_default_config_dir, resolve_bin_dir, ensure_dir
 from .safety import (
     get_wrapper_id,
     is_wrapper_file,
@@ -46,8 +46,8 @@ class WrapperManager(LoggingMixin):
         )
 
         if not emit_mode:
-            self.bin_dir.mkdir(parents=True, exist_ok=True)
-            self.config_dir.mkdir(parents=True, exist_ok=True)
+            ensure_dir(self.bin_dir)
+            ensure_dir(self.config_dir)
 
     def list_wrappers(self) -> list[dict[str, str]]:
         """List all installed wrappers."""

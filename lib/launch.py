@@ -15,7 +15,7 @@ import threading
 import time
 from pathlib import Path
 
-from .paths import get_default_config_dir, resolve_bin_dir
+from .paths import get_default_config_dir, resolve_bin_dir, ensure_dir
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ class AppLauncher:
         self.hook_failure_mode = hook_failure_mode
 
         self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
-        self.config_dir.mkdir(parents=True, exist_ok=True)
+        ensure_dir(self.config_dir)
 
         self.bin_dir = resolve_bin_dir(
             explicit_dir=bin_dir,

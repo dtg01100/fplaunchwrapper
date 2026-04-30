@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .logging_utils import LoggingMixin
-from .paths import get_default_bin_dir
+from .paths import get_default_bin_dir, ensure_dir
 from .validation import check_path_traversal, validate_app_id
 
 
@@ -110,7 +110,7 @@ WantedBy=timers.target
             return True
 
         try:
-            self.systemd_unit_dir.mkdir(parents=True, exist_ok=True)
+            ensure_dir(self.systemd_unit_dir)
 
             service_path = self.systemd_unit_dir / "fplaunch-wrapper.service"
             timer_path = self.systemd_unit_dir / "fplaunch-wrapper.timer"
@@ -387,7 +387,7 @@ WantedBy=paths.target
             return True
 
         try:
-            self.systemd_unit_dir.mkdir(parents=True, exist_ok=True)
+            ensure_dir(self.systemd_unit_dir)
 
             safe_app_id = app_id
             service_name = f"fplaunch-{safe_app_id}.service"
