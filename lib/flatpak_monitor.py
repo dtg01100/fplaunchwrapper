@@ -35,7 +35,6 @@ __all__ = [
 ]
 
 # Optional watchdog dependency - use Any to avoid static type conflicts
-
 WatchdogEventHandler: Any
 WatchdogObserver: Any
 WATCHDOG_AVAILABLE: bool
@@ -46,10 +45,7 @@ try:
 
     WATCHDOG_AVAILABLE = True
 except (ImportError, AttributeError):
-    # Use Any for fallback to avoid type conflicts
-    WatchdogEventHandler = None
-    WatchdogObserver = None
-    WATCHDOG_AVAILABLE = False
+    pass  # watchdog not available, use None defaults
 
 # Runtime observer class (None when watchdog not present)
 Observer: Any = WatchdogObserver
