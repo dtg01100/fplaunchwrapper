@@ -783,7 +783,6 @@ if ! is_interactive; then
 fi
 
 # For now, just run the interactive logic
-fi
 
 # Check for system command
 SYSTEM_EXISTS=false
