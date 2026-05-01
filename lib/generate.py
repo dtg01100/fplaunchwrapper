@@ -471,37 +471,39 @@ class WrapperGenerator(LoggingMixin):
                         item.unlink()
                         removed_count += 1
 
-                        # Remove associated .pref file
-                        assert self.config_dir is not None
-                        pref_file = self.config_dir / f"{item.name}.pref"
-                        if pref_file.exists():
-                            pref_file.unlink()
-
-                        # Remove associated .env file
-                        env_file = self.config_dir / f"{item.name}.env"
-                        if env_file.exists():
-                            env_file.unlink()
-
-                        # Remove associated scripts directory
-                        scripts_dir = self.config_dir / "scripts" / item.name
-                        if scripts_dir.exists() and scripts_dir.is_dir():
-                            shutil.rmtree(scripts_dir)
-
-                        # Update aliases.
+                        # Remove associated files.
                         # Required by
-                        # TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_aliases
-                        aliases_file = self.config_dir / "aliases"
-                        if aliases_file.exists():
-                            content = aliases_file.read_text()
-                            new_content = "\n".join(
-                                line
-                                for line in content.split("\n")
-                                if not line.startswith(f"{item.name}:")
-                            )
-                            if new_content.strip():
-                                aliases_file.write_text(new_content)
-                            else:
-                                aliases_file.unlink()
+                        # TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_old
+                        if self.config_dir is not None:
+                            pref_file = self.config_dir / f"{item.name}.pref"
+                            if pref_file.exists():
+                                pref_file.unlink()
+
+                            # Remove associated .env file
+                            env_file = self.config_dir / f"{item.name}.env"
+                            if env_file.exists():
+                                env_file.unlink()
+
+                            # Remove associated scripts directory
+                            scripts_dir = self.config_dir / "scripts" / item.name
+                            if scripts_dir.exists() and scripts_dir.is_dir():
+                                shutil.rmtree(scripts_dir)
+
+                            # Update aliases.
+                            # Required by
+                            # TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_aliases
+                            aliases_file = self.config_dir / "aliases"
+                            if aliases_file.exists():
+                                content = aliases_file.read_text()
+                                new_content = "\n".join(
+                                    line
+                                    for line in content.split("\n")
+                                    if not line.startswith(f"{item.name}:")
+                                )
+                                if new_content.strip():
+                                    aliases_file.write_text(new_content)
+                                else:
+                                    aliases_file.unlink()
                     except OSError as e:
                         self.log(f"Failed to remove {item.name}: {e}", "warning")
 

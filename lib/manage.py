@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -50,12 +51,11 @@ class WrapperManager(LoggingMixin):
             if bin_dir:
                 self.config_dir = None
                 self.bin_dir = Path(bin_dir)
+                self.config_dir = Path(tempfile.mkdtemp(prefix="fpmgmt_"))
             else:
-                import tempfile
                 self.config_dir = Path(tempfile.mkdtemp(prefix="fpmgmt_"))
                 self.bin_dir = Path(tempfile.mkdtemp(prefix="fpbin_"))
         else:
-            import tempfile
             self.config_dir = Path(tempfile.mkdtemp(prefix="fpmgmt_"))
             self.bin_dir = Path(tempfile.mkdtemp(prefix="fpbin_"))
 
