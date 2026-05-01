@@ -137,7 +137,10 @@ class TestSecurity:
         assert result is True
 
         # Attempt to launch with an adversarial app name
-        adversarial_launcher = AppLauncher(app_name="../../../etc/passwd")
+        adversarial_launcher = AppLauncher(
+            app_name="../../../etc/passwd",
+            config_dir=str(self.config_dir),
+        )
         with patch("subprocess.run") as mock_run, patch(
             "lib.safety.safe_launch_check", return_value=True
         ):
@@ -164,7 +167,10 @@ class TestSecurity:
         assert result is True
 
         # Launch with a sanitized app name
-        sanitized_launcher = AppLauncher(app_name="test_app")
+        sanitized_launcher = AppLauncher(
+            app_name="test_app",
+            config_dir=str(self.config_dir),
+        )
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0)
             launch_result = sanitized_launcher.launch()

@@ -2,6 +2,8 @@
 """Focused pytest coverage for lib.python_utils."""
 
 import os
+from pathlib import Path
+import tempfile
 
 import pytest
 
@@ -80,29 +82,33 @@ class TestLocking:
         if not acquire_lock or not release_lock:
             pytest.skip("Locking not available")
 
-        lock_name = "test-lock"
-        try:
-            result = acquire_lock(lock_name, timeout_seconds=5)
-            assert result is True
+        with tempfile.TemporaryDirectory() as tmpdir:
+            lock_dir = Path(tmpdir)
+            lock_name = "test-lock"
+            try:
+                result = acquire_lock(lock_name, timeout_seconds=5, lock_dir=lock_dir)
+                assert result is True
 
-            released = release_lock(lock_name)
-            assert released is True
-        finally:
-            release_lock(lock_name)
+                released = release_lock(lock_name, lock_dir=lock_dir)
+                assert released is True
+            finally:
+                release_lock(lock_name, lock_dir=lock_dir)
 
     def test_lock_timeout(self) -> None:
         """Test lock timeout behavior under contention."""
         if not acquire_lock or not release_lock:
             pytest.skip("Locking not available")
 
-        lock_name = f"timeout-test-{os.getpid()}"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            lock_dir = Path(tmpdir)
+            lock_name = f"timeout-test-{os.getpid()}"
 
-        assert acquire_lock(lock_name, timeout_seconds=5) is True
-        try:
-            result = acquire_lock(lock_name, timeout_seconds=0.01)
-            assert result is not True
-        finally:
-            assert release_lock(lock_name) is True
+            assert acquire_lock(lock_name, timeout_seconds=5, lock_dir=lock_dir) is True
+            try:
+                result = acquire_lock(lock_name, timeout_seconds=0.01, lock_dir=lock_dir)
+                assert result is not True
+            finally:
+                assert release_lock(lock_name, lock_dir=lock_dir) is True
 
 
 if __name__ == "__main__":

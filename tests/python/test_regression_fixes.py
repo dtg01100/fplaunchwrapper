@@ -7,6 +7,7 @@ to diagnose.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -254,9 +255,10 @@ class TestCronDuplicateDetection:
                 result.stdout = ""
             return result
 
-        with patch("shutil.which", return_value="/usr/bin/crontab"):
-            with patch("subprocess.run", side_effect=fake_run):
-                setup.install_cron_job(cron_interval=6)
+        with patch.dict(os.environ, {"XDG_CONFIG_HOME": str(tmp_path)}):
+            with patch("shutil.which", return_value="/usr/bin/crontab"):
+                with patch("subprocess.run", side_effect=fake_run):
+                    setup.install_cron_job(cron_interval=6)
 
         assert added_lines, "install_cron_job must write a cron entry when none exists"
         assert "fplaunch" in added_lines[0] or "regenerate" in added_lines[0]

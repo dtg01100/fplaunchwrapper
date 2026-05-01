@@ -267,7 +267,7 @@ class TestUninstallCLI:
         assert "emit" in result.output.lower()
 
     @patch("subprocess.run")
-    def test_uninstall_success(self, mock_run, runner, temp_config_dir):
+    def test_uninstall_success(self, mock_run, runner, isolated_home):
         """Test successful uninstall."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
         result = runner.invoke(
@@ -282,7 +282,7 @@ class TestUninstallCLI:
         assert "uninstalled" in result.output.lower()
 
     @patch("subprocess.run")
-    def test_uninstall_with_data_removal(self, mock_run, runner, temp_config_dir):
+    def test_uninstall_with_data_removal(self, mock_run, runner, isolated_home):
         """Test uninstall with --remove-data flag."""
         mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
         result = runner.invoke(

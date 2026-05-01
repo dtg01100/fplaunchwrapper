@@ -160,7 +160,12 @@ WantedBy=timers.target
                 self.log("Cron is not available on this system", "error")
                 return False
 
-            cron_dir = Path.home() / ".config" / "cron"
+            xdg_config = os.environ.get("XDG_CONFIG_HOME", "")
+            if xdg_config:
+                config_home = Path(xdg_config)
+            else:
+                config_home = Path.home() / ".config"
+            cron_dir = config_home / "cron"
             cron_dir.mkdir(parents=True, exist_ok=True)
 
             cron_script = cron_dir / "fplaunch-wrapper.sh"
@@ -486,13 +491,13 @@ ExecStart=flatpak run {exec_app}
 
 
 def get_systemd_unit_dir() -> Path:
-    """Get the directory for user systemd units."""
-    xdg_config = os.environ.get("XDG_CONFIG_HOME", "")
-    if xdg_config:
-        xdg_config_home = xdg_config
-    else:
-        xdg_config_home = str(Path.home() / ".config")
-    return Path(xdg_config_home) / "systemd" / "user"
+    """Get the directory for user systemd units.
+
+    Uses the centralized path resolution from paths module.
+    """
+    from .paths import get_systemd_unit_dir as _get_systemd_unit_dir
+
+    return _get_systemd_unit_dir()
 
 
 def main() -> int:

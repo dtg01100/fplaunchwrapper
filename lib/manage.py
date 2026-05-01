@@ -38,22 +38,35 @@ class WrapperManager(LoggingMixin):
         self.verbose = verbose
         self.emit_mode = emit_mode
         self.emit_verbose = emit_verbose
-        self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
-
-        self.bin_dir = resolve_bin_dir(
-            explicit_dir=str(bin_dir) if bin_dir else None,
-            config_dir=self.config_dir,
-        )
+        if config_dir:
+            self.config_dir = Path(config_dir)
+            self.bin_dir = resolve_bin_dir(
+                explicit_dir=str(bin_dir) if bin_dir else None,
+                config_dir=self.config_dir,
+            )
+        elif emit_mode:
+            self.config_dir = None
+            if bin_dir:
+                self.bin_dir = Path(bin_dir)
+            else:
+                import tempfile
+                self.config_dir = Path(tempfile.mkdtemp(prefix="fpmgmt_"))
+                self.bin_dir = Path(tempfile.mkdtemp(prefix="fpbin_"))
+        else:
+            import tempfile
+            self.config_dir = Path(tempfile.mkdtemp(prefix="fpmgmt_"))
+            self.bin_dir = Path(tempfile.mkdtemp(prefix="fpbin_"))
 
         if not emit_mode:
             ensure_dir(self.bin_dir)
-            ensure_dir(self.config_dir)
+            if self.config_dir is not None:
+                ensure_dir(self.config_dir)
 
     def list_wrappers(self) -> list[dict[str, str]]:
         """List all installed wrappers."""
         wrappers: list[dict[str, str]] = []
 
-        if not self.bin_dir.exists():
+        if not self.bin_dir.exists() or not os.access(self.bin_dir, os.R_OK):
             return wrappers
 
         for item in self.bin_dir.iterdir():

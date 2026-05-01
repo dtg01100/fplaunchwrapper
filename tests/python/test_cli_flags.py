@@ -75,6 +75,14 @@ def test_remove_alias_rm(cli_mod, runner, monkeypatch):
 
     monkeypatch.setattr("lib.cli.run_command", fake_run_command)
 
+    class FakeManager:
+        def __init__(self, **kwargs):
+            pass
+        def remove_wrapper(self, name, force=False):
+            return True
+
+    monkeypatch.setattr("lib.manage.WrapperManager", FakeManager)
+
     result = runner.invoke(cli_mod.cli, ["rm", "example.app"], catch_exceptions=False)
     assert result.exit_code == 0
 

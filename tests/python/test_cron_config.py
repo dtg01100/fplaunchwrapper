@@ -6,38 +6,35 @@ from lib.config_manager import create_config_manager
 from lib.systemd_setup import SystemdSetup
 
 
-def test_config_manager():
+def test_config_manager(isolated_home):
+    """Test configuration manager with isolated environment."""
     print("=== Testing Config Manager ===")
     config = create_config_manager()
+    config.config_dir = isolated_home.config_dir
 
-    # Test default value
     default_interval = config.get_cron_interval()
     print(f"Default cron interval: {default_interval} hours")
     assert default_interval == 6, "Default interval should be 6 hours"
 
-    # Test setting and getting
     new_interval = 4
     config.set_cron_interval(new_interval)
     retrieved = config.get_cron_interval()
     print(f"After setting to {new_interval} hours: {retrieved} hours")
     assert retrieved == new_interval, "Should retrieve the set value"
 
-    # Test minimum interval validation
     with pytest.raises(ValueError):
         config.set_cron_interval(0)
-    # If we reach here, exception was raised as expected
 
-    # Reset to default
     config.set_cron_interval(6)
     assert config.get_cron_interval() == 6, "Should reset to default"
     print("✓ Config manager tests passed")
 
 
-def test_systemd_setup():
+def test_systemd_setup(isolated_home):
+    """Test systemd setup with isolated environment."""
     print("\n=== Testing Systemd Setup ===")
     setup = SystemdSetup(emit_mode=True)
 
-    # Test that install_cron_job accepts interval parameter
     try:
         result = setup.install_cron_job(cron_interval=4)
         assert result, "Should return True in emit mode"

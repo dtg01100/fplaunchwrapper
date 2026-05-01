@@ -60,12 +60,10 @@ class WrapperGenerator(LoggingMixin):
         emit_verbose: bool = False,
         **kwargs: Any,
     ) -> None:
-        # Backwards compatibility: allow positional booleans for verbose/emit flags
         if isinstance(config_dir, bool):
             verbose, emit_mode, emit_verbose = config_dir, verbose, emit_mode
             config_dir = None
 
-        # Validate inputs to avoid creating unexpected artifact paths (e.g., MagicMock reprs)
         if not isinstance(bin_dir, (str, os.PathLike)):
             raise TypeError("bin_dir must be a string or path-like object")
         if config_dir is not None and not isinstance(config_dir, (str, os.PathLike)):
@@ -76,9 +74,9 @@ class WrapperGenerator(LoggingMixin):
         self.emit_mode = emit_mode
         self.emit_verbose = emit_verbose
         self.lock_name = "generate"
-        self.config_dir = Path(config_dir) if config_dir else get_default_config_dir()
+        self.config_dir = Path(config_dir) if config_dir else None
 
-        if not self.emit_mode:
+        if not self.emit_mode and self.config_dir is not None:
             ensure_dir(self.bin_dir)
             ensure_dir(self.config_dir)
             (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
@@ -171,6 +169,8 @@ class WrapperGenerator(LoggingMixin):
 
     def is_blocklisted(self, app_id: str) -> bool:
         """Check if an app ID is in the blocklist."""
+        if self.config_dir is None:
+            return False
         blocklist_file = self.config_dir / "blocklist"
         if not blocklist_file.exists():
             return False

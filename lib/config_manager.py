@@ -272,13 +272,13 @@ class EnhancedConfigManager:
     def save_config(self) -> None:
         """Save configuration to TOML file."""
         try:
+            ensure_dir(Path(self.config_file).parent)
             if TOML_AVAILABLE:
                 data = self._serialize_config()
                 with Path(self.config_file).open("wb") as f:
                     tomli_w.dump(data, f)
             else:
                 self._save_fallback_config()
-            # Set restrictive permissions: owner read/write only
             Path(self.config_file).chmod(0o600)
         except OSError as e:
             raise ConfigPermissionError(

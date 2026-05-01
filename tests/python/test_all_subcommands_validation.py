@@ -192,7 +192,7 @@ class TestPresetsSubcommands:
         assert result.exit_code == 0
         assert "browser" in result.output.lower()
 
-    def test_presets_add_with_permission(self, runner):
+    def test_presets_add_with_permission(self, runner, isolated_home):
         result = runner.invoke(cli, ["presets", "add", "test-preset", "-p", "--socket=x11"])
         assert result.exit_code == 0
 
@@ -214,11 +214,11 @@ class TestMainCLI:
         result = runner.invoke(cli, ["--verbose", "--help"])
         assert result.exit_code == 0
 
-    def test_main_emit_flag(self, runner):
+    def test_main_emit_flag(self, runner, isolated_home):
         result = runner.invoke(cli, ["--emit", "list"])
         assert result.exit_code == 0
 
-    def test_main_emit_verbose_flag(self, runner):
+    def test_main_emit_verbose_flag(self, runner, isolated_home):
         result = runner.invoke(cli, ["--emit-verbose", "list"])
         assert result.exit_code == 0
 

@@ -229,18 +229,25 @@ def safe_mktemp(
 
 
 def acquire_lock(
-    lock_name: str = "fplaunch", timeout_seconds: float = DEFAULT_LOCK_TIMEOUT,
+    lock_name: str = "fplaunch",
+    timeout_seconds: float = DEFAULT_LOCK_TIMEOUT,
+    lock_dir: Path | None = None,
 ) -> bool | None:
     """Acquire a file-based lock with timeout.
 
     Uses a file-based lock with PID tracking for stale lock detection.
     Lock is stored as a file containing the PID of the holding process.
+
+    Args:
+        lock_name: Name of the lock
+        timeout_seconds: How long to wait for lock acquisition
+        lock_dir: Directory for lock files (defaults to config-based locks)
     """
     try:
-        config_dir = get_default_config_dir()
-        ensure_dir(config_dir)
-
-        lock_dir = get_lock_dir()
+        if lock_dir is None:
+            config_dir = get_default_config_dir()
+            ensure_dir(config_dir)
+            lock_dir = get_lock_dir()
         ensure_dir(lock_dir)
 
         lockfile = lock_dir / f"{lock_name}.lock"
@@ -305,10 +312,11 @@ def _cleanup_stale_lock(lockfile: Path, pidfile: Path) -> bool:
         return False
 
 
-def release_lock(lock_name: str = "fplaunch") -> bool | None:
+def release_lock(lock_name: str = "fplaunch", lock_dir: Path | None = None) -> bool | None:
     """Release a file-based lock."""
     try:
-        lock_dir = get_lock_dir()
+        if lock_dir is None:
+            lock_dir = get_lock_dir()
         lockfile = lock_dir / f"{lock_name}.lock"
         pidfile = lock_dir / f"{lock_name}.pid"
 

@@ -110,7 +110,7 @@ class TestPerformance:
         start_time = time.time()
         results = []
         for app_name in apps:
-            launcher = AppLauncher(app_name=app_name)
+            launcher = AppLauncher(app_name=app_name, config_dir=str(self.config_dir))
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value = Mock(returncode=0)
                 launch_result = launcher.launch()
@@ -170,7 +170,7 @@ class TestPerformance:
         assert result is True
 
         # Launch the app multiple times and measure performance
-        launcher = AppLauncher(app_name=app_name)
+        launcher = AppLauncher(app_name=app_name, config_dir=str(self.config_dir), bin_dir=str(self.bin_dir))
         num_launches = 10
         start_time = time.time()
         results = []
@@ -236,7 +236,7 @@ class TestPerformance:
             assert result is True
 
             # Launch the app
-            launcher = AppLauncher(app_name=app_name)
+            launcher = AppLauncher(app_name=app_name, config_dir=str(self.config_dir), bin_dir=str(self.bin_dir))
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value = Mock(returncode=0)
                 launch_result = launcher.launch()

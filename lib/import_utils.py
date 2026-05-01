@@ -7,6 +7,8 @@ consistently across the codebase.
 
 from __future__ import annotations
 
+import importlib
+import sys
 from typing import TypeVar, Any, Optional
 
 T = TypeVar("T")
@@ -37,8 +39,6 @@ class ImportErrorHandler:
             SystemExit: If import fails
         """
         try:
-            import importlib
-
             imported = importlib.import_module(module)
             if name:
                 return getattr(imported, name)
@@ -61,8 +61,6 @@ def safe_import(module: str, name: Optional[str] = None, default: Any = None) ->
         The imported module/object, or default on failure
     """
     try:
-        import importlib
-
         imported = importlib.import_module(module)
         if name:
             return getattr(imported, name)
