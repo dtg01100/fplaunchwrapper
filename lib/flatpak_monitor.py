@@ -316,56 +316,70 @@ class FlatpakMonitor:
         return "metadata" in path_str or "manifest" in path_str
 
     def _regenerate_wrappers(self) -> bool:
-        """Regenerate Flatpak wrappers."""
-        try:
-            # Build list of possible script locations
-            script_paths = []
+        """Regenerate Flatpak wrappers (non-blocking if already running)."""
+        from .python_utils import acquire_lock, release_lock
 
-            # 1. Use shutil.which to find fplaunch-generate in PATH (works when installed)
-            generate_cmd = shutil.which("fplaunch-generate")
-            if generate_cmd:
-                script_paths.append(generate_cmd)
-
-            # 2. Add system-wide paths as fallback
-            script_paths.extend(
-                [
-                    "/usr/local/bin/fplaunch-generate",
-                    "/usr/bin/fplaunch-generate",
-                ],
-            )
-
-            # 3. Development mode: relative path from lib/
-            dev_script = Path(__file__).parent.parent / "fplaunch-generate"
-            if dev_script.exists():
-                script_paths.insert(1, str(dev_script))
-
-            for script_path in script_paths:
-                if Path(script_path).exists() and os.access(script_path, os.X_OK):
-                    logger.debug("Running wrapper regeneration script: %s", script_path)
-                    result = subprocess.run(
-                        [script_path],
-                        check=False,
-                        capture_output=True,
-                        text=True,
-                        timeout=self.config.get("regeneration_timeout", 60),
-                    )
-
-                    if result.returncode == 0:
-                        logger.debug(
-                            "Wrapper regeneration stdout: %s",
-                            str(result.stdout).strip(),
-                        )
-                        return True
-                    logger.error(
-                        "Wrapper regeneration failed with code %d: %s",
-                        result.returncode,
-                        result.stderr.strip(),
-                    )
-                    return False
-
-            logger.error("fplaunch-generate script not found")
+        if not acquire_lock("generate", timeout_seconds=0.001):
+            logger.debug("Generation already in progress, skipping")
             return False
+        try:
+            return self._run_regeneration_sync()
+        finally:
+            release_lock("generate")
 
+    def _run_regeneration_sync(self) -> bool:
+        """Run wrapper regeneration synchronously."""
+        for script_path in self._find_generate_scripts():
+            if Path(script_path).exists() and os.access(script_path, os.X_OK):
+                return self._run_generate(script_path)
+        logger.error("fplaunch-generate script not found")
+        return False
+
+    def _regenerate_wrappers_async(self) -> None:
+        """Trigger wrapper regeneration in a background thread."""
+        thread = threading.Thread(target=self._regenerate_wrappers, daemon=True)
+        thread.start()
+
+    def _find_generate_scripts(self) -> list[str]:
+        """Build list of possible fplaunch-generate script locations."""
+        script_paths = []
+        generate_cmd = shutil.which("fplaunch-generate")
+        if generate_cmd:
+            script_paths.append(generate_cmd)
+        script_paths.extend(
+            [
+                "/usr/local/bin/fplaunch-generate",
+                "/usr/bin/fplaunch-generate",
+            ],
+        )
+        dev_script = Path(__file__).parent.parent / "fplaunch-generate"
+        if dev_script.exists():
+            script_paths.insert(1, str(dev_script))
+        return script_paths
+
+    def _run_generate(self, script_path: str) -> bool:
+        """Run a specific regeneration script."""
+        try:
+            logger.debug("Running wrapper regeneration script: %s", script_path)
+            result = subprocess.run(
+                [script_path],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=self.config.get("regeneration_timeout", 60),
+            )
+            if result.returncode == 0:
+                logger.debug(
+                    "Wrapper regeneration stdout: %s",
+                    str(result.stdout).strip(),
+                )
+                return True
+            logger.error(
+                "Wrapper regeneration failed with code %d: %s",
+                result.returncode,
+                result.stderr.strip(),
+            )
+            return False
         except subprocess.TimeoutExpired:
             logger.error("Wrapper regeneration timed out")
             return False
