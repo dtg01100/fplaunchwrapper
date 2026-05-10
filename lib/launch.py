@@ -1,6 +1,24 @@
 #!/usr/bin/env python3
 """Application launcher for fplaunchwrapper
 Replaces fplaunch-launch bash script with Python implementation.
+
+
+Import Pattern Notes:
+====================
+This module uses lazy imports for config_manager to avoid circular imports.
+See lib/generate.py for detailed explanation of the lazy import pattern.
+
+Key lazy imports in this module:
+- config_manager (in _get_hook_scripts, _get_effective_failure_mode, _resolve_flatpak_id)
+- python_utils (in _resolve_flatpak_id)
+
+Usage:
+    try:
+        from lib.config_manager import create_config_manager
+        config = create_config_manager()
+    except (ImportError, OSError):
+        # Config manager unavailable, use environment variable defaults
+        pass
 """
 
 from __future__ import annotations
@@ -155,7 +173,7 @@ class AppLauncher:
                     and self._is_path_safe(script_path, self.config_dir)
                 ):
                     scripts.append(script_path)
-        except (ImportError, OSError, Exception) as e:
+        except (ImportError, OSError) as e:
             # Catch config-related errors gracefully and fall back to default paths
             if self.verbose:
                 print(
@@ -452,8 +470,12 @@ class AppLauncher:
                     else:
                         source = "flatpak"
                 elif preference == "auto":
-                    # "auto" means use the default auto-detected source; no override needed.
                     pass
+                else:
+                    logger.warning(
+                        "Invalid preference file value '%s' for %s, ignoring",
+                        preference, self.app_name,
+                    )
         except (OSError, UnicodeDecodeError) as e:
             logger.warning("Could not read preference file: %s", e)
 
@@ -497,7 +519,7 @@ class AppLauncher:
                             candidate_id = line
                             _cache_flatpak_id(self.app_name, candidate_id)
                             break
-        except Exception as e:
+        except (subprocess.CalledProcessError, OSError) as e:
             logger.debug("Failed to find flatpak ID: %s", e)
 
         return candidate_id
