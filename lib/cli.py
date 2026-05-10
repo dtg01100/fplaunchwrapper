@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""Modern CLI interface for fplaunchwrapper using Click."""
+"""Modern CLI interface for fplaunchwrapper using Click.
+
+All CLI commands return int for shell exit codes:
+- 0: Success
+- 1: Failure
+
+Note on Import Pattern:
+======================
+Commands use lazy imports via ImportErrorHandler to avoid circular imports.
+This is intentional - modules like config_manager import from manage/generate,
+which can cause circular dependency issues. The import handler provides
+consistent error handling when modules cannot be loaded.
+"""
 
 from __future__ import annotations
 

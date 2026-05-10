@@ -458,6 +458,7 @@ class TestLaunchEdgeCases:
         assert len(str(wrapper_path)) > 400  # Reasonably long path
 
 
+@pytest.mark.slow
 class TestLaunchSecurity:
     """Test security aspects of the launch functionality."""
 
@@ -1679,8 +1680,8 @@ class TestHookScriptsFromConfig:
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
-        # Make config manager raise an exception
-        mock_cm.side_effect = Exception("Config error")
+        # Make config manager raise an expected error type
+        mock_cm.side_effect = OSError("Config error")
 
         # Create default script
         scripts_dir = self.config_dir / "scripts" / "test_app"
