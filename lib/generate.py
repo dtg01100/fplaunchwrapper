@@ -1,6 +1,27 @@
 #!/usr/bin/env python3
 """Wrapper generation functionality for fplaunchwrapper
 Replaces fplaunch-generate bash script with Python implementation.
+
+
+Import Pattern Notes:
+====================
+This module uses lazy imports for config_manager to avoid circular imports.
+When config_manager imports from modules that eventually import back from
+generate.py, we would get a circular import. The solution is to import
+config_manager inside the function/method that needs it, rather than at
+module level.
+
+This pattern is intentional and documented:
+1. Imports at module level: Core dependencies (exceptions, paths, safety)
+2. Imports inside functions: Optional dependencies that could cause circular imports
+
+Usage:
+    try:
+        from .config_manager import create_config_manager
+        config = create_config_manager()
+    except OSError:
+        # Config manager unavailable, use defaults
+        pass
 """
 
 from __future__ import annotations
@@ -96,6 +117,12 @@ class WrapperGenerator(LoggingMixin):
             try:
                 resolved.relative_to(user_home)
             except ValueError:
+                import sys
+                print(
+                    f"Warning: bin_dir '{bin_dir}' resolves outside home directory, "
+                    f"falling back to {user_home / 'bin'}",
+                    file=sys.stderr,
+                )
                 resolved = user_home / "bin"
             return resolved
 
@@ -235,7 +262,7 @@ class WrapperGenerator(LoggingMixin):
                 prefs = config.get_app_preferences(wrapper_name)
                 pre_launch_script = prefs.pre_launch_script or ""
                 post_launch_script = prefs.post_launch_script or ""
-            except (ImportError, Exception):
+            except OSError:
                 pass
 
             def _format_escape(s: str) -> str:
@@ -384,11 +411,17 @@ class WrapperGenerator(LoggingMixin):
                 if wrapper_id and wrapper_id not in installed_apps:
                     remove_item = True
             else:
-                # Fallback for non-wrapper files (compatibility with tests)
-                sanitized_installed = [sanitize_id_to_name(a) for a in installed_apps]
-                if item.name not in sanitized_installed:
-                    # In tests we might have fake wrappers
-                    remove_item = True
+                # Only remove non-wrapper files that are executable shell scripts
+                # (potential legacy wrappers). Skip non-executable files to avoid
+                # accidentally deleting user data.
+                if os.access(item, os.X_OK) and is_file:
+                    try:
+                        with item.open("rb") as fh:
+                            header = fh.read(2)
+                            if header == b"#!":
+                                remove_item = True
+                    except OSError:
+                        pass
 
             if remove_item:
                 self.log(f"Removing obsolete wrapper: {item.name}")
