@@ -132,7 +132,7 @@ WantedBy=timers.target
                 "success",
             )
             return True
-        except Exception as e:
+        except (OSError, subprocess.CalledProcessError) as e:
             self.log(f"Failed to install systemd units: {e}", "error")
             return False
 
@@ -207,7 +207,7 @@ WantedBy=timers.target
                 self.log("Cron job already exists", "info")
 
             return True
-        except Exception as e:
+        except (OSError, subprocess.CalledProcessError) as e:
             self.log(f"Failed to install cron job: {e}", "error")
             return False
 
@@ -282,7 +282,7 @@ WantedBy=paths.target
             )
             result["timer"]["active"] = proc.stdout.strip() == "active"
 
-        except Exception:
+        except OSError:
             pass
 
         return result
@@ -349,7 +349,7 @@ WantedBy=paths.target
 
             self.log("Systemd units disabled", "success")
             return True
-        except Exception as e:
+        except (OSError, subprocess.CalledProcessError) as e:
             self.log(f"Failed to disable systemd units: {e}", "error")
             return False
 
@@ -394,7 +394,7 @@ WantedBy=paths.target
         try:
             ensure_dir(self.systemd_unit_dir)
 
-            safe_app_id = app_id
+            safe_app_id = app_id.replace("/", "_").replace(" ", "_")
             service_name = f"fplaunch-{safe_app_id}.service"
             service_path = self.systemd_unit_dir / service_name
 
@@ -421,7 +421,7 @@ ExecStart=flatpak run {exec_app}
 
             self.log(f"Enabled app service for {safe_app_id}", "success")
             return True
-        except Exception as e:
+        except (OSError, subprocess.CalledProcessError) as e:
             self.log(f"Failed to enable app service: {e}", "error")
             return False
 
@@ -444,7 +444,7 @@ ExecStart=flatpak run {exec_app}
             return True
 
         try:
-            safe_app_id = app_id
+            safe_app_id = app_id.replace("/", "_").replace(" ", "_")
             service_name = f"fplaunch-{safe_app_id}.service"
             service_path = self.systemd_unit_dir / service_name
 
@@ -466,7 +466,7 @@ ExecStart=flatpak run {exec_app}
 
             self.log(f"Disabled app service for {safe_app_id}", "success")
             return True
-        except Exception as e:
+        except (OSError, subprocess.CalledProcessError) as e:
             self.log(f"Failed to disable app service: {e}", "error")
             return False
 

@@ -349,8 +349,8 @@ class TestCronFallback:
 
                     result = setup.install_cron_job()
 
-                    # Should succeed since crontab is available
-                    assert result is True or result is False  # May vary by environment
+                    # Should succeed since crontab is mocked
+                    assert result is True
 
         finally:
             shutil.rmtree(temp_dir)

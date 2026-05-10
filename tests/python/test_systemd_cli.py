@@ -183,7 +183,7 @@ class TestSystemdSetupIntegration:
 
         setup = SystemdSetup()
 
-        with patch("subprocess.run", side_effect=Exception("Test exception")):
+        with patch("subprocess.run", side_effect=OSError("Test error")):
             status = setup.check_systemd_status()
 
             assert status["service"]["enabled"] is False
