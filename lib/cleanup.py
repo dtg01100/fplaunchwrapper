@@ -87,7 +87,7 @@ class CleanupConfig:
         self.assume_yes_effective = (
             self.assume_yes
             or self.force
-            or (os.environ.get("FPWRAPPER_FORCE") is not None)
+            or bool(os.environ.get("FPWRAPPER_FORCE"))
         )
         self.verbose_effective = (
             bool(self.verbose) if self.verbose is not None else False
@@ -420,7 +420,13 @@ class WrapperCleanup(LoggingMixin):
                         shutil.copy2(f, dst)
                     except (OSError, IOError) as e:
                         backup_errors.append(f"Failed to backup preference {f}: {e}")
-                for f in self.cleanup_items["data_files"][:1000]:
+                data_files = self.cleanup_items["data_files"]
+                if len(data_files) > 1000:
+                    self.log(
+                        f"Warning: Backup limited to 1000 of {len(data_files)} data files",
+                        "warning",
+                    )
+                for f in data_files[:1000]:
                     try:
                         dst = backup_root / "data" / f.name
                         dst.parent.mkdir(parents=True, exist_ok=True)
