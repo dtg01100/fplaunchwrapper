@@ -141,7 +141,7 @@ Key=valueB
         path = self._create_temp_desktop_file(self.SAMPLE_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
 
-        assert entry.name == "Firefox Web Browser"
+        assert entry.name == "Firefox"
 
     def test_name_property_fallback_to_stem(self) -> None:
         """Test name property falls back to file stem when Name is missing."""
@@ -268,7 +268,7 @@ Categories=Network;WebBrowser;
 
         content = """[Desktop Entry]
 Type=Application
-Name[en.US]=Firefox
+Name[en_US]=Firefox
 Name=Firefox Web Browser
 """
         path = self._create_temp_desktop_file(content)

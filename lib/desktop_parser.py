@@ -81,7 +81,7 @@ class DesktopEntry:
             The localized value or the non-localized fallback
         """
         if locale is None:
-            locale = os.environ.get("LANG", "en_US").replace("_", ".")
+            locale = os.environ.get("LANG", "en_US")
 
         # Try localized version first
         localized_key = f"{key}[{locale}]"
