@@ -62,10 +62,12 @@ class TestPostLaunchScriptExecution:
         post_script.write_text("#!/bin/bash\necho $FPWRAPPER_EXIT_CODE > $HOME/.test_exit_code\n")
         post_script.chmod(post_script.stat().st_mode | stat.S_IEXEC)
 
-        # Verify hook directory structure
+        # Verify hook directory structure and wrapper references it correctly
         assert hooks_dir.exists()
         assert post_script.exists()
         assert post_script.is_file()
+        # Verify wrapper content references the hook script path
+        assert str(post_script) in wrapper_content or "post-run.sh" in wrapper_content
 
     def test_post_launch_script_captures_exit_code_success(self, temp_dirs):
         """Test that post-launch script receives exit code 0 for successful app."""

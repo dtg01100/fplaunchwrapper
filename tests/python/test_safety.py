@@ -2,6 +2,8 @@
 """Unit tests for safety.py
 Tests all safety mechanisms including input validation, path traversal prevention,
 wrapper validation, and test environment detection.
+
+Marked as: @pytest.mark.security (security-focused tests)
 """
 
 import os
@@ -26,6 +28,7 @@ from lib.safety import (
 )
 
 
+@pytest.mark.security
 class TestIsTestEnvironment:
     """Test test environment detection."""
 

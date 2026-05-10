@@ -2,14 +2,34 @@
 
 from __future__ import annotations
 
+import pytest
+
 import os
 import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
 
 project_root = Path(__file__).parent.parent
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Register custom markers."""
+    config.addinivalue_line(
+        "markers", "unit: Unit tests that test individual functions/classes in isolation"
+    )
+    config.addinivalue_line(
+        "markers", "integration: Integration tests that test module interactions"
+    )
+    config.addinivalue_line(
+        "markers", "slow: Tests that take longer than usual to run"
+    )
+    config.addinivalue_line(
+        "markers", "security: Security-focused tests"
+    )
+    config.addinivalue_line(
+        "markers", "real_execution: Tests that execute real code paths (minimal mocking)"
+    )
 
 
 @pytest.fixture(autouse=True)
