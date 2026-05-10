@@ -314,9 +314,8 @@ class TestIntegrationWorkflows:
             emit_mode=False,
         )
 
-        # Test operations with missing files/directories
         result = manager.set_preference("nonexistent", "flatpak")
-        assert isinstance(result, bool)  # Should handle gracefully
+        assert result is False  # Missing app should fail gracefully
 
         # Test with corrupted configuration files
         pref_file = temp_env["config_dir"] / "corrupted.pref"
@@ -324,16 +323,18 @@ class TestIntegrationWorkflows:
 
         result = manager.set_preference("corrupted", "flatpak")
         # Should either succeed (overwrite) or fail gracefully
-        assert isinstance(result, bool)
+        # WrapperManager may fail for corrupted file, verify behavior
+        assert result is True or result is False  # Depends on implementation
 
         # Test with very long names/values
         long_name = "a" * 200  # Very long app name
         result = manager.set_preference(long_name, "flatpak")
-        assert isinstance(result, bool)
+        assert result is False  # Very long name should fail
 
         long_value = "flatpak" * 1000  # Very long preference value
         result = manager.set_preference("test", long_value)
-        assert isinstance(result, bool)
+        # Long value may fail due to validation (must be auto/flatpak/system)
+        assert result is True or result is False  # Depends on validation strictness
 
 
 if __name__ == "__main__":

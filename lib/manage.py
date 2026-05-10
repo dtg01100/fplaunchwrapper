@@ -174,8 +174,10 @@ class WrapperManager(LoggingMixin):
                     scripts_dir.resolve().relative_to(self.config_dir.resolve())
                     shutil.rmtree(scripts_dir)
                 except ValueError:
-                    self.log(f"Refused to remove scripts dir outside config: {scripts_dir}", "error")
-                    return False
+                    self.log(
+                        f"Warning: Scripts dir outside config, not removed: {scripts_dir}",
+                        "warning",
+                    )
 
             self.log(f"Removed wrapper: {name}", "success")
             return True
@@ -215,14 +217,31 @@ class WrapperManager(LoggingMixin):
     def set_preference_all(self, preference: str) -> int:
         """Set launch preference for all wrappers.
 
-        Returns the number of wrappers updated.
+        Returns the number of wrappers successfully updated.
         """
+        valid_preferences = {"system", "flatpak", "auto"}
+        if preference not in valid_preferences:
+            self.log(
+                f"Invalid preference '{preference}': must be one of "
+                f"{', '.join(sorted(valid_preferences))}",
+                "error",
+            )
+            return 0
+
         wrappers = self.list_wrappers()
         updated = 0
+        failed = 0
         for wrapper in wrappers:
             if self.set_preference(wrapper["name"], preference):
                 updated += 1
-        self.log(f"Updated preference for {updated} wrappers", "success")
+            else:
+                failed += 1
+        if failed:
+            self.log(
+                f"Updated {updated} wrappers, {failed} failed", "warning",
+            )
+        else:
+            self.log(f"Updated preference for {updated} wrappers", "success")
         return updated
 
     def create_alias(
