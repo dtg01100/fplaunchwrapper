@@ -12,13 +12,15 @@ import shutil
 import subprocess
 from typing import Optional
 
-# Check for flatpak-spawn availability
-FLATPAK_SPAWN_PATH: Optional[str] = shutil.which("flatpak-spawn")
+
+def _get_flatpak_spawn_path() -> Optional[str]:
+    """Resolve flatpak-spawn path at call time (not import time)."""
+    return shutil.which("flatpak-spawn")
 
 
 def is_portal_launcher_available() -> bool:
     """Check if flatpak-spawn is available for portal-aware launching."""
-    return FLATPAK_SPAWN_PATH is not None
+    return _get_flatpak_spawn_path() is not None
 
 
 def launch_with_portal(
@@ -46,12 +48,13 @@ def launch_with_portal(
     Raises:
         FileNotFoundError: If flatpak-spawn is not available
     """
-    if not FLATPAK_SPAWN_PATH:
+    spawn_path = _get_flatpak_spawn_path()
+    if not spawn_path:
         raise FileNotFoundError(
             "flatpak-spawn not found. Install flatpak-tools or use direct flatpak run.",
         )
 
-    cmd = [FLATPAK_SPAWN_PATH, "--host", "flatpak", "run"]
+    cmd = [spawn_path, "--host", "flatpak", "run"]
 
     if wait:
         cmd.append("--wait")
@@ -162,8 +165,9 @@ def get_launch_command(
         Command as list of strings
     """
     if use_portal and is_portal_launcher_available():
-        assert FLATPAK_SPAWN_PATH is not None  # Checked by is_portal_launcher_available
-        cmd = [FLATPAK_SPAWN_PATH, "--host", "flatpak", "run", flatpak_id]
+        spawn_path = _get_flatpak_spawn_path()
+        assert spawn_path is not None  # Checked by is_portal_launcher_available
+        cmd = [spawn_path, "--host", "flatpak", "run", flatpak_id]
     else:
         cmd = ["flatpak", "run", flatpak_id]
 

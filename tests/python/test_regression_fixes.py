@@ -78,8 +78,8 @@ class TestPortalLauncherWaitFlagPosition:
     """--wait must appear before the app ID in the flatpak run command."""
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_wait_before_app_id_portal(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_wait_before_app_id_portal(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """launch_with_portal: --wait must precede the app ID."""
         from lib.portal_launcher import launch_with_portal
 
@@ -109,8 +109,8 @@ class TestPortalLauncherWaitFlagPosition:
         ), f"--wait (index {wait_index}) must come before app ID (index {app_index})"
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_app_args_still_after_app_id(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_app_args_still_after_app_id(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Application arguments must remain after the app ID even when wait=True."""
         from lib.portal_launcher import launch_with_portal
 
@@ -123,8 +123,8 @@ class TestPortalLauncherWaitFlagPosition:
         assert url_index > app_index, "Application arguments must appear after the app ID"
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_no_wait_flag_when_wait_false(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_no_wait_flag_when_wait_false(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """When wait=False, --wait must not appear in the command."""
         from lib.portal_launcher import launch_with_portal
 

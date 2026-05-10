@@ -14,33 +14,31 @@ import pytest
 class TestPortalLauncherAvailability:
     """Tests for flatpak-spawn availability detection."""
 
-    @patch("lib.portal_launcher.shutil.which")
-    def test_is_portal_launcher_available_true(self, mock_which: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path")
+    def test_is_portal_launcher_available_true(self, mock_get_path: MagicMock) -> None:
         """Test that portal launcher is available when flatpak-spawn is found."""
         from lib.portal_launcher import is_portal_launcher_available
 
-        mock_which.return_value = "/usr/bin/flatpak-spawn"
+        mock_get_path.return_value = "/usr/bin/flatpak-spawn"
+        result = is_portal_launcher_available()
+        assert result is True
 
-        with patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn"):
-            result = is_portal_launcher_available()
-            assert result is True
-
-    @patch("lib.portal_launcher.shutil.which")
-    def test_is_portal_launcher_available_false(self, mock_which: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path")
+    def test_is_portal_launcher_available_false(self, mock_get_path: MagicMock) -> None:
         """Test that portal launcher is unavailable when flatpak-spawn is not found."""
         from lib.portal_launcher import is_portal_launcher_available
 
-        with patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", None):
-            result = is_portal_launcher_available()
-            assert result is False
+        mock_get_path.return_value = None
+        result = is_portal_launcher_available()
+        assert result is False
 
 
 class TestLaunchWithPortal:
     """Tests for launch_with_portal function."""
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_launches_with_flatpak_spawn(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_launches_with_flatpak_spawn(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that launch_with_portal uses flatpak-spawn."""
         from lib.portal_launcher import launch_with_portal
 
@@ -57,8 +55,8 @@ class TestLaunchWithPortal:
         assert "org.mozilla.firefox" in cmd
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_passes_arguments_to_command(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_passes_arguments_to_command(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that application arguments are passed through."""
         from lib.portal_launcher import launch_with_portal
 
@@ -71,8 +69,8 @@ class TestLaunchWithPortal:
         assert "https://example.com" in cmd
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_wait_flag_adds_wait_argument(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_wait_flag_adds_wait_argument(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that wait=True adds --wait to command."""
         from lib.portal_launcher import launch_with_portal
 
@@ -84,8 +82,8 @@ class TestLaunchWithPortal:
         assert "--wait" in cmd
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_environment_overrides_applied(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_environment_overrides_applied(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that environment variable overrides are applied."""
         from lib.portal_launcher import launch_with_portal
 
@@ -99,8 +97,8 @@ class TestLaunchWithPortal:
         assert "HOME" in env
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_cwd_is_passed(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_cwd_is_passed(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that working directory is passed to subprocess."""
         from lib.portal_launcher import launch_with_portal
 
@@ -111,8 +109,8 @@ class TestLaunchWithPortal:
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs["cwd"] == "/tmp"
 
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", None)
-    def test_raises_error_when_spawn_not_available(self) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value=None)
+    def test_raises_error_when_spawn_not_available(self, mock_get_path: MagicMock) -> None:
         """Test that FileNotFoundError is raised when flatpak-spawn is not available."""
         from lib.portal_launcher import launch_with_portal
 
@@ -122,8 +120,8 @@ class TestLaunchWithPortal:
         assert "flatpak-spawn not found" in str(exc_info.value)
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_returns_completed_process(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_returns_completed_process(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that subprocess.CompletedProcess is returned."""
         from lib.portal_launcher import launch_with_portal
 
@@ -135,8 +133,8 @@ class TestLaunchWithPortal:
         assert result == expected
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_captures_output(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_captures_output(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that subprocess is called with capture_output."""
         from lib.portal_launcher import launch_with_portal
 
@@ -340,8 +338,8 @@ class TestGetLaunchCommand:
     """Tests for get_launch_command function."""
 
     @patch("lib.portal_launcher.is_portal_launcher_available")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_returns_portal_command_when_available(self, mock_available: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_returns_portal_command_when_available(self, mock_get_path: MagicMock, mock_available: MagicMock) -> None:
         """Test that portal command is returned when available."""
         from lib.portal_launcher import get_launch_command
 
@@ -383,8 +381,8 @@ class TestGetLaunchCommand:
         assert result[1] == "run"
 
     @patch("lib.portal_launcher.is_portal_launcher_available")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_appends_arguments(self, mock_available: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_appends_arguments(self, mock_get_path: MagicMock, mock_available: MagicMock) -> None:
         """Test that arguments are appended to command."""
         from lib.portal_launcher import get_launch_command
 
@@ -396,8 +394,8 @@ class TestGetLaunchCommand:
         assert "/tmp/profile" in result
 
     @patch("lib.portal_launcher.is_portal_launcher_available")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_empty_args_does_not_double_list(self, mock_available: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_empty_args_does_not_double_list(self, mock_get_path: MagicMock, mock_available: MagicMock) -> None:
         """Test that None args doesn't add extra elements."""
         from lib.portal_launcher import get_launch_command
 
@@ -409,8 +407,8 @@ class TestGetLaunchCommand:
         assert firefox_count == 1
 
     @patch("lib.portal_launcher.is_portal_launcher_available")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_returns_list_of_strings(self, mock_available: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_returns_list_of_strings(self, mock_get_path: MagicMock, mock_available: MagicMock) -> None:
         """Test that result is a list of strings."""
         from lib.portal_launcher import get_launch_command
 
@@ -426,8 +424,8 @@ class TestCommandConstruction:
     """Integration tests for command construction scenarios."""
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_full_portal_launch_command_structure(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_full_portal_launch_command_structure(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test complete command structure for portal launch."""
         from lib.portal_launcher import launch_with_portal
 
@@ -494,8 +492,8 @@ class TestErrorHandling:
     """Tests for error handling and edge cases."""
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_handles_subprocess_errors(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_handles_subprocess_errors(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that subprocess errors are propagated."""
         from lib.portal_launcher import launch_with_portal
 
@@ -509,8 +507,8 @@ class TestErrorHandling:
             launch_with_portal("org.test.app")
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_handles_none_env_overrides(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_handles_none_env_overrides(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that None env_overrides doesn't cause issues."""
         from lib.portal_launcher import launch_with_portal
 
@@ -522,8 +520,8 @@ class TestErrorHandling:
         assert "HOME" in call_kwargs["env"]
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_handles_empty_args_list(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_handles_empty_args_list(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that empty args list works correctly."""
         from lib.portal_launcher import launch_with_portal
 
@@ -535,8 +533,8 @@ class TestErrorHandling:
         assert cmd[-1] == "org.test.app"
 
     @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher.FLATPAK_SPAWN_PATH", "/usr/bin/flatpak-spawn")
-    def test_special_characters_in_args(self, mock_run: MagicMock) -> None:
+    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
+    def test_special_characters_in_args(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
         """Test that special characters in args are preserved."""
         from lib.portal_launcher import launch_with_portal
 
