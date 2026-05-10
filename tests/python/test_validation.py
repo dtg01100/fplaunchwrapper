@@ -264,7 +264,7 @@ class TestShouldProcessEvent:
         """Test that other types are converted to string."""
         # Should handle various input types gracefully
         result = should_process_event("/var/lib/flatpak")
-        assert isinstance(result, bool)
+        assert result is True
 
 
 if __name__ == "__main__":
