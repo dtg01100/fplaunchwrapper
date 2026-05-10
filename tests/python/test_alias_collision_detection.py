@@ -33,7 +33,7 @@ class TestAliasNameCollisionDetection:
 
             # Should warn but still allow creation (due to optional validation)
             # The warning is logged, but the operation continues
-            assert result is True or result is False  # Both acceptable with warning
+            assert result is True  # Same-name alias should succeed
 
     def test_no_collision_with_different_name(self):
         """Test that alias creation succeeds when name doesn't collide."""

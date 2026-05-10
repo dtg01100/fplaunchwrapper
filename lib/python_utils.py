@@ -87,18 +87,19 @@ def validate_home_dir(dir_path: str | Path) -> str | None:
 def is_wrapper_file(file_path: str | Path) -> bool:
     """Check if a file is a valid wrapper script."""
     try:
-        if not Path(file_path).is_file():
+        path = Path(file_path)
+        if path.is_symlink():
+            path = path.resolve()
+        if not path.is_file():
             return False
-        if not os.access(file_path, os.R_OK):
-            return False
-        if Path(file_path).is_symlink():
+        if not os.access(path, os.R_OK):
             return False
 
-        size = Path(file_path).stat().st_size
+        size = path.stat().st_size
         if size > MAX_FILE_SIZE:
             return False
 
-        with Path(file_path).open(encoding="utf-8", errors="ignore") as f:
+        with path.open(encoding="utf-8", errors="ignore") as f:
             content = f.read(min(BUFFER_SIZE, size))
 
         if any(ord(c) < 32 and c not in "\t\n\r" for c in content):
@@ -130,7 +131,10 @@ def get_wrapper_id(file_path: str | Path) -> str | None:
     Returns the ID string when found, otherwise returns None.
     """
     try:
-        with Path(file_path).open(encoding="utf-8", errors="ignore") as f:
+        path = Path(file_path)
+        if path.is_symlink():
+            path = path.resolve()
+        with path.open(encoding="utf-8", errors="ignore") as f:
             content = f.read(BUFFER_SIZE)
 
         id_match = re.search(r'^ID="([^"]*)"', content, re.MULTILINE)
