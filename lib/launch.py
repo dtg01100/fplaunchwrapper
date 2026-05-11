@@ -273,7 +273,9 @@ class AppLauncher:
                 args = [str(script_path), safe_app_name, source]
                 if hook_type == "post":
                     args.append(str(exit_code))
-                args.extend(self.args)
+                # Sanitize all user-provided args to prevent shell injection
+                sanitized_args = [self._sanitize_arg(arg) for arg in self.args]
+                args.extend(sanitized_args)
 
                 result = subprocess.run(
                     args,
@@ -564,6 +566,15 @@ class AppLauncher:
         command injection attacks in hook script execution.
         """
         return re.sub(r"[^a-zA-Z0-9_.-]", "_", app_name)
+
+    def _sanitize_arg(self, arg: str) -> str:
+        """Sanitize a command-line argument to prevent shell injection.
+
+        Allows alphanumeric, dash, underscore, dot, slash, equals, and
+        common filename characters. Replaces dangerous shell metacharacters
+        with underscores to prevent command injection via hook script args.
+        """
+        return re.sub(r"[^a-zA-Z0-9_./@:=-]", "_", arg)
 
     def _is_path_safe(self, path: Path, base_dir: Path) -> bool:
         """Check if a path is safely within a base directory.

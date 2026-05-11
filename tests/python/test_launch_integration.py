@@ -121,15 +121,15 @@ class TestLauncherConfigManagerIntegration:
         call_args = mock_subprocess.call_args[0][0]
         assert "firefox" in str(call_args)
 
-    def test_launch_loads_hook_scripts_from_config(self) -> None:
-        """Test launcher loads pre/post launch scripts from config."""
+    def test_launch_detects_hook_scripts_in_config(self) -> None:
+        """Test launcher detects pre/post launch scripts from config."""
         if not AppLauncher:
             pytest.skip("AppLauncher not available")
 
         # Create scripts directory with hook script
         scripts_dir = self.config_dir / "scripts" / "firefox"
         scripts_dir.mkdir(parents=True)
-        
+
         pre_launch = scripts_dir / "pre-launch.sh"
         pre_launch.write_text("#!/bin/bash\necho 'pre-launch'\n")
         pre_launch.chmod(0o755)
@@ -192,16 +192,10 @@ class TestLauncherSafetyIntegration:
         # (which is what is_dangerous_wrapper actually checks for)
         dangerous_wrapper = self.bin_dir / "malicious"
         dangerous_wrapper.write_text(
-            "#!/bin/bash\nflatpak run org.mozilla.firefox &\ngoogle-chrome &\n"
+            "#!/bin/bash\nflatpak run org.mozilla.firefox &\nchromium &\n"
         )
         dangerous_wrapper.chmod(0o755)
 
-
-        launcher = AppLauncher(
-            app_name="malicious",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-        )
 
         # Safety check should detect hardcoded browser launches
         from lib.safety import is_dangerous_wrapper
@@ -447,6 +441,4 @@ class TestLauncherEnvironmentIntegration:
 
         call_kwargs = mock_subprocess.call_args[1]
         assert "env" in call_kwargs
-        # When env is provided, it completely replaces os.environ
-        # This prevents environment variable injection attacks
         assert call_kwargs["env"]["APP_VAR"] == "value"

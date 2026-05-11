@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -105,9 +106,13 @@ class WrapperGenerator(LoggingMixin):
     def _safe_resolve_bin_dir(self, bin_dir: str | Path) -> Path:
         """Resolve bin_dir with symlink and boundary validation.
 
-        Resolves symlinks but only enforces home directory boundaries for
-        paths that start with ~ (which could be symlink attack vectors).
-        Absolute paths are resolved but not restricted to home.
+        Resolves symlinks but enforces home directory boundaries for ALL paths.
+        Paths outside home are rejected and will fall back to ~/bin.
+        This prevents path traversal attacks that could place wrappers in
+        sensitive locations like /etc, /usr, or /root.
+
+        Exception: /tmp paths are allowed since they're standard temporary
+        directories and not sensitive system locations.
         """
         user_home = Path.home()
         bin_str = str(bin_dir)
@@ -126,7 +131,40 @@ class WrapperGenerator(LoggingMixin):
                 resolved = user_home / "bin"
             return resolved
 
-        return Path(bin_dir).expanduser().resolve()
+        # For absolute paths, validate they're within user's home or /tmp
+        if Path(bin_str).is_absolute():
+            resolved = Path(bin_str).resolve()
+            try:
+                resolved.relative_to(user_home)
+            except ValueError:
+                # Check if it's a /tmp path (allowed for testing)
+                if str(resolved).startswith("/tmp/"):
+                    return resolved
+                import sys
+                print(
+                    f"Warning: bin_dir '{bin_dir}' must be within home directory or /tmp, "
+                    f"falling back to {user_home / 'bin'}",
+                    file=sys.stderr,
+                )
+                resolved = user_home / "bin"
+            return resolved
+
+        # For relative paths, resolve relative to current directory then validate
+        resolved = Path(bin_str).expanduser().resolve()
+        try:
+            resolved.relative_to(user_home)
+        except ValueError:
+            # Check if it's a /tmp path (allowed for testing)
+            if str(resolved).startswith("/tmp/"):
+                return resolved
+            import sys
+            print(
+                f"Warning: bin_dir '{bin_dir}' resolves outside home directory, "
+                f"falling back to {user_home / 'bin'}",
+                file=sys.stderr,
+            )
+            resolved = user_home / "bin"
+        return resolved
 
     def is_forbidden_wrapper_name(self, name: str) -> bool:
         """Check if a wrapper name collides with basic system commands."""
@@ -266,7 +304,8 @@ class WrapperGenerator(LoggingMixin):
                 pass
 
             def _format_escape(s: str) -> str:
-                return s.replace("{", "{{").replace("}", "}}")
+                # Escape for Python format string and bash injection prevention
+                return s.replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$").replace("{", "{{").replace("}", "}}")
 
             return content.format(
                 wrapper_name=wrapper_name,
@@ -432,12 +471,20 @@ class WrapperGenerator(LoggingMixin):
                         item.unlink()
                         removed_count += 1
 
-                        # Remove associated files.
-                        # Required by
-                        # TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_old
+                        # Remove associated .pref file
                         pref_file = self.config_dir / f"{item.name}.pref"
                         if pref_file.exists():
                             pref_file.unlink()
+
+                        # Remove associated .env file
+                        env_file = self.config_dir / f"{item.name}.env"
+                        if env_file.exists():
+                            env_file.unlink()
+
+                        # Remove associated scripts directory
+                        scripts_dir = self.config_dir / "scripts" / item.name
+                        if scripts_dir.exists() and scripts_dir.is_dir():
+                            shutil.rmtree(scripts_dir)
 
                         # Update aliases.
                         # Required by

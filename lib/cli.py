@@ -467,7 +467,11 @@ def _run_systemd_setup(
         if hasattr(setup, "install_systemd_units"):
             result = setup.install_systemd_units()
             return 0 if result else 1
-        return 0
+        console_err.print(
+            "[red]Error:[/red] SystemdSetup has no valid method "
+            "(neither 'run' nor 'install_systemd_units')"
+        )
+        return 1
     except Exception as e:
         console_err.print(f"[red]Error:[/red] {e}")
         return 1

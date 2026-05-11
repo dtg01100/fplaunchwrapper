@@ -239,7 +239,7 @@ def acquire_lock(
 ) -> bool | None:
     """Acquire a file-based lock with timeout.
 
-    Uses a file-based lock with PID tracking for stale lock detection.
+    Uses mkdir() for atomic lock acquisition (O_EXCL flag ensures atomicity).
     Lock is stored as a file containing the PID of the holding process.
 
     Args:
@@ -261,15 +261,20 @@ def acquire_lock(
         end_time = start_time + timeout_seconds
 
         while time.time() < end_time:
-            try:
-                if lockfile.exists():
-                    if _cleanup_stale_lock(lockfile, pidfile):
-                        continue
+            # Clean up stale lock if it exists
+            if lockfile.exists():
+                if _cleanup_stale_lock(lockfile, pidfile):
+                    continue  # Lock was cleaned, try to acquire again
 
+            # Use mkdir for atomic lock acquisition
+            # This is atomic even across network filesystems (NFS, etc.)
+            try:
                 lockfile.mkdir(parents=True, exist_ok=False)
-                pidfile.write_text(str(os.getpid()))
+                # Write PID file - use atomic write via tempfile + rename
+                _write_pid_atomic(pidfile, os.getpid())
                 return True
             except FileExistsError:
+                # Lock acquired by another process, wait and retry
                 time.sleep(0.1)
                 continue
             except OSError:
@@ -280,6 +285,20 @@ def acquire_lock(
 
     except (IOError, OSError, PermissionError, RuntimeError):
         return False
+
+
+def _write_pid_atomic(pidfile: Path, pid: int) -> None:
+    """Write PID file atomically using rename trick."""
+    temp_pid = pidfile.parent / f"{pidfile.name}.tmp"
+    try:
+        temp_pid.write_text(str(pid))
+        temp_pid.rename(pidfile)  # Atomic on POSIX
+    except OSError:
+        # Fallback: direct write if rename fails
+        if temp_pid.exists():
+            with contextlib.suppress(OSError):
+                temp_pid.unlink()
+        pidfile.write_text(str(pid))
 
 
 def _cleanup_stale_lock(lockfile: Path, pidfile: Path) -> bool:
