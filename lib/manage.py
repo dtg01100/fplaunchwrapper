@@ -26,6 +26,8 @@ from .safety import (
 class WrapperManager(LoggingMixin):
     """Manages Flatpak application wrappers."""
 
+    config_dir: Path | None
+
     def __init__(
         self,
         bin_dir: str | Path | None = None,
@@ -45,8 +47,8 @@ class WrapperManager(LoggingMixin):
                 config_dir=self.config_dir,
             )
         elif emit_mode:
-            self.config_dir = None
             if bin_dir:
+                self.config_dir = None
                 self.bin_dir = Path(bin_dir)
             else:
                 import tempfile
@@ -131,12 +133,15 @@ class WrapperManager(LoggingMixin):
         console.print(f"[bold]Application ID:[/bold] {wrapper_id or 'unknown'}")
         console.print(f"[bold]Path:[/bold] {wrapper_path}")
 
-        pref_file = self.config_dir / f"{name}.pref"
-        if pref_file.exists():
-            pref = pref_file.read_text().strip()
-            console.print(f"[bold]Launch Preference:[/bold] {pref}")
+        if self.config_dir is None:
+            console.print("[bold]Launch Preference:[/bold] unavailable (emit mode)")
         else:
-            console.print("[bold]Launch Preference:[/bold] none (will prompt)")
+            pref_file = self.config_dir / f"{name}.pref"
+            if pref_file.exists():
+                pref = pref_file.read_text().strip()
+                console.print(f"[bold]Launch Preference:[/bold] {pref}")
+            else:
+                console.print("[bold]Launch Preference:[/bold] none (will prompt)")
 
         return True
 
@@ -156,6 +161,8 @@ class WrapperManager(LoggingMixin):
         if self.emit_mode:
             self.log(f"Would remove wrapper: {wrapper_path}", "emit")
             return True
+
+        assert self.config_dir is not None
 
         try:
             wrapper_path.unlink()
@@ -199,6 +206,8 @@ class WrapperManager(LoggingMixin):
         if self.emit_mode:
             self.log(f"Would set preference for {name} to {preference}", "emit")
             return True
+
+        assert self.config_dir is not None
 
         wrapper_path = self.bin_dir / name
         if not wrapper_path.exists():
@@ -307,6 +316,8 @@ class WrapperManager(LoggingMixin):
             self.log(f"Would create alias: {alias_name} -> {target}", "emit")
             return True
 
+        assert self.config_dir is not None
+
         try:
             aliases_file = self.config_dir / "aliases"
 
@@ -367,19 +378,22 @@ class WrapperManager(LoggingMixin):
                 add_file(name, "wrapper", self.bin_dir / name)
 
             if file_type in (None, "all", "prefs"):
-                pref_file = self.config_dir / f"{name}.pref"
-                if pref_file.exists():
-                    add_file(name, "pref", pref_file)
+                if self.config_dir is not None:
+                    pref_file = self.config_dir / f"{name}.pref"
+                    if pref_file.exists():
+                        add_file(name, "pref", pref_file)
 
             if file_type in (None, "all", "env"):
-                env_file = self.config_dir / f"{name}.env"
-                if env_file.exists():
-                    add_file(name, "env", env_file)
+                if self.config_dir is not None:
+                    env_file = self.config_dir / f"{name}.env"
+                    if env_file.exists():
+                        add_file(name, "env", env_file)
 
         # Add aliases file if exists
-        aliases_file = self.config_dir / "aliases"
-        if aliases_file.exists():
-            result["_aliases"] = [{"type": "aliases", "path": str(aliases_file)}]
+        if self.config_dir is not None:
+            aliases_file = self.config_dir / "aliases"
+            if aliases_file.exists():
+                result["_aliases"] = [{"type": "aliases", "path": str(aliases_file)}]
 
         return result
 

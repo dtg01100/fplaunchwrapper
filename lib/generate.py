@@ -138,7 +138,7 @@ class WrapperGenerator(LoggingMixin):
                 resolved.relative_to(user_home)
             except ValueError:
                 # Check if it's a /tmp path (allowed for testing)
-                if str(resolved).startswith("/tmp/"):
+                if str(resolved).startswith("/tmp/"):  # nosec B108
                     return resolved
                 import sys
                 print(
@@ -155,7 +155,7 @@ class WrapperGenerator(LoggingMixin):
             resolved.relative_to(user_home)
         except ValueError:
             # Check if it's a /tmp path (allowed for testing)
-            if str(resolved).startswith("/tmp/"):
+            if str(resolved).startswith("/tmp/"):  # nosec B108
                 return resolved
             import sys
             print(
@@ -472,6 +472,7 @@ class WrapperGenerator(LoggingMixin):
                         removed_count += 1
 
                         # Remove associated .pref file
+                        assert self.config_dir is not None
                         pref_file = self.config_dir / f"{item.name}.pref"
                         if pref_file.exists():
                             pref_file.unlink()
