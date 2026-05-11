@@ -134,6 +134,7 @@ Key=valueB
 
     # === Property Tests ===
 
+    @patch.dict(os.environ, {"LANG": "en_US"})
     def test_name_property(self) -> None:
         """Test name property returns localized name or stem."""
         from lib.desktop_parser import DesktopEntry
