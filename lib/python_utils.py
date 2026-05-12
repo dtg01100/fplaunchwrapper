@@ -50,9 +50,9 @@ def canonicalize_path_no_resolve(path: str | Path) -> Path | None:
             path_str = str(Path(path_str).expanduser())
 
         if not Path(path_str).is_absolute():
-            path_str = str(Path(path_str).resolve())
+            path_str = os.path.abspath(path_str)
 
-        return Path(Path(path_str).resolve())
+        return Path(os.path.normpath(path_str))
 
     except (TypeError, ValueError, OSError):
         return None

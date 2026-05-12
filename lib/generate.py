@@ -103,6 +103,25 @@ class WrapperGenerator(LoggingMixin):
             ensure_dir(self.config_dir)
             (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
 
+    @staticmethod
+    def _enforce_home_boundary(
+        resolved: Path, original_str: str, user_home: Path
+    ) -> Path:
+        """Check resolved path is under home or /tmp, falling back to ~/bin if not."""
+        try:
+            resolved.relative_to(user_home)
+        except ValueError:
+            if str(resolved).startswith("/tmp/"):  # nosec B108
+                return resolved
+            import sys
+            print(
+                f"Warning: bin_dir '{original_str}' resolves outside home directory, "
+                f"falling back to {user_home / 'bin'}",
+                file=sys.stderr,
+            )
+            resolved = user_home / "bin"
+        return resolved
+
     def _safe_resolve_bin_dir(self, bin_dir: str | Path) -> Path:
         """Resolve bin_dir with symlink and boundary validation.
 
@@ -119,52 +138,12 @@ class WrapperGenerator(LoggingMixin):
 
         if bin_str.startswith("~"):
             resolved = Path(bin_dir).expanduser().resolve()
-            try:
-                resolved.relative_to(user_home)
-            except ValueError:
-                import sys
-                print(
-                    f"Warning: bin_dir '{bin_dir}' resolves outside home directory, "
-                    f"falling back to {user_home / 'bin'}",
-                    file=sys.stderr,
-                )
-                resolved = user_home / "bin"
-            return resolved
-
-        # For absolute paths, validate they're within user's home or /tmp
-        if Path(bin_str).is_absolute():
+        elif Path(bin_str).is_absolute():
             resolved = Path(bin_str).resolve()
-            try:
-                resolved.relative_to(user_home)
-            except ValueError:
-                # Check if it's a /tmp path (allowed for testing)
-                if str(resolved).startswith("/tmp/"):  # nosec B108
-                    return resolved
-                import sys
-                print(
-                    f"Warning: bin_dir '{bin_dir}' must be within home directory or /tmp, "
-                    f"falling back to {user_home / 'bin'}",
-                    file=sys.stderr,
-                )
-                resolved = user_home / "bin"
-            return resolved
+        else:
+            resolved = Path(bin_str).expanduser().resolve()
 
-        # For relative paths, resolve relative to current directory then validate
-        resolved = Path(bin_str).expanduser().resolve()
-        try:
-            resolved.relative_to(user_home)
-        except ValueError:
-            # Check if it's a /tmp path (allowed for testing)
-            if str(resolved).startswith("/tmp/"):  # nosec B108
-                return resolved
-            import sys
-            print(
-                f"Warning: bin_dir '{bin_dir}' resolves outside home directory, "
-                f"falling back to {user_home / 'bin'}",
-                file=sys.stderr,
-            )
-            resolved = user_home / "bin"
-        return resolved
+        return self._enforce_home_boundary(resolved, bin_str, user_home)
 
     def is_forbidden_wrapper_name(self, name: str) -> bool:
         """Check if a wrapper name collides with basic system commands."""
@@ -472,7 +451,8 @@ class WrapperGenerator(LoggingMixin):
                         removed_count += 1
 
                         # Remove associated .pref file
-                        assert self.config_dir is not None
+                        if self.config_dir is None:
+                            raise RuntimeError("config_dir is required for cleanup")
                         pref_file = self.config_dir / f"{item.name}.pref"
                         if pref_file.exists():
                             pref_file.unlink()

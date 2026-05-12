@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .config_manager import LaunchMethod
+
 from rich.table import Table
 
 from .logging_utils import LoggingMixin, console
@@ -162,7 +164,8 @@ class WrapperManager(LoggingMixin):
             self.log(f"Would remove wrapper: {wrapper_path}", "emit")
             return True
 
-        assert self.config_dir is not None
+        if self.config_dir is None:
+            raise RuntimeError("config_dir is required for wrapper removal")
 
         try:
             wrapper_path.unlink()
@@ -194,7 +197,7 @@ class WrapperManager(LoggingMixin):
 
     def set_preference(self, name: str, preference: str) -> bool:
         """Set launch preference for a wrapper."""
-        valid_preferences = {"system", "flatpak", "auto"}
+        valid_preferences = set(LaunchMethod)
         if preference not in valid_preferences:
             self.log(
                 f"Invalid preference '{preference}': must be one of "
@@ -207,7 +210,8 @@ class WrapperManager(LoggingMixin):
             self.log(f"Would set preference for {name} to {preference}", "emit")
             return True
 
-        assert self.config_dir is not None
+        if self.config_dir is None:
+            raise RuntimeError("config_dir is required for setting preference")
 
         wrapper_path = self.bin_dir / name
         if not wrapper_path.exists():
@@ -228,7 +232,7 @@ class WrapperManager(LoggingMixin):
 
         Returns the number of wrappers successfully updated.
         """
-        valid_preferences = {"system", "flatpak", "auto"}
+        valid_preferences = set(LaunchMethod)
         if preference not in valid_preferences:
             self.log(
                 f"Invalid preference '{preference}': must be one of "
@@ -316,7 +320,8 @@ class WrapperManager(LoggingMixin):
             self.log(f"Would create alias: {alias_name} -> {target}", "emit")
             return True
 
-        assert self.config_dir is not None
+        if self.config_dir is None:
+            raise RuntimeError("config_dir is required for alias creation")
 
         try:
             aliases_file = self.config_dir / "aliases"
