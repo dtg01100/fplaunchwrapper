@@ -11,6 +11,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -63,7 +64,9 @@ except ImportError:
 
 
 # TOML support is optional. Use Any for static analysis.
-TOML_AVAILABLE = False  # type: bool
+tomli: Any = None
+tomli_w: Any = None
+TOML_AVAILABLE: bool = False
 
 try:
     import tomli
@@ -71,8 +74,6 @@ try:
 
     TOML_AVAILABLE = True
 except ImportError:
-    tomli = None
-    tomli_w = None
     TOML_AVAILABLE = False
 
 
@@ -98,8 +99,20 @@ except ImportError:
     )
 
 
+class LaunchMethod(str, Enum):
+    SYSTEM = "system"
+    FLATPAK = "flatpak"
+    AUTO = "auto"
+
+
+class HookFailureMode(str, Enum):
+    ABORT = "abort"
+    WARN = "warn"
+    IGNORE = "ignore"
+
+
 # Valid hook failure modes
-HOOK_FAILURE_MODES = ("abort", "warn", "ignore")
+HOOK_FAILURE_MODES = tuple(HookFailureMode)
 
 
 @dataclass
