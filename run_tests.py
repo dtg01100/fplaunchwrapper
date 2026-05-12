@@ -61,8 +61,7 @@ def run_test_file(test_file_path):
                         # Method needs fixtures or parameters, skip for now
                         print(f"    ⚠️  {method_name} (needs parameters, skipped)")
                         continue
-                    else:
-                        raise
+                    raise
                 except Exception as e:
                     print(f"    ❌ {method_name}: {e}")
                 finally:
