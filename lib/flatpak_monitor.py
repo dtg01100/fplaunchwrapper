@@ -40,8 +40,8 @@ WatchdogObserver: Any
 WATCHDOG_AVAILABLE: bool
 
 try:
-    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler  # type: ignore[no-redef]
-    from watchdog.observers import Observer as WatchdogObserver  # type: ignore[no-redef]
+    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler
+    from watchdog.observers import Observer as WatchdogObserver
     WATCHDOG_AVAILABLE = True
 except (ImportError, AttributeError):
     WATCHDOG_AVAILABLE = False
@@ -259,9 +259,7 @@ class FlatpakMonitor:
             logger.info("Flatpak monitor started successfully")
             return True
 
-        except (OSError, RuntimeError, Exception) as e:
-            # Catch a broad range since observer.start() can raise various errors
-            # RuntimeError covers threading issues, Exception catches any other failures
+        except Exception as e:
             logger.error("Failed to start Flatpak monitor: %s", e)
             return False
 
@@ -310,10 +308,10 @@ class FlatpakMonitor:
         """Determine if wrappers should be regenerated based on the path."""
         path_str = str(path).lower()
 
-        if "exports" in path_str or "app" in path_str:
+        if "/exports/" in path_str or "/app/" in path_str or path_str.endswith("/app"):
             return True
 
-        return "metadata" in path_str or "manifest" in path_str
+        return "/metadata" in path_str or "/manifest" in path_str
 
     def _regenerate_wrappers(self) -> bool:
         """Regenerate Flatpak wrappers (non-blocking if already running)."""
