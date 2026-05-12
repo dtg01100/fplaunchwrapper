@@ -185,6 +185,48 @@ def isolated_home(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.
         shutil.rmtree(base_dir, ignore_errors=True)
 
 
+@pytest.fixture
+def wrapper_generator(isolated_home):
+    """Provide a configured WrapperGenerator.
+
+    Builds on isolated_home to create a generator pointed at the
+    isolated temp directory.
+    """
+    from lib.generate import WrapperGenerator
+
+    return WrapperGenerator(
+        bin_dir=str(isolated_home.bin_dir),
+        config_dir=str(isolated_home.config_dir),
+    )
+
+
+@pytest.fixture
+def wrapper_manager(isolated_home):
+    """Provide a configured WrapperManager.
+
+    Builds on isolated_home to create a manager pointed at the
+    isolated temp directory.
+    """
+    from lib.manage import WrapperManager
+
+    return WrapperManager(
+        bin_dir=str(isolated_home.bin_dir),
+        config_dir=str(isolated_home.config_dir),
+    )
+
+
+@pytest.fixture
+def app_launcher(isolated_home):
+    """Provide a configured AppLauncher.
+
+    Builds on isolated_home to create a launcher pointed at the
+    isolated temp directory.
+    """
+    from lib.launch import AppLauncher
+
+    return AppLauncher(**isolated_home.app_launcher_kwargs)
+
+
 @pytest.fixture(autouse=True)
 def cleanup_legacy_config():
     """Remove any default config dir created during tests.
