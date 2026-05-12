@@ -33,39 +33,23 @@ import threading
 import time
 from pathlib import Path
 
+from .config_manager import HookFailureMode, LaunchMethod
 from .paths import get_default_config_dir, resolve_bin_dir, ensure_dir
 
 logger = logging.getLogger(__name__)
 
 
-class _AppNotFoundError(Exception):
-    pass
-
-
-class _LaunchBlockedError(Exception):
-    pass
-
-
-class _LaunchError(Exception):
-    pass
-
-
-AppNotFoundError = _AppNotFoundError
-LaunchBlockedError = _LaunchBlockedError
-LaunchError = _LaunchError
-
 try:
-    from .exceptions import (
-        AppNotFoundError as _AppNotFoundErrorReal,
-        LaunchBlockedError as _LaunchBlockedErrorReal,
-        LaunchError as _LaunchErrorReal,
-    )
-
-    AppNotFoundError = _AppNotFoundErrorReal  # type: ignore[misc,assignment]
-    LaunchBlockedError = _LaunchBlockedErrorReal  # type: ignore[misc,assignment]
-    LaunchError = _LaunchErrorReal  # type: ignore[misc,assignment]
+    from .exceptions import AppNotFoundError, LaunchBlockedError, LaunchError
 except ImportError:
-    pass
+    class AppNotFoundError(Exception):  # type: ignore[no-redef]
+        pass
+
+    class LaunchBlockedError(Exception):  # type: ignore[no-redef]
+        pass
+
+    class LaunchError(Exception):  # type: ignore[no-redef]
+        pass
 
 
 _FLATPAK_ID_CACHE: dict[str, tuple[str, float]] = {}
@@ -222,6 +206,47 @@ class AppLauncher:
 
         return "warn"
 
+    def _report_hook_error(
+        self, hook_type: str, failure_mode: str, script_path: Path,
+        verb: str, detail: str = "",
+    ) -> bool | None:
+        """Report and handle hook script errors based on failure mode.
+
+        Args:
+            hook_type: 'pre' or 'post'
+            failure_mode: 'abort', 'warn', or 'ignore'
+            script_path: Path to the failing hook script
+            verb: Past-tense verb phrase (e.g. 'failed (exit 1)', 'timed out', 'error')
+            detail: Additional error detail for warn mode
+
+        Returns:
+            False if launch should be aborted (abort/pre), None otherwise
+        """
+        if failure_mode == "ignore":
+            return None
+
+        if failure_mode == "abort":
+            if hook_type == "pre":
+                print(
+                    f"[fplaunchwrapper] Pre-launch hook {verb}, "
+                    f"aborting launch: {script_path}",
+                    file=sys.stderr,
+                )
+                return False
+            print(
+                f"[fplaunchwrapper] Post-launch hook {verb}: {script_path}",
+                file=sys.stderr,
+            )
+        elif failure_mode == "warn":
+            suffix = f": {detail}" if detail else ""
+            print(
+                f"[fplaunchwrapper] Warning: {hook_type}-launch hook {verb} "
+                f"({script_path}){suffix}",
+                file=sys.stderr,
+            )
+
+        return None
+
     def _run_hook_scripts(
         self, hook_type: str, exit_code: int = 0, source: str = "flatpak",
     ) -> bool:
@@ -287,95 +312,43 @@ class AppLauncher:
 
                 if result.returncode != 0:
                     all_succeeded = False
-
-                    if failure_mode == "abort":
-                        if hook_type == "pre":
-                            print(
-                                f"[fplaunchwrapper] Pre-launch hook failed "
-                                f"(exit {result.returncode}), aborting launch: {script_path}",
-                                file=sys.stderr,
-                            )
-                            return False
-                        print(
-                            f"[fplaunchwrapper] Post-launch hook failed "
-                            f"(exit {result.returncode}): {script_path}",
-                            file=sys.stderr,
-                        )
-                    elif failure_mode == "warn":
-                        print(
-                            f"[fplaunchwrapper] Warning: {hook_type}-launch hook failed "
-                            f"({script_path}): {result.stderr}",
-                            file=sys.stderr,
-                        )
+                    outcome = self._report_hook_error(
+                        hook_type, failure_mode, script_path,
+                        f"failed (exit {result.returncode})",
+                        result.stderr.strip(),
+                    )
+                    if outcome is False:
+                        return False
 
                 elif self.verbose and result.stdout:
                     print(f"{hook_type} hook output: {result.stdout}", file=sys.stderr)
 
             except subprocess.TimeoutExpired:
                 all_succeeded = False
-
-                if failure_mode == "abort":
-                    if hook_type == "pre":
-                        print(
-                            f"[fplaunchwrapper] Pre-launch hook timed out, "
-                            f"aborting launch: {script_path}",
-                            file=sys.stderr,
-                        )
-                        return False
-                    print(
-                        f"[fplaunchwrapper] Post-launch hook timed out: {script_path}",
-                        file=sys.stderr,
-                    )
-                elif failure_mode == "warn":
-                    print(
-                        f"[fplaunchwrapper] Warning: {hook_type}-launch hook timed out "
-                        f"({script_path})",
-                        file=sys.stderr,
-                    )
+                outcome = self._report_hook_error(
+                    hook_type, failure_mode, script_path,
+                    "timed out",
+                )
+                if outcome is False:
+                    return False
 
             except OSError as e:
                 all_succeeded = False
-
-                if failure_mode == "abort":
-                    if hook_type == "pre":
-                        print(
-                            f"[fplaunchwrapper] Pre-launch hook error, aborting launch "
-                            f"({script_path}): {e}",
-                            file=sys.stderr,
-                        )
-                        return False
-                    print(
-                        f"[fplaunchwrapper] Post-launch hook error ({script_path}): {e}",
-                        file=sys.stderr,
-                    )
-                elif failure_mode == "warn":
-                    print(
-                        f"[fplaunchwrapper] Warning: Error running {hook_type}-launch hook "
-                        f"({script_path}): {e}",
-                        file=sys.stderr,
-                    )
+                outcome = self._report_hook_error(
+                    hook_type, failure_mode, script_path,
+                    "error", str(e),
+                )
+                if outcome is False:
+                    return False
 
             except Exception as e:
-                # Catch unexpected errors (e.g., from mocks in tests)
                 all_succeeded = False
-                error_msg = f"Unexpected error running {hook_type}-launch hook ({script_path}): {e}"
-                if failure_mode == "abort":
-                    if hook_type == "pre":
-                        print(
-                            f"[fplaunchwrapper] Pre-launch hook error, aborting launch: "
-                            f"{error_msg}",
-                            file=sys.stderr,
-                        )
-                        return False
-                    print(
-                        f"[fplaunchwrapper] Post-launch hook error: {error_msg}",
-                        file=sys.stderr,
-                    )
-                elif failure_mode == "warn":
-                    print(
-                        f"[fplaunchwrapper] Warning: {error_msg}",
-                        file=sys.stderr,
-                    )
+                outcome = self._report_hook_error(
+                    hook_type, failure_mode, script_path,
+                    "error", str(e),
+                )
+                if outcome is False:
+                    return False
 
         return all_succeeded
 

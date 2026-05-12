@@ -18,94 +18,42 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Define fallback exception classes first
-# These are used when the real exceptions from .exceptions cannot be imported
-# (e.g., if there's a circular import or the exceptions module has errors)
-
-
-class _SafetyError(Exception):
-    """Fallback safety error for when .exceptions cannot be loaded.
-
-    Raised when a safety check fails (input validation, path traversal, etc.)
-    """
-
-
-class _ForbiddenNameError(Exception):
-    """Fallback forbidden name error for when .exceptions cannot be loaded.
-
-    Raised when an app name or ID contains forbidden characters or patterns.
-    """
-
-
-class _PathTraversalError(Exception):
-    """Fallback path traversal error for when .exceptions cannot be loaded.
-
-    Raised when a path attempt escapes the allowed directory boundaries.
-    """
-
-
-class _InvalidFlatpakIdError(Exception):
-    """Fallback invalid Flatpak ID error for when .exceptions cannot be loaded.
-
-    Raised when a Flatpak ID does not match the expected format pattern.
-    """
-
-
-# Default to fallback values
-SafetyError = _SafetyError
-ForbiddenNameError = _ForbiddenNameError
-PathTraversalError = _PathTraversalError
-InvalidFlatpakIdError = _InvalidFlatpakIdError
-
-# Default utils to None
-canonicalize_path_no_resolve: Any = None
-get_wrapper_id: Any = None
-is_wrapper_file: Any = None
-sanitize_id_to_name: Any = None
-sanitize_string: Any = None
-validate_home_dir: Any = None
-UTILS_IMPORTED = False
-
-# Try to import real implementations and override fallbacks if available
 try:
     from .exceptions import (
-        ForbiddenNameError as _ForbiddenNameErrorReal,
-        InvalidFlatpakIdError as _InvalidFlatpakIdErrorReal,
-        PathTraversalError as _PathTraversalErrorReal,
-        SafetyError as _SafetyErrorReal,
+        ForbiddenNameError,
+        InvalidFlatpakIdError,
+        PathTraversalError,
+        SafetyError,
     )
-
-    # Override with real implementations when available
-    SafetyError = _SafetyErrorReal  # type: ignore[misc,assignment]
-    ForbiddenNameError = _ForbiddenNameErrorReal  # type: ignore[misc,assignment]
-    PathTraversalError = _PathTraversalErrorReal  # type: ignore[misc,assignment]
-    InvalidFlatpakIdError = _InvalidFlatpakIdErrorReal  # type: ignore[misc,assignment]
 except ImportError:
-    # Exceptions not available - fallbacks already set above
-    pass
+    class SafetyError(Exception):  # type: ignore[no-redef]
+        pass
+
+    class ForbiddenNameError(Exception):  # type: ignore[no-redef]
+        pass
+
+    class PathTraversalError(Exception):  # type: ignore[no-redef]
+        pass
+
+    class InvalidFlatpakIdError(Exception):  # type: ignore[no-redef]
+        pass
 
 try:
     from .python_utils import (
-        canonicalize_path_no_resolve as _canonicalize_path_no_resolve,
-        get_wrapper_id as _get_wrapper_id,
-        is_wrapper_file as _is_wrapper_file,
-        sanitize_id_to_name as _sanitize_id_to_name,
-        sanitize_string as _sanitize_string,
-        validate_home_dir as _validate_home_dir,
+        canonicalize_path_no_resolve,
+        get_wrapper_id,
+        is_wrapper_file,
+        sanitize_id_to_name,
+        sanitize_string,
+        validate_home_dir,
     )
-
-    canonicalize_path_no_resolve = _canonicalize_path_no_resolve
-    get_wrapper_id = _get_wrapper_id
-    is_wrapper_file = _is_wrapper_file
-    sanitize_id_to_name = _sanitize_id_to_name
-    sanitize_string = _sanitize_string
-    validate_home_dir = _validate_home_dir
-    UTILS_IMPORTED = True
 except ImportError as e:
     raise RuntimeError(
         f"Failed to import python_utils: {e}. "
         "Safety utilities are required for this module to function."
     ) from e
+
+UTILS_IMPORTED = True
 
 __all__ = [
     "ForbiddenNameError",
