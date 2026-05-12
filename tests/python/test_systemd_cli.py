@@ -28,36 +28,12 @@ class TestSystemdCliCommand:
             "Manage optional systemd timer" in result.output or "systemd" in result.output.lower()
         )
 
-    def test_systemd_enable_help(self):
-        """Test systemd enable action help."""
+    @pytest.mark.parametrize("action", ["enable", "disable", "status", "test"])
+    def test_systemd_action_help(self, action: str):
+        """Test systemd action help."""
         runner = CliRunner()
-        result = runner.invoke(cli, ["systemd", "enable", "--help"])
+        result = runner.invoke(cli, ["systemd", action, "--help"])
 
-        # Should show help without error
-        assert result.exit_code == 0
-
-    def test_systemd_disable_help(self):
-        """Test systemd disable action help."""
-        runner = CliRunner()
-        result = runner.invoke(cli, ["systemd", "disable", "--help"])
-
-        # Should show help without error
-        assert result.exit_code == 0
-
-    def test_systemd_status_help(self):
-        """Test systemd status action help."""
-        runner = CliRunner()
-        result = runner.invoke(cli, ["systemd", "status", "--help"])
-
-        # Should show help without error
-        assert result.exit_code == 0
-
-    def test_systemd_test_help(self):
-        """Test systemd test action help."""
-        runner = CliRunner()
-        result = runner.invoke(cli, ["systemd", "test", "--help"])
-
-        # Should show help without error
         assert result.exit_code == 0
 
     def test_systemd_test_emit_mode(self):

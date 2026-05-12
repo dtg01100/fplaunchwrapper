@@ -36,113 +36,99 @@ class TestPortalLauncherAvailability:
 class TestLaunchWithPortal:
     """Tests for launch_with_portal function."""
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_launches_with_flatpak_spawn(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    @pytest.fixture(autouse=True)
+    def _setup_portal_mocks(self):
+        with (
+            patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn") as mock_get,
+            patch("lib.portal_launcher.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            self._mock_get_path = mock_get
+            self._mock_run = mock_run
+            yield
+
+    def test_launches_with_flatpak_spawn(self) -> None:
         """Test that launch_with_portal uses flatpak-spawn."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_with_portal("org.mozilla.firefox")
 
-        mock_run.assert_called_once()
-        cmd = mock_run.call_args[0][0]
+        self._mock_run.assert_called_once()
+        cmd = self._mock_run.call_args[0][0]
         assert cmd[0] == "/usr/bin/flatpak-spawn"
         assert "--host" in cmd
         assert "flatpak" in cmd
         assert "run" in cmd
         assert "org.mozilla.firefox" in cmd
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_passes_arguments_to_command(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_passes_arguments_to_command(self) -> None:
         """Test that application arguments are passed through."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_with_portal("org.mozilla.firefox", args=["--private-window", "https://example.com"])
 
-        cmd = mock_run.call_args[0][0]
+        cmd = self._mock_run.call_args[0][0]
         assert "--private-window" in cmd
         assert "https://example.com" in cmd
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_wait_flag_adds_wait_argument(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_wait_flag_adds_wait_argument(self) -> None:
         """Test that wait=True adds --wait to command."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_with_portal("org.mozilla.firefox", wait=True)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = self._mock_run.call_args[0][0]
         assert "--wait" in cmd
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_environment_overrides_applied(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_environment_overrides_applied(self) -> None:
         """Test that environment variable overrides are applied."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_with_portal("org.mozilla.firefox", env_overrides={"DISPLAY": ":1"})
 
-        call_kwargs = mock_run.call_args[1]
+        call_kwargs = self._mock_run.call_args[1]
         env = call_kwargs["env"]
         assert env["DISPLAY"] == ":1"
         assert "HOME" in env
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_cwd_is_passed(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_cwd_is_passed(self) -> None:
         """Test that working directory is passed to subprocess."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_with_portal("org.mozilla.firefox", cwd="/tmp")
 
-        call_kwargs = mock_run.call_args[1]
+        call_kwargs = self._mock_run.call_args[1]
         assert call_kwargs["cwd"] == "/tmp"
 
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value=None)
-    def test_raises_error_when_spawn_not_available(self, mock_get_path: MagicMock) -> None:
+    def test_raises_error_when_spawn_not_available(self) -> None:
         """Test that FileNotFoundError is raised when flatpak-spawn is not available."""
         from lib.portal_launcher import launch_with_portal
+
+        self._mock_get_path.return_value = None
 
         with pytest.raises(FileNotFoundError) as exc_info:
             launch_with_portal("org.mozilla.firefox")
 
         assert "flatpak-spawn not found" in str(exc_info.value)
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_returns_completed_process(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_returns_completed_process(self) -> None:
         """Test that subprocess.CompletedProcess is returned."""
         from lib.portal_launcher import launch_with_portal
 
         expected = MagicMock(returncode=0, stdout="output", stderr="")
-        mock_run.return_value = expected
+        self._mock_run.return_value = expected
 
         result = launch_with_portal("org.mozilla.firefox")
 
         assert result == expected
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_captures_output(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_captures_output(self) -> None:
         """Test that subprocess is called with capture_output."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_with_portal("org.mozilla.firefox")
 
-        call_kwargs = mock_run.call_args[1]
+        call_kwargs = self._mock_run.call_args[1]
         assert call_kwargs["capture_output"] is True
         assert call_kwargs["text"] is True
 
@@ -150,78 +136,69 @@ class TestLaunchWithPortal:
 class TestLaunchDirect:
     """Tests for launch_direct function."""
 
-    @patch("lib.portal_launcher.subprocess.run")
-    def test_launches_with_flatpak_run(self, mock_run: MagicMock) -> None:
+    @pytest.fixture(autouse=True)
+    def _setup_mocks(self):
+        with patch("lib.portal_launcher.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            self._mock_run = mock_run
+            yield
+
+    def test_launches_with_flatpak_run(self) -> None:
         """Test that launch_direct uses flatpak run."""
         from lib.portal_launcher import launch_direct
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_direct("org.mozilla.firefox")
 
-        mock_run.assert_called_once()
-        cmd = mock_run.call_args[0][0]
+        self._mock_run.assert_called_once()
+        cmd = self._mock_run.call_args[0][0]
         assert cmd[0] == "flatpak"
         assert cmd[1] == "run"
         assert cmd[2] == "org.mozilla.firefox"
 
-    @patch("lib.portal_launcher.subprocess.run")
-    def test_passes_arguments_to_command(self, mock_run: MagicMock) -> None:
+    def test_passes_arguments_to_command(self) -> None:
         """Test that application arguments are passed through."""
         from lib.portal_launcher import launch_direct
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_direct("org.mozilla.firefox", args=["--version"])
 
-        cmd = mock_run.call_args[0][0]
+        cmd = self._mock_run.call_args[0][0]
         assert "--version" in cmd
 
-    @patch("lib.portal_launcher.subprocess.run")
-    def test_wait_flag_adds_wait_argument(self, mock_run: MagicMock) -> None:
+    def test_wait_flag_adds_wait_argument(self) -> None:
         """Test that wait=True adds --wait to command."""
         from lib.portal_launcher import launch_direct
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_direct("org.mozilla.firefox", wait=True)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = self._mock_run.call_args[0][0]
         assert "--wait" in cmd
 
-    @patch("lib.portal_launcher.subprocess.run")
-    def test_environment_overrides_applied(self, mock_run: MagicMock) -> None:
+    def test_environment_overrides_applied(self) -> None:
         """Test that environment variable overrides are applied."""
         from lib.portal_launcher import launch_direct
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_direct("org.mozilla.firefox", env_overrides={"GTK_THEME": "dark"})
 
-        call_kwargs = mock_run.call_args[1]
+        call_kwargs = self._mock_run.call_args[1]
         env = call_kwargs["env"]
         assert env["GTK_THEME"] == "dark"
         assert "HOME" in env
 
-    @patch("lib.portal_launcher.subprocess.run")
-    def test_cwd_is_passed(self, mock_run: MagicMock) -> None:
+    def test_cwd_is_passed(self) -> None:
         """Test that working directory is passed to subprocess."""
         from lib.portal_launcher import launch_direct
 
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-
         launch_direct("org.mozilla.firefox", cwd="/home/user")
 
-        call_kwargs = mock_run.call_args[1]
+        call_kwargs = self._mock_run.call_args[1]
         assert call_kwargs["cwd"] == "/home/user"
 
-    @patch("lib.portal_launcher.subprocess.run")
-    def test_returns_completed_process(self, mock_run: MagicMock) -> None:
+    def test_returns_completed_process(self) -> None:
         """Test that subprocess.CompletedProcess is returned."""
         from lib.portal_launcher import launch_direct
 
         expected = MagicMock(returncode=0, stdout="", stderr="")
-        mock_run.return_value = expected
+        self._mock_run.return_value = expected
 
         result = launch_direct("org.mozilla.firefox")
 
@@ -423,13 +400,20 @@ class TestGetLaunchCommand:
 class TestCommandConstruction:
     """Integration tests for command construction scenarios."""
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_full_portal_launch_command_structure(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    @pytest.fixture(autouse=True)
+    def _setup_portal_mocks(self):
+        with (
+            patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn") as mock_get,
+            patch("lib.portal_launcher.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0)
+            self._mock_get_path = mock_get
+            self._mock_run = mock_run
+            yield
+
+    def test_full_portal_launch_command_structure(self) -> None:
         """Test complete command structure for portal launch."""
         from lib.portal_launcher import launch_with_portal
-
-        mock_run.return_value = MagicMock(returncode=0)
 
         launch_with_portal(
             "com.example.app",
@@ -439,7 +423,7 @@ class TestCommandConstruction:
             wait=True,
         )
 
-        call_args = mock_run.call_args
+        call_args = self._mock_run.call_args
         cmd = call_args[0][0]
         kwargs = call_args[1]
 
@@ -458,12 +442,9 @@ class TestCommandConstruction:
         assert kwargs["capture_output"] is True
         assert kwargs["text"] is True
 
-    @patch("lib.portal_launcher.subprocess.run")
-    def test_full_direct_launch_command_structure(self, mock_run: MagicMock) -> None:
+    def test_full_direct_launch_command_structure(self) -> None:
         """Test complete command structure for direct launch."""
         from lib.portal_launcher import launch_direct
-
-        mock_run.return_value = MagicMock(returncode=0)
 
         launch_direct(
             "com.example.app",
@@ -473,7 +454,7 @@ class TestCommandConstruction:
             wait=True,
         )
 
-        call_args = mock_run.call_args
+        call_args = self._mock_run.call_args
         cmd = call_args[0][0]
         kwargs = call_args[1]
 
@@ -491,13 +472,22 @@ class TestCommandConstruction:
 class TestErrorHandling:
     """Tests for error handling and edge cases."""
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_handles_subprocess_errors(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    @pytest.fixture(autouse=True)
+    def _setup_portal_mocks(self):
+        with (
+            patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn") as mock_get,
+            patch("lib.portal_launcher.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0)
+            self._mock_get_path = mock_get
+            self._mock_run = mock_run
+            yield
+
+    def test_handles_subprocess_errors(self) -> None:
         """Test that subprocess errors are propagated."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.side_effect = subprocess.CalledProcessError(
+        self._mock_run.side_effect = subprocess.CalledProcessError(
             returncode=1,
             cmd=["flatpak-spawn", "--host", "flatpak", "run", "org.test.app"],
             output="error output",
@@ -506,46 +496,34 @@ class TestErrorHandling:
         with pytest.raises(subprocess.CalledProcessError):
             launch_with_portal("org.test.app")
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_handles_none_env_overrides(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_handles_none_env_overrides(self) -> None:
         """Test that None env_overrides doesn't cause issues."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0)
-
         launch_with_portal("org.test.app", env_overrides=None)
 
-        call_kwargs = mock_run.call_args[1]
+        call_kwargs = self._mock_run.call_args[1]
         assert "HOME" in call_kwargs["env"]
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_handles_empty_args_list(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_handles_empty_args_list(self) -> None:
         """Test that empty args list works correctly."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0)
-
         launch_with_portal("org.test.app", args=[])
 
-        cmd = mock_run.call_args[0][0]
+        cmd = self._mock_run.call_args[0][0]
         assert cmd[-1] == "org.test.app"
 
-    @patch("lib.portal_launcher.subprocess.run")
-    @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_special_characters_in_args(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_special_characters_in_args(self) -> None:
         """Test that special characters in args are preserved."""
         from lib.portal_launcher import launch_with_portal
-
-        mock_run.return_value = MagicMock(returncode=0)
 
         launch_with_portal(
             "org.test.app",
             args=["--option=value", 'arg with "quotes"', "path/to/file"],
         )
 
-        cmd = mock_run.call_args[0][0]
+        cmd = self._mock_run.call_args[0][0]
         assert "--option=value" in cmd
         assert 'arg with "quotes"' in cmd
         assert "path/to/file" in cmd

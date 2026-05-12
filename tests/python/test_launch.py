@@ -930,326 +930,89 @@ class TestRunHookScriptsFailureModes:
         script_path.chmod(0o755)
         return script_path
 
-    @patch("subprocess.run")
-    def test_pre_launch_abort_mode_returns_false_on_failure(self, mock_run) -> None:
-        """Test pre-launch hook failure with abort mode returns False."""
-        if not LibAppLauncher:
-            pytest.skip("LibAppLauncher class not available")
-
-        # Create hook script
-        self._create_hook_script("pre")
-
-        # Mock failed execution
-        mock_result = Mock()
-        mock_result.returncode = 1
-        mock_result.stdout = ""
-        mock_result.stderr = "hook error"
-        mock_run.return_value = mock_result
-
-        launcher = LibAppLauncher(
-            app_name="test_app",
+    def _make_launcher(self, hook_failure_mode="warn", **kwargs) -> "LibAppLauncher":
+        return LibAppLauncher(
+            app_name=kwargs.pop("app_name", "test_app"),
             bin_dir=str(self.bin_dir),
             config_dir=str(self.config_dir),
-            hook_failure_mode="abort",
+            hook_failure_mode=hook_failure_mode,
+            **kwargs,
         )
 
-        # Mock _get_effective_failure_mode to return "abort"
-        with patch.object(
-            launcher, "_get_effective_failure_mode", return_value="abort"
-        ):
-            result = launcher._run_hook_scripts("pre", source="flatpak")
-
-        assert result is False
-
+    @pytest.mark.parametrize(
+        ("hook_type", "failure_mode", "error_factory", "expected"),
+        [
+            ("pre", "abort", lambda r: setattr(r, "returncode", 1) or r, False),
+            ("post", "abort", lambda r: setattr(r, "returncode", 1) or r, False),
+            ("pre", "warn", lambda r: setattr(r, "returncode", 1) or r, False),
+            ("pre", "ignore", lambda r: setattr(r, "returncode", 1) or r, False),
+            ("pre", "abort", lambda _: (_ for _ in ()).throw(subprocess.TimeoutExpired("s", 30)), False),
+            ("post", "abort", lambda _: (_ for _ in ()).throw(subprocess.TimeoutExpired("s", 30)), False),
+            ("pre", "warn", lambda _: (_ for _ in ()).throw(subprocess.TimeoutExpired("s", 30)), False),
+            ("pre", "abort", lambda _: (_ for _ in ()).throw(OSError("Permission denied")), False),
+            ("post", "abort", lambda _: (_ for _ in ()).throw(OSError("Permission denied")), False),
+            ("pre", "warn", lambda _: (_ for _ in ()).throw(OSError("Permission denied")), False),
+            ("pre", "abort", lambda _: (_ for _ in ()).throw(RuntimeError("Unexpected")), False),
+            ("post", "abort", lambda _: (_ for _ in ()).throw(RuntimeError("Unexpected")), False),
+            ("pre", "warn", lambda _: (_ for _ in ()).throw(RuntimeError("Unexpected")), False),
+        ],
+        ids=[
+            "returncode+abort+pre",
+            "returncode+abort+post",
+            "returncode+warn+pre",
+            "returncode+ignore+pre",
+            "timeout+abort+pre",
+            "timeout+abort+post",
+            "timeout+warn+pre",
+            "oserror+abort+pre",
+            "oserror+abort+post",
+            "oserror+warn+pre",
+            "exception+abort+pre",
+            "exception+abort+post",
+            "exception+warn+pre",
+        ],
+    )
     @patch("subprocess.run")
-    @patch("sys.stderr")
-    def test_pre_launch_abort_mode_prints_abort_message(
-        self, mock_stderr, mock_run
+    def test_hook_error_modes(
+        self, mock_run, hook_type, failure_mode, error_factory, expected,
     ) -> None:
-        """Test pre-launch hook failure with abort mode prints correct message."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
-        # Create hook script
-        self._create_hook_script("pre")
+        self._create_hook_script(hook_type)
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+        mock_run.side_effect = lambda *a, **kw: error_factory(mock_result)
 
-        # Mock failed execution
+        launcher = self._make_launcher(hook_failure_mode=failure_mode)
+
+        with patch.object(launcher, "_get_effective_failure_mode", return_value=failure_mode):
+            result = launcher._run_hook_scripts(hook_type, exit_code=0, source="flatpak")
+
+        assert result is expected
+
+    @patch("subprocess.run")
+    def test_abort_pre_prints_error_message(self, mock_run) -> None:
+        """Pre-launch abort prints an abort message to stderr."""
+        if not LibAppLauncher:
+            pytest.skip("LibAppLauncher class not available")
+
+        self._create_hook_script("pre")
         mock_result = Mock()
         mock_result.returncode = 1
         mock_result.stdout = ""
         mock_result.stderr = "hook error"
         mock_run.return_value = mock_result
 
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            hook_failure_mode="abort",
-        )
+        launcher = self._make_launcher(hook_failure_mode="abort")
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
+            with patch("sys.stderr") as mock_stderr:
+                launcher._run_hook_scripts("pre", source="flatpak")
 
-        with patch.object(
-            launcher, "_get_effective_failure_mode", return_value="abort"
-        ):
-            launcher._run_hook_scripts("pre", source="flatpak")
-
-        # Check that abort message was printed
-        printed_output = "".join(
-            str(call.args[0]) for call in mock_stderr.write.call_args_list
-        )
-        assert (
-            "aborting launch" in printed_output.lower()
-            or "pre-launch hook failed" in printed_output.lower()
-        )
-
-    @patch("subprocess.run")
-    def test_post_launch_abort_mode_does_not_return_early(self, mock_run) -> None:
-        """Test post-launch hook failure with abort mode does not return early
-        (continues processing)."""
-        if not LibAppLauncher:
-            pytest.skip("LibAppLauncher class not available")
-
-        # Create hook script
-        self._create_hook_script("post")
-
-        # Mock failed execution
-        mock_result = Mock()
-        mock_result.returncode = 1
-        mock_result.stdout = ""
-        mock_result.stderr = "hook error"
-        mock_run.return_value = mock_result
-
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            hook_failure_mode="abort",
-        )
-
-        with patch.object(
-            launcher, "_get_effective_failure_mode", return_value="abort"
-        ):
-            result = launcher._run_hook_scripts("post", exit_code=0, source="flatpak")
-
-        # Post-launch with abort mode returns False (all_succeeded=False) but doesn't abort early
-        # The key difference from pre-launch is that it doesn't return early with False
-        assert result is False
-
-    @patch("subprocess.run")
-    def test_warn_mode_prints_warning_on_failure(self, mock_run) -> None:
-        """Test warn mode prints warning message with stderr output."""
-        if not LibAppLauncher:
-            pytest.skip("LibAppLauncher class not available")
-
-        # Create hook script
-        self._create_hook_script("pre")
-
-        # Mock failed execution
-        mock_result = Mock()
-        mock_result.returncode = 1
-        mock_result.stdout = ""
-        mock_result.stderr = "hook stderr output"
-        mock_run.return_value = mock_result
-
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            hook_failure_mode="warn",
-        )
-
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
-            with patch("sys.stderr"):
-                result = launcher._run_hook_scripts("pre", source="flatpak")
-
-        # Should return False but not abort
-        assert result is False
-
-    @patch("subprocess.run")
-    def test_ignore_mode_silently_ignores_failure(self, mock_run) -> None:
-        """Test ignore mode silently ignores hook failure."""
-        if not LibAppLauncher:
-            pytest.skip("LibAppLauncher class not available")
-
-        # Create hook script
-        self._create_hook_script("pre")
-
-        # Mock failed execution
-        mock_result = Mock()
-        mock_result.returncode = 1
-        mock_result.stdout = ""
-        mock_result.stderr = "hook error"
-        mock_run.return_value = mock_result
-
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            hook_failure_mode="ignore",
-        )
-
-        with patch.object(
-            launcher, "_get_effective_failure_mode", return_value="ignore"
-        ):
-            result = launcher._run_hook_scripts("pre", source="flatpak")
-
-        # Should return False (all_succeeded is False) but no error printed
-        assert result is False
-
-    @patch("subprocess.run")
-    def test_pre_launch_timeout_abort_mode_returns_false(self, mock_run) -> None:
-        """Test pre-launch timeout with abort mode returns False."""
-        if not LibAppLauncher:
-            pytest.skip("LibAppLauncher class not available")
-
-        # Create hook script
-        self._create_hook_script("pre")
-
-        # Mock timeout
-        mock_run.side_effect = subprocess.TimeoutExpired("script", 30)
-
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            hook_failure_mode="abort",
-        )
-
-        with patch.object(
-            launcher, "_get_effective_failure_mode", return_value="abort"
-        ):
-            result = launcher._run_hook_scripts("pre", source="flatpak")
-
-        assert result is False
-
-    @patch("subprocess.run")
-    def test_post_launch_timeout_abort_mode_continues(self, mock_run) -> None:
-        """Test post-launch timeout with abort mode doesn't return early."""
-        if not LibAppLauncher:
-            pytest.skip("LibAppLauncher class not available")
-
-        # Create hook script
-        self._create_hook_script("post")
-
-        # Mock timeout
-        mock_run.side_effect = subprocess.TimeoutExpired("script", 30)
-
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            hook_failure_mode="abort",
-        )
-
-        with patch.object(
-            launcher, "_get_effective_failure_mode", return_value="abort"
-        ):
-            result = launcher._run_hook_scripts("post", exit_code=0, source="flatpak")
-
-        # Post-launch timeout returns False (all_succeeded=False) but doesn't abort early
-        assert result is False
-
-    @patch("subprocess.run")
-    def test_timeout_warn_mode_prints_warning(self, mock_run) -> None:
-        """Test timeout with warn mode prints warning."""
-        if not LibAppLauncher:
-            pytest.skip("LibAppLauncher class not available")
-
-        # Create hook script
-        self._create_hook_script("pre")
-
-        # Mock timeout
-        mock_run.side_effect = subprocess.TimeoutExpired("script", 30)
-
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            hook_failure_mode="warn",
-        )
-
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
-            with patch("sys.stderr"):
-                result = launcher._run_hook_scripts("pre", source="flatpak")
-
-        assert result is False
-
-    @patch("subprocess.run")
-    def test_pre_launch_exception_abort_mode_returns_false(self, mock_run) -> None:
-        """Test pre-launch exception with abort mode returns False."""
-        if not LibAppLauncher:
-            pytest.skip("LibAppLauncher class not available")
-
-        # Create hook script
-        self._create_hook_script("pre")
-
-        # Mock generic exception
-        mock_run.side_effect = OSError("Permission denied")
-
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            hook_failure_mode="abort",
-        )
-
-        with patch.object(
-            launcher, "_get_effective_failure_mode", return_value="abort"
-        ):
-            result = launcher._run_hook_scripts("pre", source="flatpak")
-
-        assert result is False
-
-    @patch("subprocess.run")
-    def test_post_launch_exception_abort_mode_continues(self, mock_run) -> None:
-        """Test post-launch exception with abort mode doesn't return early."""
-        if not LibAppLauncher:
-            pytest.skip("LibAppLauncher class not available")
-
-        # Create hook script
-        self._create_hook_script("post")
-
-        # Mock generic exception
-        mock_run.side_effect = OSError("Permission denied")
-
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            hook_failure_mode="abort",
-        )
-
-        with patch.object(
-            launcher, "_get_effective_failure_mode", return_value="abort"
-        ):
-            result = launcher._run_hook_scripts("post", exit_code=0, source="flatpak")
-
-        # Post-launch exception returns False (all_succeeded=False) but doesn't abort early
-        assert result is False
-
-    @patch("subprocess.run")
-    def test_exception_warn_mode_prints_warning(self, mock_run) -> None:
-        """Test exception with warn mode prints warning."""
-        if not LibAppLauncher:
-            pytest.skip("LibAppLauncher class not available")
-
-        # Create hook script
-        self._create_hook_script("pre")
-
-        # Mock generic exception
-        mock_run.side_effect = RuntimeError("Unexpected error")
-
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            hook_failure_mode="warn",
-        )
-
-        with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
-            with patch("sys.stderr"):
-                result = launcher._run_hook_scripts("pre", source="flatpak")
-
-        assert result is False
+        printed = "".join(str(c.args[0]) for c in mock_stderr.write.call_args_list)
+        assert "aborting launch" in printed.lower()
 
     @patch("subprocess.run")
     def test_verbose_mode_prints_hook_output(self, mock_run) -> None:
@@ -1257,34 +1020,21 @@ class TestRunHookScriptsFailureModes:
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
-        # Create hook script
         self._create_hook_script("pre")
-
-        # Mock successful execution with output
         mock_result = Mock()
         mock_result.returncode = 0
         mock_result.stdout = "hook stdout output"
         mock_result.stderr = ""
         mock_run.return_value = mock_result
 
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-            verbose=True,
-        )
-
+        launcher = self._make_launcher(verbose=True)
         with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             with patch("sys.stderr") as mock_stderr:
                 result = launcher._run_hook_scripts("pre", source="flatpak")
 
         assert result is True
-        # Verify verbose output was printed
-        printed_output = "".join(
-            str(call.args[0]) for call in mock_stderr.write.call_args_list if call.args
-        )
-        # Check for either the hook output or the "Running pre-launch scripts" message
-        assert "hook" in printed_output.lower() or mock_stderr.write.called
+        printed = "".join(str(c.args[0]) for c in mock_stderr.write.call_args_list if c.args)
+        assert "hook" in printed.lower() or mock_stderr.write.called
 
     @patch("subprocess.run")
     def test_environment_variables_passed_to_hooks(self, mock_run) -> None:
@@ -1292,65 +1042,41 @@ class TestRunHookScriptsFailureModes:
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
-        # Create hook script
         self._create_hook_script("pre")
-
-        # Mock successful execution
         mock_result = Mock()
         mock_result.returncode = 0
         mock_result.stdout = ""
         mock_result.stderr = ""
         mock_run.return_value = mock_result
 
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-        )
-
+        launcher = self._make_launcher()
         with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             launcher._run_hook_scripts("pre", source="flatpak")
 
-        # Check environment variables passed to subprocess.run
-        call_kwargs = mock_run.call_args[1]
-        env = call_kwargs["env"]
-
+        env = mock_run.call_args[1]["env"]
         assert env["FPWRAPPER_WRAPPER_NAME"] == "test_app"
         assert env["FPWRAPPER_APP_ID"] == "test_app"
         assert env["FPWRAPPER_SOURCE"] == "flatpak"
         assert env["FPWRAPPER_HOOK_FAILURE_MODE"] == "warn"
 
     @patch("subprocess.run")
-    def test_environment_variables_post_launch_includes_exit_code(
-        self, mock_run
-    ) -> None:
+    def test_environment_variables_post_launch_includes_exit_code(self, mock_run) -> None:
         """Test that FPWRAPPER_EXIT_CODE is set for post-launch hooks."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
-        # Create hook script
         self._create_hook_script("post")
-
-        # Mock successful execution
         mock_result = Mock()
         mock_result.returncode = 0
         mock_result.stdout = ""
         mock_result.stderr = ""
         mock_run.return_value = mock_result
 
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-        )
-
+        launcher = self._make_launcher()
         with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
             launcher._run_hook_scripts("post", exit_code=42, source="system")
 
-        # Check environment variables
-        call_kwargs = mock_run.call_args[1]
-        env = call_kwargs["env"]
-
+        env = mock_run.call_args[1]["env"]
         assert env["FPWRAPPER_EXIT_CODE"] == "42"
         assert env["FPWRAPPER_SOURCE"] == "system"
 
@@ -1360,16 +1086,9 @@ class TestRunHookScriptsFailureModes:
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
-        launcher = LibAppLauncher(
-            app_name="test_app",
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-        )
-
+        launcher = self._make_launcher()
         result = launcher._run_hook_scripts("pre", source="flatpak")
-
         assert result is True
-        # subprocess.run should not be called
         mock_run.assert_not_called()
 
     def test_no_app_name_returns_true(self) -> None:
@@ -1377,14 +1096,8 @@ class TestRunHookScriptsFailureModes:
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
-        launcher = LibAppLauncher(
-            app_name=None,
-            bin_dir=str(self.bin_dir),
-            config_dir=str(self.config_dir),
-        )
-
+        launcher = self._make_launcher(app_name=None)
         result = launcher._run_hook_scripts("pre", source="flatpak")
-
         assert result is True
 
 

@@ -141,13 +141,11 @@ class TestSecurity:
             app_name="../../../etc/passwd",
             config_dir=str(self.config_dir),
         )
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
-        ):
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0)
             launch_result = adversarial_launcher.launch()
 
-        # Verify the result (should succeed - current implementation doesn't block path traversal)
+        # Verify the result — should be True (current impl doesn't block path traversal)
         assert launch_result is True
 
         # Verify the command that would be executed
