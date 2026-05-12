@@ -59,11 +59,11 @@ def run_command(
     if description:
         with console.status(f"[bold green]{description}..."):
             result = subprocess.run(
-                cmd, check=False, capture_output=not show_output, text=True,
+                cmd, check=False, capture_output=not show_output, text=True, timeout=30,
             )
     else:
         result = subprocess.run(
-            cmd, check=False, capture_output=not show_output, text=True,
+            cmd, check=False, capture_output=not show_output, text=True, timeout=30,
         )
 
     return result
@@ -341,7 +341,7 @@ def cleanup(ctx: click.Context) -> int:
     """
     from .paths import resolve_bin_dir
 
-    config_dir = Path(ctx.obj.get("config_dir"))
+    config_dir = Path(ctx.obj.get("config_dir", "~/.config/fplaunchwrapper"))
     bin_dir = resolve_bin_dir(explicit_dir=None, config_dir=config_dir)
 
     WrapperCleanup = import_handler.require("lib.cleanup", "WrapperCleanup")
@@ -355,7 +355,7 @@ def clean(ctx: click.Context) -> int:
     """Clean up orphaned wrapper files and artifacts (alias for cleanup)."""
     from .paths import resolve_bin_dir
 
-    config_dir = Path(ctx.obj.get("config_dir"))
+    config_dir = Path(ctx.obj.get("config_dir", "~/.config/fplaunchwrapper"))
     bin_dir = resolve_bin_dir(explicit_dir=None, config_dir=config_dir)
 
     WrapperCleanup = import_handler.require("lib.cleanup", "WrapperCleanup")
@@ -552,58 +552,45 @@ def systemd_status(ctx: click.Context) -> int:
     return 0
 
 
+def _systemctl_command(ctx: click.Context, action: str, unit: str | None = "fplaunch-wrapper.timer") -> int:
+    """Run a systemctl command with emit-mode awareness."""
+    emit_mode = ctx.obj.get("emit", False)
+    if emit_mode:
+        console.print(f"[yellow]EMIT: Would run systemctl {action}[/yellow]")
+        return 0
+    cmd = ["systemctl", "--user", action]
+    if unit:
+        cmd.append(unit)
+    result = subprocess.run(cmd, check=False, timeout=30)
+    return 0 if result.returncode == 0 else 1
+
+
 @systemd_group.command(name="start")
 @click.pass_context
 def systemd_start(ctx: click.Context) -> int:
     """Start the systemd service immediately."""
-    emit_mode = ctx.obj.get("emit", False)
-    if emit_mode:
-        console.print("[yellow]EMIT: Would start systemd service[/yellow]")
-        return 0
-    result = subprocess.run(
-        ["systemctl", "--user", "start", "fplaunch-wrapper.timer"], check=False,
-    )
-    return 0 if result.returncode == 0 else 1
+    return _systemctl_command(ctx, "start")
 
 
 @systemd_group.command(name="stop")
 @click.pass_context
 def systemd_stop(ctx: click.Context) -> int:
     """Stop the systemd service."""
-    emit_mode = ctx.obj.get("emit", False)
-    if emit_mode:
-        console.print("[yellow]EMIT: Would stop systemd service[/yellow]")
-        return 0
-    result = subprocess.run(
-        ["systemctl", "--user", "stop", "fplaunch-wrapper.timer"], check=False,
-    )
-    return 0 if result.returncode == 0 else 1
+    return _systemctl_command(ctx, "stop")
 
 
 @systemd_group.command(name="restart")
 @click.pass_context
 def systemd_restart(ctx: click.Context) -> int:
     """Restart the systemd service."""
-    emit_mode = ctx.obj.get("emit", False)
-    if emit_mode:
-        console.print("[yellow]EMIT: Would restart systemd service[/yellow]")
-        return 0
-    result = subprocess.run(
-        ["systemctl", "--user", "restart", "fplaunch-wrapper.timer"], check=False,
-    )
-    return 0 if result.returncode == 0 else 1
+    return _systemctl_command(ctx, "restart")
 
 
 @systemd_group.command(name="reload")
 @click.pass_context
 def systemd_reload(ctx: click.Context) -> int:
     """Reload systemd daemon configuration."""
-    emit_mode = ctx.obj.get("emit", False)
-    if emit_mode:
-        console.print("[yellow]EMIT: Would reload systemd daemon[/yellow]")
-        return 0
-    result = subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
-    return 0 if result.returncode == 0 else 1
+    return _systemctl_command(ctx, "daemon-reload", unit=None)
 
 
 @systemd_group.command(name="logs")
@@ -617,7 +604,7 @@ def systemd_logs(ctx: click.Context) -> int:
     result = subprocess.run(
         ["journalctl", "--user", "-u", "fplaunch-wrapper.service", "-n", "50"],
         check=False,
-        text=True,
+        text=True, timeout=30,
     )
     if result.stdout:
         console.print(result.stdout)

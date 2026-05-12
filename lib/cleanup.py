@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+from collections.abc import Callable
 import os
 import shutil
 import subprocess
@@ -22,19 +23,22 @@ from rich.prompt import Confirm
 
 from .logging_utils import LoggingMixin
 
-try:
-    from .safety import is_wrapper_file
+is_wrapper_file: Callable[[str | Path], bool] | None = None
+UTILS_AVAILABLE = False
 
+try:
+    from .safety import is_wrapper_file as _is_wrapper_file
+
+    is_wrapper_file = _is_wrapper_file
     UTILS_AVAILABLE = True
 except ImportError:
     try:
-        from safety import is_wrapper_file as safety_is_wrapper_file
+        from safety import is_wrapper_file as safety_is_wrapper_file  # type: ignore[import-not-found]
 
         is_wrapper_file = safety_is_wrapper_file
         UTILS_AVAILABLE = True
     except ImportError:
-        is_wrapper_file = None
-        UTILS_AVAILABLE = False
+        pass
 
 try:
     from lib.paths import (
@@ -288,7 +292,7 @@ class WrapperCleanup(LoggingMixin):
                 [crontab_path, "-l"],
                 check=False,
                 capture_output=True,
-                text=True,
+                text=True, timeout=10,
             )
             if result.returncode == 0:
                 # Look for any cron entries related to fplaunchwrapper
@@ -342,7 +346,7 @@ class WrapperCleanup(LoggingMixin):
                 [crontab_path, "-l"],
                 check=False,
                 capture_output=True,
-                text=True,
+                text=True, timeout=10,
             )
             if result.returncode == 0:
                 return "fplaunch-generate" in str(result.stdout)
@@ -397,6 +401,17 @@ class WrapperCleanup(LoggingMixin):
 
         return bool(Confirm.ask("Proceed with cleanup?"))
 
+    def _backup_items(self, items: list[Path], category: str, item_label: str, backup_root: Path) -> list[str]:
+        errors: list[str] = []
+        for f in items:
+            try:
+                dst = backup_root / category / f.name
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(f, dst)
+            except (OSError, IOError) as e:
+                errors.append(f"Failed to backup {item_label} {f}: {e}")
+        return errors
+
     def perform_cleanup(self) -> bool:
         """Perform the actual cleanup."""
         try:
@@ -406,33 +421,21 @@ class WrapperCleanup(LoggingMixin):
                     tempfile.mkdtemp(prefix="fp_cleanup_"),
                 )
                 backup_errors = []
-                for f in self.cleanup_items["wrappers"]:
-                    try:
-                        dst = backup_root / "wrappers" / f.name
-                        dst.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(f, dst)
-                    except (OSError, IOError) as e:
-                        backup_errors.append(f"Failed to backup wrapper {f}: {e}")
-                for f in self.cleanup_items["preferences"]:
-                    try:
-                        dst = backup_root / "preferences" / f.name
-                        dst.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(f, dst)
-                    except (OSError, IOError) as e:
-                        backup_errors.append(f"Failed to backup preference {f}: {e}")
+                backup_errors.extend(
+                    self._backup_items(self.cleanup_items["wrappers"], "wrappers", "wrapper", backup_root)
+                )
+                backup_errors.extend(
+                    self._backup_items(self.cleanup_items["preferences"], "preferences", "preference", backup_root)
+                )
                 data_files = self.cleanup_items["data_files"]
                 if len(data_files) > 1000:
                     self.log(
                         f"Warning: Backup limited to 1000 of {len(data_files)} data files",
                         "warning",
                     )
-                for f in data_files[:1000]:
-                    try:
-                        dst = backup_root / "data" / f.name
-                        dst.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(f, dst)
-                    except (OSError, IOError) as e:
-                        backup_errors.append(f"Failed to backup data file {f}: {e}")
+                backup_errors.extend(
+                    self._backup_items(data_files[:1000], "data", "data file", backup_root)
+                )
                 if backup_errors:
                     for err in backup_errors:
                         self.log(err, "warning")
@@ -487,7 +490,7 @@ class WrapperCleanup(LoggingMixin):
                         "fplaunch-wrapper.service",
                     ],
                     check=False,
-                    capture_output=True,
+                    capture_output=True, timeout=30,
                 )
 
                 subprocess.run(
@@ -500,13 +503,13 @@ class WrapperCleanup(LoggingMixin):
                         "fplaunch-wrapper.service",
                     ],
                     check=False,
-                    capture_output=True,
+                    capture_output=True, timeout=30,
                 )
 
                 subprocess.run(
                     [systemctl_path, "--user", "daemon-reload"],
                     check=False,
-                    capture_output=True,
+                    capture_output=True, timeout=30,
                 )
 
         for unit_path in self.cleanup_items["systemd_units"]:
@@ -526,7 +529,7 @@ class WrapperCleanup(LoggingMixin):
                         [crontab_path, "-l"],
                         check=False,
                         capture_output=True,
-                        text=True,
+                        text=True, timeout=10,
                     )
                     if result.returncode == 0:
                         current_cron = result.stdout
@@ -540,7 +543,7 @@ class WrapperCleanup(LoggingMixin):
                             check=False,
                             input=new_cron,
                             text=True,
-                            capture_output=True,
+                            capture_output=True, timeout=10,
                         )
                 except (subprocess.CalledProcessError, OSError):
                     pass
@@ -673,7 +676,7 @@ class WrapperCleanup(LoggingMixin):
         wrapper_path = self.bin_dir / safe_name
         if wrapper_path.exists():
             try:
-                wrapper_path.unlink()
+                wrapper_path.unlink(missing_ok=True)
                 self.log(f"Removed wrapper: {app_id}")
                 return True
             except (OSError, PermissionError) as e:
