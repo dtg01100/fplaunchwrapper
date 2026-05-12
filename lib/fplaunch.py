@@ -4,20 +4,24 @@ Main entry point for all operations.
 """
 
 import sys
+from typing import Any
 
-# Expose important submodules (like `safety`) as attributes on the package
-# so tests that patch `fplaunch.safety` can find them regardless of import
-# ordering or package installation details.
+safety: Any
+safe_launch_check: Any
+
 try:
     from .safety import is_wrapper_file as safe_launch_check
+    from . import safety as _safety_mod
+    safety = _safety_mod
 except (ImportError, AttributeError):
 
     class _SafetyStub:
         @staticmethod
-        def safe_launch_check(_app_name, _wrapper_path=None):
+        def is_wrapper_file(_app_name, _wrapper_path=None):
             return True
 
     safety = _SafetyStub()
+    safe_launch_check = safety.is_wrapper_file
 
 
 def main():
