@@ -67,12 +67,18 @@ class TestSafeIntegrationWorkflows:
 
         Simulates: fplaunch-cleanup --all --force
         """
-        with patch("subprocess.run") as mock_run, patch(
-            "os.path.exists",
-            return_value=True,
-        ), patch("os.remove"), patch("shutil.rmtree"), patch(
-            "pathlib.Path.home",
-            return_value=isolated_env["home_dir"],
+        with (
+            patch("subprocess.run") as mock_run,
+            patch(
+                "os.path.exists",
+                return_value=True,
+            ),
+            patch("os.remove"),
+            patch("shutil.rmtree"),
+            patch(
+                "pathlib.Path.home",
+                return_value=isolated_env["home_dir"],
+            ),
         ):
             mock_run.return_value = Mock(returncode=0, stdout="cleaned", stderr="")
 
@@ -101,13 +107,17 @@ class TestSafeIntegrationWorkflows:
         """
         app_id = "com.spotify.Client"
 
-        with patch("subprocess.run") as mock_run, patch(
-            "subprocess.Popen",
-        ) as mock_popen, patch("os.path.exists", return_value=True), patch(
-            "os.environ.copy",
-            return_value={},
-        ), patch(
-            "pathlib.Path.home", return_value=isolated_env["home_dir"]
+        with (
+            patch("subprocess.run") as mock_run,
+            patch(
+                "subprocess.Popen",
+            ) as mock_popen,
+            patch("os.path.exists", return_value=True),
+            patch(
+                "os.environ.copy",
+                return_value={},
+            ),
+            patch("pathlib.Path.home", return_value=isolated_env["home_dir"]),
         ):
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
             mock_popen.return_value = Mock()
@@ -135,13 +145,17 @@ class TestCLISafeIntegration:
 
     def test_cli_command_isolation(self, tmp_path) -> None:
         """Test that CLI commands are properly mocked and don't execute real operations."""
-        with patch("sys.argv", ["fplaunch-generate", "firefox"]), patch(
-            "subprocess.run",
-        ) as mock_run, patch("os.path.exists", return_value=True), patch(
-            "pathlib.Path.home",
-            return_value=tmp_path / "home",
-        ), patch(
-            "sys.stdout"
+        with (
+            patch("sys.argv", ["fplaunch-generate", "firefox"]),
+            patch(
+                "subprocess.run",
+            ) as mock_run,
+            patch("os.path.exists", return_value=True),
+            patch(
+                "pathlib.Path.home",
+                return_value=tmp_path / "home",
+            ),
+            patch("sys.stdout"),
         ):
             mock_run.return_value = Mock(returncode=0, stdout="generated", stderr="")
 

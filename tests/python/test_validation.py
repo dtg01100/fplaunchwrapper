@@ -17,17 +17,20 @@ class TestValidateAppId:
     """Test validate_app_id function."""
 
     # Valid Flatpak IDs (reverse-DNS format)
-    @pytest.mark.parametrize("app_id", [
-        "org.mozilla.Firefox",
-        "org.mozilla.firefox",
-        "com.example.App",
-        "com.example.app123",
-        "org.freedesktop.Platform",
-        "org.kde.KDE",
-        "io.github.some_project",
-        "org.gimp.GIMP",
-        "com.valvesoftware.Steam",
-    ])
+    @pytest.mark.parametrize(
+        "app_id",
+        [
+            "org.mozilla.Firefox",
+            "org.mozilla.firefox",
+            "com.example.App",
+            "com.example.app123",
+            "org.freedesktop.Platform",
+            "org.kde.KDE",
+            "io.github.some_project",
+            "org.gimp.GIMP",
+            "com.valvesoftware.Steam",
+        ],
+    )
     def test_valid_reverse_dns_format(self, app_id: str) -> None:
         """Test valid reverse-DNS format Flatpak IDs."""
         valid, error = validate_app_id(app_id)
@@ -35,14 +38,17 @@ class TestValidateAppId:
         assert error == ""
 
     # Invalid Flatpak IDs - no dot
-    @pytest.mark.parametrize("app_id", [
-        "firefox",
-        "app",
-        "test",
-        "APP",
-        "my-app",
-        "no-dot-here",
-    ])
+    @pytest.mark.parametrize(
+        "app_id",
+        [
+            "firefox",
+            "app",
+            "test",
+            "APP",
+            "my-app",
+            "no-dot-here",
+        ],
+    )
     def test_invalid_no_dot(self, app_id: str) -> None:
         """Test IDs without dot are invalid."""
         valid, error = validate_app_id(app_id)
@@ -50,11 +56,14 @@ class TestValidateAppId:
         assert "dot" in error.lower() or "reverse-dns" in error.lower()
 
     # Invalid Flatpak IDs - starts with dot
-    @pytest.mark.parametrize("app_id", [
-        ".invalid",
-        ".org.app",
-        ".mozilla.firefox",
-    ])
+    @pytest.mark.parametrize(
+        "app_id",
+        [
+            ".invalid",
+            ".org.app",
+            ".mozilla.firefox",
+        ],
+    )
     def test_invalid_starts_with_dot(self, app_id: str) -> None:
         """Test IDs starting with dot are invalid."""
         valid, error = validate_app_id(app_id)
@@ -62,11 +71,14 @@ class TestValidateAppId:
         assert "dot" in error.lower()
 
     # Invalid Flatpak IDs - ends with dot
-    @pytest.mark.parametrize("app_id", [
-        "invalid.",
-        "org.",
-        "org.mozilla.",
-    ])
+    @pytest.mark.parametrize(
+        "app_id",
+        [
+            "invalid.",
+            "org.",
+            "org.mozilla.",
+        ],
+    )
     def test_invalid_ends_with_dot(self, app_id: str) -> None:
         """Test IDs ending with dot are invalid."""
         valid, error = validate_app_id(app_id)
@@ -74,12 +86,15 @@ class TestValidateAppId:
         assert "dot" in error.lower()
 
     # Invalid Flatpak IDs - empty/whitespace
-    @pytest.mark.parametrize("app_id", [
-        "",
-        "   ",
-        "\t",
-        "\n",
-    ])
+    @pytest.mark.parametrize(
+        "app_id",
+        [
+            "",
+            "   ",
+            "\t",
+            "\n",
+        ],
+    )
     def test_invalid_empty_or_whitespace(self, app_id: str) -> None:
         """Test empty or whitespace-only IDs are invalid."""
         valid, error = validate_app_id(app_id)
@@ -87,40 +102,49 @@ class TestValidateAppId:
         assert "empty" in error.lower()
 
     # Invalid Flatpak IDs - special characters
-    @pytest.mark.parametrize("app_id", [
-        "org@test.app",
-        "org.test@app",
-        "org test app",
-        "org\ntest.app",
-        "org/test.app",
-        "org.test.app/",
-    ])
+    @pytest.mark.parametrize(
+        "app_id",
+        [
+            "org@test.app",
+            "org.test@app",
+            "org test app",
+            "org\ntest.app",
+            "org/test.app",
+            "org.test.app/",
+        ],
+    )
     def test_invalid_special_chars(self, app_id: str) -> None:
         """Test IDs with special characters are invalid."""
         valid, error = validate_app_id(app_id)
         assert valid is False
 
     # Invalid Flatpak IDs - starts with digit
-    @pytest.mark.parametrize("app_id", [
-        "123.app",
-        "1org.test.app",
-        "0.com.example",
-    ])
+    @pytest.mark.parametrize(
+        "app_id",
+        [
+            "123.app",
+            "1org.test.app",
+            "0.com.example",
+        ],
+    )
     def test_invalid_starts_with_digit(self, app_id: str) -> None:
         """Test IDs starting with digit are invalid."""
         valid, error = validate_app_id(app_id)
         assert valid is False
 
     # Security: injection attempts
-    @pytest.mark.parametrize("app_id", [
-        "../etc/passwd",
-        "test;rm -rf",
-        "test&&rm -rf",
-        "test|rm -rf",
-        "test`rm`",
-        "$(whoami)",
-        "${HOME}",
-    ])
+    @pytest.mark.parametrize(
+        "app_id",
+        [
+            "../etc/passwd",
+            "test;rm -rf",
+            "test&&rm -rf",
+            "test|rm -rf",
+            "test`rm`",
+            "$(whoami)",
+            "${HOME}",
+        ],
+    )
     def test_invalid_injection_attempts(self, app_id: str) -> None:
         """Test that injection attempts are rejected."""
         valid, error = validate_app_id(app_id)
@@ -209,41 +233,53 @@ class TestCheckPathTraversal:
 class TestShouldProcessEvent:
     """Test should_process_event function."""
 
-    @pytest.mark.parametrize("path", [
-        "/var/lib/flatpak",
-        "/var/lib/flatpak/app",
-        "/var/lib/flatpak/app/org.example.App",
-        "/var/lib/flatpak/exports",
-        "/var/lib/flatpak/repo",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/var/lib/flatpak",
+            "/var/lib/flatpak/app",
+            "/var/lib/flatpak/app/org.example.App",
+            "/var/lib/flatpak/exports",
+            "/var/lib/flatpak/repo",
+        ],
+    )
     def test_system_flatpak_paths(self, path: str) -> None:
         """Test that system Flatpak paths are processed."""
         assert should_process_event(path) is True
 
-    @pytest.mark.parametrize("path", [
-        "/etc/passwd",
-        "/etc/shadow",
-        "/etc/group",
-        "/etc/fplaunchwrapper/config",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/etc/passwd",
+            "/etc/shadow",
+            "/etc/group",
+            "/etc/fplaunchwrapper/config",
+        ],
+    )
     def test_etc_paths_rejected(self, path: str) -> None:
         """Test that /etc paths are not processed."""
         assert should_process_event(path) is False
 
-    @pytest.mark.parametrize("path", [
-        "/tmp/file",
-        "/tmp/fplaunchwrapper",
-        "/var/tmp/data",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/tmp/file",
+            "/tmp/fplaunchwrapper",
+            "/var/tmp/data",
+        ],
+    )
     def test_tmp_paths_rejected(self, path: str) -> None:
         """Test that /tmp paths are not processed."""
         assert should_process_event(path) is False
 
-    @pytest.mark.parametrize("path", [
-        "/home/user/Documents",
-        "/home/user/Downloads",
-        "/var/home/user/Pictures",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/home/user/Documents",
+            "/home/user/Downloads",
+            "/var/home/user/Pictures",
+        ],
+    )
     def test_home_paths_rejected(self, path: str) -> None:
         """Test that general home paths are not processed."""
         assert should_process_event(path) is False

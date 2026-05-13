@@ -62,8 +62,7 @@ def validate_app_id(app_id: str) -> tuple[bool, str]:
     # Standalone / is not allowed (only // for platform versions)
     if "/" in app_id and "//" not in app_id:
         return False, (
-            f"Invalid app_id: {app_id} "
-            "(forward slash only allowed in // for platform versions)"
+            f"Invalid app_id: {app_id} (forward slash only allowed in // for platform versions)"
         )
 
     return True, ""

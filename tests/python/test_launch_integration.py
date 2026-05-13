@@ -59,6 +59,7 @@ class TestLauncherConfigManagerIntegration:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("subprocess.run")
@@ -160,6 +161,7 @@ class TestLauncherSafetyIntegration:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("subprocess.run")
@@ -191,14 +193,12 @@ class TestLauncherSafetyIntegration:
         # Create a wrapper with hardcoded browser launch commands
         # (which is what is_dangerous_wrapper actually checks for)
         dangerous_wrapper = self.bin_dir / "malicious"
-        dangerous_wrapper.write_text(
-            "#!/bin/bash\nflatpak run org.mozilla.firefox &\nchromium &\n"
-        )
+        dangerous_wrapper.write_text("#!/bin/bash\nflatpak run org.mozilla.firefox &\nchromium &\n")
         dangerous_wrapper.chmod(0o755)
-
 
         # Safety check should detect hardcoded browser launches
         from lib.safety import is_dangerous_wrapper
+
         assert is_dangerous_wrapper(dangerous_wrapper) is True
 
 
@@ -217,6 +217,7 @@ class TestLauncherGenerateIntegration:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_launch_after_generate_creates_wrapper(self) -> None:
@@ -296,13 +297,12 @@ class TestLauncherHookScriptIntegration:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("subprocess.run")
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_pre_launch_hooks_execute(
-        self, mock_safety: Mock, mock_subprocess: Mock
-    ) -> None:
+    def test_pre_launch_hooks_execute(self, mock_safety: Mock, mock_subprocess: Mock) -> None:
         """Test that pre-launch hooks execute before app launch."""
         if not AppLauncher:
             pytest.skip("AppLauncher not available")
@@ -332,9 +332,7 @@ class TestLauncherHookScriptIntegration:
 
     @patch("subprocess.run")
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_post_launch_hooks_execute(
-        self, mock_safety: Mock, mock_subprocess: Mock
-    ) -> None:
+    def test_post_launch_hooks_execute(self, mock_safety: Mock, mock_subprocess: Mock) -> None:
         """Test that post-launch hooks execute after app launch."""
         if not AppLauncher:
             pytest.skip("AppLauncher not available")
@@ -343,7 +341,9 @@ class TestLauncherHookScriptIntegration:
         scripts_dir = self.config_dir / "scripts" / "firefox"
         scripts_dir.mkdir(parents=True)
         post_hook = scripts_dir / "post-run.sh"
-        post_hook.write_text("#!/bin/bash\necho 'after-launch' > /tmp/post_hook_output.txt\nexit 0\n")
+        post_hook.write_text(
+            "#!/bin/bash\necho 'after-launch' > /tmp/post_hook_output.txt\nexit 0\n"
+        )
         post_hook.chmod(0o755)
 
         mock_result = Mock()
@@ -378,6 +378,7 @@ class TestLauncherEnvironmentIntegration:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("subprocess.run")

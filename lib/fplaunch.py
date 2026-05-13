@@ -12,6 +12,7 @@ safe_launch_check: Any
 try:
     from .safety import is_wrapper_file as safe_launch_check
     from . import safety as _safety_mod
+
     safety = _safety_mod
 except (ImportError, AttributeError):
 

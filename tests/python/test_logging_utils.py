@@ -18,8 +18,6 @@ class TestConsoleInstances:
         assert console_err is not None
 
 
-
-
 class TestLoggingMixin:
     """Test LoggingMixin log method."""
 

@@ -821,7 +821,7 @@ class TestFallbackConfig:
             pytest.skip("EnhancedConfigManager class not available")
 
         self.config_file.write_text(
-            "# This is a comment\n" "\n" "  # Indented comment\n" "bin_dir=/test/bin\n"
+            "# This is a comment\n\n  # Indented comment\nbin_dir=/test/bin\n"
         )
 
         with patch("pathlib.Path.home", return_value=self.temp_dir):

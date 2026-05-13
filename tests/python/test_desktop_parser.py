@@ -348,9 +348,7 @@ Exec=command
         """Test that extra whitespace is stripped."""
         from lib.desktop_parser import DesktopEntry
 
-        content = (
-            "[Desktop Entry]\n" "   Name  =    App With Spaces   \n" "   Exec  =    command    \n"
-        )
+        content = "[Desktop Entry]\n   Name  =    App With Spaces   \n   Exec  =    command    \n"
         path = self._create_temp_desktop_file(content)
         entry = DesktopEntry(path)
 

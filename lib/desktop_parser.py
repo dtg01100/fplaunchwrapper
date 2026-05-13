@@ -53,7 +53,10 @@ class DesktopEntry:
                 self._entries[current_section][key.strip()] = value.strip()
 
     def get(
-        self, key: str, section: str = "Desktop Entry", default: Optional[str] = None,
+        self,
+        key: str,
+        section: str = "Desktop Entry",
+        default: Optional[str] = None,
     ) -> Optional[str]:
         """Get a value from the desktop entry.
 
@@ -68,7 +71,10 @@ class DesktopEntry:
         return self._entries.get(section, {}).get(key, default)
 
     def get_localized(
-        self, key: str, section: str = "Desktop Entry", locale: Optional[str] = None,
+        self,
+        key: str,
+        section: str = "Desktop Entry",
+        locale: Optional[str] = None,
     ) -> Optional[str]:
         """Get a localized value from the desktop entry.
 
@@ -213,7 +219,8 @@ def parse_flatpak_desktop_files(
 
 
 def get_app_metadata(
-    flatpak_id: str, desktop_entries: Optional[dict[str, DesktopEntry]] = None,
+    flatpak_id: str,
+    desktop_entries: Optional[dict[str, DesktopEntry]] = None,
 ) -> dict[str, Any]:
     """Get metadata for a Flatpak app.
 

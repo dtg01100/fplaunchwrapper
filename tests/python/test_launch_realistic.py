@@ -97,8 +97,9 @@ exec flatpak run {flatpak_id} "$@"
         )
 
         # Launch should work (with mock subprocess)
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
 
@@ -137,8 +138,9 @@ exec flatpak run {flatpak_id} "$@"
                 args=args,
             )
 
-            with patch("subprocess.run") as mock_run, patch(
-                "lib.safety.safe_launch_check", return_value=True
+            with (
+                patch("subprocess.run") as mock_run,
+                patch("lib.safety.safe_launch_check", return_value=True),
             ):
                 mock_run.return_value = Mock(returncode=0)
 
@@ -165,8 +167,9 @@ exec flatpak run {flatpak_id} "$@"
         )
 
         # Mock flatpak command for fallback
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_run.return_value = Mock(returncode=0)
 
@@ -206,8 +209,9 @@ exec flatpak run {flatpak_id} "$@"
             config_dir=str(self.config_dir),
         )
 
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_run.return_value = Mock(
                 returncode=returncode,
@@ -247,8 +251,9 @@ exec flatpak run {flatpak_id} "$@"
             env=test_env,
         )
 
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_run.return_value = Mock(returncode=0)
 
@@ -286,8 +291,9 @@ exec flatpak run {flatpak_id} "$@"
                 config_dir=str(self.config_dir),
             )
 
-            with patch("subprocess.run") as mock_run, patch(
-                "lib.safety.safe_launch_check", return_value=True
+            with (
+                patch("subprocess.run") as mock_run,
+                patch("lib.safety.safe_launch_check", return_value=True),
             ):
                 mock_run.return_value = Mock(returncode=0)
 
@@ -323,8 +329,9 @@ exec flatpak run {flatpak_id} "$@"
         )
 
         # Verify preference file is read
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_run.return_value = Mock(returncode=0)
 
@@ -354,8 +361,9 @@ exec flatpak run {flatpak_id} "$@"
         )
 
         # Launch should acquire lock
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_run.return_value = Mock(returncode=0)
 
@@ -403,8 +411,9 @@ class TestLaunchBehaviorNotImplementation:
 
         # Test PUBLIC method: launch()
         # Don't test HOW it finds the wrapper
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_run.return_value = Mock(returncode=0)
 
@@ -454,8 +463,9 @@ class TestLaunchBehaviorNotImplementation:
         )
 
         # Test PUBLIC method: launch()
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_run.return_value = Mock(returncode=0)
 
@@ -559,8 +569,9 @@ class TestLaunchRealWorldScenarios:
         # Launch multiple concurrent instances
         threads = []
         # Patch subprocess.run once for all threads to avoid patching race conditions
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_run.return_value = Mock(returncode=0)
 
@@ -601,8 +612,9 @@ class TestLaunchRealWorldScenarios:
             config_dir=str(self.config_dir),
         )
 
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_run.return_value = Mock(returncode=0)
 
@@ -666,8 +678,9 @@ class TestLaunchRealWorldScenarios:
                 config_dir=str(self.config_dir),
             )
 
-            with patch("subprocess.run") as mock_run, patch(
-                "lib.safety.safe_launch_check", return_value=True
+            with (
+                patch("subprocess.run") as mock_run,
+                patch("lib.safety.safe_launch_check", return_value=True),
             ):
                 mock_run.return_value = Mock(returncode=0)
 

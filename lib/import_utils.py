@@ -8,7 +8,6 @@ consistently across the codebase.
 from __future__ import annotations
 
 import importlib
-import sys
 from typing import TypeVar, Any, Optional
 
 T = TypeVar("T")

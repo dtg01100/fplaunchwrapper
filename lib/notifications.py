@@ -48,7 +48,10 @@ def notify_send_available() -> bool:
     """Check if notify-send command is available on the system."""
     try:
         result = subprocess.run(
-            ["which", "notify-send"], check=False, capture_output=True, text=True,
+            ["which", "notify-send"],
+            check=False,
+            capture_output=True,
+            text=True,
         )
         return result.returncode == 0
     except Exception:

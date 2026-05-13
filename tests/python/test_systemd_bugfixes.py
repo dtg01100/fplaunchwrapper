@@ -128,7 +128,9 @@ class TestPrerequisiteCheckingFix:
             mock_which.side_effect = lambda cmd: (
                 "/usr/bin/flatpak"
                 if cmd == "flatpak"
-                else "/usr/bin/python" if cmd == "python" else None
+                else "/usr/bin/python"
+                if cmd == "python"
+                else None
             )
 
             setup = SystemdSetup(wrapper_script="python")

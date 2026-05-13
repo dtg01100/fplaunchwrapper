@@ -59,11 +59,19 @@ def run_command(
     if description:
         with console.status(f"[bold green]{description}..."):
             result = subprocess.run(
-                cmd, check=False, capture_output=not show_output, text=True, timeout=30,
+                cmd,
+                check=False,
+                capture_output=not show_output,
+                text=True,
+                timeout=30,
             )
     else:
         result = subprocess.run(
-            cmd, check=False, capture_output=not show_output, text=True, timeout=30,
+            cmd,
+            check=False,
+            capture_output=not show_output,
+            text=True,
+            timeout=30,
         )
 
     return result
@@ -86,10 +94,14 @@ def find_fplaunch_script(script_name: str) -> Optional[Path]:
 @click.group(invoke_without_command=True)
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option(
-    "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
+    "--emit",
+    is_flag=True,
+    help="Emit commands instead of executing (dry run)",
 )
 @click.option(
-    "--emit-verbose", is_flag=True, help="Show detailed file contents in emit mode",
+    "--emit-verbose",
+    is_flag=True,
+    help="Show detailed file contents in emit mode",
 )
 @click.option(
     "--config-dir",
@@ -247,7 +259,9 @@ def uninstall(ctx: click.Context, app_name: str, remove_data: bool, emit: bool) 
         cmd.append("--delete-data")
     cmd.append(app_name)
     result = run_command(
-        cmd, f"Uninstalling Flatpak app: {app_name}", emit_mode=emit_mode,
+        cmd,
+        f"Uninstalling Flatpak app: {app_name}",
+        emit_mode=emit_mode,
     )
     if result is None or result.returncode != 0:
         err_msg = result.stderr if result else "Command failed in emit mode"
@@ -286,7 +300,11 @@ def uninstall(ctx: click.Context, app_name: str, remove_data: bool, emit: bool) 
 )
 @click.pass_context
 def launch(
-    ctx, app_name, hook_failure, abort_on_hook_failure, ignore_hook_failure,
+    ctx,
+    app_name,
+    hook_failure,
+    abort_on_hook_failure,
+    ignore_hook_failure,
 ) -> int:
     """Launch a Flatpak application via its wrapper.
 
@@ -438,7 +456,9 @@ def rm(ctx: click.Context, name: str, force: bool) -> int:
 
 
 def _run_systemd_setup(
-    ctx, bin_dir: str | None = None, wrapper_script: str | None = None,
+    ctx,
+    bin_dir: str | None = None,
+    wrapper_script: str | None = None,
 ) -> int:
     """Underlying systemd setup implementation.
 
@@ -482,7 +502,9 @@ def _run_systemd_setup(
 @click.argument("wrapper_script", required=False)
 @click.pass_context
 def systemd_setup_cmd(
-    ctx: click.Context, bin_dir: str | None, wrapper_script: str | None,
+    ctx: click.Context,
+    bin_dir: str | None,
+    wrapper_script: str | None,
 ) -> int:
     """Install/enable systemd units for automatic wrapper generation."""
     return _run_systemd_setup(ctx, bin_dir, wrapper_script)
@@ -552,7 +574,9 @@ def systemd_status(ctx: click.Context) -> int:
     return 0
 
 
-def _systemctl_command(ctx: click.Context, action: str, unit: str | None = "fplaunch-wrapper.timer") -> int:
+def _systemctl_command(
+    ctx: click.Context, action: str, unit: str | None = "fplaunch-wrapper.timer"
+) -> int:
     """Run a systemctl command with emit-mode awareness."""
     emit_mode = ctx.obj.get("emit", False)
     if emit_mode:
@@ -604,7 +628,8 @@ def systemd_logs(ctx: click.Context) -> int:
     result = subprocess.run(
         ["journalctl", "--user", "-u", "fplaunch-wrapper.service", "-n", "50"],
         check=False,
-        text=True, timeout=30,
+        text=True,
+        timeout=30,
     )
     if result.stdout:
         console.print(result.stdout)
@@ -633,7 +658,9 @@ def systemd_list(ctx) -> int:
 
 @systemd_group.command(name="test")
 @click.option(
-    "--emit", is_flag=True, help="Emit commands instead of executing (dry run)",
+    "--emit",
+    is_flag=True,
+    help="Emit commands instead of executing (dry run)",
 )
 @click.pass_context
 def systemd_test(ctx, emit) -> int:
@@ -715,7 +742,8 @@ def profiles_group(ctx: click.Context) -> None:
 def profiles_list(ctx: click.Context) -> int:
     """List available profiles."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     profiles = cfg.list_profiles()
@@ -735,7 +763,8 @@ def profiles_list(ctx: click.Context) -> int:
 def profiles_create(ctx, profile_name, copy_from) -> int:
     """Create a new profile."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     if cfg.create_profile(profile_name, copy_from):
@@ -754,15 +783,15 @@ def profiles_create(ctx, profile_name, copy_from) -> int:
 def profiles_switch(ctx, profile_name) -> int:
     """Switch to a profile."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     if cfg.switch_profile(profile_name):
         console.print(f"[green]✓[/green] Switched to profile: {profile_name}")
         return 0
     console_err.print(
-        f"[red]Error:[/red] Could not switch to profile '{profile_name}' "
-        "(profile may not exist)",
+        f"[red]Error:[/red] Could not switch to profile '{profile_name}' (profile may not exist)",
     )
     return 1
 
@@ -772,7 +801,8 @@ def profiles_switch(ctx, profile_name) -> int:
 def profiles_current(ctx) -> int:
     """Show current profile."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     active = cfg.get_active_profile()
@@ -787,7 +817,8 @@ def profiles_current(ctx) -> int:
 def profiles_export(ctx, profile_name, output_file) -> int:
     """Export a profile to a file."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     export_path = Path(output_file) if output_file else Path(f"{profile_name}.toml")
@@ -809,7 +840,8 @@ def profiles_export(ctx, profile_name, output_file) -> int:
 def profiles_import(ctx, input_file, profile_name) -> int:
     """Import a profile from a file."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     import_path = Path(input_file)
@@ -836,7 +868,8 @@ def presets_group(ctx) -> None:
 def presets_list(ctx) -> int:
     """List available permission presets."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     presets = cfg.list_permission_presets()
@@ -858,7 +891,8 @@ def presets_get(ctx, preset_name) -> int:
         raise click.UsageError("PRESET_NAME is required")
 
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     permissions = cfg.get_permission_preset(preset_name)
@@ -883,7 +917,8 @@ def presets_add(ctx, preset_name, permission) -> int:
         return 1
 
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     cfg.add_permission_preset(preset_name, list(permission))
@@ -897,7 +932,8 @@ def presets_add(ctx, preset_name, permission) -> int:
 def presets_remove(ctx, preset_name) -> int:
     """Remove a permission preset."""
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     if cfg.remove_permission_preset(preset_name):
@@ -1033,7 +1069,8 @@ def config(ctx, action, value) -> int:
       cron-interval Get or set cron interval (in hours)
     """
     create_config_manager = import_handler.require(
-        "lib.config_manager", "create_config_manager",
+        "lib.config_manager",
+        "create_config_manager",
     )
     cfg = create_config_manager()
     if not action or action == "show":

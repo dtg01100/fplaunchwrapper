@@ -78,6 +78,7 @@ def test_remove_alias_rm(cli_mod, runner, monkeypatch):
     class FakeManager:
         def __init__(self, **kwargs):
             pass
+
         def remove_wrapper(self, name, force=False):
             return True
 

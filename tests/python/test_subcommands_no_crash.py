@@ -155,9 +155,7 @@ class TestSubcommandImportErrors:
         def fake_require(module_name, symbol_name):
             return required_symbols[(module_name, symbol_name)]
 
-        mock_req = patch.object(
-            cli_module.import_handler, "require", side_effect=fake_require
-        )
+        mock_req = patch.object(cli_module.import_handler, "require", side_effect=fake_require)
         mock_run = patch.object(
             cli_module,
             "run_command",

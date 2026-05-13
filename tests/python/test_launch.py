@@ -151,9 +151,7 @@ class TestLaunchEdgeCases:
 
     @patch("subprocess.run")
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_launch_flatpak_with_architectures(
-        self, mock_safety, mock_subprocess
-    ) -> None:
+    def test_launch_flatpak_with_architectures(self, mock_safety, mock_subprocess) -> None:
         """Test launch with different Flatpak architectures."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
@@ -179,9 +177,7 @@ class TestLaunchEdgeCases:
 
     @patch("subprocess.run")
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_launch_environment_variable_injection(
-        self, mock_safety, mock_subprocess
-    ) -> None:
+    def test_launch_environment_variable_injection(self, mock_safety, mock_subprocess) -> None:
         """Test environment variable injection attempts are blocked."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
@@ -759,9 +755,7 @@ class TestConfigExceptionHandling:
                 else:
                     del os.environ["XDG_CONFIG_HOME"]
         except Exception as e:
-            pytest.fail(
-                f"Config manager should handle parse errors gracefully, not raise: {e}"
-            )
+            pytest.fail(f"Config manager should handle parse errors gracefully, not raise: {e}")
 
     def test_config_validation_error_on_invalid_data(self) -> None:
         """Test config manager handles validation errors gracefully with fallback."""
@@ -946,9 +940,24 @@ class TestRunHookScriptsFailureModes:
             ("post", "abort", lambda r: setattr(r, "returncode", 1) or r, False),
             ("pre", "warn", lambda r: setattr(r, "returncode", 1) or r, False),
             ("pre", "ignore", lambda r: setattr(r, "returncode", 1) or r, False),
-            ("pre", "abort", lambda _: (_ for _ in ()).throw(subprocess.TimeoutExpired("s", 30)), False),
-            ("post", "abort", lambda _: (_ for _ in ()).throw(subprocess.TimeoutExpired("s", 30)), False),
-            ("pre", "warn", lambda _: (_ for _ in ()).throw(subprocess.TimeoutExpired("s", 30)), False),
+            (
+                "pre",
+                "abort",
+                lambda _: (_ for _ in ()).throw(subprocess.TimeoutExpired("s", 30)),
+                False,
+            ),
+            (
+                "post",
+                "abort",
+                lambda _: (_ for _ in ()).throw(subprocess.TimeoutExpired("s", 30)),
+                False,
+            ),
+            (
+                "pre",
+                "warn",
+                lambda _: (_ for _ in ()).throw(subprocess.TimeoutExpired("s", 30)),
+                False,
+            ),
             ("pre", "abort", lambda _: (_ for _ in ()).throw(OSError("Permission denied")), False),
             ("post", "abort", lambda _: (_ for _ in ()).throw(OSError("Permission denied")), False),
             ("pre", "warn", lambda _: (_ for _ in ()).throw(OSError("Permission denied")), False),
@@ -974,7 +983,12 @@ class TestRunHookScriptsFailureModes:
     )
     @patch("subprocess.run")
     def test_hook_error_modes(
-        self, mock_run, hook_type, failure_mode, error_factory, expected,
+        self,
+        mock_run,
+        hook_type,
+        failure_mode,
+        error_factory,
+        expected,
     ) -> None:
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
@@ -1135,9 +1149,7 @@ class TestMainCLIArgumentParsing:
 
     def test_config_dir_option(self) -> None:
         """Test --config-dir option is parsed correctly."""
-        with patch(
-            "sys.argv", ["fplaunch-launch", "--config-dir", "/custom/config", "firefox"]
-        ):
+        with patch("sys.argv", ["fplaunch-launch", "--config-dir", "/custom/config", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1151,9 +1163,7 @@ class TestMainCLIArgumentParsing:
 
     def test_bin_dir_option(self) -> None:
         """Test --bin-dir option is parsed correctly."""
-        with patch(
-            "sys.argv", ["fplaunch-launch", "--bin-dir", "/custom/bin", "firefox"]
-        ):
+        with patch("sys.argv", ["fplaunch-launch", "--bin-dir", "/custom/bin", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1167,9 +1177,7 @@ class TestMainCLIArgumentParsing:
 
     def test_hook_failure_abort(self) -> None:
         """Test --hook-failure abort is parsed correctly."""
-        with patch(
-            "sys.argv", ["fplaunch-launch", "--hook-failure", "abort", "firefox"]
-        ):
+        with patch("sys.argv", ["fplaunch-launch", "--hook-failure", "abort", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1183,9 +1191,7 @@ class TestMainCLIArgumentParsing:
 
     def test_hook_failure_warn(self) -> None:
         """Test --hook-failure warn is parsed correctly."""
-        with patch(
-            "sys.argv", ["fplaunch-launch", "--hook-failure", "warn", "firefox"]
-        ):
+        with patch("sys.argv", ["fplaunch-launch", "--hook-failure", "warn", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1199,9 +1205,7 @@ class TestMainCLIArgumentParsing:
 
     def test_hook_failure_ignore(self) -> None:
         """Test --hook-failure ignore is parsed correctly."""
-        with patch(
-            "sys.argv", ["fplaunch-launch", "--hook-failure", "ignore", "firefox"]
-        ):
+        with patch("sys.argv", ["fplaunch-launch", "--hook-failure", "ignore", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1215,9 +1219,7 @@ class TestMainCLIArgumentParsing:
 
     def test_abort_on_hook_failure_shorthand(self) -> None:
         """Test --abort-on-hook-failure shorthand is parsed correctly."""
-        with patch(
-            "sys.argv", ["fplaunch-launch", "--abort-on-hook-failure", "firefox"]
-        ):
+        with patch("sys.argv", ["fplaunch-launch", "--abort-on-hook-failure", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
                 mock_instance = Mock()
                 mock_instance.launch.return_value = True
@@ -1334,9 +1336,7 @@ class TestGetEffectiveFailureMode:
             config_dir=str(self.config_dir),
         )
 
-        with patch(
-            "lib.config_manager.create_config_manager", side_effect=ImportError()
-        ):
+        with patch("lib.config_manager.create_config_manager", side_effect=ImportError()):
             with patch.dict(os.environ, {"FPWRAPPER_HOOK_FAILURE": "abort"}):
                 result = launcher._get_effective_failure_mode("pre")
 
@@ -1353,9 +1353,7 @@ class TestGetEffectiveFailureMode:
             config_dir=str(self.config_dir),
         )
 
-        with patch(
-            "lib.config_manager.create_config_manager", side_effect=ImportError()
-        ):
+        with patch("lib.config_manager.create_config_manager", side_effect=ImportError()):
             # Clear any existing env var
             env = os.environ.copy()
             if "FPWRAPPER_HOOK_FAILURE" in env:
@@ -1589,9 +1587,7 @@ class TestIsTestEnvironmentLaunch:
         from lib.launch import is_test_environment_launch
 
         # Make sure no test modules are loaded
-        test_modules = [
-            k for k in sys.modules.keys() if "pytest" in k or "unittest" in k
-        ]
+        test_modules = [k for k in sys.modules.keys() if "pytest" in k or "unittest" in k]
         for mod in test_modules:
             del sys.modules[mod]
 
@@ -1700,9 +1696,7 @@ class TestDetermineLaunchSource:
         assert wrapper_path is None
 
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_determine_launch_source_path_safe_check_exception(
-        self, mock_safety
-    ) -> None:
+    def test_determine_launch_source_path_safe_check_exception(self, mock_safety) -> None:
         """Test _determine_launch_source handles path safety check exception."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
@@ -1882,9 +1876,7 @@ class TestResolveFlatpakId:
     @patch("lib.launch.subprocess.run")
     @patch("lib.python_utils.find_executable")
     @patch("lib.safety.is_test_environment", return_value=False)
-    def test_resolve_flatpak_id_uses_flatpak_list(
-        self, mock_is_test, mock_find, mock_run
-    ) -> None:
+    def test_resolve_flatpak_id_uses_flatpak_list(self, mock_is_test, mock_find, mock_run) -> None:
         """Test resolution uses flatpak list command."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
@@ -2140,9 +2132,7 @@ class TestLaunchHookFailureVerbose:
             verbose=True,
         )
 
-        with patch.object(
-            launcher, "_get_effective_failure_mode", return_value="abort"
-        ):
+        with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
             with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
                 launcher.launch()
 
@@ -2208,9 +2198,7 @@ class TestLaunchExceptions:
             verbose=True,
         )
 
-        with patch.object(
-            launcher, "_determine_launch_source", side_effect=KeyboardInterrupt()
-        ):
+        with patch.object(launcher, "_determine_launch_source", side_effect=KeyboardInterrupt()):
             with patch("sys.stderr", new_callable=StringIO):
                 result = launcher.launch()
 

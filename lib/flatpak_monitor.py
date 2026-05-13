@@ -42,6 +42,7 @@ WATCHDOG_AVAILABLE: bool
 try:
     from watchdog.events import FileSystemEventHandler as WatchdogEventHandler
     from watchdog.observers import Observer as WatchdogObserver
+
     WATCHDOG_AVAILABLE = True
 except (ImportError, AttributeError):
     WATCHDOG_AVAILABLE = False
@@ -51,9 +52,7 @@ Observer: Any = WatchdogObserver
 
 # For runtime we select a base handler that is the watchdog class when present,
 # otherwise a neutral fallback (object).
-_BaseFSHandler: Any = (
-    WatchdogEventHandler if WatchdogEventHandler is not None else object
-)
+_BaseFSHandler: Any = WatchdogEventHandler if WatchdogEventHandler is not None else object
 
 
 # Systemd notify support (optional) - import at runtime via importlib to avoid
@@ -130,7 +129,8 @@ class FlatpakEventHandler(_BaseFSHandler):
             self.batch_timer.cancel()
 
         self.batch_timer = threading.Timer(
-            self.batch_window, self._flush_pending_events,
+            self.batch_window,
+            self._flush_pending_events,
         )
         if self.batch_timer is not None:
             self.batch_timer.daemon = True
@@ -239,7 +239,8 @@ class FlatpakMonitor:
             self.observer = Observer() if Observer is not None else None
 
             event_handler = FlatpakEventHandler(
-                callback=self._on_flatpak_change, config=self.config,
+                callback=self._on_flatpak_change,
+                config=self.config,
             )
 
             for path in self.watch_paths:
@@ -403,7 +404,9 @@ class FlatpakMonitor:
 
 
 def start_flatpak_monitoring(
-    callback: Any = None, daemon: bool = False, config: Optional[Dict[str, Any]] = None,
+    callback: Any = None,
+    daemon: bool = False,
+    config: Optional[Dict[str, Any]] = None,
 ) -> FlatpakMonitor:
     """Start Flatpak monitoring (convenience function)."""
     monitor = FlatpakMonitor(callback=callback, config=config)
@@ -440,7 +443,10 @@ def main(
         description="Flatpak installation monitoring service",
     )
     parser.add_argument(
-        "-d", "--daemon", action="store_true", help="Run in background as a daemon",
+        "-d",
+        "--daemon",
+        action="store_true",
+        help="Run in background as a daemon",
     )
     parser.add_argument(
         "-c",
@@ -450,7 +456,10 @@ def main(
         help="Callback function to execute on events (format: module:function)",
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose logging",
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging",
     )
     parser.add_argument(
         "--batch-window",
@@ -508,7 +517,9 @@ def main(
 
     logger.info("Starting Flatpak monitor with configuration: %s", config)
     monitor = start_flatpak_monitoring(
-        callback=callback_func, daemon=args.daemon, config=config,
+        callback=callback_func,
+        daemon=args.daemon,
+        config=config,
     )
 
     if not args.daemon and monitor:

@@ -264,8 +264,9 @@ class TestNotificationSecurity:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("lib.notifications.subprocess.run") as mock_run, patch(
-            "lib.notifications.notify_send_available", return_value=True
+        with (
+            patch("lib.notifications.subprocess.run") as mock_run,
+            patch("lib.notifications.notify_send_available", return_value=True),
         ):
             mock_result = Mock()
             mock_result.returncode = 0
@@ -297,8 +298,9 @@ class TestNotificationSecurity:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("lib.notifications.subprocess.run") as mock_run, patch(
-            "lib.notifications.notify_send_available", return_value=True
+        with (
+            patch("lib.notifications.subprocess.run") as mock_run,
+            patch("lib.notifications.notify_send_available", return_value=True),
         ):
             mock_result = Mock()
             mock_result.returncode = 0
@@ -319,8 +321,9 @@ class TestNotificationSecurity:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("lib.notifications.subprocess.run") as mock_run, patch(
-            "lib.notifications.notify_send_available", return_value=True
+        with (
+            patch("lib.notifications.subprocess.run") as mock_run,
+            patch("lib.notifications.notify_send_available", return_value=True),
         ):
             mock_result = Mock()
             mock_result.returncode = 0
@@ -344,8 +347,9 @@ class TestNotificationEdgeCases:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("lib.notifications.subprocess.run") as mock_run, patch(
-            "lib.notifications.notify_send_available", return_value=True
+        with (
+            patch("lib.notifications.subprocess.run") as mock_run,
+            patch("lib.notifications.notify_send_available", return_value=True),
         ):
             mock_result = Mock()
             mock_result.returncode = 0
@@ -363,8 +367,9 @@ class TestNotificationEdgeCases:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("lib.notifications.subprocess.run") as mock_run, patch(
-            "lib.notifications.notify_send_available", return_value=True
+        with (
+            patch("lib.notifications.subprocess.run") as mock_run,
+            patch("lib.notifications.notify_send_available", return_value=True),
         ):
             mock_result = Mock()
             mock_result.returncode = 0
@@ -381,8 +386,9 @@ class TestNotificationEdgeCases:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("lib.notifications.subprocess.run") as mock_run, patch(
-            "lib.notifications.notify_send_available", return_value=True
+        with (
+            patch("lib.notifications.subprocess.run") as mock_run,
+            patch("lib.notifications.notify_send_available", return_value=True),
         ):
             mock_result = Mock()
             mock_result.returncode = 0
@@ -400,8 +406,9 @@ class TestNotificationEdgeCases:
         if not send_notification:
             pytest.skip("notifications module not available")
 
-        with patch("lib.notifications.subprocess.run") as mock_run, patch(
-            "lib.notifications.notify_send_available", return_value=True
+        with (
+            patch("lib.notifications.subprocess.run") as mock_run,
+            patch("lib.notifications.notify_send_available", return_value=True),
         ):
             mock_result = Mock()
             mock_result.returncode = 0

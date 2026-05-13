@@ -21,12 +21,8 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", "integration: Integration tests that test module interactions"
     )
-    config.addinivalue_line(
-        "markers", "slow: Tests that take longer than usual to run"
-    )
-    config.addinivalue_line(
-        "markers", "security: Security-focused tests"
-    )
+    config.addinivalue_line("markers", "slow: Tests that take longer than usual to run")
+    config.addinivalue_line("markers", "security: Security-focused tests")
     config.addinivalue_line(
         "markers", "real_execution: Tests that execute real code paths (minimal mocking)"
     )

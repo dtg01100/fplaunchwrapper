@@ -89,9 +89,9 @@ class TestPortalLauncherWaitFlagPosition:
         cmd = mock_run.call_args[0][0]
         app_index = cmd.index("org.example.App")
         wait_index = cmd.index("--wait")
-        assert (
-            wait_index < app_index
-        ), f"--wait (index {wait_index}) must come before app ID (index {app_index})"
+        assert wait_index < app_index, (
+            f"--wait (index {wait_index}) must come before app ID (index {app_index})"
+        )
 
     @patch("lib.portal_launcher.subprocess.run")
     def test_wait_before_app_id_direct(self, mock_run: MagicMock) -> None:
@@ -104,13 +104,15 @@ class TestPortalLauncherWaitFlagPosition:
         cmd = mock_run.call_args[0][0]
         app_index = cmd.index("org.example.App")
         wait_index = cmd.index("--wait")
-        assert (
-            wait_index < app_index
-        ), f"--wait (index {wait_index}) must come before app ID (index {app_index})"
+        assert wait_index < app_index, (
+            f"--wait (index {wait_index}) must come before app ID (index {app_index})"
+        )
 
     @patch("lib.portal_launcher.subprocess.run")
     @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_app_args_still_after_app_id(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_app_args_still_after_app_id(
+        self, mock_get_path: MagicMock, mock_run: MagicMock
+    ) -> None:
         """Application arguments must remain after the app ID even when wait=True."""
         from lib.portal_launcher import launch_with_portal
 
@@ -124,7 +126,9 @@ class TestPortalLauncherWaitFlagPosition:
 
     @patch("lib.portal_launcher.subprocess.run")
     @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_no_wait_flag_when_wait_false(self, mock_get_path: MagicMock, mock_run: MagicMock) -> None:
+    def test_no_wait_flag_when_wait_false(
+        self, mock_get_path: MagicMock, mock_run: MagicMock
+    ) -> None:
         """When wait=False, --wait must not appear in the command."""
         from lib.portal_launcher import launch_with_portal
 
@@ -158,8 +162,9 @@ class TestCliAliasesUseCtxInvoke:
         """fplaunch pref <wrapper> <pref> must behave like fplaunch set-pref."""
         pytest.importorskip("lib.manage")
 
-        with patch("lib.manage.WrapperManager.set_preference", return_value=True), patch(
-            "lib.manage.WrapperManager.__init__", return_value=None
+        with (
+            patch("lib.manage.WrapperManager.set_preference", return_value=True),
+            patch("lib.manage.WrapperManager.__init__", return_value=None),
         ):
             # Also patch the import inside cli.py
             result = self._run_cli(["pref", "firefox", "flatpak"])
@@ -169,8 +174,9 @@ class TestCliAliasesUseCtxInvoke:
 
     def test_discover_alias_invokes_search_logic(self, tmp_path: Path) -> None:
         """fplaunch discover must behave like fplaunch search."""
-        with patch("lib.manage.WrapperManager.display_wrappers", return_value=None), patch(
-            "lib.manage.WrapperManager.__init__", return_value=None
+        with (
+            patch("lib.manage.WrapperManager.display_wrappers", return_value=None),
+            patch("lib.manage.WrapperManager.__init__", return_value=None),
         ):
             result = self._run_cli(["discover"])
 
@@ -322,9 +328,10 @@ class TestFlatpakMonitorNoSleepInCallback:
         monitor.config = {"debounce": 1}
         monitor.callback = None
 
-        with patch.object(monitor, "_should_regenerate_wrappers", return_value=False), patch(
-            "lib.flatpak_monitor.time.sleep"
-        ) as mock_sleep:
+        with (
+            patch.object(monitor, "_should_regenerate_wrappers", return_value=False),
+            patch("lib.flatpak_monitor.time.sleep") as mock_sleep,
+        ):
             monitor._on_flatpak_change("modified", "/some/path")
 
             mock_sleep.assert_not_called()
@@ -397,6 +404,6 @@ class TestVersionConsistency:
         except (ImportError, AttributeError):
             pytest.skip("lib.__version__ not available")
 
-        assert (
-            toml_version == module_version
-        ), f"pyproject.toml version ({toml_version}) != lib.__version__ ({module_version})"
+        assert toml_version == module_version, (
+            f"pyproject.toml version ({toml_version}) != lib.__version__ ({module_version})"
+        )

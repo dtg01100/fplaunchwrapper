@@ -39,7 +39,9 @@ class TestLaunchWithPortal:
     @pytest.fixture(autouse=True)
     def _setup_portal_mocks(self):
         with (
-            patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn") as mock_get,
+            patch(
+                "lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn"
+            ) as mock_get,
             patch("lib.portal_launcher.subprocess.run") as mock_run,
         ):
             mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
@@ -316,7 +318,9 @@ class TestGetLaunchCommand:
 
     @patch("lib.portal_launcher.is_portal_launcher_available")
     @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_returns_portal_command_when_available(self, mock_get_path: MagicMock, mock_available: MagicMock) -> None:
+    def test_returns_portal_command_when_available(
+        self, mock_get_path: MagicMock, mock_available: MagicMock
+    ) -> None:
         """Test that portal command is returned when available."""
         from lib.portal_launcher import get_launch_command
 
@@ -372,7 +376,9 @@ class TestGetLaunchCommand:
 
     @patch("lib.portal_launcher.is_portal_launcher_available")
     @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_empty_args_does_not_double_list(self, mock_get_path: MagicMock, mock_available: MagicMock) -> None:
+    def test_empty_args_does_not_double_list(
+        self, mock_get_path: MagicMock, mock_available: MagicMock
+    ) -> None:
         """Test that None args doesn't add extra elements."""
         from lib.portal_launcher import get_launch_command
 
@@ -385,7 +391,9 @@ class TestGetLaunchCommand:
 
     @patch("lib.portal_launcher.is_portal_launcher_available")
     @patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn")
-    def test_returns_list_of_strings(self, mock_get_path: MagicMock, mock_available: MagicMock) -> None:
+    def test_returns_list_of_strings(
+        self, mock_get_path: MagicMock, mock_available: MagicMock
+    ) -> None:
         """Test that result is a list of strings."""
         from lib.portal_launcher import get_launch_command
 
@@ -403,7 +411,9 @@ class TestCommandConstruction:
     @pytest.fixture(autouse=True)
     def _setup_portal_mocks(self):
         with (
-            patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn") as mock_get,
+            patch(
+                "lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn"
+            ) as mock_get,
             patch("lib.portal_launcher.subprocess.run") as mock_run,
         ):
             mock_run.return_value = MagicMock(returncode=0)
@@ -475,7 +485,9 @@ class TestErrorHandling:
     @pytest.fixture(autouse=True)
     def _setup_portal_mocks(self):
         with (
-            patch("lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn") as mock_get,
+            patch(
+                "lib.portal_launcher._get_flatpak_spawn_path", return_value="/usr/bin/flatpak-spawn"
+            ) as mock_get,
             patch("lib.portal_launcher.subprocess.run") as mock_run,
         ):
             mock_run.return_value = MagicMock(returncode=0)

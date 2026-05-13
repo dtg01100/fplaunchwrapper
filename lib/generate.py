@@ -54,7 +54,7 @@ from .exceptions import (
     ForbiddenNameError,
     WrapperGenerationError,
 )
-from .paths import get_default_config_dir, ensure_dir
+from .paths import ensure_dir
 from .python_utils import (
     acquire_lock,
     find_executable,
@@ -104,9 +104,7 @@ class WrapperGenerator(LoggingMixin):
             (self.config_dir / "bin_dir").write_text(str(self.bin_dir))
 
     @staticmethod
-    def _enforce_home_boundary(
-        resolved: Path, original_str: str, user_home: Path
-    ) -> Path:
+    def _enforce_home_boundary(resolved: Path, original_str: str, user_home: Path) -> Path:
         """Check resolved path is under home or /tmp, falling back to ~/bin if not."""
         try:
             resolved.relative_to(user_home)
@@ -114,6 +112,7 @@ class WrapperGenerator(LoggingMixin):
             if str(resolved).startswith("/tmp/"):  # nosec B108
                 return resolved
             import sys
+
             print(
                 f"Warning: bin_dir '{original_str}' resolves outside home directory, "
                 f"falling back to {user_home / 'bin'}",
@@ -150,13 +149,18 @@ class WrapperGenerator(LoggingMixin):
         return name.lower() in ForbiddenNameError.FORBIDDEN_NAMES
 
     def run_command(
-        self, cmd: list[str], description: str = "",
+        self,
+        cmd: list[str],
+        description: str = "",
     ) -> subprocess.CompletedProcess:
         """Run a command and return its output."""
         if description and not self.verbose:
             with console.status(f"[bold green]{description}..."):
                 result = subprocess.run(
-                    cmd, capture_output=True, text=True, check=False,
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    check=False,
                 )
         else:
             if description and self.verbose:
@@ -171,7 +175,8 @@ class WrapperGenerator(LoggingMixin):
         flatpak_path = find_executable("flatpak")
         if flatpak_path is None:
             raise WrapperGenerationError(
-                "flatpak", "Failed to find flatpak executable in PATH",
+                "flatpak",
+                "Failed to find flatpak executable in PATH",
             )
 
         result = self.run_command(
@@ -180,7 +185,8 @@ class WrapperGenerator(LoggingMixin):
         )
         if result.returncode != 0:
             raise WrapperGenerationError(
-                "flatpak", f"Failed to get Flatpak applications: {result.stderr}",
+                "flatpak",
+                f"Failed to get Flatpak applications: {result.stderr}",
             )
 
         apps = []
@@ -202,11 +208,7 @@ class WrapperGenerator(LoggingMixin):
             if stdout_system:
                 for line in stdout_system.split("\n"):
                     line = line.strip()
-                    if (
-                        line
-                        and not line.startswith("Application ID")
-                        and line not in apps
-                    ):
+                    if line and not line.startswith("Application ID") and line not in apps:
                         apps.append(line)
 
         return sorted(set(apps))
@@ -235,9 +237,7 @@ class WrapperGenerator(LoggingMixin):
         # 1. When installed: use importlib.resources to find template in package data
         if HAS_IMPORTLIB_RESOURCES:
             try:
-                template_file = (
-                    importlib_files("lib") / "templates" / "wrapper.template.sh"
-                )
+                template_file = importlib_files("lib") / "templates" / "wrapper.template.sh"
                 candidates.append(Path(str(template_file)))
             except (TypeError, AttributeError, FileNotFoundError):
                 pass
@@ -273,7 +273,9 @@ class WrapperGenerator(LoggingMixin):
 
                 config = create_config_manager()
                 failure_mode = getattr(
-                    config.config, "hook_failure_mode_default", "warn",
+                    config.config,
+                    "hook_failure_mode_default",
+                    "warn",
                 )
 
                 prefs = config.get_app_preferences(wrapper_name)
@@ -284,7 +286,13 @@ class WrapperGenerator(LoggingMixin):
 
             def _format_escape(s: str) -> str:
                 # Escape for Python format string and bash injection prevention
-                return s.replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$").replace("{", "{{").replace("}", "}}")
+                return (
+                    s.replace("\\", "\\\\")
+                    .replace("`", "\\`")
+                    .replace("$", "\\$")
+                    .replace("{", "{{")
+                    .replace("}", "}}")
+                )
 
             return content.format(
                 wrapper_name=wrapper_name,
@@ -298,7 +306,8 @@ class WrapperGenerator(LoggingMixin):
 
         except Exception as e:
             raise WrapperGenerationError(
-                app_id, f"Failed to read wrapper template: {e}",
+                app_id,
+                f"Failed to read wrapper template: {e}",
             ) from e
 
     def generate_wrapper(self, app_id: str, flatpak_id: str | None = None) -> bool:
@@ -336,7 +345,8 @@ class WrapperGenerator(LoggingMixin):
             target_flatpak_id = sanitize_id_to_name(app_id)
             if not target_flatpak_id:
                 self.log(
-                    f"Skipping invalid app ID (unsanitizable): {app_id}", "warning",
+                    f"Skipping invalid app ID (unsanitizable): {app_id}",
+                    "warning",
                 )
                 return False
 
@@ -542,7 +552,8 @@ class WrapperGenerator(LoggingMixin):
             disable=not self.verbose and not sys.stdout.isatty(),
         ) as progress:
             task = progress.add_task(
-                "Generating wrappers...", total=len(installed_apps),
+                "Generating wrappers...",
+                total=len(installed_apps),
             )
             for app_id in installed_apps:
                 # Track if this app had a wrapper before

@@ -147,9 +147,7 @@ class WrapperConfig:
     )  # Custom permission presets
     schema_version: int = 1  # Schema version for migration purposes
     cron_interval: int = 6  # Cron interval in hours (default: 6 hours)
-    enable_notifications: bool = (
-        True  # Enable desktop notifications for update failures
-    )
+    enable_notifications: bool = True  # Enable desktop notifications for update failures
     # Global hook failure mode defaults
     hook_failure_mode_default: str = "warn"
     pre_launch_failure_mode_default: str | None = (
@@ -178,13 +176,16 @@ class EnhancedConfigManager:
         self.template_variables = {
             "HOME": str(Path.home()),
             "XDG_CONFIG_HOME": os.environ.get(
-                "XDG_CONFIG_HOME", str(Path.home() / ".config"),
+                "XDG_CONFIG_HOME",
+                str(Path.home() / ".config"),
             ),
             "XDG_DATA_HOME": os.environ.get(
-                "XDG_DATA_HOME", str(Path.home() / ".local" / "share"),
+                "XDG_DATA_HOME",
+                str(Path.home() / ".local" / "share"),
             ),
             "XDG_CACHE_HOME": os.environ.get(
-                "XDG_CACHE_HOME", str(Path.home() / ".cache"),
+                "XDG_CACHE_HOME",
+                str(Path.home() / ".cache"),
             ),
             "CONFIG_DIR": str(self.config_dir),
             "DATA_DIR": str(self.data_dir),
@@ -353,7 +354,8 @@ class EnhancedConfigManager:
             self._apply_unvalidated_config(processed_data)
 
     def _apply_validated_config(
-        self, validated_config: "PydanticWrapperConfig",
+        self,
+        validated_config: "PydanticWrapperConfig",
     ) -> None:
         """Apply validated configuration from Pydantic model."""
         self.config.bin_dir = validated_config.bin_dir
@@ -369,9 +371,7 @@ class EnhancedConfigManager:
         self.config.cron_interval = validated_config.cron_interval
         self.config.enable_notifications = validated_config.enable_notifications
 
-        self.config.hook_failure_mode_default = (
-            validated_config.hook_failure_mode_default
-        )
+        self.config.hook_failure_mode_default = validated_config.hook_failure_mode_default
         self.config.pre_launch_failure_mode_default = (
             validated_config.pre_launch_failure_mode_default
         )
@@ -410,11 +410,13 @@ class EnhancedConfigManager:
         self.config.log_level = data.get("log_level", self.config.log_level)
         self.config.cron_interval = data.get("cron_interval", self.config.cron_interval)
         self.config.enable_notifications = data.get(
-            "enable_notifications", self.config.enable_notifications,
+            "enable_notifications",
+            self.config.enable_notifications,
         )
 
         self.config.hook_failure_mode_default = data.get(
-            "hook_failure_mode_default", "warn",
+            "hook_failure_mode_default",
+            "warn",
         )
         self.config.pre_launch_failure_mode_default = data.get(
             "pre_launch_failure_mode_default",
@@ -477,13 +479,9 @@ class EnhancedConfigManager:
         }
 
         if self.config.pre_launch_failure_mode_default:
-            data["pre_launch_failure_mode_default"] = (
-                self.config.pre_launch_failure_mode_default
-            )
+            data["pre_launch_failure_mode_default"] = self.config.pre_launch_failure_mode_default
         if self.config.post_launch_failure_mode_default:
-            data["post_launch_failure_mode_default"] = (
-                self.config.post_launch_failure_mode_default
-            )
+            data["post_launch_failure_mode_default"] = self.config.post_launch_failure_mode_default
 
         gp = self.config.global_preferences
         data["global_preferences"] = {
@@ -644,7 +642,10 @@ class EnhancedConfigManager:
         return app_id in self.config.blocklist
 
     def get_effective_hook_failure_mode(
-        self, app_id: str, hook_type: str, runtime_override: str | None = None,
+        self,
+        app_id: str,
+        hook_type: str,
+        runtime_override: str | None = None,
     ) -> str:
         """Get the effective hook failure mode for an app.
 
@@ -1016,15 +1017,19 @@ if PYDANTIC_AVAILABLE:
                                 key, value = arg.split("=", 1)
                                 for char in dangerous_chars:
                                     if char in value:
-                                        raise ValueError(
-                                            f"Custom argument value contains dangerous character '{char}': {arg}"
+                                        msg = (
+                                            f"Custom argument value contains "
+                                            f"dangerous character '{char}': {arg}"
                                         )
+                                        raise ValueError(msg)
                         else:
                             for char in dangerous_chars:
                                 if char in arg:
-                                    raise ValueError(
-                                        f"Custom argument contains dangerous character '{char}': {arg}"
+                                    msg = (
+                                        f"Custom argument contains "
+                                        f"dangerous character '{char}': {arg}"
                                     )
+                                    raise ValueError(msg)
             return v
 
         @field_validator("pre_launch_script", "post_launch_script")
@@ -1043,7 +1048,8 @@ if PYDANTIC_AVAILABLE:
                     (
                         "XDG_DATA_HOME",
                         os.environ.get(
-                            "XDG_DATA_HOME", str(Path.home() / ".local" / "share"),
+                            "XDG_DATA_HOME",
+                            str(Path.home() / ".local" / "share"),
                         ),
                     ),
                 ]:
@@ -1090,9 +1096,7 @@ if PYDANTIC_AVAILABLE:
 
                 # Additional check: ensure script is executable
                 if not os.access(substituted, os.X_OK):
-                    msg = (
-                        f"Script file is not executable: {v} (resolved: {substituted})"
-                    )
+                    msg = f"Script file is not executable: {v} (resolved: {substituted})"
                     raise ValueError(msg)
 
             return v
@@ -1135,7 +1139,8 @@ if PYDANTIC_AVAILABLE:
             return v
 
         @field_validator(
-            "pre_launch_failure_mode_default", "post_launch_failure_mode_default",
+            "pre_launch_failure_mode_default",
+            "post_launch_failure_mode_default",
         )
         @classmethod
         def validate_optional_failure_mode(cls, v):

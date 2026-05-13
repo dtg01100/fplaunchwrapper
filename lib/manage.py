@@ -18,7 +18,7 @@ from .config_manager import LaunchMethod
 from rich.table import Table
 
 from .logging_utils import LoggingMixin, console
-from .paths import get_default_config_dir, resolve_bin_dir, ensure_dir
+from .paths import resolve_bin_dir, ensure_dir
 from .safety import (
     get_wrapper_id,
     is_wrapper_file,
@@ -54,10 +54,12 @@ class WrapperManager(LoggingMixin):
                 self.bin_dir = Path(bin_dir)
             else:
                 import tempfile
+
                 self.config_dir = Path(tempfile.mkdtemp(prefix="fpmgmt_"))
                 self.bin_dir = Path(tempfile.mkdtemp(prefix="fpbin_"))
         else:
             import tempfile
+
             self.config_dir = Path(tempfile.mkdtemp(prefix="fpmgmt_"))
             self.bin_dir = Path(tempfile.mkdtemp(prefix="fpbin_"))
 
@@ -251,7 +253,8 @@ class WrapperManager(LoggingMixin):
                 failed += 1
         if failed:
             self.log(
-                f"Updated {updated} wrappers, {failed} failed", "warning",
+                f"Updated {updated} wrappers, {failed} failed",
+                "warning",
             )
         else:
             self.log(f"Updated preference for {updated} wrappers", "success")

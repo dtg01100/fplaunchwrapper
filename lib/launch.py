@@ -33,7 +33,6 @@ import threading
 import time
 from pathlib import Path
 
-from .config_manager import HookFailureMode, LaunchMethod
 from .paths import get_default_config_dir, resolve_bin_dir, ensure_dir
 
 logger = logging.getLogger(__name__)
@@ -42,6 +41,7 @@ logger = logging.getLogger(__name__)
 try:
     from .exceptions import AppNotFoundError, LaunchBlockedError, LaunchError
 except ImportError:
+
     class AppNotFoundError(Exception):  # type: ignore[no-redef]
         pass
 
@@ -194,7 +194,9 @@ class AppLauncher:
 
             config = create_config_manager()
             mode: str = config.get_effective_hook_failure_mode(
-                self.app_name or "", hook_type, self.hook_failure_mode,
+                self.app_name or "",
+                hook_type,
+                self.hook_failure_mode,
             )
             return mode
         except (ImportError, OSError):
@@ -207,8 +209,12 @@ class AppLauncher:
         return "warn"
 
     def _report_hook_error(
-        self, hook_type: str, failure_mode: str, script_path: Path,
-        verb: str, detail: str = "",
+        self,
+        hook_type: str,
+        failure_mode: str,
+        script_path: Path,
+        verb: str,
+        detail: str = "",
     ) -> bool | None:
         """Report and handle hook script errors based on failure mode.
 
@@ -228,8 +234,7 @@ class AppLauncher:
         if failure_mode == "abort":
             if hook_type == "pre":
                 print(
-                    f"[fplaunchwrapper] Pre-launch hook {verb}, "
-                    f"aborting launch: {script_path}",
+                    f"[fplaunchwrapper] Pre-launch hook {verb}, aborting launch: {script_path}",
                     file=sys.stderr,
                 )
                 return False
@@ -248,7 +253,10 @@ class AppLauncher:
         return None
 
     def _run_hook_scripts(
-        self, hook_type: str, exit_code: int = 0, source: str = "flatpak",
+        self,
+        hook_type: str,
+        exit_code: int = 0,
+        source: str = "flatpak",
     ) -> bool:
         """Run pre or post-launch hook scripts.
 
@@ -313,7 +321,9 @@ class AppLauncher:
                 if result.returncode != 0:
                     all_succeeded = False
                     outcome = self._report_hook_error(
-                        hook_type, failure_mode, script_path,
+                        hook_type,
+                        failure_mode,
+                        script_path,
                         f"failed (exit {result.returncode})",
                         result.stderr.strip(),
                     )
@@ -326,7 +336,9 @@ class AppLauncher:
             except subprocess.TimeoutExpired:
                 all_succeeded = False
                 outcome = self._report_hook_error(
-                    hook_type, failure_mode, script_path,
+                    hook_type,
+                    failure_mode,
+                    script_path,
                     "timed out",
                 )
                 if outcome is False:
@@ -335,8 +347,11 @@ class AppLauncher:
             except OSError as e:
                 all_succeeded = False
                 outcome = self._report_hook_error(
-                    hook_type, failure_mode, script_path,
-                    "error", str(e),
+                    hook_type,
+                    failure_mode,
+                    script_path,
+                    "error",
+                    str(e),
                 )
                 if outcome is False:
                     return False
@@ -344,8 +359,11 @@ class AppLauncher:
             except Exception as e:
                 all_succeeded = False
                 outcome = self._report_hook_error(
-                    hook_type, failure_mode, script_path,
-                    "error", str(e),
+                    hook_type,
+                    failure_mode,
+                    script_path,
+                    "error",
+                    str(e),
                 )
                 if outcome is False:
                     return False
@@ -425,7 +443,9 @@ class AppLauncher:
         return source, wrapper_path
 
     def _check_preference_override(
-        self, wrapper_path: Path | None, source: str,
+        self,
+        wrapper_path: Path | None,
+        source: str,
     ) -> tuple[Path | None, str]:
         """Check for preference file override.
 
@@ -449,7 +469,8 @@ class AppLauncher:
                 else:
                     logger.warning(
                         "Invalid preference file value '%s' for %s, ignoring",
-                        preference, self.app_name,
+                        preference,
+                        self.app_name,
                     )
         except (OSError, UnicodeDecodeError) as e:
             logger.warning("Could not read preference file: %s", e)

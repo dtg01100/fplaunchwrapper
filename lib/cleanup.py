@@ -33,7 +33,9 @@ try:
     UTILS_AVAILABLE = True
 except ImportError:
     try:
-        from safety import is_wrapper_file as safety_is_wrapper_file  # type: ignore[import-not-found]
+        from safety import (  # type: ignore[import-not-found]
+            is_wrapper_file as safety_is_wrapper_file,
+        )
 
         is_wrapper_file = safety_is_wrapper_file
         UTILS_AVAILABLE = True
@@ -79,23 +81,15 @@ class CleanupConfig:
 
     def __post_init__(self):
         """Set derived values after initialization."""
-        self.bin_dir_path = (
-            Path(self.bin_dir) if self.bin_dir else get_default_bin_dir()
-        )
+        self.bin_dir_path = Path(self.bin_dir) if self.bin_dir else get_default_bin_dir()
         self.config_dir_path = (
             Path(self.config_dir) if self.config_dir else get_default_config_dir()
         )
-        self.data_dir_path = (
-            Path(self.data_dir) if self.data_dir else get_default_data_dir()
-        )
+        self.data_dir_path = Path(self.data_dir) if self.data_dir else get_default_data_dir()
         self.assume_yes_effective = (
-            self.assume_yes
-            or self.force
-            or bool(os.environ.get("FPWRAPPER_FORCE"))
+            self.assume_yes or self.force or bool(os.environ.get("FPWRAPPER_FORCE"))
         )
-        self.verbose_effective = (
-            bool(self.verbose) if self.verbose is not None else False
-        )
+        self.verbose_effective = bool(self.verbose) if self.verbose is not None else False
 
 
 class WrapperCleanup(LoggingMixin):
@@ -130,9 +124,7 @@ class WrapperCleanup(LoggingMixin):
         self.remove_data = self.config.remove_data
         self.remove_systemd = self.config.remove_systemd
         self.create_backup = self.config.create_backup
-        self.backup_dir = (
-            Path(self.config.backup_dir) if self.config.backup_dir else None
-        )
+        self.backup_dir = Path(self.config.backup_dir) if self.config.backup_dir else None
         self.had_errors: bool = False
 
         self.cleanup_items: dict[str, list] = {
@@ -292,17 +284,14 @@ class WrapperCleanup(LoggingMixin):
                 [crontab_path, "-l"],
                 check=False,
                 capture_output=True,
-                text=True, timeout=10,
+                text=True,
+                timeout=10,
             )
             if result.returncode == 0:
                 # Look for any cron entries related to fplaunchwrapper
                 cron_lines = []
                 for line in str(result.stdout).split("\n"):
-                    if (
-                        "fplaunch" in line
-                        and line.strip()
-                        and not line.strip().startswith("#")
-                    ):
+                    if "fplaunch" in line and line.strip() and not line.strip().startswith("#"):
                         cron_lines.append(line.strip())
 
                 if cron_lines:
@@ -346,7 +335,8 @@ class WrapperCleanup(LoggingMixin):
                 [crontab_path, "-l"],
                 check=False,
                 capture_output=True,
-                text=True, timeout=10,
+                text=True,
+                timeout=10,
             )
             if result.returncode == 0:
                 return "fplaunch-generate" in str(result.stdout)
@@ -401,7 +391,9 @@ class WrapperCleanup(LoggingMixin):
 
         return bool(Confirm.ask("Proceed with cleanup?"))
 
-    def _backup_items(self, items: list[Path], category: str, item_label: str, backup_root: Path) -> list[str]:
+    def _backup_items(
+        self, items: list[Path], category: str, item_label: str, backup_root: Path
+    ) -> list[str]:
         errors: list[str] = []
         for f in items:
             try:
@@ -422,10 +414,14 @@ class WrapperCleanup(LoggingMixin):
                 )
                 backup_errors = []
                 backup_errors.extend(
-                    self._backup_items(self.cleanup_items["wrappers"], "wrappers", "wrapper", backup_root)
+                    self._backup_items(
+                        self.cleanup_items["wrappers"], "wrappers", "wrapper", backup_root
+                    )
                 )
                 backup_errors.extend(
-                    self._backup_items(self.cleanup_items["preferences"], "preferences", "preference", backup_root)
+                    self._backup_items(
+                        self.cleanup_items["preferences"], "preferences", "preference", backup_root
+                    )
                 )
                 data_files = self.cleanup_items["data_files"]
                 if len(data_files) > 1000:
@@ -490,7 +486,8 @@ class WrapperCleanup(LoggingMixin):
                         "fplaunch-wrapper.service",
                     ],
                     check=False,
-                    capture_output=True, timeout=30,
+                    capture_output=True,
+                    timeout=30,
                 )
 
                 subprocess.run(
@@ -503,13 +500,15 @@ class WrapperCleanup(LoggingMixin):
                         "fplaunch-wrapper.service",
                     ],
                     check=False,
-                    capture_output=True, timeout=30,
+                    capture_output=True,
+                    timeout=30,
                 )
 
                 subprocess.run(
                     [systemctl_path, "--user", "daemon-reload"],
                     check=False,
-                    capture_output=True, timeout=30,
+                    capture_output=True,
+                    timeout=30,
                 )
 
         for unit_path in self.cleanup_items["systemd_units"]:
@@ -529,21 +528,21 @@ class WrapperCleanup(LoggingMixin):
                         [crontab_path, "-l"],
                         check=False,
                         capture_output=True,
-                        text=True, timeout=10,
+                        text=True,
+                        timeout=10,
                     )
                     if result.returncode == 0:
                         current_cron = result.stdout
                         new_cron = "\n".join(
-                            line
-                            for line in current_cron.split("\n")
-                            if "fplaunch" not in line
+                            line for line in current_cron.split("\n") if "fplaunch" not in line
                         )
                         subprocess.run(
                             [crontab_path, "-"],
                             check=False,
                             input=new_cron,
                             text=True,
-                            capture_output=True, timeout=10,
+                            capture_output=True,
+                            timeout=10,
                         )
                 except (subprocess.CalledProcessError, OSError):
                     pass
@@ -728,7 +727,9 @@ This removes:
     parser.add_argument("--config-dir", help="Override configuration directory")
 
     parser.add_argument(
-        "--force", action="store_true", help="Force non-interactive cleanup",
+        "--force",
+        action="store_true",
+        help="Force non-interactive cleanup",
     )
 
     try:

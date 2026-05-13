@@ -926,9 +926,9 @@ echo "testapp executed"
         assert "--fpwrapper-set-preference" in help_output, "Alias flag not in help"
 
         # Preference should be labeled as an alias
-        assert (
-            "Alias for" in help_output or "alias" in help_output.lower()
-        ), "Help text should indicate alias relationship"
+        assert "Alias for" in help_output or "alias" in help_output.lower(), (
+            "Help text should indicate alias relationship"
+        )
 
     def test_alias_flag_persistence(self, generated_wrapper) -> None:
         """Test that both alias and original flag store preference identically."""

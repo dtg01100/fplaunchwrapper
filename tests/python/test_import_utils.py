@@ -16,12 +16,14 @@ class TestSafeImport:
         result = safe_import("os")
         assert result is not None
         import os
+
         assert result is os
 
     def test_import_existing_name(self) -> None:
         result = safe_import("os.path", name="join")
         assert result is not None
         from os.path import join
+
         assert result is join
 
     def test_import_nonexistent_module(self) -> None:
@@ -53,12 +55,14 @@ class TestImportErrorHandler:
         handler = ImportErrorHandler(console_err)
         result = handler.require("os")
         import os
+
         assert result is os
 
     def test_require_existing_name(self, console_err: Mock) -> None:
         handler = ImportErrorHandler(console_err)
         result = handler.require("os.path", name="join")
         from os.path import join
+
         assert result is join
 
     def test_require_nonexistent_module_raises(self, console_err: Mock) -> None:

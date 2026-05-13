@@ -124,7 +124,8 @@ WantedBy=timers.target
             # Enable and start timer
             subprocess.run(
                 ["systemctl", "--user", "enable", "--now", "fplaunch-wrapper.timer"],
-                check=False, timeout=30,
+                check=False,
+                timeout=30,
             )
 
             self.log(
@@ -143,23 +144,14 @@ WantedBy=timers.target
         return 1
 
     @staticmethod
-    def _crontab_has_entry(
-        existing_crontab: str, cron_script: Path, cron_interval: int
-    ) -> bool:
+    def _crontab_has_entry(existing_crontab: str, cron_script: Path, cron_interval: int) -> bool:
         """Check if crontab already has a matching entry for the given script."""
         for line in existing_crontab.splitlines():
             if line.strip() and not line.strip().startswith("#"):
                 parts = line.split()
-                if (
-                    len(parts) >= 6
-                    and parts[0] == "0"
-                    and parts[1] == "*/{}".format(cron_interval)
-                ):
+                if len(parts) >= 6 and parts[0] == "0" and parts[1] == "*/{}".format(cron_interval):
                     cron_script_path = " ".join(parts[5:])
-                    if (
-                        str(cron_script) in cron_script_path
-                        or cron_script.name in cron_script_path
-                    ):
+                    if str(cron_script) in cron_script_path or cron_script.name in cron_script_path:
                         return True
         return False
 
@@ -254,7 +246,8 @@ WantedBy=paths.target
             proc = subprocess.run(
                 ["systemctl", "--user", "is-enabled", "fplaunch-wrapper.service"],
                 capture_output=True,
-                text=True, timeout=30,
+                text=True,
+                timeout=30,
             )
             result["service"]["exists"] = (
                 self.systemd_unit_dir / "fplaunch-wrapper.service"
@@ -264,7 +257,8 @@ WantedBy=paths.target
             proc = subprocess.run(
                 ["systemctl", "--user", "is-active", "fplaunch-wrapper.service"],
                 capture_output=True,
-                text=True, timeout=30,
+                text=True,
+                timeout=30,
             )
             result["service"]["active"] = proc.stdout.strip() == "active"
 
@@ -273,14 +267,16 @@ WantedBy=paths.target
             proc = subprocess.run(
                 ["systemctl", "--user", "is-enabled", "fplaunch-wrapper.timer"],
                 capture_output=True,
-                text=True, timeout=30,
+                text=True,
+                timeout=30,
             )
             result["timer"]["enabled"] = proc.returncode == 0
 
             proc = subprocess.run(
                 ["systemctl", "--user", "is-active", "fplaunch-wrapper.timer"],
                 capture_output=True,
-                text=True, timeout=30,
+                text=True,
+                timeout=30,
             )
             result["timer"]["active"] = proc.stdout.strip() == "active"
 
@@ -327,13 +323,15 @@ WantedBy=paths.target
             # Stop and disable timer
             subprocess.run(
                 ["systemctl", "--user", "disable", "--now", "fplaunch-wrapper.timer"],
-                check=False, timeout=30,
+                check=False,
+                timeout=30,
             )
 
             # Stop and disable service
             subprocess.run(
                 ["systemctl", "--user", "disable", "--now", "fplaunch-wrapper.service"],
-                check=False, timeout=30,
+                check=False,
+                timeout=30,
             )
 
             # Remove unit files
@@ -458,7 +456,8 @@ ExecStart=flatpak run {exec_app}
 
             subprocess.run(
                 ["systemctl", "--user", "disable", service_name],
-                check=False, timeout=30,
+                check=False,
+                timeout=30,
             )
 
             if service_path.exists():

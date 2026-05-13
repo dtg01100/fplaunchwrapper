@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Focused edge case tests for project-specific python utilities."""
+
 import pytest
 
 try:

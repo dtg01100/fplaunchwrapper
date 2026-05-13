@@ -264,8 +264,9 @@ class TestGeneratedLauncherIntegration:
 
         from lib.launch import AppLauncher
 
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=True
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=True),
         ):
             mock_result = Mock()
             mock_result.returncode = 0
@@ -288,8 +289,9 @@ class TestGeneratedLauncherIntegration:
         from lib.launch import AppLauncher
 
         # Create a safety check failure scenario
-        with patch("subprocess.run") as mock_run, patch(
-            "lib.safety.safe_launch_check", return_value=False
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.safety.safe_launch_check", return_value=False),
         ):
             mock_result = Mock()
             mock_result.returncode = 1
