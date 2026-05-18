@@ -40,8 +40,8 @@ WatchdogObserver: Any
 WATCHDOG_AVAILABLE: bool
 
 try:
-    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler
-    from watchdog.observers import Observer as WatchdogObserver
+    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler  # type: ignore[no-redef]
+    from watchdog.observers import Observer as WatchdogObserver  # type: ignore[no-redef]
 
     WATCHDOG_AVAILABLE = True
 except (ImportError, AttributeError):
@@ -211,7 +211,7 @@ class FlatpakMonitor:
 
         return paths
 
-    def _should_process_event(self, path: str | object) -> bool:
+    def _should_process_event(self, path: str | Path) -> bool:
         """Determine if we should process this event.
 
         Delegates to the module-level should_process_event() function.
