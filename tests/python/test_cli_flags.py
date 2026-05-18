@@ -120,6 +120,7 @@ def test_config_defaults_to_show(cli_mod, runner, monkeypatch):
     class FakeConfigManager:
         def __init__(self):
             calls.append("init")
+            self.config_file = Path("/nonexistent/config.toml")
 
         def save_config(self):
             calls.append("save_config")

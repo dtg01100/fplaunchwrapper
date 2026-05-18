@@ -7,11 +7,9 @@ Tests the interaction between AppLauncher and other modules like:
 - generate (wrapper creation)
 """
 
-import os
-import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 import pytest
 

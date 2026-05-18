@@ -76,16 +76,12 @@ class WrapperGenerator(LoggingMixin):
     def __init__(
         self,
         bin_dir: str | Path,
-        config_dir: str | Path | None | bool = None,
+        config_dir: str | Path | None = None,
         verbose: bool = False,
         emit_mode: bool = False,
         emit_verbose: bool = False,
         **kwargs: Any,
     ) -> None:
-        if isinstance(config_dir, bool):
-            verbose, emit_mode, emit_verbose = config_dir, verbose, emit_mode
-            config_dir = None
-
         if not isinstance(bin_dir, (str, os.PathLike)):
             raise TypeError("bin_dir must be a string or path-like object")
         if config_dir is not None and not isinstance(config_dir, (str, os.PathLike)):

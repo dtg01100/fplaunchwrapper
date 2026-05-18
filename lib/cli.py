@@ -1074,7 +1074,7 @@ def config(ctx, action, value) -> int:
     )
     cfg = create_config_manager()
     if not action or action == "show":
-        config_path = Path(ctx.obj.get("config_dir", "")) / "config.toml"
+        config_path = cfg.config_file
         if config_path.exists():
             console.print(f"[bold]Configuration file:[/bold] {config_path}")
             content = config_path.read_text()

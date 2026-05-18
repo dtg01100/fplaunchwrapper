@@ -22,6 +22,12 @@ from rich.console import Console
 from rich.prompt import Confirm
 
 from .logging_utils import LoggingMixin
+from .paths import (
+    get_default_bin_dir,
+    get_default_config_dir,
+    get_default_data_dir,
+    get_systemd_unit_dir,
+)
 
 is_wrapper_file: Callable[[str | Path], bool] | None = None
 UTILS_AVAILABLE = False
@@ -32,30 +38,7 @@ try:
     is_wrapper_file = _is_wrapper_file
     UTILS_AVAILABLE = True
 except ImportError:
-    try:
-        from safety import (  # type: ignore[import-not-found]
-            is_wrapper_file as safety_is_wrapper_file,
-        )
-
-        is_wrapper_file = safety_is_wrapper_file
-        UTILS_AVAILABLE = True
-    except ImportError:
-        pass
-
-try:
-    from lib.paths import (
-        get_default_bin_dir,
-        get_default_config_dir,
-        get_default_data_dir,
-        get_systemd_unit_dir,
-    )
-except ImportError:
-    from .paths import (
-        get_default_bin_dir,
-        get_default_config_dir,
-        get_default_data_dir,
-        get_systemd_unit_dir,
-    )
+    pass
 
 console = Console()
 

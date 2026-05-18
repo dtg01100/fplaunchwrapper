@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Focused pytest coverage for lib.paths."""
 
-import os
 from pathlib import Path
 
 import pytest

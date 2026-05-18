@@ -34,6 +34,7 @@ import time
 from pathlib import Path
 
 from .paths import get_default_config_dir, resolve_bin_dir, ensure_dir
+from .validation import validate_app_id
 
 logger = logging.getLogger(__name__)
 
@@ -416,12 +417,11 @@ class AppLauncher:
         source = "flatpak"
         wrapper_path = self._find_wrapper()
 
+        escaped = False
         candidate_wrapper = self._get_wrapper_path()
         try:
             if not self._is_path_safe(candidate_wrapper, self.bin_dir):
                 escaped = True
-            else:
-                escaped = False
 
             if (
                 not escaped
@@ -487,6 +487,9 @@ class AppLauncher:
 
         if self.app_name is None:
             return ""
+        valid, _ = validate_app_id(self.app_name)
+        if not valid:
+            logger.warning("Invalid app name '%s', using as-is", self.app_name)
         cached = _get_cached_flatpak_id(self.app_name)
         if cached:
             return cached

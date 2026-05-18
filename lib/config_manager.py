@@ -85,18 +85,11 @@ from .exceptions import (  # noqa: E402
     ConfigValidationError,
 )
 
-try:
-    from .paths import (
-        get_default_config_dir,
-        get_default_data_dir,
-        ensure_dir,
-    )
-except ImportError:
-    from lib.paths import (
-        get_default_config_dir,
-        get_default_data_dir,
-        ensure_dir,
-    )
+from .paths import (  # noqa: E402
+    get_default_config_dir,
+    get_default_data_dir,
+    ensure_dir,
+)
 
 
 class LaunchMethod(str, Enum):

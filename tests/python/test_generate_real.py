@@ -96,14 +96,14 @@ class TestWrapperGeneratorReal:
         assert not new_bin.exists()
         assert not new_config.exists()
 
-    def test_init_backwards_compatibility(self) -> None:
-        """Test __init__ with old-style boolean parameters."""
-        # Old API: WrapperGenerator(bin_dir, verbose_bool, emit_bool, emit_verbose_bool)
+    def test_init_keyword_arguments(self) -> None:
+        """Test __init__ with keyword arguments."""
         gen = WrapperGenerator(
-            str(self.bin_dir),
-            True,  # This becomes verbose (config_dir position)
-            False,  # This becomes emit_mode (verbose position)
-            True,  # This becomes emit_verbose (emit_mode position)
+            bin_dir=str(self.bin_dir),
+            config_dir=str(self.config_dir),
+            verbose=True,
+            emit_mode=False,
+            emit_verbose=True,
         )
 
         assert gen.verbose is True

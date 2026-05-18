@@ -116,7 +116,7 @@ def _get_flatpak_paths() -> tuple[str, ...]:
     )
 
 
-def should_process_event(path: str | object) -> bool:
+def should_process_event(path: str | Path) -> bool:
     """Determine if we should process a file system event for this path.
 
     Args:
