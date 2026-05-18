@@ -428,6 +428,8 @@ class WrapperManager(LoggingMixin):
             if aliases_file.exists():
                 result["_aliases"] = [{"type": "aliases", "path": str(aliases_file)}]
 
+        return result
+
     def discover_features(self) -> None:
         """Discover and display available features and capabilities."""
         console.print("[bold]fplaunchwrapper Features:[/bold]")
