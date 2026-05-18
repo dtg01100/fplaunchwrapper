@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,8 @@ class WrapperManager(LoggingMixin):
         self.verbose = verbose
         self.emit_mode = emit_mode
         self.emit_verbose = emit_verbose
+        self.config_dir: Path | None = None
+        self.bin_dir: Path | None = None
         if config_dir:
             self.config_dir = Path(config_dir)
             self.bin_dir = resolve_bin_dir(
@@ -71,6 +74,9 @@ class WrapperManager(LoggingMixin):
     def list_wrappers(self) -> list[dict[str, str]]:
         """List all installed wrappers."""
         wrappers: list[dict[str, str]] = []
+
+        if self.bin_dir is None:
+            return wrappers
 
         if not self.bin_dir.exists() or not os.access(self.bin_dir, os.R_OK):
             return wrappers
@@ -122,6 +128,10 @@ class WrapperManager(LoggingMixin):
 
     def show_info(self, name: str) -> bool:
         """Show detailed information about a wrapper."""
+        if self.bin_dir is None:
+            self.log("Bin directory not set", "error")
+            return False
+
         wrapper_path = self.bin_dir / name
         if not wrapper_path.exists():
             self.log(f"Wrapper not found: {name}", "error")
@@ -137,20 +147,24 @@ class WrapperManager(LoggingMixin):
         console.print(f"[bold]Application ID:[/bold] {wrapper_id or 'unknown'}")
         console.print(f"[bold]Path:[/bold] {wrapper_path}")
 
-        if self.config_dir is None:
-            console.print("[bold]Launch Preference:[/bold] unavailable (emit mode)")
-        else:
+        if self.config_dir is not None:
             pref_file = self.config_dir / f"{name}.pref"
             if pref_file.exists():
                 pref = pref_file.read_text().strip()
                 console.print(f"[bold]Launch Preference:[/bold] {pref}")
             else:
                 console.print("[bold]Launch Preference:[/bold] none (will prompt)")
+        else:
+            console.print("[bold]Launch Preference:[/bold] none (emit mode)")
 
         return True
 
     def remove_wrapper(self, name: str, force: bool = False) -> bool:
         """Remove a wrapper and its associated files."""
+        if self.bin_dir is None:
+            self.log("Bin directory not set", "error")
+            return False
+
         wrapper_path = self.bin_dir / name
         if not wrapper_path.exists():
             self.log(f"Wrapper not found: {name}", "error")
@@ -172,24 +186,23 @@ class WrapperManager(LoggingMixin):
         try:
             wrapper_path.unlink()
 
-            pref_file = self.config_dir / f"{name}.pref"
-            if pref_file.exists():
-                pref_file.unlink()
+            if self.config_dir is not None:
+                pref_file = self.config_dir / f"{name}.pref"
+                if pref_file.exists():
+                    pref_file.unlink()
 
-            env_file = self.config_dir / f"{name}.env"
-            if env_file.exists():
-                env_file.unlink()
+                env_file = self.config_dir / f"{name}.env"
+                if env_file.exists():
+                    env_file.unlink()
 
-            scripts_dir = self.config_dir / "scripts" / name
-            if scripts_dir.exists():
-                try:
-                    scripts_dir.resolve().relative_to(self.config_dir.resolve())
-                    shutil.rmtree(scripts_dir)
-                except ValueError:
-                    self.log(
-                        f"Warning: Scripts dir outside config, not removed: {scripts_dir}",
-                        "warning",
-                    )
+                scripts_dir = self.config_dir / "scripts" / name
+                if scripts_dir.exists():
+                    try:
+                        scripts_dir.resolve().relative_to(self.config_dir.resolve())
+                        shutil.rmtree(scripts_dir)
+                    except ValueError:
+                        self.log(f"Refused to remove scripts dir outside config: {scripts_dir}", "error")
+                        return False
 
             self.log(f"Removed wrapper: {name}", "success")
             return True
@@ -199,7 +212,11 @@ class WrapperManager(LoggingMixin):
 
     def set_preference(self, name: str, preference: str) -> bool:
         """Set launch preference for a wrapper."""
-        valid_preferences = set(LaunchMethod)
+        if self.bin_dir is None:
+            self.log("Bin directory not set", "error")
+            return False
+
+        valid_preferences = {"system", "flatpak", "auto"}
         if preference not in valid_preferences:
             self.log(
                 f"Invalid preference '{preference}': must be one of "
@@ -221,9 +238,12 @@ class WrapperManager(LoggingMixin):
             return False
 
         try:
-            pref_file = self.config_dir / f"{name}.pref"
-            pref_file.write_text(preference)
-            self.log(f"Preference for {name} set to {preference}", "success")
+            if self.config_dir is not None:
+                pref_file = self.config_dir / f"{name}.pref"
+                pref_file.write_text(preference)
+                self.log(f"Preference for {name} set to {preference}", "success")
+            else:
+                self.log(f"Preference for {name} set to {preference} (emit mode)", "emit")
             return True
         except OSError as e:
             self.log(f"Failed to set preference: {e}", "error")
@@ -276,7 +296,10 @@ class WrapperManager(LoggingMixin):
         Returns:
             True if alias was created successfully, False otherwise
         """
-        # Input validation
+        if self.bin_dir is None:
+            self.log("Bin directory not set", "error")
+            return False
+
         if not alias_name or not alias_name.strip():
             self.log("Empty alias name rejected", "error")
             return False
@@ -323,32 +346,32 @@ class WrapperManager(LoggingMixin):
             self.log(f"Would create alias: {alias_name} -> {target}", "emit")
             return True
 
-        if self.config_dir is None:
-            raise RuntimeError("config_dir is required for alias creation")
-
         try:
-            aliases_file = self.config_dir / "aliases"
+            if self.config_dir is not None:
+                aliases_file = self.config_dir / "aliases"
 
-            # Read existing aliases
-            existing_aliases: dict[str, str] = {}
-            if aliases_file.exists():
-                for line in aliases_file.read_text().splitlines():
-                    if ":" in line:
-                        k, v = line.split(":", 1)
-                        existing_aliases[k.strip()] = v.strip()
+                # Read existing aliases
+                existing_aliases: dict[str, str] = {}
+                if aliases_file.exists():
+                    for line in aliases_file.read_text().splitlines():
+                        if ":" in line:
+                            k, v = line.split(":", 1)
+                            existing_aliases[k.strip()] = v.strip()
 
-            # Check if alias already exists
-            if alias_name in existing_aliases:
-                self.log(f"Alias '{alias_name}' already exists", "error")
-                return False
+                # Check if alias already exists
+                if alias_name in existing_aliases:
+                    self.log(f"Alias '{alias_name}' already exists", "error")
+                    return False
 
-            # Add new alias
-            existing_aliases[alias_name] = target
+                # Add new alias
+                existing_aliases[alias_name] = target
 
-            # Write sorted aliases
-            sorted_aliases = sorted(existing_aliases.items())
-            aliases_file.write_text("\n".join(f"{k}:{v}" for k, v in sorted_aliases) + "\n")
-            self.log(f"Created alias: {alias_name} -> {target}", "success")
+                # Write sorted aliases
+                sorted_aliases = sorted(existing_aliases.items())
+                aliases_file.write_text("\n".join(f"{k}:{v}" for k, v in sorted_aliases) + "\n")
+                self.log(f"Created alias: {alias_name} -> {target}", "success")
+            else:
+                self.log(f"Would create alias: {alias_name} -> {target} (emit mode)", "emit")
             return True
         except OSError as e:
             self.log(f"Failed to create alias: {e}", "error")
@@ -377,6 +400,9 @@ class WrapperManager(LoggingMixin):
 
         wrappers = self.list_wrappers()
 
+        if self.bin_dir is None:
+            return result
+
         for wrapper in wrappers:
             name = wrapper["name"]
             if app_name and name != app_name:
@@ -385,14 +411,13 @@ class WrapperManager(LoggingMixin):
             if file_type in (None, "all", "wrappers"):
                 add_file(name, "wrapper", self.bin_dir / name)
 
-            if file_type in (None, "all", "prefs"):
-                if self.config_dir is not None:
+            if self.config_dir is not None:
+                if file_type in (None, "all", "prefs"):
                     pref_file = self.config_dir / f"{name}.pref"
                     if pref_file.exists():
                         add_file(name, "pref", pref_file)
 
-            if file_type in (None, "all", "env"):
-                if self.config_dir is not None:
+                if file_type in (None, "all", "env"):
                     env_file = self.config_dir / f"{name}.env"
                     if env_file.exists():
                         add_file(name, "env", env_file)
@@ -402,8 +427,6 @@ class WrapperManager(LoggingMixin):
             aliases_file = self.config_dir / "aliases"
             if aliases_file.exists():
                 result["_aliases"] = [{"type": "aliases", "path": str(aliases_file)}]
-
-        return result
 
     def discover_features(self) -> None:
         """Discover and display available features and capabilities."""
