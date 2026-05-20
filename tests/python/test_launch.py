@@ -1008,8 +1008,8 @@ class TestRunHookScriptsFailureModes:
         assert result is expected
 
     @patch("subprocess.run")
-    def test_abort_pre_prints_error_message(self, mock_run) -> None:
-        """Pre-launch abort prints an abort message to stderr."""
+    def test_abort_pre_prints_error_message(self, mock_run, caplog) -> None:
+        """Pre-launch abort prints an abort message via logger."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
@@ -1022,18 +1022,17 @@ class TestRunHookScriptsFailureModes:
 
         launcher = self._make_launcher(hook_failure_mode="abort")
         with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
-            with patch("sys.stderr") as mock_stderr:
-                launcher._run_hook_scripts("pre", source="flatpak")
+            launcher._run_hook_scripts("pre", source="flatpak")
 
-        printed = "".join(str(c.args[0]) for c in mock_stderr.write.call_args_list)
-        assert "aborting launch" in printed.lower()
+        assert "aborting launch" in caplog.text.lower()
 
     @patch("subprocess.run")
-    def test_verbose_mode_prints_hook_output(self, mock_run) -> None:
+    def test_verbose_mode_prints_hook_output(self, mock_run, caplog) -> None:
         """Test verbose mode prints hook output on success."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
+        caplog.set_level("INFO")
         self._create_hook_script("pre")
         mock_result = Mock()
         mock_result.returncode = 0
@@ -1043,12 +1042,10 @@ class TestRunHookScriptsFailureModes:
 
         launcher = self._make_launcher(verbose=True)
         with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
-            with patch("sys.stderr") as mock_stderr:
-                result = launcher._run_hook_scripts("pre", source="flatpak")
+            result = launcher._run_hook_scripts("pre", source="flatpak")
 
         assert result is True
-        printed = "".join(str(c.args[0]) for c in mock_stderr.write.call_args_list if c.args)
-        assert "hook" in printed.lower() or mock_stderr.write.called
+        assert "hook" in caplog.text.lower()
 
     @patch("subprocess.run")
     def test_environment_variables_passed_to_hooks(self, mock_run) -> None:
@@ -1957,11 +1954,12 @@ class TestExecuteLaunchDebugMode:
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("subprocess.run")
-    def test_execute_launch_debug_prints_command(self, mock_run) -> None:
-        """Test _execute_launch prints command in debug mode."""
+    def test_execute_launch_debug_prints_command(self, mock_run, caplog) -> None:
+        """Test _execute_launch prints debug command."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
+        caplog.set_level("DEBUG")
         mock_result = Mock()
         mock_result.returncode = 0
         mock_run.return_value = mock_result
@@ -1973,12 +1971,10 @@ class TestExecuteLaunchDebugMode:
             debug=True,
         )
 
-        with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
-            launcher._execute_launch(["flatpak", "run", "firefox"])
+        launcher._execute_launch(["flatpak", "run", "firefox"])
 
-            # Check debug output was printed
-            output = mock_stderr.getvalue()
-            assert "flatpak run firefox" in output
+        # Check debug output was logged
+        assert "flatpak run firefox" in caplog.text
 
 
 class TestWrapperExistsFindWrapperExceptions:
@@ -2114,15 +2110,18 @@ class TestLaunchHookFailureVerbose:
         script_path.chmod(0o755)
 
     @patch("subprocess.run")
-    def test_launch_verbose_on_pre_hook_failure(self, mock_run) -> None:
-        """Test verbose output when pre-launch hook fails."""
+    def test_launch_verbose_on_pre_hook_failure(self, mock_run, caplog) -> None:
+        """Test verbose output when pre-launch hook succeeds."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
+        caplog.set_level("INFO")
         self._create_hook_script("pre")
 
         mock_result = Mock()
         mock_result.returncode = 0
+        mock_result.stdout = "hook stdout output"
+        mock_result.stderr = ""
         mock_run.return_value = mock_result
 
         launcher = LibAppLauncher(
@@ -2133,12 +2132,10 @@ class TestLaunchHookFailureVerbose:
         )
 
         with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
-            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
-                launcher.launch()
+            launcher.launch()
 
-                # Should print verbose message about hook failure
-                output = mock_stderr.getvalue()
-                assert "Pre-launch hooks failed" in output or "hook" in output.lower()
+            # Should log hook output
+            assert "hook output" in caplog.text.lower()
 
     @patch("subprocess.run")
     def test_launch_verbose_on_post_hook_failure(self, mock_run) -> None:
@@ -2160,12 +2157,7 @@ class TestLaunchHookFailureVerbose:
         )
 
         with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
-            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
-                launcher.launch()
-
-                # Should print verbose message
-                mock_stderr.getvalue()
-                # May or may not have output depending on failure mode handling
+            launcher.launch()
 
 
 class TestLaunchExceptions:
@@ -2199,13 +2191,12 @@ class TestLaunchExceptions:
         )
 
         with patch.object(launcher, "_determine_launch_source", side_effect=KeyboardInterrupt()):
-            with patch("sys.stderr", new_callable=StringIO):
-                result = launcher.launch()
+            result = launcher.launch()
 
-                assert result is False
+            assert result is False
 
     @patch("lib.safety.safe_launch_check", return_value=True)
-    def test_launch_general_exception(self, mock_safety) -> None:
+    def test_launch_general_exception(self, mock_safety, caplog) -> None:
         """Test launch handles general exceptions."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
@@ -2220,13 +2211,11 @@ class TestLaunchExceptions:
         with patch.object(
             launcher, "_determine_launch_source", side_effect=RuntimeError("test error")
         ):
-            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
-                result = launcher.launch()
+            result = launcher.launch()
 
-                assert result is False
-                # Should print error message
-                output = mock_stderr.getvalue()
-                assert "Error" in output
+            assert result is False
+            # Should log error message
+            assert "Error launching" in caplog.text
 
 
 class TestMainCLISystemExit:
@@ -2281,11 +2270,12 @@ class TestHookScriptDebugOutput:
         return script_path
 
     @patch("subprocess.run")
-    def test_run_hook_scripts_debug_mode_prints_execution(self, mock_run) -> None:
+    def test_run_hook_scripts_debug_mode_prints_execution(self, mock_run, caplog) -> None:
         """Test _run_hook_scripts prints debug info in debug mode."""
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
+        caplog.set_level("DEBUG")
         self._create_hook_script("pre")
 
         mock_result = Mock()
@@ -2302,12 +2292,10 @@ class TestHookScriptDebugOutput:
         )
 
         with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
-            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
-                launcher._run_hook_scripts("pre", source="flatpak")
+            launcher._run_hook_scripts("pre", source="flatpak")
 
-                # Should print debug output
-                output = mock_stderr.getvalue()
-                assert "Executing" in output or "hook" in output.lower()
+            # Should log debug output
+            assert "Executing" in caplog.text
 
 
 class TestSanitizeAppName:

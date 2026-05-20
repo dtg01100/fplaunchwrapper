@@ -159,12 +159,8 @@ class AppLauncher:
                 ):
                     scripts.append(script_path)
         except (ImportError, OSError) as e:
-            # Catch config-related errors gracefully and fall back to default paths
             if self.verbose:
-                print(
-                    f"Warning: Failed to load hook scripts from config: {e}",
-                    file=sys.stderr,
-                )
+                logger.warning("Failed to load hook scripts from config: %s", e)
 
         if not scripts:
             scripts_dir = self.config_dir / "scripts" / app_name
@@ -234,21 +230,25 @@ class AppLauncher:
 
         if failure_mode == "abort":
             if hook_type == "pre":
-                print(
-                    f"[fplaunchwrapper] Pre-launch hook {verb}, aborting launch: {script_path}",
-                    file=sys.stderr,
+                logger.warning(
+                    "[fplaunchwrapper] Pre-launch hook %s, aborting launch: %s",
+                    verb,
+                    script_path,
                 )
                 return False
-            print(
-                f"[fplaunchwrapper] Post-launch hook {verb}: {script_path}",
-                file=sys.stderr,
+            logger.warning(
+                "[fplaunchwrapper] Post-launch hook %s: %s",
+                verb,
+                script_path,
             )
         elif failure_mode == "warn":
             suffix = f": {detail}" if detail else ""
-            print(
-                f"[fplaunchwrapper] Warning: {hook_type}-launch hook {verb} "
-                f"({script_path}){suffix}",
-                file=sys.stderr,
+            logger.warning(
+                "[fplaunchwrapper] Warning: %s-launch hook %s (%s)%s",
+                hook_type,
+                verb,
+                script_path,
+                suffix,
             )
 
         return None
@@ -281,10 +281,11 @@ class AppLauncher:
         failure_mode = self._get_effective_failure_mode(hook_type)
 
         if self.verbose:
-            print(
-                f"Running {hook_type}-launch scripts for {self.app_name} "
-                f"(failure mode: {failure_mode})",
-                file=sys.stderr,
+            logger.info(
+                "Running %s-launch scripts for %s (failure mode: %s)",
+                hook_type,
+                self.app_name,
+                failure_mode,
             )
 
         all_succeeded = True
@@ -292,7 +293,7 @@ class AppLauncher:
         for script_path in scripts:
             try:
                 if self.debug:
-                    print(f"Executing {hook_type} hook: {script_path}", file=sys.stderr)
+                    logger.debug("Executing %s hook: %s", hook_type, script_path)
 
                 env = os.environ.copy()
                 env["FPWRAPPER_WRAPPER_NAME"] = self.app_name
@@ -332,7 +333,7 @@ class AppLauncher:
                         return False
 
                 elif self.verbose and result.stdout:
-                    print(f"{hook_type} hook output: {result.stdout}", file=sys.stderr)
+                    logger.info("%s hook output: %s", hook_type, result.stdout.strip())
 
             except subprocess.TimeoutExpired:
                 all_succeeded = False
@@ -429,9 +430,9 @@ class AppLauncher:
                 and not os.access(candidate_wrapper, os.X_OK)
             ):
                 if self.verbose:
-                    print(
-                        f"Warning: Wrapper {candidate_wrapper} exists but is not executable",
-                        file=sys.stderr,
+                    logger.warning(
+                        "Wrapper %s exists but is not executable",
+                        candidate_wrapper,
                     )
                 return source, None
         except (OSError, ValueError):
@@ -545,7 +546,7 @@ class AppLauncher:
         Returns the subprocess result.
         """
         if self.debug:
-            print(f"Launching: {' '.join(cmd)}", file=sys.stderr)
+            logger.debug("Launching: %s", ' '.join(cmd))
 
         if self.env:
             return subprocess.run(cmd, capture_output=False, env=self.env)
@@ -628,7 +629,7 @@ class AppLauncher:
 
             if not self._run_hook_scripts("pre", source=source):
                 if self.verbose:
-                    print(f"Pre-launch hooks failed for {self.app_name}", file=sys.stderr)
+                    logger.warning("Pre-launch hooks failed for %s", self.app_name)
                 return False
 
             wrapper_path, source = self._check_preference_override(wrapper_path, source)
@@ -642,17 +643,17 @@ class AppLauncher:
 
             if not self._run_hook_scripts("post", exit_code=result.returncode, source=source):
                 if self.verbose:
-                    print(f"Post-launch hooks failed for {self.app_name}", file=sys.stderr)
+                    logger.warning("Post-launch hooks failed for %s", self.app_name)
 
             return launch_success
 
         except KeyboardInterrupt:
             if self.verbose:
-                print(f"Launch interrupted for {self.app_name}", file=sys.stderr)
+                logger.warning("Launch interrupted for %s", self.app_name)
             return False
         except Exception as e:
             if self.verbose:
-                print(f"Error launching {self.app_name}: {e}", file=sys.stderr)
+                logger.error("Error launching %s: %s", self.app_name, e)
             return False
 
 
