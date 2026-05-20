@@ -6,23 +6,10 @@ Main entry point for all operations.
 import sys
 from typing import Any
 
-safety: Any
-safe_launch_check: Any
+from .safety import is_wrapper_file as safe_launch_check
+from . import safety as safety_mod
 
-try:
-    from .safety import is_wrapper_file as safe_launch_check
-    from . import safety as _safety_mod
-
-    safety = _safety_mod
-except (ImportError, AttributeError):
-
-    class _SafetyStub:
-        @staticmethod
-        def is_wrapper_file(_app_name, _wrapper_path=None):
-            return True
-
-    safety = _SafetyStub()
-    safe_launch_check = safety.is_wrapper_file
+safety = safety_mod
 
 
 def main():

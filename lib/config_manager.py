@@ -69,8 +69,8 @@ tomli_w: Any
 TOML_AVAILABLE: bool = False
 
 try:
-    import tomli  # type: ignore[no-redef]
-    import tomli_w  # type: ignore[no-redef]
+    import tomli
+    import tomli_w
 
     TOML_AVAILABLE = True
 except ImportError:

@@ -10,14 +10,12 @@ import os
 import re
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 from typing import Any
 
-from .config_manager import LaunchMethod
-
 from rich.table import Table
 
+from .config_manager import LaunchMethod
 from .logging_utils import LoggingMixin, console
 from .paths import resolve_bin_dir, ensure_dir
 from .safety import (

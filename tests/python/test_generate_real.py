@@ -339,7 +339,7 @@ class TestWrapperGeneratorReal:
         assert not wrapper.exists()
 
         # But shows what it would do
-        assert "EMIT MODE active" in output
+        assert "EMIT: Would create wrapper: firefox" in output
 
     def test_generate_wrapper_emit_verbose_mode(self) -> None:
         """Test generate_wrapper() in emit verbose mode shows content."""

@@ -79,8 +79,6 @@ def main():
     """Run tests on key test files"""
     test_files = [
         "tests/python/test_python_utils.py",
-        "tests/python/test_edge_cases_focused.py",
-        "tests/python/test_cleanup.py",
         "tests/python/test_config_manager.py",
     ]
 

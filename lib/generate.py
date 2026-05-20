@@ -35,12 +35,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-try:
-    from importlib.resources import files as importlib_files
-
-    HAS_IMPORTLIB_RESOURCES = True
-except ImportError:
-    HAS_IMPORTLIB_RESOURCES = False
+from importlib.resources import files as importlib_files
 
 from rich.console import Console as _Console
 from rich.progress import (
@@ -107,8 +102,6 @@ class WrapperGenerator(LoggingMixin):
         except ValueError:
             if str(resolved).startswith("/tmp/"):  # nosec B108
                 return resolved
-            import sys
-
             print(
                 f"Warning: bin_dir '{original_str}' resolves outside home directory, "
                 f"falling back to {user_home / 'bin'}",
@@ -231,12 +224,11 @@ class WrapperGenerator(LoggingMixin):
         candidates = []
 
         # 1. When installed: use importlib.resources to find template in package data
-        if HAS_IMPORTLIB_RESOURCES:
-            try:
-                template_file = importlib_files("lib") / "templates" / "wrapper.template.sh"
-                candidates.append(Path(str(template_file)))
-            except (TypeError, AttributeError, FileNotFoundError):
-                pass
+        try:
+            template_file = importlib_files("lib") / "templates" / "wrapper.template.sh"
+            candidates.append(Path(str(template_file)))
+        except (TypeError, AttributeError, FileNotFoundError):
+            pass
 
         # 2. Development mode: templates/ at project root
         candidates.append(
@@ -374,8 +366,6 @@ class WrapperGenerator(LoggingMixin):
         if self.emit_mode:
             action = "Update" if wrapper_existed else "Create"
             self.log(f"EMIT: Would {action.lower()} wrapper: {wrapper_name}")
-            # Required by TestWrapperGeneratorReal.test_generate_wrapper_emit_mode
-            print(f"EMIT MODE active for {wrapper_name}")
             if self.emit_verbose:
                 self.log(f"EMIT: File content for {wrapper_path}:")
                 from rich.panel import Panel
@@ -387,7 +377,6 @@ class WrapperGenerator(LoggingMixin):
                         border_style="blue",
                     ),
                 )
-                print(content)
             return True
 
         try:
@@ -444,8 +433,8 @@ class WrapperGenerator(LoggingMixin):
                             header = fh.read(2)
                             if header == b"#!":
                                 remove_item = True
-                    except OSError:
-                        pass
+                    except OSError as e:
+                        self.log(f"Could not read {item} header: {e}", "debug")
 
             if remove_item:
                 self.log(f"Removing obsolete wrapper: {item.name}")
