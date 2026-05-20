@@ -371,7 +371,7 @@ def cleanup(ctx: click.Context) -> int:
 @click.pass_context
 def clean(ctx: click.Context) -> int:
     """Clean up orphaned wrapper files and artifacts (alias for cleanup)."""
-    return ctx.invoke(cleanup)
+    return int(ctx.invoke(cleanup))
 
 
 @cli.command()

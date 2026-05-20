@@ -64,14 +64,16 @@ except ImportError:
 
 
 # TOML support is optional. Use Any for static analysis.
-tomli: Any
-tomli_w: Any
+tomli: Any = None
+tomli_w: Any = None
 TOML_AVAILABLE: bool = False
 
 try:
-    import tomli
-    import tomli_w
+    import tomli as _tomli
+    import tomli_w as _tomli_w
 
+    tomli = _tomli
+    tomli_w = _tomli_w
     TOML_AVAILABLE = True
 except ImportError:
     TOML_AVAILABLE = False
