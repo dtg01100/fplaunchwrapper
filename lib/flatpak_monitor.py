@@ -273,16 +273,8 @@ class FlatpakMonitor:
             self.running = False
             logger.info("Flatpak monitor stopped")
 
-    def start(self) -> bool:
-        """Alias for start_monitoring()."""
-        return self.start_monitoring()
-
-    def stop(self) -> None:
-        """Alias for stop_monitoring()."""
-        self.stop_monitoring()
-
     def _on_change(self, event) -> None:
-        """Adapter to handle simple event objects with src_path and event_type."""
+        """Handle simple event objects with src_path and event_type."""
         path = getattr(event, "src_path", "")
         event_type = getattr(event, "event_type", "modified")
 

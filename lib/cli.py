@@ -371,14 +371,7 @@ def cleanup(ctx: click.Context) -> int:
 @click.pass_context
 def clean(ctx: click.Context) -> int:
     """Clean up orphaned wrapper files and artifacts (alias for cleanup)."""
-    from .paths import resolve_bin_dir
-
-    config_dir = Path(ctx.obj.get("config_dir", "~/.config/fplaunchwrapper"))
-    bin_dir = resolve_bin_dir(explicit_dir=None, config_dir=config_dir)
-
-    WrapperCleanup = import_handler.require("lib.cleanup", "WrapperCleanup")
-    cleanup_manager = WrapperCleanup(bin_dir=str(bin_dir))
-    return int(cleanup_manager.run())
+    return ctx.invoke(cleanup)
 
 
 @cli.command()

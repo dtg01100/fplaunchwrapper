@@ -161,16 +161,16 @@ class TestFlatpakMonitor:
         callback = Mock()
         monitor = FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
 
-        monitor.start()
+        monitor.start_monitoring()
 
         mock_observer.start.assert_called_once()
 
-        monitor.stop()
+        monitor.stop_monitoring()
 
         mock_observer.stop.assert_called_once()
         mock_observer.join.assert_called_once()
 
-        monitor.stop()
+        monitor.stop_monitoring()
 
         mock_observer.stop.assert_called_once()
         mock_observer.join.assert_called_once()
@@ -185,22 +185,22 @@ class TestFlatpakMonitor:
         callback = Mock()
         monitor = FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
 
-        result = monitor.start()
+        result = monitor.start_monitoring()
 
         assert result is True or len(monitor.watch_paths) > 0
 
-        monitor.stop()
+        monitor.stop_monitoring()
 
-    def test_monitor_compatibility_aliases(self):
-        """Test that start() and stop() aliases exist for compatibility."""
+    def test_monitor_has_start_stop_methods(self):
+        """Test that start_monitoring() and stop_monitoring() exist."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
         monitor = FlatpakMonitor()
 
-        assert hasattr(monitor, "start"), "start() alias should exist"
-        assert hasattr(monitor, "stop"), "stop() alias should exist"
-        assert callable(monitor.start)
-        assert callable(monitor.stop)
+        assert hasattr(monitor, "start_monitoring"), "start_monitoring() should exist"
+        assert hasattr(monitor, "stop_monitoring"), "stop_monitoring() should exist"
+        assert callable(monitor.start_monitoring)
+        assert callable(monitor.stop_monitoring)
 
     def test_monitor_detects_watch_paths(self):
         """Test that monitor detects existing Flatpak directories."""
@@ -426,7 +426,7 @@ class TestFlatpakMonitor:
         callback = Mock()
         monitor = FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
 
-        result = monitor.start()
+        result = monitor.start_monitoring()
 
         assert result is False
         assert mock_observer.start.called
@@ -443,11 +443,11 @@ class TestFlatpakMonitor:
         callback = Mock()
         monitor = FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
 
-        monitor.start()
+        monitor.start_monitoring()
         assert mock_observer.start.call_count == 1
 
-        monitor.stop()
-        monitor.start()
+        monitor.stop_monitoring()
+        monitor.start_monitoring()
         assert mock_observer.start.call_count == 2
 
     def test_monitor_callback_validation(self) -> None:
@@ -474,11 +474,11 @@ class TestFlatpakMonitor:
 
         monitor = FlatpakMonitor(callback=callback, bin_dir=bin_dir)
 
-        result = monitor.start()
+        result = monitor.start_monitoring()
 
         assert result is True or monitor.watch_paths is not None
 
-        monitor.stop()
+        monitor.stop_monitoring()
 
     @patch("lib.flatpak_monitor.Observer")
     def test_monitor_cleanup_on_stop(self, mock_observer_class) -> None:
@@ -492,8 +492,8 @@ class TestFlatpakMonitor:
         callback = Mock()
         monitor = FlatpakMonitor(callback=callback, bin_dir=str(self.temp_dir / "bin"))
 
-        monitor.start()
-        monitor.stop()
+        monitor.start_monitoring()
+        monitor.stop_monitoring()
 
         mock_observer.stop.assert_called_once()
         mock_observer.join.assert_called_once()
@@ -538,9 +538,9 @@ class TestFlatpakMonitor:
 
         def worker() -> None:
             try:
-                monitor.start()
+                monitor.start_monitoring()
                 time.sleep(0.1)
-                monitor.stop()
+                monitor.stop_monitoring()
                 results.append("success")
             except Exception as e:
                 errors.append(e)
@@ -713,7 +713,7 @@ class TestFlatpakMonitorIntegration:
             monitor = start_flatpak_monitoring(callback=test_callback, daemon=True)
             assert monitor is not None
             assert monitor.callback == test_callback
-            monitor.stop()
+            monitor.stop_monitoring()
         except Exception as e:
             pytest.skip(f"Monitor integration test skipped: {e}")
 
