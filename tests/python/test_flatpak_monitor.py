@@ -220,7 +220,6 @@ class TestFlatpakMonitor:
 
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
-        monitor = FlatpakMonitor()
 
         assert should_process_event("/var/lib/flatpak/something")
         assert should_process_event(os.path.expanduser("~/.local/share/flatpak/app"))
