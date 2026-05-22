@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
+
 """fplaunchwrapper - Modern Flatpak wrapper management system
 Main entry point for all operations.
 """
 
 import sys
-from typing import Any
 
-from .safety import is_wrapper_file as safe_launch_check
 from . import safety as safety_mod
+from .safety import is_wrapper_file as safe_launch_check  # noqa: F401
 
 safety = safety_mod
 

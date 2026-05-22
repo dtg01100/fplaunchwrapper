@@ -320,7 +320,12 @@ def launch(
     elif ignore_hook_failure:
         resolved_hook_failure = "ignore"
 
-    launcher = AppLauncher(app_name, hook_failure_mode=resolved_hook_failure)
+    launcher = AppLauncher(
+        app_name,
+        config_dir=ctx.obj.get("config_dir"),
+        bin_dir=ctx.obj.get("bin_dir"),
+        hook_failure_mode=resolved_hook_failure,
+    )
     return 0 if launcher.launch() else 1
 
 
@@ -718,8 +723,7 @@ def search(ctx: click.Context, query: str | None) -> int:
 @click.pass_context
 def discover(ctx, query) -> int:
     """Alias for search."""
-    ctx.invoke(search, query=query)
-    return 0
+    return int(ctx.invoke(search, query=query))
 
 
 @cli.group(name="profiles", invoke_without_command=True)

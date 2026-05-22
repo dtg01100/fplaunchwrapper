@@ -7,6 +7,7 @@ schema validation, migration, and templating.
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import re
 import sys
@@ -152,7 +153,6 @@ class WrapperConfig:
         None  # Overrides hook_failure_mode_default for post-launch
     )
 
-
 class EnhancedConfigManager:
     """Enhanced configuration management with type safety, validation,
     migration, and templating support.
@@ -188,26 +188,34 @@ class EnhancedConfigManager:
 
         try:
             ensure_dir(self.config_dir)
-        except OSError:
-            pass
+        except OSError as exc:
+            logging.warning(
+                "Could not create config directory %s: %s",
+                self.config_dir,
+                exc,
+            )
         try:
             ensure_dir(self.data_dir)
-        except OSError:
-            pass
+        except OSError as exc:
+            logging.warning(
+                "Could not create data directory %s: %s",
+                self.data_dir,
+                exc,
+            )
 
         try:
             self.load_config()
         except ConfigPermissionError as e:
-            print(f"Warning: {e}", file=sys.stderr)
-            print("Falling back to default configuration", file=sys.stderr)
+            logging.warning(str(e))
+            logging.warning("Falling back to default configuration")
             self._create_default_config()
         except (ConfigParseError, ConfigValidationError, ConfigMigrationError) as e:
-            print(f"Warning: {e}", file=sys.stderr)
-            print("Falling back to default configuration", file=sys.stderr)
+            logging.warning(str(e))
+            logging.warning("Falling back to default configuration")
             self._create_default_config()
         except ConfigError as e:
-            print(f"Warning: Unexpected configuration error: {e}", file=sys.stderr)
-            print("Falling back to default configuration", file=sys.stderr)
+            logging.warning("Unexpected configuration error: %s", e)
+            logging.warning("Falling back to default configuration")
             self._create_default_config()
 
     def _substitute_variables(self, value: str) -> str:
@@ -612,7 +620,7 @@ class EnhancedConfigManager:
         try:
             self.save_config()
         except ConfigError as e:
-            print(f"Warning: Failed to save app preferences: {e}", file=sys.stderr)
+            logging.warning("Failed to save app preferences: %s", e)
 
     def add_to_blocklist(self, app_id: str) -> None:
         """Add app to blocklist."""
@@ -621,7 +629,7 @@ class EnhancedConfigManager:
             try:
                 self.save_config()
             except ConfigError as e:
-                print(f"Warning: Failed to save blocklist: {e}", file=sys.stderr)
+                logging.warning("Failed to save blocklist: %s", e)
 
     def remove_from_blocklist(self, app_id: str) -> None:
         """Remove app from blocklist."""
@@ -630,7 +638,7 @@ class EnhancedConfigManager:
             try:
                 self.save_config()
             except ConfigError as e:
-                print(f"Warning: Failed to save blocklist: {e}", file=sys.stderr)
+                logging.warning("Failed to save blocklist: %s", e)
 
     def is_blocked(self, app_id: str) -> bool:
         """Check if app is blocked."""

@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .validation import should_process_event
 
@@ -40,8 +40,8 @@ WatchdogObserver: Any
 WATCHDOG_AVAILABLE: bool
 
 try:
-    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler  # type: ignore[no-redef]
-    from watchdog.observers import Observer as WatchdogObserver  # type: ignore[no-redef]
+    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler
+    from watchdog.observers import Observer as WatchdogObserver
 
     WATCHDOG_AVAILABLE = True
 except (ImportError, AttributeError):
@@ -52,7 +52,9 @@ Observer: Any = WatchdogObserver
 
 # For runtime we select a base handler that is the watchdog class when present,
 # otherwise a neutral fallback (object).
-_BaseFSHandler: Any = WatchdogEventHandler if WatchdogEventHandler is not None else object
+_BaseFSHandler: Any = (
+    WatchdogEventHandler if WatchdogEventHandler is not None else object
+)
 
 
 # Systemd notify support (optional) - import at runtime via importlib to avoid
@@ -70,15 +72,17 @@ except (ImportError, ModuleNotFoundError):
 class FlatpakEventHandler(_BaseFSHandler):
     """Handler for Flatpak installation/removal events with event batching."""
 
-    def __init__(self, callback=None, config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(
+        self, callback=None, config: dict[str, Any] | None = None
+    ) -> None:
         self.callback = callback
         self.last_event_time = 0.0
         self.config = config or {}
         self.cooldown_seconds: float = self.config.get("cooldown", 2)
-        self.pending_events: List[tuple[str, str]] = []
+        self.pending_events: list[tuple[str, str]] = []
         self.batch_window: float = self.config.get("batch_window", 1.0)
-        self.batch_timer: Optional[Any] = None
-        self._event_lock: Optional[Any] = None
+        self.batch_timer: threading.Timer | None = None
+        self._event_lock: threading.Lock | None = None
         self._init_lock()
 
     def _init_lock(self) -> None:
@@ -110,7 +114,7 @@ class FlatpakEventHandler(_BaseFSHandler):
         if should_process_event(event.dest_path):
             self._queue_event("moved", event.dest_path)
 
-    def _queue_event(self, event_type, path) -> None:
+    def _queue_event(self, event_type: str, path: str) -> None:
         """Queue event for batching instead of processing immediately."""
         if self._event_lock:
             with self._event_lock:
@@ -118,7 +122,7 @@ class FlatpakEventHandler(_BaseFSHandler):
         else:
             self._queue_event_unlocked(event_type, path)
 
-    def _queue_event_unlocked(self, event_type, path) -> None:
+    def _queue_event_unlocked(self, event_type: str, path: str) -> None:
         """Queue event without lock (internal method)."""
         event_key = (event_type, path)
         if event_key not in self.pending_events:
@@ -152,10 +156,12 @@ class FlatpakEventHandler(_BaseFSHandler):
         current_time = time.time()
         if current_time - self.last_event_time < self.cooldown_seconds:
             delay = self.cooldown_seconds - (current_time - self.last_event_time)
-            # Cancel existing timer before creating new one to prevent race condition
+            # Cancel existing timer before creating new one to prevent race
             if self.batch_timer is not None:
                 self.batch_timer.cancel()
-            self.batch_timer = threading.Timer(delay, self._flush_pending_events)
+            self.batch_timer = threading.Timer(
+                delay, self._flush_pending_events
+            )
             self.batch_timer.daemon = True
             self.batch_timer.start()
             logger.debug("Cooldown active, rescheduling flush in %.1fs", delay)
@@ -164,12 +170,16 @@ class FlatpakEventHandler(_BaseFSHandler):
         self.last_event_time = current_time
 
         if self.callback:
-            logger.debug("Flushing %d batched events", len(self.pending_events))
+            logger.debug(
+                "Flushing %d batched events", len(self.pending_events)
+            )
             for event_type, path in self.pending_events:
                 try:
                     self.callback(event_type, path)
                 except Exception as e:
-                    logger.error("Callback failed for %s %s: %s", event_type, path, e)
+                    logger.error(
+                        "Callback failed for %s %s: %s", event_type, path, e
+                    )
 
         self.pending_events = []
         self.batch_timer = None
@@ -181,12 +191,12 @@ class FlatpakMonitor:
     def __init__(
         self,
         callback=None,
-        bin_dir: Optional[str] = None,
-        config: Optional[Dict[str, Any]] = None,
+        bin_dir: str | None = None,
+        config: dict[str, Any] | None = None,
     ) -> None:
         self.callback = callback
         self.bin_dir = bin_dir
-        self.observer: Optional[Any] = None
+        self.observer: Any = None
         self.running = False
         self.config = config or {}
 
@@ -210,13 +220,6 @@ class FlatpakMonitor:
             paths.append(user_app_data)
 
         return paths
-
-    def _should_process_event(self, path: str | Path) -> bool:
-        """Determine if we should process this event.
-
-        Delegates to the module-level should_process_event() function.
-        """
-        return should_process_event(path)
 
     def _send_systemd_notify(self, status: str = "READY=1") -> None:
         """Send notification to systemd."""
@@ -286,7 +289,9 @@ class FlatpakMonitor:
         logger.debug("Flatpak change detected: %s - %s", event_type, path)
 
         if self._should_regenerate_wrappers(path):
-            logger.info("Regenerating Flatpak wrappers due to change: %s", path)
+            logger.info(
+                "Regenerating Flatpak wrappers due to change: %s", path
+            )
             success = self._regenerate_wrappers()
             if success:
                 logger.info("Flatpak wrappers regenerated successfully")
@@ -301,7 +306,11 @@ class FlatpakMonitor:
         """Determine if wrappers should be regenerated based on the path."""
         path_str = str(path).lower()
 
-        if "/exports/" in path_str or "/app/" in path_str or path_str.endswith("/app"):
+        if (
+            "/exports/" in path_str
+            or "/app/" in path_str
+            or path_str.endswith("/app")
+        ):
             return True
 
         return "/metadata" in path_str or "/manifest" in path_str
@@ -351,7 +360,9 @@ class FlatpakMonitor:
     def _run_generate(self, script_path: str) -> bool:
         """Run a specific regeneration script."""
         try:
-            logger.debug("Running wrapper regeneration script: %s", script_path)
+            logger.debug(
+                "Running wrapper regeneration script: %s", script_path
+            )
             result = subprocess.run(
                 [script_path],
                 check=False,
@@ -398,13 +409,15 @@ class FlatpakMonitor:
 def start_flatpak_monitoring(
     callback: Any = None,
     daemon: bool = False,
-    config: Optional[Dict[str, Any]] = None,
+    config: dict[str, Any] | None = None,
 ) -> FlatpakMonitor:
     """Start Flatpak monitoring (convenience function)."""
     monitor = FlatpakMonitor(callback=callback, config=config)
 
     if daemon:
-        thread = threading.Thread(target=monitor.start_monitoring, daemon=True)
+        thread = threading.Thread(
+            target=monitor.start_monitoring, daemon=True
+        )
         thread.start()
         return monitor
 
@@ -415,8 +428,8 @@ def start_flatpak_monitoring(
 
 def main(
     daemon: bool = False,
-    callback: Optional[str] = None,
-    config: Optional[Dict[str, Any]] = None,
+    callback: str | None = None,
+    config: dict[str, Any] | None = None,
     skip_parse: bool = False,
 ) -> None:
     """Command-line interface for flatpak monitoring.
@@ -428,7 +441,9 @@ def main(
     wrapper) without argparse trying to parse unrelated arguments.
     """
     if skip_parse:
-        start_flatpak_monitoring(callback=callback, daemon=daemon, config=config)
+        start_flatpak_monitoring(
+            callback=callback, daemon=daemon, config=config
+        )
         return
 
     parser = argparse.ArgumentParser(
@@ -445,7 +460,8 @@ def main(
         "--callback",
         type=str,
         default=None,
-        help="Callback function to execute on events (format: module:function)",
+        help="Callback function to execute on events "
+        "(format: module:function)",
     )
     parser.add_argument(
         "-v",
@@ -499,7 +515,7 @@ def main(
             logger.error("Failed to load callback %s: %s", args.callback, e)
             sys.exit(1)
 
-    config = {
+    config_dict = {
         "batch_window": args.batch_window,
         "cooldown": args.cooldown,
         "debounce": args.debounce,
@@ -507,11 +523,13 @@ def main(
         "log_level": args.log_level.upper(),
     }
 
-    logger.info("Starting Flatpak monitor with configuration: %s", config)
+    logger.info(
+        "Starting Flatpak monitor with configuration: %s", config_dict
+    )
     monitor = start_flatpak_monitoring(
         callback=callback_func,
         daemon=args.daemon,
-        config=config,
+        config=config_dict,
     )
 
     if not args.daemon and monitor:

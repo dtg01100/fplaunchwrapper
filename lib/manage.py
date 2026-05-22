@@ -199,7 +199,8 @@ class WrapperManager(LoggingMixin):
                         scripts_dir.resolve().relative_to(self.config_dir.resolve())
                         shutil.rmtree(scripts_dir)
                     except ValueError:
-                        self.log(f"Refused to remove scripts dir outside config: {scripts_dir}", "error")
+                        msg = f"Refused to remove scripts dir outside config: {scripts_dir}"
+                        self.log(msg, "error")
                         return False
 
             self.log(f"Removed wrapper: {name}", "success")

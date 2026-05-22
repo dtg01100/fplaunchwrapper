@@ -166,8 +166,10 @@ def get_launch_command(
     """
     if use_portal and is_portal_launcher_available():
         spawn_path = _get_flatpak_spawn_path()
-        assert spawn_path is not None  # Checked by is_portal_launcher_available
-        cmd = [spawn_path, "--host", "flatpak", "run", flatpak_id]
+        if spawn_path:
+            cmd = [spawn_path, "--host", "flatpak", "run", flatpak_id]
+        else:
+            cmd = ["flatpak", "run", flatpak_id]
     else:
         cmd = ["flatpak", "run", flatpak_id]
 

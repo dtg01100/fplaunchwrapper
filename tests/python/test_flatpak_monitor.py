@@ -211,17 +211,23 @@ class TestFlatpakMonitor:
         assert isinstance(monitor.watch_paths, list)
 
     def test_monitor_should_process_event(self):
-        """Test event filtering logic for Flatpak paths."""
+        """Test event filtering logic for Flatpak paths.
+
+        Uses the module-level should_process_event() function since the
+        _should_process_event instance method was removed (dead code).
+        """
+        from lib.validation import should_process_event
+
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
         monitor = FlatpakMonitor()
 
-        assert monitor._should_process_event("/var/lib/flatpak/something")
-        assert monitor._should_process_event(os.path.expanduser("~/.local/share/flatpak/app"))
-        assert monitor._should_process_event(os.path.expanduser("~/.var/app/something"))
+        assert should_process_event("/var/lib/flatpak/something")
+        assert should_process_event(os.path.expanduser("~/.local/share/flatpak/app"))
+        assert should_process_event(os.path.expanduser("~/.var/app/something"))
 
-        assert not monitor._should_process_event("/etc/passwd")
-        assert not monitor._should_process_event("/tmp/random")
+        assert not should_process_event("/etc/passwd")
+        assert not should_process_event("/tmp/random")
 
     def test_monitor_should_regenerate_on_exports(self):
         """Test that wrappers should regenerate on exports directory changes."""

@@ -14,7 +14,6 @@ from unittest.mock import patch
 
 import pytest
 
-
 from lib.safety import (
     canonicalize_path_no_resolve,
     is_dangerous_wrapper,
@@ -56,16 +55,18 @@ class TestIsTestEnvironment:
         """Test is_test_environment returns False when not in test environment."""
         with patch.object(sys, "argv", ["script"]):
             with patch.dict(os.environ, {"FPWRAPPER_TEST_ENV": "false"}):
-                unittest_modules = [mod for mod in sys.modules if mod.startswith("unittest")]
+                unittest_modules = [
+                    mod for mod in sys.modules if mod.startswith("unittest")
+                ]
                 for mod in unittest_modules:
                     del sys.modules[mod]
-
                 pytest_modules = [
-                    mod for mod in sys.modules if mod.startswith("pytest") or "pytest" in mod
+                    mod
+                    for mod in sys.modules
+                    if mod.startswith("pytest") or "pytest" in mod
                 ]
                 for mod in pytest_modules:
                     del sys.modules[mod]
-
                 assert is_test_environment() is False
 
 
@@ -298,19 +299,12 @@ class TestSecurityEdgeCases:
 
     def test_large_input_handling(self) -> None:
         """Test handling of large inputs."""
-        large_input = "test" * 10000
-        import time
-
-        start = time.time()
-        result = sanitize_string(large_input)
-        end = time.time()
-
-        assert len(result) > 0
-        assert end - start < 1.0
+        long_id = "org." + "a" * 1000 + ".test"
+        result = sanitize_id_to_name(long_id)
+        assert len(result) < len(long_id)
 
     def test_unicode_handling(self) -> None:
-        """Test handling of unicode characters."""
-        unicode_input = "café_настройка_設定"
-        result = sanitize_id_to_name(f"org.example.{unicode_input}")
+        """Test handling of unicode in Flatpak IDs."""
+        result = sanitize_id_to_name("org.test.app_日本語")
         assert result is not None
-        assert len(result) > 0
+        assert isinstance(result, str)

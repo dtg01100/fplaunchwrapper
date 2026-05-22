@@ -16,11 +16,7 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-try:
-    from .paths import get_default_config_dir, get_lock_dir, ensure_dir
-except ImportError:
-    from lib.paths import get_default_config_dir, get_lock_dir, ensure_dir
-
+from .paths import get_default_config_dir, get_lock_dir, ensure_dir
 # Constants for file operations
 # Can be overridden via environment variables for testing/customization
 MAX_FILE_SIZE = int(os.environ.get("FPWRAPPER_MAX_FILE_SIZE", 100_000))  # 100KB limit

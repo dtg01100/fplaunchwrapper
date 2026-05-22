@@ -462,9 +462,8 @@ class WrapperGenerator(LoggingMixin):
                             scripts_dir = self.config_dir / "scripts" / item.name
                             if scripts_dir.exists() and scripts_dir.is_dir():
                                 shutil.rmtree(scripts_dir)
-                            # Update aliases.
-                            # Required by
-                            # TestWrapperGeneratorReal.test_cleanup_obsolete_wrappers_removes_aliases
+                            # Update aliases. Required by TestWrapperGeneratorReal.
+                            # test_cleanup_obsolete_wrappers_removes_aliases
                             aliases_file = self.config_dir / "aliases"
                             if aliases_file.exists():
                                 content = aliases_file.read_text()
