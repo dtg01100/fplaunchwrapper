@@ -58,6 +58,7 @@ def cli_string_strategy(draw) -> str:
 PROJECT_DIR = Path(__file__).parent.parent.parent
 
 
+
 def run_cli(*args, home: str | None = None) -> subprocess.CompletedProcess:
     """Run CLI command with isolated environment."""
     cmd = [sys.executable, str(PROJECT_DIR / "lib" / "cli.py")] + list(args)
@@ -69,6 +70,7 @@ def run_cli(*args, home: str | None = None) -> subprocess.CompletedProcess:
     except ValueError:
         result = subprocess.CompletedProcess(cmd, 1, "", "ValueError: embedded null byte")
     return result
+
 
 
 class TestGenerateCommandFuzz:
