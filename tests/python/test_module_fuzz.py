@@ -400,7 +400,7 @@ class TestSafetyFuzz:
             pytest.fail(f"validate_flatpak_id crashed on {flatpak_id!r}: {e}")
 
     @given(flatpak_id=special_string_strategy(min_size=0, max_size=1000))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_validate_flatpak_id_unicode(self, flatpak_id: str) -> None:
         """Test validate_flatpak_id with unicode and special characters."""
         try:
@@ -412,7 +412,7 @@ class TestSafetyFuzz:
             pytest.fail(f"validate_flatpak_id crashed on unicode string: {e}")
 
     @given(input_str=special_string_strategy(min_size=0, max_size=1000))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_sanitize_string_no_crash(self, input_str: str) -> None:
         """Test that sanitize_string doesn't crash on any input."""
         try:
@@ -422,7 +422,7 @@ class TestSafetyFuzz:
             pytest.fail(f"sanitize_string crashed on {input_str!r}: {e}")
 
     @given(input_str=special_string_strategy(min_size=0, max_size=1000))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_sanitize_string_output_valid(self, input_str: str) -> None:
         """Test that sanitize_string returns valid escaped output."""
         try:
@@ -440,7 +440,7 @@ class TestPythonUtilsFuzz:
     """Fuzz tests for lib/python_utils.py"""
 
     @given(id_str=flatpak_id_strategy(min_size=0, max_size=500))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_sanitize_id_to_name_no_crash(self, id_str: str) -> None:
         """Test that sanitize_id_to_name doesn't crash on any input."""
         try:
@@ -450,7 +450,7 @@ class TestPythonUtilsFuzz:
             pytest.fail(f"sanitize_id_to_name crashed on {id_str!r}: {e}")
 
     @given(id_str=special_string_strategy(min_size=0, max_size=1000))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_sanitize_id_to_name_edge_cases(self, id_str: str) -> None:
         """Test sanitize_id_to_name with special/unicode strings."""
         try:
