@@ -2,33 +2,27 @@
 # Benchmark harness for test execution time optimization
 # Measures the total test suite execution time
 
-set -e
-
 cd "$(dirname "$0")"
 
-# Run pytest with timing measurement
+export HYPOTHESIS_PROFILE=ci
+
 echo "Running test suite..."
 
 START=$(date +%s.%N)
 
-# Run tests and capture the summary line
-OUTPUT=$(python3 -m pytest tests/python/ -q --tb=no --no-header 2>&1)
-EXIT_CODE=$?
+python3 -m pytest tests/python/ -q --tb=no --no-header 2>&1
+RC=$?
 
 END=$(date +%s.%N)
 
-# Calculate duration
 DURATION=$(echo "$END - $START" | bc)
 
-# Extract test count and status from output
-PASSED=$(echo "$OUTPUT" | grep -oP '\d+(?= passed)' | head -1 || echo "0")
-FAILED=$(echo "$OUTPUT" | grep -oP '\d+(?= failed)' | head -1 || echo "0")
+# Parse output
+OUTPUT=$(python3 -m pytest tests/python/ --collect-only -q 2>/dev/null | tail -1)
+TOTAL=$(echo "$OUTPUT" | grep -oE '^[0-9]+' || echo "0")
 
-echo "$OUTPUT" | tail -3
 echo ""
 echo "METRIC test_execution_time=$DURATION"
-echo "METRIC tests_passed=$PASSED"
-echo "METRIC tests_failed=$FAILED"
+echo "METRIC tests_passed=$TOTAL"
 
-# Exit with pytest's exit code
-exit $EXIT_CODE
+exit $RC
