@@ -303,11 +303,11 @@ def uninstall(ctx: click.Context, app_name: str, remove_data: bool, emit: bool) 
 )
 @click.pass_context
 def launch(
-    ctx,
-    app_name,
-    hook_failure,
-    abort_on_hook_failure,
-    ignore_hook_failure,
+    ctx: click.Context,
+    app_name: str,
+    hook_failure: str | None,
+    abort_on_hook_failure: bool,
+    ignore_hook_failure: bool,
 ) -> int:
     """Launch a Flatpak application via its wrapper.
 
@@ -457,7 +457,7 @@ def rm(ctx: click.Context, name: str, force: bool) -> int:
 
 
 def _run_systemd_setup(
-    ctx,
+    ctx: click.Context,
     bin_dir: str | None = None,
     wrapper_script: str | None = None,
 ) -> int:
@@ -642,8 +642,7 @@ def systemd_logs(ctx: click.Context) -> int:
 
 @systemd_group.command(name="list")
 @click.pass_context
-def systemd_list(ctx) -> int:
-    """List all managed systemd units."""
+def systemd_list(ctx: click.Context) -> int:
     setup = _get_systemd_setup(ctx)
     if setup is None:
         console_err.print("[red]Error:[/red] systemd_setup module not available")
@@ -665,8 +664,7 @@ def systemd_list(ctx) -> int:
     help="Emit commands instead of executing (dry run)",
 )
 @click.pass_context
-def systemd_test(ctx, emit) -> int:
-    """Test systemd configuration (dry run)."""
+def systemd_test(ctx: click.Context, emit: bool) -> int:
     emit_mode = emit or ctx.obj.get("emit", False) if ctx.obj else False
 
     if emit_mode:
@@ -725,8 +723,7 @@ def search(ctx: click.Context, query: str | None) -> int:
 @cli.command(name="discover")
 @click.argument("query", required=False)
 @click.pass_context
-def discover(ctx, query) -> int:
-    """Alias for search."""
+def discover(ctx: click.Context, query: str | None) -> int:
     return int(ctx.invoke(search, query=query))
 
 
@@ -761,7 +758,7 @@ def profiles_list(ctx: click.Context) -> int:
 @click.argument("profile_name")
 @click.option("--copy-from", help="Copy configuration from existing profile")
 @click.pass_context
-def profiles_create(ctx, profile_name, copy_from) -> int:
+def profiles_create(ctx: click.Context, profile_name: str, copy_from: str | None) -> int:
     """Create a new profile."""
     create_config_manager = import_handler.require(
         "lib.config_manager",
@@ -781,7 +778,7 @@ def profiles_create(ctx, profile_name, copy_from) -> int:
 @profiles_group.command(name="switch")
 @click.argument("profile_name")
 @click.pass_context
-def profiles_switch(ctx, profile_name) -> int:
+def profiles_switch(ctx: click.Context, profile_name: str) -> int:
     """Switch to a profile."""
     create_config_manager = import_handler.require(
         "lib.config_manager",
@@ -815,7 +812,7 @@ def profiles_current(ctx) -> int:
 @click.argument("profile_name")
 @click.argument("output_file", required=False)
 @click.pass_context
-def profiles_export(ctx, profile_name, output_file) -> int:
+def profiles_export(ctx: click.Context, profile_name: str, output_file: str | None) -> int:
     """Export a profile to a file."""
     create_config_manager = import_handler.require(
         "lib.config_manager",
@@ -838,7 +835,7 @@ def profiles_export(ctx, profile_name, output_file) -> int:
 @click.argument("input_file")
 @click.argument("profile_name", required=False)
 @click.pass_context
-def profiles_import(ctx, input_file, profile_name) -> int:
+def profiles_import(ctx: click.Context, input_file: str, profile_name: str | None) -> int:
     """Import a profile from a file."""
     create_config_manager = import_handler.require(
         "lib.config_manager",
@@ -858,7 +855,7 @@ def profiles_import(ctx, input_file, profile_name) -> int:
 
 @cli.group(name="presets", invoke_without_command=True)
 @click.pass_context
-def presets_group(ctx) -> None:
+def presets_group(ctx: click.Context) -> None:
     """Manage permission presets (list/get/add/remove)."""
     if ctx.invoked_subcommand is None:
         ctx.invoke(presets_list)
@@ -911,7 +908,7 @@ def presets_get(ctx, preset_name) -> int:
 @click.argument("preset_name")
 @click.option("-p", "--permission", multiple=True, help="Add a permission")
 @click.pass_context
-def presets_add(ctx, preset_name, permission) -> int:
+def presets_add(ctx: click.Context, preset_name: str, permission: tuple[str, ...]) -> int:
     """Add a new permission preset."""
     if not permission:
         console_err.print("[red]Error:[/red] At least one permission is required")
@@ -959,7 +956,16 @@ def presets_remove(ctx, preset_name) -> int:
 @click.option("--paths", is_flag=True, help="Output raw paths (machine-parseable)")
 @click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
 @click.pass_context
-def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> int:
+def files(
+    ctx: click.Context,
+    app_name: str | None,
+    show_all: bool,
+    wrappers: bool,
+    prefs: bool,
+    env: bool,
+    paths: bool,
+    json_output: bool,
+) -> int:
     """Display all files managed by fplaunchwrapper for a given application.
 
     Without APP_NAME, lists all managed files across all apps.
@@ -1024,7 +1030,7 @@ def files(ctx, app_name, show_all, wrappers, prefs, env, paths, json_output) -> 
 @click.argument("app_name")
 @click.option("--emit", is_flag=True, help="Emit only (dry run)")
 @click.pass_context
-def manifest(ctx, app_name, emit) -> int:
+def manifest(ctx: click.Context, app_name: str, emit: bool) -> int:
     """Show manifest information for a Flatpak application."""
     if not app_name:
         console.print("[red]Error:[/red] APP_NAME is required")
@@ -1061,7 +1067,7 @@ def manifest(ctx, app_name, emit) -> int:
 @click.argument("action", required=False)
 @click.argument("value", required=False)
 @click.pass_context
-def config(ctx, action, value) -> int:
+def config(ctx: click.Context, action: str | None, value: str | None) -> int:
     """Manage fplaunchwrapper configuration.
 
     \b
