@@ -138,7 +138,7 @@ def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Pat
         Resolved bin directory path
     """
     if explicit_dir:
-        return Path(explicit_dir)
+        return Path(explicit_dir).expanduser()
 
     if config_dir:
         bin_dir_file = config_dir / "bin_dir"
@@ -146,7 +146,7 @@ def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Pat
             if bin_dir_file.exists():
                 bin_path = bin_dir_file.read_text().strip()
                 if bin_path:
-                    return Path(bin_path)
+                    return Path(bin_path).expanduser()
         except (OSError, UnicodeDecodeError):
             pass
 

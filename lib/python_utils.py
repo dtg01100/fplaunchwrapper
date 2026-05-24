@@ -285,21 +285,29 @@ def acquire_lock(
 def _write_pid_atomic(pidfile: Path, pid: int) -> None:
     """Write PID file atomically using rename trick."""
     temp_pid = pidfile.parent / f"{pidfile.name}.tmp"
+    timestamp = int(time.time())
+    pid_data = f"{pid}:{timestamp}"
     try:
-        temp_pid.write_text(str(pid))
+        temp_pid.write_text(pid_data)
         temp_pid.rename(pidfile)  # Atomic on POSIX
     except OSError:
         # Fallback: direct write if rename fails
         if temp_pid.exists():
             with contextlib.suppress(OSError):
                 temp_pid.unlink()
-        pidfile.write_text(str(pid))
+        pidfile.write_text(pid_data)
 
 
-def _cleanup_stale_lock(lockfile: Path, pidfile: Path) -> bool:
+def _cleanup_stale_lock(lockfile: Path, pidfile: Path, stale_timeout: int = 60) -> bool:
     """Check if lock is stale and clean it up if the process is dead.
 
     Returns True if lock was cleaned up, False otherwise.
+
+    Note: stale_timeout parameter kept for API compatibility but PID check
+    is the primary staleness detection. A lock is stale if:
+    1. PID file doesn't exist, OR
+    2. PID is not alive (process not running), OR
+    3. Lock timestamp exceeds stale_timeout (defensive check)
     """
     try:
         if not pidfile.exists():
@@ -308,19 +316,35 @@ def _cleanup_stale_lock(lockfile: Path, pidfile: Path) -> bool:
             return True
 
         try:
-            stored_pid = int(pidfile.read_text().strip())
+            content = pidfile.read_text().strip()
+            parts = content.split(":")
+            stored_pid = int(parts[0])
+
+            # Check if PID is alive - primary staleness check
+            try:
+                os.kill(stored_pid, 0)
+                # PID is alive - check timestamp for defensive staleness
+                if len(parts) >= 2:
+                    try:
+                        stored_timestamp = int(parts[1])
+                        current_time = int(time.time())
+                        if current_time - stored_timestamp > stale_timeout:
+                            # Timestamp is stale even though PID appears alive
+                            # This handles edge case of PID reuse after long delay
+                            with contextlib.suppress(OSError):
+                                lockfile.rmdir()
+                                pidfile.unlink(missing_ok=True)
+                            return True
+                    except ValueError:
+                        pass  # Invalid timestamp, rely on PID check
+                return False  # PID is alive and timestamp is fresh
+            except OSError:
+                # PID is not alive - clean up the lock
+                pass  # Fall through to cleanup
         except (ValueError, OSError):
-            with contextlib.suppress(OSError):
-                lockfile.rmdir()
-                pidfile.unlink(missing_ok=True)
-            return True
+            pass  # Can't parse PID, fall through to cleanup
 
-        try:
-            os.kill(stored_pid, 0)
-            return False
-        except OSError:
-            pass
-
+        # Clean up the lock
         with contextlib.suppress(OSError):
             lockfile.rmdir()
             pidfile.unlink(missing_ok=True)
@@ -339,7 +363,10 @@ def release_lock(lock_name: str = "fplaunch", lock_dir: Path | None = None) -> b
         pidfile = lock_dir / f"{lock_name}.pid"
 
         if pidfile.exists():
-            stored_pid = pidfile.read_text().strip()
+            content = pidfile.read_text().strip()
+            # Parse PID from new format (pid:timestamp) or old format (just pid)
+            parts = content.split(":")
+            stored_pid = parts[0]
             if stored_pid == str(os.getpid()):
                 with contextlib.suppress(FileNotFoundError):
                     lockfile.rmdir()  # lockfile is a directory, not a file

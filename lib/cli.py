@@ -15,6 +15,7 @@ consistent error handling when modules cannot be loaded.
 
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 import sys
@@ -36,6 +37,7 @@ console_err = Console(stderr=True)
 # Import handler for consistent error messaging
 from lib.import_utils import ImportErrorHandler, safe_import  # noqa: E402
 
+logger = logging.getLogger(__name__)
 import_handler = ImportErrorHandler(console_err)
 
 
@@ -252,6 +254,7 @@ def uninstall(ctx: click.Context, app_name: str, remove_data: bool, emit: bool) 
     try:
         wrapper_removed = manager.remove_wrapper(app_name, force=True)
     except Exception as e:
+        logger.warning("Failed to remove wrapper %s: %s", app_name, e, exc_info=True)
         console_err.print(f"[yellow]Warning:[/yellow] Failed to remove wrapper: {e}")
 
     cmd = ["flatpak", "uninstall", "-y"]
@@ -485,14 +488,15 @@ def _run_systemd_setup(
         if hasattr(setup, "install_systemd_units"):
             result = setup.install_systemd_units()
             return 0 if result else 1
-        console_err.print(
-            "[red]Error:[/red] SystemdSetup has no valid method "
-            "(neither 'run' nor 'install_systemd_units')"
-        )
-        return 1
     except Exception as e:
+        logger.exception("Systemd setup failed: %s", e)
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
+    console_err.print(
+        "[red]Error:[/red] SystemdSetup has no valid method "
+        "(neither 'run' nor 'install_systemd_units')"
+    )
+    return 1
 
 
 @cli.command(name="systemd-setup")
@@ -1048,6 +1052,7 @@ def manifest(ctx, app_name, emit) -> int:
     except click.exceptions.Exit:
         raise
     except Exception as e:
+        logger.exception("Manifest command failed for %s: %s", app_name, e)
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
 
@@ -1118,6 +1123,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             return code
         return 1
     except Exception as e:
+        logger.exception("CLI main error: %s", e)
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
 

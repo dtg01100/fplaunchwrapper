@@ -27,6 +27,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import re
 import shutil
@@ -63,6 +64,7 @@ from .safety import (
 )
 
 console = _Console()
+logger = logging.getLogger(__name__)
 
 
 class WrapperGenerator(LoggingMixin):
@@ -293,6 +295,7 @@ class WrapperGenerator(LoggingMixin):
             )
 
         except Exception as e:
+            logger.exception("Failed to read wrapper template for %s", app_id)
             raise WrapperGenerationError(
                 app_id,
                 f"Failed to read wrapper template: {e}",
@@ -360,6 +363,7 @@ class WrapperGenerator(LoggingMixin):
         try:
             content = self.create_wrapper_script(wrapper_name, target_flatpak_id)
         except Exception as e:
+            logger.exception("Failed to create wrapper for %s", app_id)
             self.log(f"Failed to create wrapper for {app_id}: {e}", "error")
             return False
 
@@ -388,6 +392,7 @@ class WrapperGenerator(LoggingMixin):
                 self.log(f"Created wrapper: {wrapper_name}")
             return True
         except Exception as e:
+            logger.exception("Failed to create wrapper %s", wrapper_name)
             self.log(f"Failed to create wrapper {wrapper_name}: {e}", "error")
             return False
 

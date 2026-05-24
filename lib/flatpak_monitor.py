@@ -178,7 +178,7 @@ class FlatpakEventHandler(_BaseFSHandler):
                     self.callback(event_type, path)
                 except Exception as e:
                     logger.error(
-                        "Callback failed for %s %s: %s", event_type, path, e
+                        "Callback failed for %s %s: %s", event_type, path, e, exc_info=True
                     )
 
         self.pending_events = []
@@ -264,7 +264,7 @@ class FlatpakMonitor:
             return True
 
         except Exception as e:
-            logger.error("Failed to start Flatpak monitor: %s", e)
+            logger.error("Failed to start Flatpak monitor: %s", e, exc_info=True)
             return False
 
     def stop_monitoring(self) -> None:

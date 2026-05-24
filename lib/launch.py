@@ -360,6 +360,7 @@ class AppLauncher:
 
             except Exception as e:
                 all_succeeded = False
+                logger.exception("Hook %s script failed: %s", hook_type, script_path)
                 outcome = self._report_hook_error(
                     hook_type,
                     failure_mode,
@@ -651,9 +652,10 @@ class AppLauncher:
             if self.verbose:
                 logger.warning("Launch interrupted for %s", self.app_name)
             return False
-        except Exception as e:
+        except Exception:
+            logger.exception("Error launching %s", self.app_name)
             if self.verbose:
-                logger.error("Error launching %s: %s", self.app_name, e)
+                logger.error("Failed to launch %s", self.app_name)
             return False
 
 

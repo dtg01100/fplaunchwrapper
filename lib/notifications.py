@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+import logging
 
 
 def _sanitize_notification_text(text: str) -> str:
@@ -110,6 +111,8 @@ def send_notification(
         result = subprocess.run(cmd, check=False, capture_output=True, text=True)
         return result.returncode == 0
     except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.exception("Failed to send notification: %s", e)
         print(f"Failed to send notification: {e}", file=sys.stderr)
         return False
 
