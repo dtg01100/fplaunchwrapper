@@ -140,19 +140,19 @@ class DesktopEntry:
     def terminal_required(self) -> bool:
         """Check if the app requires a terminal."""
         value = self.get("Terminal") or "false"
-        return value.lower() == "true"
+        return value.lower() in ("true", "1")
 
     @property
     def is_hidden(self) -> bool:
         """Check if the app is hidden."""
         value = self.get("Hidden") or "false"
-        return value.lower() == "true"
+        return value.lower() in ("true", "1")
 
     @property
     def no_display(self) -> bool:
         """Check if the app should not be displayed."""
         value = self.get("NoDisplay") or "false"
-        return value.lower() == "true"
+        return value.lower() in ("true", "1")
 
 
 def find_desktop_files(directory: Path, recursive: bool = True) -> list[Path]:

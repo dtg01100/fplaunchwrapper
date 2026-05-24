@@ -68,7 +68,7 @@ def validate_app_id(app_id: str) -> tuple[bool, str]:
     return True, ""
 
 
-def check_path_traversal(path: Path, base_dir: Path) -> tuple[bool, str]:
+def check_path_traversal(path: str | Path, base_dir: Path) -> tuple[bool, str]:
     """Check if a path attempts to traverse outside its base directory.
 
     Args:
@@ -84,6 +84,7 @@ def check_path_traversal(path: Path, base_dir: Path) -> tuple[bool, str]:
         pointing to outside locations will be flagged as unsafe.
     """
     try:
+        path = Path(path) if not isinstance(path, Path) else path
         # Check for symlinks in the path that might escape base_dir
         resolved_path = path.resolve()
         resolved_base = base_dir.resolve()

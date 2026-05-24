@@ -54,13 +54,15 @@ def canonicalize_path_no_resolve(path: str | Path) -> Path | None:
         return None
 
 
-def validate_home_dir(dir_path: str | Path) -> str | None:
+def validate_home_dir(dir_path: str | Path | None) -> str | None:
     """Validate that a directory is within HOME.
 
     Returns the normalized absolute path string if the directory is within the user's HOME,
     otherwise returns None. Accepts string or Path-like input.
     """
     try:
+        if dir_path is None:
+            return None
         dir_str = str(dir_path)
 
         if dir_str.startswith("~"):
