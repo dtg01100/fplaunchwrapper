@@ -46,7 +46,6 @@ dev = [
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
     "pytest-timeout>=2.2.0",
-    "pytest-xdist>=3.0.0",
     "hypothesis>=6.0.0",
     "tomli>=2.0.0",
     "ruff>=0.14.0",
