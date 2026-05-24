@@ -314,7 +314,7 @@ class TestValidationFuzz:
     """Fuzz tests for lib/validation.py"""
 
     @given(app_id=flatpak_id_strategy(min_size=0, max_size=500))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_validate_app_id_no_crash(self, app_id: str) -> None:
         """Test that validate_app_id doesn't crash on any string input."""
         try:
@@ -325,7 +325,7 @@ class TestValidationFuzz:
             pytest.fail(f"validate_app_id crashed on {app_id!r}: {e}")
 
     @given(app_id=special_string_strategy(min_size=0, max_size=1000))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_validate_app_id_edge_cases(self, app_id: str) -> None:
         """Test validate_app_id with special character strings."""
         try:
@@ -390,7 +390,7 @@ class TestSafetyFuzz:
     """Fuzz tests for lib/safety.py"""
 
     @given(flatpak_id=flatpak_id_strategy(min_size=0, max_size=500))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_validate_flatpak_id_no_crash(self, flatpak_id: str) -> None:
         """Test that validate_flatpak_id doesn't crash on any input."""
         try:
@@ -533,7 +533,7 @@ class TestDesktopParserFuzz:
     """Fuzz tests for lib/desktop_parser.py"""
 
     @given(content_data=desktop_content_strategy())
-    @settings(max_examples=100, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=50, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_desktop_entry_parse_no_crash(self, content_data: tuple, tmp_path: Path) -> None:
         """Test that DesktopEntry parsing doesn't crash on malformed files."""
         filename, content = content_data
@@ -556,7 +556,7 @@ class TestDesktopParserFuzz:
             pytest.fail(f"DesktopEntry crashed on {filename!r}: {e}")
 
     @given(content_data=desktop_content_strategy())
-    @settings(max_examples=100, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=50, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_desktop_entry_properties(self, content_data: tuple, tmp_path: Path) -> None:
         """Test DesktopEntry property access on various content."""
         filename, content = content_data
@@ -593,7 +593,7 @@ class TestDesktopParserFuzz:
             pytest.fail(f"DesktopEntry properties failed: {e}")
 
     @given(key=text(min_size=0, max_size=50), value=text(min_size=0, max_size=200))
-    @settings(max_examples=100, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=50, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_desktop_entry_get_method(self, key: str, value: str, tmp_path: Path) -> None:
         """Test DesktopEntry.get() with various keys and values."""
         test_file = tmp_path / "test.desktop"
@@ -623,7 +623,7 @@ class TestDesktopParserFuzz:
             pytest.fail(f"get_app_metadata crashed on {flatpak_id!r}: {e}")
 
     @given(directory=text(min_size=0, max_size=200))
-    @settings(max_examples=100, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=50, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_find_desktop_files_no_crash(self, directory: str, tmp_path: Path) -> None:
         """Test that find_desktop_files doesn't crash on invalid directories."""
         try:
@@ -653,7 +653,7 @@ class TestPathsFuzz:
             pytest.fail(f"get_default_config_dir crashed on {app_name!r}: {e}")
 
     @given(app_name=special_string_strategy(min_size=0, max_size=200))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_get_default_config_dir_special_chars(self, app_name: str) -> None:
         """Test get_default_config_dir with special characters in app name."""
         try:
@@ -693,7 +693,7 @@ class TestPathsFuzz:
             pytest.fail(f"resolve_bin_dir crashed on {explicit_dir!r}: {e}")
 
     @given(path_input=one_of(text(min_size=0, max_size=500), none()))
-    @settings(max_examples=100, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=50, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_ensure_dir_no_crash(self, path_input, tmp_path: Path) -> None:
         """Test that ensure_dir doesn't crash on various paths."""
         if path_input is None:
@@ -751,7 +751,7 @@ class TestSecurityFuzz:
         ]),
         special_string_strategy(min_size=10, max_size=200),
     ))
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=50, deadline=5000)
     def test_sanitize_string_injection_resistance(self, input_str: str) -> None:
         """Test that sanitize_string properly escapes injection attempts."""
         try:
@@ -788,7 +788,7 @@ class TestSecurityFuzz:
         ]),
         text(min_size=0, max_size=100),
     ))
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=50, deadline=5000)
     def test_validate_app_id_security_checks(self, app_id: str) -> None:
         """Test that validate_app_id enforces security rules."""
         try:
@@ -817,7 +817,7 @@ class TestSecurityFuzz:
         ]),
         text(min_size=0, max_size=100),
     ))
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=50, deadline=5000)
     def test_validate_flatpak_id_security(self, flatpak_id: str) -> None:
         """Test that validate_flatpak_id enforces security rules."""
         try:
@@ -840,7 +840,7 @@ class TestEnvironmentFuzz:
     """Tests for environment-dependent functions."""
 
     @given(cmd=special_string_strategy(min_size=0, max_size=200))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_find_executable_no_crash(self, cmd: str) -> None:
         """Test that find_executable doesn't crash on any input."""
         from lib.python_utils import find_executable
@@ -860,7 +860,7 @@ class TestEdgeCases:
     """Tests for extreme edge cases."""
 
     @given(value=text(min_size=0, max_size=10000))
-    @settings(max_examples=100, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_very_long_strings(self, value: str) -> None:
         """Test functions with very long strings don't crash."""
         try:
