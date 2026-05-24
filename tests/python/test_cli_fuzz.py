@@ -7,6 +7,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+
+
 import pytest
 from hypothesis import given, settings, HealthCheck, strategies as st
 
@@ -58,7 +60,6 @@ def cli_string_strategy(draw) -> str:
 PROJECT_DIR = Path(__file__).parent.parent.parent
 
 
-
 def run_cli(*args, home: str | None = None) -> subprocess.CompletedProcess:
     """Run CLI command with isolated environment."""
     cmd = [sys.executable, str(PROJECT_DIR / "lib" / "cli.py")] + list(args)
@@ -76,10 +77,8 @@ def run_cli(*args, home: str | None = None) -> subprocess.CompletedProcess:
 class TestGenerateCommandFuzz:
     """Fuzz tests for the generate command."""
 
-    @given(app_name=cli_string_strategy())
-    @settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
-    def test_generate_handles_various_app_names(self, app_name):
-        """generate command should handle various app_name formats gracefully."""
+    def test_generate_help(self):
+        """generate --help should work."""
         result = run_cli("generate", "--help")
         assert result.returncode in (0, 1, 2, 64, 65, 127)
 
@@ -219,14 +218,13 @@ class TestGlobalOptionsFuzz:
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr
 
-    @given(command=st.sampled_from(["generate", "launch", "remove", "list"]))
-    @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
-    def test_help_for_each_command(self, command):
+    def test_help_for_each_command(self):
         """Each command's --help should work."""
-        result = run_cli(command, "--help")
-        assert result.returncode == 0
-        assert "usage:" in result.stdout.lower()
-        assert "Traceback" not in result.stderr
+        for command in ["generate", "launch", "remove", "list"]:
+            result = run_cli(command, "--help")
+            assert result.returncode == 0
+            assert "usage:" in result.stdout.lower()
+            assert "Traceback" not in result.stderr
 
 
 class TestCLIEdgeCases:
