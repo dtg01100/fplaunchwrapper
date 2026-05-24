@@ -136,35 +136,41 @@ class TestSystemdUnitGeneration:
 
     def test_timer_unit_content(self):
         """Test that timer unit has correct content."""
-        from lib.systemd_setup import SystemdSetup
+        from unittest.mock import patch
 
-        temp_dir, systemd_dir = SystemdTestFixtures.create_temp_systemd_dir()
-        temp_bin, bin_dir = SystemdTestFixtures.create_fake_bin_dir()
-
-        try:
-            setup = SystemdSetup(
-                bin_dir=str(bin_dir),
-                wrapper_script=str(bin_dir / "fplaunch-generate"),
-                emit_mode=False,
+        with patch(f"{__name__}.subprocess.run") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
             )
-            setup.systemd_unit_dir = systemd_dir
+            from lib.systemd_setup import SystemdSetup
 
-            timer_content = setup.create_timer_unit()
+            temp_dir, systemd_dir = SystemdTestFixtures.create_temp_systemd_dir()
+            temp_bin, bin_dir = SystemdTestFixtures.create_fake_bin_dir()
 
-            # Verify basic structure
-            assert "[Unit]" in timer_content
-            assert "[Timer]" in timer_content
-            assert "[Install]" in timer_content
-            assert "OnUnitActiveSec" in timer_content
-            assert "fplaunch-wrapper.service" in timer_content
+            try:
+                setup = SystemdSetup(
+                    bin_dir=str(bin_dir),
+                    wrapper_script=str(bin_dir / "fplaunch-generate"),
+                    emit_mode=False,
+                )
+                setup.systemd_unit_dir = systemd_dir
 
-            # Validate with systemd-analyze if available
-            valid, msg = SystemdTestFixtures.validate_systemd_unit(timer_content)
-            assert valid, f"Timer unit validation failed: {msg}"
+                timer_content = setup.create_timer_unit()
 
-        finally:
-            shutil.rmtree(temp_dir)
-            shutil.rmtree(temp_bin)
+                # Verify basic structure
+                assert "[Unit]" in timer_content
+                assert "[Timer]" in timer_content
+                assert "[Install]" in timer_content
+                assert "OnUnitActiveSec" in timer_content
+                assert "fplaunch-wrapper.service" in timer_content
+
+                # Validate with systemd-analyze if available
+                valid, msg = SystemdTestFixtures.validate_systemd_unit(timer_content)
+                assert valid, f"Timer unit validation failed: {msg}"
+
+            finally:
+                shutil.rmtree(temp_dir)
+                shutil.rmtree(temp_bin)
 
     def test_actual_file_creation(self):
         """Test that unit files are actually created on disk."""

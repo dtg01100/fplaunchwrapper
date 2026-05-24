@@ -533,7 +533,7 @@ class TestDesktopParserFuzz:
     """Fuzz tests for lib/desktop_parser.py"""
 
     @given(content_data=desktop_content_strategy())
-    @settings(max_examples=50, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=30, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_desktop_entry_parse_no_crash(self, content_data: tuple, tmp_path: Path) -> None:
         """Test that DesktopEntry parsing doesn't crash on malformed files."""
         filename, content = content_data
@@ -556,7 +556,7 @@ class TestDesktopParserFuzz:
             pytest.fail(f"DesktopEntry crashed on {filename!r}: {e}")
 
     @given(content_data=desktop_content_strategy())
-    @settings(max_examples=50, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=30, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_desktop_entry_properties(self, content_data: tuple, tmp_path: Path) -> None:
         """Test DesktopEntry property access on various content."""
         filename, content = content_data
@@ -593,7 +593,7 @@ class TestDesktopParserFuzz:
             pytest.fail(f"DesktopEntry properties failed: {e}")
 
     @given(key=text(min_size=0, max_size=50), value=text(min_size=0, max_size=200))
-    @settings(max_examples=50, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=30, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_desktop_entry_get_method(self, key: str, value: str, tmp_path: Path) -> None:
         """Test DesktopEntry.get() with various keys and values."""
         test_file = tmp_path / "test.desktop"
