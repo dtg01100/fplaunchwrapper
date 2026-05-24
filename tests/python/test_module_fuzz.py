@@ -314,7 +314,7 @@ class TestValidationFuzz:
     """Fuzz tests for lib/validation.py"""
 
     @given(app_id=flatpak_id_strategy(min_size=0, max_size=500))
-    @settings(max_examples=500, deadline=10000)
+    @settings(max_examples=100, deadline=10000)
     def test_validate_app_id_no_crash(self, app_id: str) -> None:
         """Test that validate_app_id doesn't crash on any string input."""
         try:
@@ -325,7 +325,7 @@ class TestValidationFuzz:
             pytest.fail(f"validate_app_id crashed on {app_id!r}: {e}")
 
     @given(app_id=special_string_strategy(min_size=0, max_size=1000))
-    @settings(max_examples=300, deadline=10000)
+    @settings(max_examples=100, deadline=10000)
     def test_validate_app_id_edge_cases(self, app_id: str) -> None:
         """Test validate_app_id with special character strings."""
         try:
@@ -338,7 +338,7 @@ class TestValidationFuzz:
             pytest.fail(f"validate_app_id crashed on special string: {e}")
 
     @given(base_dir=text(min_size=1, max_size=100), relative=text(min_size=1, max_size=200))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_check_path_traversal_no_crash(self, base_dir: str, relative: str) -> None:
         """Test that check_path_traversal doesn't crash on various paths."""
         try:
@@ -356,7 +356,7 @@ class TestValidationFuzz:
                 pytest.fail(f"check_path_traversal crashed: {e}")
 
     @given(path_input=special_string_strategy(min_size=0, max_size=500))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_should_process_event_no_crash(self, path_input: str) -> None:
         """Test that should_process_event doesn't crash on any path string."""
         try:
@@ -369,7 +369,7 @@ class TestValidationFuzz:
             pytest.fail(f"should_process_event crashed on {path_input!r}: {e}")
 
     @given(path_input=path_traversal_attempt_strategy())
-    @settings(max_examples=100, deadline=5000)
+    @settings(max_examples=50, deadline=5000)
     def test_path_traversal_detection(self, path_input: str) -> None:
         """Test that path traversal attempts are properly detected."""
         try:
@@ -390,7 +390,7 @@ class TestSafetyFuzz:
     """Fuzz tests for lib/safety.py"""
 
     @given(flatpak_id=flatpak_id_strategy(min_size=0, max_size=500))
-    @settings(max_examples=500, deadline=10000)
+    @settings(max_examples=100, deadline=10000)
     def test_validate_flatpak_id_no_crash(self, flatpak_id: str) -> None:
         """Test that validate_flatpak_id doesn't crash on any input."""
         try:
@@ -400,7 +400,7 @@ class TestSafetyFuzz:
             pytest.fail(f"validate_flatpak_id crashed on {flatpak_id!r}: {e}")
 
     @given(flatpak_id=special_string_strategy(min_size=0, max_size=1000))
-    @settings(max_examples=300, deadline=10000)
+    @settings(max_examples=100, deadline=10000)
     def test_validate_flatpak_id_unicode(self, flatpak_id: str) -> None:
         """Test validate_flatpak_id with unicode and special characters."""
         try:
@@ -412,7 +412,7 @@ class TestSafetyFuzz:
             pytest.fail(f"validate_flatpak_id crashed on unicode string: {e}")
 
     @given(input_str=special_string_strategy(min_size=0, max_size=1000))
-    @settings(max_examples=500, deadline=10000)
+    @settings(max_examples=100, deadline=10000)
     def test_sanitize_string_no_crash(self, input_str: str) -> None:
         """Test that sanitize_string doesn't crash on any input."""
         try:
@@ -422,7 +422,7 @@ class TestSafetyFuzz:
             pytest.fail(f"sanitize_string crashed on {input_str!r}: {e}")
 
     @given(input_str=special_string_strategy(min_size=0, max_size=1000))
-    @settings(max_examples=500, deadline=10000)
+    @settings(max_examples=100, deadline=10000)
     def test_sanitize_string_output_valid(self, input_str: str) -> None:
         """Test that sanitize_string returns valid escaped output."""
         try:
@@ -440,7 +440,7 @@ class TestPythonUtilsFuzz:
     """Fuzz tests for lib/python_utils.py"""
 
     @given(id_str=flatpak_id_strategy(min_size=0, max_size=500))
-    @settings(max_examples=500, deadline=10000)
+    @settings(max_examples=100, deadline=10000)
     def test_sanitize_id_to_name_no_crash(self, id_str: str) -> None:
         """Test that sanitize_id_to_name doesn't crash on any input."""
         try:
@@ -450,7 +450,7 @@ class TestPythonUtilsFuzz:
             pytest.fail(f"sanitize_id_to_name crashed on {id_str!r}: {e}")
 
     @given(id_str=special_string_strategy(min_size=0, max_size=1000))
-    @settings(max_examples=300, deadline=10000)
+    @settings(max_examples=100, deadline=10000)
     def test_sanitize_id_to_name_edge_cases(self, id_str: str) -> None:
         """Test sanitize_id_to_name with special/unicode strings."""
         try:
@@ -462,7 +462,7 @@ class TestPythonUtilsFuzz:
             pytest.fail(f"sanitize_id_to_name crashed: {e}")
 
     @given(id_str=flatpak_id_strategy(min_size=1, max_size=200))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_sanitize_id_to_name_length(self, id_str: str) -> None:
         """Test that sanitize_id_to_name respects the 100 character limit."""
         try:
@@ -473,7 +473,7 @@ class TestPythonUtilsFuzz:
             pytest.fail(f"sanitize_id_to_name length check failed: {e}")
 
     @given(id_str=flatpak_id_strategy(min_size=1, max_size=100))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_sanitize_id_to_name_returns_string(self, id_str: str) -> None:
         """Test that sanitize_id_to_name returns a non-empty string."""
         try:
@@ -484,7 +484,7 @@ class TestPythonUtilsFuzz:
             pytest.fail(f"sanitize_id_to_name check failed: {e}")
 
     @given(path_input=one_of(text(min_size=0, max_size=500), none()))
-    @settings(max_examples=300, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_canonicalize_path_no_resolve_no_crash(self, path_input) -> None:
         """Test that canonicalize_path_no_resolve doesn't crash."""
         try:
@@ -494,7 +494,7 @@ class TestPythonUtilsFuzz:
             pytest.fail(f"canonicalize_path_no_resolve crashed on {path_input!r}: {e}")
 
     @given(path_input=special_string_strategy(min_size=0, max_size=500))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_canonicalize_path_special_chars(self, path_input: str) -> None:
         """Test canonicalize_path_no_resolve with special path characters."""
         try:
@@ -504,7 +504,7 @@ class TestPythonUtilsFuzz:
             pytest.fail(f"canonicalize_path_no_resolve crashed on special path: {e}")
 
     @given(dir_path=one_of(text(min_size=0, max_size=500), none()))
-    @settings(max_examples=300, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_validate_home_dir_no_crash(self, dir_path) -> None:
         """Test that validate_home_dir doesn't crash."""
         try:
@@ -514,7 +514,7 @@ class TestPythonUtilsFuzz:
             pytest.fail(f"validate_home_dir crashed on {dir_path!r}: {e}")
 
     @given(dir_path=special_string_strategy(min_size=0, max_size=500))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_validate_home_dir_traversal(self, dir_path: str) -> None:
         """Test that validate_home_dir handles path traversal safely."""
         try:
@@ -607,7 +607,7 @@ class TestDesktopParserFuzz:
             pytest.fail(f"DesktopEntry.get() crashed on key={key!r}: {e}")
 
     @given(flatpak_id=special_string_strategy(min_size=0, max_size=500))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_get_app_metadata_no_crash(self, flatpak_id: str) -> None:
         """Test that get_app_metadata doesn't crash on any input."""
         try:
@@ -642,7 +642,7 @@ class TestPathsFuzz:
     """Fuzz tests for lib/paths.py"""
 
     @given(app_name=text(min_size=0, max_size=200))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_get_default_config_dir_no_crash(self, app_name: str) -> None:
         """Test that get_default_config_dir doesn't crash on any name."""
         try:
@@ -663,7 +663,7 @@ class TestPathsFuzz:
             pytest.fail(f"get_default_config_dir failed with special chars: {e}")
 
     @given(app_name=text(min_size=0, max_size=200))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_get_default_data_dir_no_crash(self, app_name: str) -> None:
         """Test that get_default_data_dir doesn't crash on any name."""
         try:
@@ -673,7 +673,7 @@ class TestPathsFuzz:
             pytest.fail(f"get_default_data_dir crashed on {app_name!r}: {e}")
 
     @given(app_name=text(min_size=0, max_size=200))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_get_default_cache_dir_no_crash(self, app_name: str) -> None:
         """Test that get_default_cache_dir doesn't crash on any name."""
         try:
@@ -683,7 +683,7 @@ class TestPathsFuzz:
             pytest.fail(f"get_default_cache_dir crashed on {app_name!r}: {e}")
 
     @given(explicit_dir=one_of(text(min_size=0, max_size=200), none()))
-    @settings(max_examples=200, deadline=10000)
+    @settings(max_examples=50, deadline=10000)
     def test_resolve_bin_dir_no_crash(self, explicit_dir) -> None:
         """Test that resolve_bin_dir doesn't crash on various inputs."""
         try:

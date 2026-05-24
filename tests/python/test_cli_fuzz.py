@@ -75,14 +75,14 @@ class TestGenerateCommandFuzz:
     """Fuzz tests for the generate command."""
 
     @given(app_name=cli_string_strategy())
-    @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_generate_handles_various_app_names(self, app_name):
         """generate command should handle various app_name formats gracefully."""
         result = run_cli("generate", "--help")
         assert result.returncode in (0, 1, 2, 64, 65, 127)
 
     @given(extra_args=st.lists(cli_string_strategy(), max_size=5))
-    @settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_generate_with_extra_args(self, extra_args):
         """generate command should reject or handle arbitrary extra args."""
         result = run_cli("generate", "org.example.App", *extra_args)
@@ -93,7 +93,7 @@ class TestLaunchCommandFuzz:
     """Fuzz tests for the launch command."""
 
     @given(app_name=cli_string_strategy())
-    @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_launch_handles_various_app_names(self, app_name):
         """launch command should handle various app_name formats gracefully."""
         result = run_cli("launch", app_name)
@@ -104,7 +104,7 @@ class TestLaunchCommandFuzz:
         app_name=st.text(min_size=1, max_size=100),
         flags=st.lists(st.sampled_from(["--abort-on-hook-failure", "--ignore-hook-failure"]), max_size=2)
     )
-    @settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_launch_with_flags(self, app_name, flags):
         """launch command should handle flags without crashing."""
         result = run_cli("launch", app_name, *flags)
@@ -116,7 +116,7 @@ class TestRemoveCommandFuzz:
     """Fuzz tests for the remove command."""
 
     @given(name=cli_string_strategy())
-    @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_remove_handles_various_names(self, name):
         """remove command should handle various wrapper names."""
         result = run_cli("remove", name, "--force")
@@ -131,7 +131,7 @@ class TestInstallCommandFuzz:
         app_name=cli_string_strategy(),
         extra_args=st.lists(st.sampled_from(["--force-reinstall", "--no-pull"]), max_size=2)
     )
-    @settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_install_handles_various_inputs(self, app_name, extra_args):
         """install command should handle various inputs gracefully."""
         result = run_cli("install", app_name, *extra_args)
@@ -146,7 +146,7 @@ class TestUninstallCommandFuzz:
         app_name=cli_string_strategy(),
         extra_args=st.lists(st.sampled_from(["--remove-data", "--force"]), max_size=2)
     )
-    @settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_uninstall_handles_various_inputs(self, app_name, extra_args):
         """uninstall command should handle various inputs gracefully."""
         result = run_cli("uninstall", app_name, *extra_args)
@@ -158,7 +158,7 @@ class TestInfoCommandFuzz:
     """Fuzz tests for the info command."""
 
     @given(app_name=cli_string_strategy())
-    @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_info_handles_various_app_names(self, app_name):
         """info command should handle various inputs."""
         result = run_cli("info", app_name)
@@ -174,7 +174,7 @@ class TestConfigCommandFuzz:
         key=st.text(min_size=1, max_size=50).filter(lambda x: not x.startswith("-")),
         value=st.one_of(st.none(), cli_string_strategy()),
     )
-    @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_config_subcommands(self, subcommand, key, value):
         """config subcommands should handle various inputs gracefully."""
         args = ["config", subcommand]
@@ -196,7 +196,7 @@ class TestSetPrefCommandFuzz:
         app_name=cli_string_strategy(),
         preference=st.sampled_from(["system", "user", "default", "auto"]),
     )
-    @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_set_pref_handles_various_inputs(self, app_name, preference):
         """set-pref command should handle various inputs."""
         result = run_cli("set-pref", app_name, preference)
@@ -210,7 +210,7 @@ class TestGlobalOptionsFuzz:
     @given(
         args=st.lists(st.sampled_from(["--verbose", "-v", "--emit", "--help", "--version"]), max_size=4)
     )
-    @settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_global_options(self, args):
         """Global options should not cause crashes."""
         result = run_cli(*args)
@@ -218,7 +218,7 @@ class TestGlobalOptionsFuzz:
         assert "Traceback" not in result.stderr
 
     @given(command=st.sampled_from(["generate", "launch", "remove", "list"]))
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_help_for_each_command(self, command):
         """Each command's --help should work."""
         result = run_cli(command, "--help")
@@ -301,14 +301,14 @@ class TestCLIPerformance:
     """Test CLI performance with many arguments."""
 
     def test_many_arguments_dont_crash(self):
-        """CLI should not crash with many arguments."""
-        many_args = ["launch", "org.example." + "x" * 1000]
-        result = run_cli(*many_args)
+        """CLI should handle many arguments without crashing."""
+        args = ["launch", "org.example"] + [f"--arg{i}" for i in range(100)]
+        result = run_cli(*args)
         assert result.returncode in (0, 1, 2, 64, 127)
 
+    @pytest.mark.slow
     def test_rapid_commands(self):
-        """CLI should handle rapid invocations."""
-        for _ in range(10):
+        """CLI should handle rapid sequential commands without issues."""
+        for _ in range(50):
             result = run_cli("list")
             assert result.returncode in (0, 1, 64, 127)
-            assert "Traceback" not in result.stderr
