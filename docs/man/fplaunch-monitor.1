@@ -1,0 +1,135 @@
+.TH FPLAUNCH-MONITOR 1 "May 2026" "fplaunchwrapper 1.4" "User Commands"
+.SH NAME
+fplaunch-monitor \- monitor Flatpak installations and update wrappers
+.SH SYNOPSIS
+.B fplaunch-monitor
+.RI [OPTIONS]
+.SH DESCRIPTION
+.B fplaunch-monitor
+starts a daemon that watches for changes to Flatpak installations and
+automatically updates wrapper scripts when applications are installed,
+updated, or removed.
+.PP
+The monitor watches the following directories for changes:
+.IP \(bu 3
+.I /var/lib/flatpak
+\- System-wide Flatpak installations
+.IP \(bu 3
+.I ~/.local/share/flatpak
+\- User Flatpak installations
+.PP
+When changes are detected, the monitor triggers wrapper regeneration to
+ensure wrappers stay synchronized with the installed applications.
+.SH OPTIONS
+.TP
+.B \-d, \-\-daemon
+Run in daemon mode (background). The monitor will run in the background
+and continue watching for changes until stopped.
+.TP
+.B \-h, \-\-help
+Show help message and exit.
+.SH BEHAVIOR
+.SS Event Detection
+The monitor uses the
+.B watchdog
+library to detect file system events. Events are:
+.IP \(bu 3
+Processed only for Flatpak-related paths
+.IP \(bu 3
+Batched within a 1-second window to reduce redundant operations
+.IP \(bu 3
+Deduplicated to prevent rapid-fire regenerations
+.PP
+A 2-second cooldown period prevents the monitor from regenerating
+wrappers too frequently.
+.SS Regeneration
+When changes are detected:
+.IP \(bu 3
+The monitor runs
+.B fplaunch-generate
+to update wrappers
+.IP \(bu 3
+Installed Flatpak applications are discovered
+.IP \(bu 3
+Wrappers are created for new applications
+.IP \(bu 3
+Wrappers for removed applications are cleaned up
+.SS Signal Handling
+The monitor handles the following signals:
+.TP
+.B SIGINT
+Clean shutdown (Ctrl+C)
+.TP
+.B SIGTERM
+Clean shutdown
+.SH DAEMON MODE
+When run with
+.B \-\-daemon\fR,
+the monitor:
+.IP \(bu 3
+Forks to the background
+.IP \(bu 3
+Disconnects from the controlling terminal
+.IP \(bu 3
+Continues running until explicitly stopped
+.PP
+To stop the daemon, send a signal:
+.PP
+.B killall fplaunch-monitor
+.PP
+Or use the process ID stored by systemd if available.
+.SH SYSTEMD INTEGRATION
+For automatic startup and management, enable the systemd user service:
+.PP
+.B fplaunch systemd enable
+.PP
+This creates a systemd service that runs the monitor as a user-level
+service, automatically starting on login and restarting on failure.
+.SH CONFIGURATION
+The monitor uses the main fplaunchwrapper configuration:
+.TP
+.I ~/.config/fplaunchwrapper/config.toml
+Main configuration file controlling wrapper behavior.
+.TP
+.I ~/.config/fplaunchwrapper/bin_dir
+Directory where wrapper scripts are stored.
+.PP
+See
+.BR fplaunch-config (1)
+for configuration details.
+.SH EXAMPLES
+.TP
+Run monitor in foreground (for testing):
+.B fplaunch-monitor
+.TP
+Run monitor in daemon mode:
+.B fplaunch-monitor \-\-daemon
+.TP
+Stop the daemon:
+.B killall fplaunch-monitor
+.SH EXIT STATUS
+.TP
+.B 0
+Monitor exited normally (e.g., received SIGINT or SIGTERM).
+.TP
+.B 1
+An error occurred (e.g., watchdog not available, permission denied).
+.TP
+.B 2
+Invalid arguments provided.
+.SH DEPENDENCIES
+.TP
+.B watchdog
+Python library for file system monitoring. Install with:
+.PP
+.B pip install watchdog
+.PP
+If not installed, the monitor will print an error and exit.
+.SH SEE ALSO
+.BR fplaunch (1),
+.BR fplaunch-generate (1),
+.BR fplaunch-systemd (1)
+.SH AUTHOR
+Written by the fplaunchwrapper contributors.
+.SH BUGS
+Report bugs at: https://github.com/dtg01100/fplaunchwrapper/issues

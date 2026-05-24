@@ -1,0 +1,133 @@
+.TH FPLAUNCH-CONFIG 1 "May 2026" "fplaunchwrapper 1.4" "User Commands"
+.SH NAME
+fplaunch-config \- manage fplaunchwrapper configuration
+.SH SYNOPSIS
+.B fplaunch-config
+.RI [ACTION] [VALUE]
+.SH DESCRIPTION
+.B fplaunch-config
+manages the fplaunchwrapper configuration file, allowing you to view,
+initialize, and modify settings.
+.PP
+The configuration file is stored at:
+.I ~/.config/fplaunchwrapper/config.toml
+.SH ACTIONS
+.TP
+.B show
+Display the current configuration. This is the default action if no
+action is specified.
+.TP
+.B init
+Initialize a new configuration file with default values. If a
+configuration already exists, it will be backed up before being
+replaced.
+.TP
+.B cron-interval [HOURS]
+Get or set the cron job interval for automatic wrapper regeneration.
+If called without a value, displays the current interval. If called with
+a value, sets the interval to that number of hours.
+.SH CONFIGURATION OPTIONS
+The configuration file supports the following options:
+.TP
+.B bin_dir
+Directory where wrapper scripts are stored. Defaults to
+.I ~/bin\fR.
+.TP
+.B data_dir
+Directory for fplaunchwrapper data. Defaults to
+.I ~/.local/share/fplaunchwrapper\fR.
+.TP
+.B log_level
+Logging verbosity. Valid values: DEBUG, INFO, WARNING, ERROR.
+.TP
+.B debug_mode
+Enable debug mode. Valid values: true, false.
+.TP
+.B hook_failure_mode_default
+Default behavior when hooks fail. Valid values: abort, warn, ignore.
+.TP
+.B active_profile
+Currently active configuration profile.
+.TP
+.B permission_presets
+Dictionary of permission presets for Flatpak sandbox overrides.
+.TP
+.B schema_version
+Configuration file format version.
+.SH EXAMPLES
+.TP
+Show current configuration:
+.B fplaunch-config show
+.TP
+Initialize configuration with defaults:
+.B fplaunch-config init
+.TP
+Get current cron interval:
+.B fplaunch-config cron-interval
+.TP
+Set cron interval to 12 hours:
+.B fplaunch-config cron-interval 12
+.SH CONFIGURATION FILE FORMAT
+Example configuration:
+.PP
+.nf
+.RS
+[settings]
+bin_dir = "/home/user/bin"
+data_dir = "/home/user/.local/share/fplaunchwrapper"
+log_level = "INFO"
+debug_mode = false
+
+[hooks]
+hook_failure_mode_default = "warn"
+
+[global_preferences]
+launch_method = "auto"
+
+[profiles]
+active_profile = "default"
+
+[permission_presets]
+gaming = ["--device=dri", "--socket=pulseaudio"]
+development = ["--share=network", "--filesystem=home"]
+.RE
+.fi
+.SH PROFILES
+Configuration profiles allow you to maintain multiple configurations:
+.TP
+.B fplaunch profiles list
+List available profiles.
+.TP
+.B fplaunch profiles create NAME
+Create a new profile.
+.TP
+.B fplaunch profiles switch NAME
+Switch to a different profile.
+.TP
+.B fplaunch profiles export NAME [FILE]
+Export a profile to a file.
+.TP
+.B fplaunch profiles import FILE [NAME]
+Import a profile from a file.
+.SH ENVIRONMENT VARIABLES
+.TP
+.B XDG_CONFIG_HOME
+If set, configuration is read from
+.I $XDG_CONFIG_HOME/fplaunchwrapper
+instead of
+.I ~/.config/fplaunchwrapper\fR.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Error occurred (file not found, invalid action, etc.).
+.SH SEE ALSO
+.BR fplaunch (1),
+.BR fplaunch-generate (1),
+.BR fplaunch-profiles (1)
+.SH AUTHOR
+Written by the fplaunchwrapper contributors.
+.SH BUGS
+Report bugs at: https://github.com/dtg01100/fplaunchwrapper/issues

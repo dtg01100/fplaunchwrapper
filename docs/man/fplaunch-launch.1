@@ -1,0 +1,112 @@
+.TH FPLAUNCH-LAUNCH 1 "May 2026" "fplaunchwrapper 1.4" "User Commands"
+.SH NAME
+fplaunch-launch \- launch a Flatpak application via its wrapper
+.SH SYNOPSIS
+.B fplaunch-launch
+.RI [OPTIONS] APP_NAME
+.SH DESCRIPTION
+.B fplaunch-launch
+launches a Flatpak application using its fplaunchwrapper wrapper script.
+This allows launching applications with their configured preferences,
+environment variables, and pre/post-launch hooks.
+.PP
+The command finds the wrapper for the specified application name and
+executes it with any provided arguments.
+.SH OPTIONS
+.TP
+.B APP_NAME
+The name of the application to launch (e.g., "firefox", "chrome").
+.TP
+.B \-\-hook\-failure [abort|warn|ignore]
+Override hook failure mode for this launch:
+.RS
+.IP \(bu 3
+.I abort
+\- Stop the launch entirely if a hook fails (pre-launch only)
+.IP \(bu 3
+.I warn
+\- Continue with a warning message (default)
+.IP \(bu 3
+.I ignore
+\- Continue silently without warning
+.RE
+.TP
+.B \-\-abort\-on\-hook\-failure
+Abort launch if any hook fails. Shorthand for
+.B \-\-hook\-failure abort\fR.
+.TP
+.B \-\-ignore\-hook\-failure
+Ignore hook failures silently. Shorthand for
+.B \-\-hook\-failure ignore\fR.
+.TP
+.B \-h, \-\-help
+Show help message and exit.
+.SH HOOK FAILURE MODES
+Pre-launch and post-launch scripts can be configured for each wrapper.
+These hooks control actions taken before the application starts or after it
+completes.
+.PP
+When a hook fails, the
+.B hook failure mode
+determines what happens:
+.TP
+.I abort
+The launch is stopped entirely. This only applies to pre-launch hooks;
+post-launch hooks cannot abort since the application has already run.
+.TP
+.I warn
+A warning message is printed but execution continues.
+.TP
+.I ignore
+Hook failure is silently ignored.
+.PP
+Hook failure mode can be set at multiple levels (highest to lowest priority):
+.IP \(bu 3
+CLI options (\fB\-\-hook\-failure\fR, \fB\-\-abort\-on\-hook\-failure\fR)
+.IP \(bu 3
+Environment variable \fBFPWRAPPER_HOOK_FAILURE\fR
+.IP \(bu 3
+Per-app configuration in config.toml
+.IP \(bu 3
+Global default in config.toml (\fBhook_failure_mode_default\fR)
+.SH ENVIRONMENT VARIABLES
+.TP
+.B FPWRAPPER_HOOK_FAILURE
+Set hook failure mode for all launches in this session.
+.TP
+.B FPWRAPPER_WRAPPER_NAME
+Set to the wrapper name during hook execution.
+.TP
+.B FPWRAPPER_APP_ID
+Set to the Flatpak application ID during hook execution.
+.TP
+.B FPWRAPPER_SOURCE
+Set to "system" or "flatpak" during hook execution.
+.TP
+.B FPWRAPPER_EXIT_CODE
+Set to the application exit code during post-launch hook execution.
+.SH EXAMPLES
+.TP
+Launch Firefox:
+.B fplaunch-launch firefox
+.TP
+Launch with abort on hook failure:
+.B fplaunch-launch firefox \-\-abort\-on\-hook\-failure
+.TP
+Launch with ignore on hook failure:
+.B fplaunch-launch firefox \-\-ignore\-hook\-failure
+.SH EXIT STATUS
+.TP
+.B 0
+Application launched successfully.
+.TP
+.B 1
+Launch failed (application not found, blocked, or hook aborted).
+.SH SEE ALSO
+.BR fplaunch (1),
+.BR fplaunch-generate (1),
+.BR fplaunch-manage (1)
+.SH AUTHOR
+Written by the fplaunchwrapper contributors.
+.SH BUGS
+Report bugs at: https://github.com/dtg01100/fplaunchwrapper/issues

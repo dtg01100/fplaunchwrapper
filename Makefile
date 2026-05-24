@@ -4,7 +4,10 @@
 MAN1_SOURCES = docs/man/fplaunch-manage.1 \
                docs/man/fplaunch-generate.1 \
                docs/man/fplaunch-setup-systemd.1 \
-               docs/man/fplaunch-cleanup.1
+               docs/man/fplaunch-cleanup.1 \
+               docs/man/fplaunch-launch.1 \
+               docs/man/fplaunch-monitor.1 \
+               docs/man/fplaunch-config.1
 
 MAN7_SOURCES = docs/man/fplaunchwrapper.7
 

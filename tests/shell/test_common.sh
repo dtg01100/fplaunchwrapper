@@ -158,3 +158,94 @@ teardown() {
     # Output should contain the custom path
     echo "$output" | grep -q "/custom/config/systemd/user"
 }
+@test "sanitize_id_to_name extracts last segment of Flatpak ID" {
+    # Filter out the warning line
+    output=$(bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; sanitize_id_to_name 'org.mozilla.firefox'" | tail -1)
+    [ "$output" = "firefox" ]
+}
+
+@test "sanitize_id_to_name lowercases result" {
+    output=$(bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; sanitize_id_to_name 'org.example.TestApp'" | tail -1)
+    echo "$output" | grep -q "testapp"
+}
+
+@test "sanitize_id_to_name handles dots in name" {
+    output=$(bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; sanitize_id_to_name 'com.google.Chrome'" | tail -1)
+    [ "$output" = "chrome" ]
+}
+
+@test "canonicalize_path_no_resolve handles simple paths" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; canonicalize_path_no_resolve '/tmp/test'"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "/tmp/test"
+}
+
+@test "canonicalize_path_no_resolve handles parent references" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; canonicalize_path_no_resolve '/tmp/../var/test'"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "/var/test"
+}
+
+@test "canonicalize_path_no_resolve handles current directory reference" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; canonicalize_path_no_resolve '/tmp/./test'"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "/tmp/test"
+}
+
+@test "validate_home_dir returns path for valid home subdirectories" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; validate_home_dir '$HOME/.config'"
+    [ "$status" -eq 0 ]
+}
+
+@test "validate_home_dir rejects paths outside home" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; validate_home_dir '/etc/passwd'"
+    [ "$status" -ne 0 ]
+}
+
+@test "validate_home_dir rejects absolute paths to /tmp" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; validate_home_dir '/tmp/subdir'"
+    [ "$status" -ne 0 ]
+}
+
+@test "find_executable finds bash" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; find_executable bash"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "bash"
+}
+
+@test "find_executable returns 1 for non-existent command" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; find_executable this_command_does_not_exist_12345"
+    [ "$status" -ne 0 ]
+}
+
+@test "get_temp_dir returns a directory path" {
+    # Filter out the warning line
+    output=$(bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; get_temp_dir" | tail -1)
+    # Should be a valid temp directory path
+    echo "$output" | grep -qE "^/(tmp|var/tmp|run/user)"
+}
+
+@test "safe_mktemp creates a file" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; safe_mktemp"
+    [ "$status" -eq 0 ]
+    # Output should be a path
+    [ -n "$output" ]
+}
+
+@test "safe_mktemp with custom prefix" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; safe_mktemp 'test.XXXXXX'"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "test."
+}
+
+@test "info_log outputs to stderr" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; info_log 'test info'" 2>&1
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -qE "\[INFO\]|test info"
+}
+
+@test "warn_log outputs warning to stderr" {
+    run bash -c "source '$PROJECT_ROOT/lib/common.sh' 2>/dev/null; warn_log 'test warning'" 2>&1
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -qE "\[WARN\]|test warning"
+}
