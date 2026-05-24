@@ -10,7 +10,7 @@ echo "Running test suite..."
 
 START=$(date +%s.%N)
 
-python3 -m pytest tests/python/ -q --tb=no --no-header 2>&1
+python3 -m pytest tests/python/ -n2 -q --tb=no --no-header 2>&1
 RC=$?
 
 END=$(date +%s.%N)
