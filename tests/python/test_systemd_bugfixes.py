@@ -182,10 +182,12 @@ class TestReturnValueSemanticsFix:
         try:
             setup = SystemdSetup(emit_mode=False)
             setup.systemd_unit_dir = temp_dir / "nonexistent"
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = Mock(returncode=0)
 
-            result = setup.disable_systemd_units()
+                result = setup.disable_systemd_units()
+                assert result is True
 
-            assert result is True
 
         finally:
             shutil.rmtree(temp_dir)
