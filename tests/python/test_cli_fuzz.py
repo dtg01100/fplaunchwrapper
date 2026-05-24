@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 
 
@@ -71,8 +72,6 @@ def run_cli(*args, home: str | None = None) -> subprocess.CompletedProcess:
     except ValueError:
         result = subprocess.CompletedProcess(cmd, 1, "", "ValueError: embedded null byte")
     return result
-from types import SimpleNamespace
-
 
 def run_cli_inproc(*args, home: str | None = None) -> SimpleNamespace:
     """Run CLI command in-process (no subprocess overhead).

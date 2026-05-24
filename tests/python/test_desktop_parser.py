@@ -72,7 +72,6 @@ Exec=command --option "with spaces" --another='quoted'
 
     def test_parse_basic_desktop_file(self) -> None:
         """Test parsing a basic valid desktop file."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.SAMPLE_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -85,7 +84,6 @@ Exec=command --option "with spaces" --another='quoted'
 
     def test_parse_stores_all_sections(self) -> None:
         """Test that multiple sections are properly stored."""
-        from lib.desktop_parser import DesktopEntry
 
         content = """[Desktop Entry]
 Name=App1
@@ -107,7 +105,6 @@ Name=Edit File
 
     def test_get_with_default_value(self) -> None:
         """Test get() returns default for missing keys."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.MINIMAL_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -118,7 +115,6 @@ Name=Edit File
 
     def test_get_with_custom_section(self) -> None:
         """Test get() with custom section specification."""
-        from lib.desktop_parser import DesktopEntry
 
         content = """[Section A]
 Key=valueA
@@ -138,7 +134,6 @@ Key=valueB
     @patch.dict(os.environ, {"LANG": "en_US"})
     def test_name_property(self) -> None:
         """Test name property returns localized name or stem."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.SAMPLE_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -147,7 +142,6 @@ Key=valueB
 
     def test_name_property_fallback_to_stem(self) -> None:
         """Test name property falls back to file stem when Name is missing."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.MINIMAL_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -156,7 +150,6 @@ Key=valueB
 
     def test_comment_property(self) -> None:
         """Test comment property returns localized comment."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.SAMPLE_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -165,7 +158,6 @@ Key=valueB
 
     def test_icon_property(self) -> None:
         """Test icon property."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.SAMPLE_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -174,7 +166,6 @@ Key=valueB
 
     def test_categories_property(self) -> None:
         """Test categories property parses semicolon-separated list."""
-        from lib.desktop_parser import DesktopEntry
 
         content = """[Desktop Entry]
 Type=Application
@@ -188,7 +179,6 @@ Categories=Network;WebBrowser;
 
     def test_categories_handles_empty(self) -> None:
         """Test categories handles empty or missing Categories field."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.MINIMAL_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -197,7 +187,6 @@ Categories=Network;WebBrowser;
 
     def test_flatpak_id_property(self) -> None:
         """Test flatpak_id property returns X-Flatpak field."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.SAMPLE_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -206,7 +195,6 @@ Categories=Network;WebBrowser;
 
     def test_flatpak_id_returns_none_when_missing(self) -> None:
         """Test flatpak_id returns None when X-Flatpak is not present."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.MINIMAL_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -215,7 +203,6 @@ Categories=Network;WebBrowser;
 
     def test_exec_command_property(self) -> None:
         """Test exec_command property."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.SAMPLE_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -224,7 +211,6 @@ Categories=Network;WebBrowser;
 
     def test_terminal_required_property_true(self) -> None:
         """Test terminal_required returns True when Terminal=true."""
-        from lib.desktop_parser import DesktopEntry
 
         content = "[Desktop Entry]\nType=Application\nTerminal=true\n"
         path = self._create_temp_desktop_file(content)
@@ -234,7 +220,6 @@ Categories=Network;WebBrowser;
 
     def test_terminal_required_property_false(self) -> None:
         """Test terminal_required returns False for missing or false value."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.SAMPLE_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -243,7 +228,6 @@ Categories=Network;WebBrowser;
 
     def test_is_hidden_property(self) -> None:
         """Test is_hidden property."""
-        from lib.desktop_parser import DesktopEntry
 
         content = "[Desktop Entry]\nType=Application\nHidden=true\n"
         path = self._create_temp_desktop_file(content)
@@ -253,7 +237,6 @@ Categories=Network;WebBrowser;
 
     def test_no_display_property(self) -> None:
         """Test no_display property."""
-        from lib.desktop_parser import DesktopEntry
 
         content = "[Desktop Entry]\nType=Application\nNoDisplay=true\n"
         path = self._create_temp_desktop_file(content)
@@ -266,7 +249,6 @@ Categories=Network;WebBrowser;
     @patch.dict(os.environ, {"LANG": "en_US"})
     def test_get_localized_returns_exact_locale_match(self) -> None:
         """Test get_localized returns exact locale match when available."""
-        from lib.desktop_parser import DesktopEntry
 
         content = """[Desktop Entry]
 Type=Application
@@ -281,7 +263,6 @@ Name=Firefox Web Browser
     @patch.dict(os.environ, {"LANG": "fr_FR"})
     def test_get_localized_returns_language_only_fallback(self) -> None:
         """Test get_localized falls back to language-only locale."""
-        from lib.desktop_parser import DesktopEntry
 
         content = """[Desktop Entry]
 Name[en]=Firefox English
@@ -296,7 +277,6 @@ Name=Firefox Default
     @patch.dict(os.environ, {"LANG": "de_DE"})
     def test_get_localized_falls_back_to_non_localized(self) -> None:
         """Test get_localized falls back to non-localized key."""
-        from lib.desktop_parser import DesktopEntry
 
         content = """[Desktop Entry]
 Name=Firefox Default
@@ -309,7 +289,6 @@ Name=Firefox Default
     @patch.dict(os.environ, {"LANG": "en_US"})
     def test_get_localized_with_explicit_locale(self) -> None:
         """Test get_localized respects explicit locale parameter."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.SAMPLE_DESKTOP_CONTENT)
         entry = DesktopEntry(path)
@@ -320,7 +299,6 @@ Name=Firefox Default
 
     def test_handles_malformed_lines(self) -> None:
         """Test that malformed lines are handled gracefully."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file(self.MALFORMED_CONTENT)
         entry = DesktopEntry(path)
@@ -331,7 +309,6 @@ Name=Firefox Default
 
     def test_handles_comments(self) -> None:
         """Test that comment lines are ignored."""
-        from lib.desktop_parser import DesktopEntry
 
         content = """# Full line comment
 [Desktop Entry]
@@ -347,7 +324,6 @@ Exec=command
 
     def test_handles_extra_whitespace(self) -> None:
         """Test that extra whitespace is stripped."""
-        from lib.desktop_parser import DesktopEntry
 
         content = "[Desktop Entry]\n   Name  =    App With Spaces   \n   Exec  =    command    \n"
         path = self._create_temp_desktop_file(content)
@@ -358,7 +334,6 @@ Exec=command
 
     def test_handles_empty_file(self) -> None:
         """Test handling of empty file content."""
-        from lib.desktop_parser import DesktopEntry
 
         path = self._create_temp_desktop_file("")
         entry = DesktopEntry(path)
@@ -367,7 +342,6 @@ Exec=command
 
     def test_handles_no_section(self) -> None:
         """Test handling of entries without a section header."""
-        from lib.desktop_parser import DesktopEntry
 
         content = "Name=NoSection\nExec=command\n"
         path = self._create_temp_desktop_file(content)
@@ -377,7 +351,6 @@ Exec=command
 
     def test_file_read_error_returns_empty_parse(self) -> None:
         """Test that file read errors are handled gracefully."""
-        from lib.desktop_parser import DesktopEntry
 
         mock_path = MagicMock(spec=Path)
         mock_path.read_text.side_effect = OSError("Permission denied")
@@ -390,7 +363,6 @@ Exec=command
 
     def test_nonexistent_file(self) -> None:
         """Test handling of non-existent file."""
-        from lib.desktop_parser import DesktopEntry
 
         path = Path("/nonexistent/path/to/file.desktop")
         entry = DesktopEntry(path)
@@ -539,7 +511,7 @@ class TestGetAppMetadata:
 
     def test_returns_metadata_from_existing_entry(self) -> None:
         """Test getting metadata from a pre-fetched desktop entry."""
-        from lib.desktop_parser import DesktopEntry, get_app_metadata
+        from lib.desktop_parser import get_app_metadata
 
         mock_entry = MagicMock(spec=DesktopEntry)
         mock_entry.name = "Test App"
