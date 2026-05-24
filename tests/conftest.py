@@ -76,7 +76,7 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers", "real_execution: Tests that execute real code paths (minimal mocking)"
     )
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def mock_flatpak_binary_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Create the mock flatpak binary once per session."""
     mock_bin_dir = tmp_path_factory.mktemp("mock_bin")
@@ -134,28 +134,12 @@ esac
 
     flatpak_path.write_text(flatpak_script)
     flatpak_path.chmod(0o755)
-    return mock_bin_dir
-
-
-@pytest.fixture(autouse=True)
-def mock_flatpak_binary(mock_flatpak_binary_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """Provide a mock flatpak binary to prevent real flatpak execution during tests.
-
-    This fixture creates a fake flatpak script that logs calls instead of executing
-    actual flatpak commands. This ensures tests don't run real flatpaks when they
-    execute generated wrapper scripts.
-
-    The mock flatpak:
-    - Logs all calls to a file for debugging
-    - Returns appropriate exit codes for common commands
-    - Simulates flatpak list, info, and run commands
-    Yields path to mock flatpak log file for inspection if needed.
-    """
-    mock_bin_dir = mock_flatpak_binary_path
-    flatpak_log = mock_bin_dir / "flatpak_calls.log"
+    # Add to PATH for all tests in this session
     old_path = os.environ.get("PATH", "")
-    monkeypatch.setenv("PATH", f"{mock_bin_dir}:{old_path}")
-    yield flatpak_log
+    os.environ["PATH"] = f"{mock_bin_dir}:{old_path}"
+    yield mock_bin_dir
+    os.environ["PATH"] = old_path
+
 
 
 @pytest.fixture
@@ -263,7 +247,7 @@ def app_launcher(isolated_home):
     return AppLauncher(**isolated_home.app_launcher_kwargs)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def cleanup_legacy_config():
     """Remove any default config dir created during tests.
 
