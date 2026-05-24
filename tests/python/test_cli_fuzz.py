@@ -71,6 +71,61 @@ def run_cli(*args, home: str | None = None) -> subprocess.CompletedProcess:
     except ValueError:
         result = subprocess.CompletedProcess(cmd, 1, "", "ValueError: embedded null byte")
     return result
+from types import SimpleNamespace
+
+
+def run_cli_inproc(*args, home: str | None = None) -> SimpleNamespace:
+    """Run CLI command in-process (no subprocess overhead).
+
+    Captures stdout/stderr by redirecting sys.std{out,err} and
+    Console.file/console_err.file to StringIO objects. Returns a
+    SimpleNamespace with returncode, stdout, stderr (same shape as
+    CompletedProcess for subprocess-based run_cli).
+    """
+    import click
+    import shutil
+    from io import StringIO
+    from unittest.mock import patch
+
+    from lib import cli as cli_module
+
+
+    _home = home or tempfile.mkdtemp()
+    out_capture = StringIO()
+    err_capture = StringIO()
+
+    old_console_file = cli_module.console.file
+    old_console_err_file = cli_module.console_err.file
+    cli_module.console.file = out_capture
+    cli_module.console_err.file = err_capture
+
+    try:
+        with (
+            patch.dict(os.environ, {"HOME": str(_home)}),
+            patch("sys.stdout", out_capture),
+            patch("sys.stderr", err_capture),
+        ):
+            try:
+                ret = cli_module.cli(list(args), standalone_mode=False)
+                code = ret if ret is not None else 0
+            except SystemExit as e:
+                code = e.code if e.code is not None else 0
+            except click.exceptions.ClickException as e:
+                code = e.exit_code
+            except click.exceptions.Abort:
+                code = 1
+    finally:
+        cli_module.console.file = old_console_file
+        cli_module.console_err.file = old_console_err_file
+
+    if home is None:
+        shutil.rmtree(_home, ignore_errors=True)
+
+    return SimpleNamespace(
+        returncode=code,
+        stdout=out_capture.getvalue(),
+        stderr=err_capture.getvalue(),
+    )
 
 
 
@@ -86,7 +141,7 @@ class TestGenerateCommandFuzz:
     @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_generate_with_extra_args(self, extra_args):
         """generate command should reject or handle arbitrary extra args."""
-        result = run_cli("generate", "org.example.App", *extra_args)
+        result = run_cli_inproc("generate", "org.example.App", *extra_args)
         assert result.returncode in (0, 1, 2, 64, 65, 127)
 
 
@@ -97,7 +152,7 @@ class TestLaunchCommandFuzz:
     @settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_launch_handles_various_app_names(self, app_name):
         """launch command should handle various app_name formats gracefully."""
-        result = run_cli("launch", app_name)
+        result = run_cli_inproc("launch", app_name)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr or "NoSuchOption" in result.stderr
 
@@ -108,7 +163,7 @@ class TestLaunchCommandFuzz:
     @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_launch_with_flags(self, app_name, flags):
         """launch command should handle flags without crashing."""
-        result = run_cli("launch", app_name, *flags)
+        result = run_cli_inproc("launch", app_name, *flags)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr or "NoSuchOption" in result.stderr
 
@@ -120,7 +175,7 @@ class TestRemoveCommandFuzz:
     @settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_remove_handles_various_names(self, name):
         """remove command should handle various wrapper names."""
-        result = run_cli("remove", name, "--force")
+        result = run_cli_inproc("remove", name, "--force")
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr
 
@@ -135,7 +190,7 @@ class TestInstallCommandFuzz:
     @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_install_handles_various_inputs(self, app_name, extra_args):
         """install command should handle various inputs gracefully."""
-        result = run_cli("install", app_name, *extra_args)
+        result = run_cli_inproc("install", app_name, *extra_args)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr or "NoSuchOption" in result.stderr
 
@@ -150,7 +205,7 @@ class TestUninstallCommandFuzz:
     @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_uninstall_handles_various_inputs(self, app_name, extra_args):
         """uninstall command should handle various inputs gracefully."""
-        result = run_cli("uninstall", app_name, *extra_args)
+        result = run_cli_inproc("uninstall", app_name, *extra_args)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr or "NoSuchOption" in result.stderr
 
@@ -162,7 +217,7 @@ class TestInfoCommandFuzz:
     @settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_info_handles_various_app_names(self, app_name):
         """info command should handle various inputs."""
-        result = run_cli("info", app_name)
+        result = run_cli_inproc("info", app_name)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr
 
@@ -185,7 +240,7 @@ class TestConfigCommandFuzz:
             args.append(key)
             if value:
                 args.append(value)
-        result = run_cli(*args)
+        result = run_cli_inproc(*args)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr or "UsageError" in result.stderr or "NoSuchOption" in result.stderr
 
@@ -200,7 +255,7 @@ class TestSetPrefCommandFuzz:
     @settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_set_pref_handles_various_inputs(self, app_name, preference):
         """set-pref command should handle various inputs."""
-        result = run_cli("set-pref", app_name, preference)
+        result = run_cli_inproc("set-pref", app_name, preference)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr
 
@@ -214,14 +269,14 @@ class TestGlobalOptionsFuzz:
     @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_global_options(self, args):
         """Global options should not cause crashes."""
-        result = run_cli(*args)
+        result = run_cli_inproc(*args)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr
 
     def test_help_for_each_command(self):
         """Each command's --help should work."""
         for command in ["generate", "launch", "remove", "list"]:
-            result = run_cli(command, "--help")
+            result = run_cli_inproc(command, "--help")
             assert result.returncode == 0
             assert "usage:" in result.stdout.lower()
             assert "Traceback" not in result.stderr
@@ -309,6 +364,16 @@ class TestCLIPerformance:
     @pytest.mark.slow
     def test_rapid_commands(self):
         """CLI should handle rapid sequential commands without issues."""
+        from lib import cli
+        import tempfile
+        from unittest.mock import patch
+
         for _ in range(20):
-            result = run_cli("list")
-            assert result.returncode in (0, 1, 64, 127)
+            with tempfile.TemporaryDirectory() as home:
+                with patch.dict(os.environ, {"HOME": str(home)}):
+                    try:
+                        ret = cli.cli(["list"], standalone_mode=False)
+                        code = ret if ret is not None else 0
+                    except SystemExit as e:
+                        code = e.code if e.code is not None else 0
+            assert code in (0, 1, 64, 127)
