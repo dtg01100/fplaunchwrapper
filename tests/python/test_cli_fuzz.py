@@ -134,7 +134,7 @@ class TestGenerateCommandFuzz:
 
     def test_generate_help(self):
         """generate --help should work."""
-        result = run_cli("generate", "--help")
+        result = run_cli_inproc("generate", "--help")
         assert result.returncode in (0, 1, 2, 64, 65, 127)
 
     @given(extra_args=st.lists(cli_string_strategy(), max_size=5))
@@ -344,10 +344,10 @@ class TestCLIEdgeCases:
             "FPLAUNCH_CONFIG": "../../../etc/passwd",
             "FPLAUNCH_BIN_DIR": "../../../etc",
         }
-        env = os.environ.copy()
-        env.update(malicious_env)
-        cmd = [sys.executable, str(PROJECT_DIR / "lib" / "cli.py"), "list"]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, env=env, cwd=str(PROJECT_DIR))
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, malicious_env):
+            result = run_cli_inproc("list")
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr
 
@@ -358,7 +358,7 @@ class TestCLIPerformance:
     def test_many_arguments_dont_crash(self):
         """CLI should handle many arguments without crashing."""
         args = ["launch", "org.example"] + [f"--arg{i}" for i in range(100)]
-        result = run_cli(*args)
+        result = run_cli_inproc(*args)
         assert result.returncode in (0, 1, 2, 64, 127)
 
     @pytest.mark.slow
