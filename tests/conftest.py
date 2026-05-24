@@ -76,28 +76,13 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers", "real_execution: Tests that execute real code paths (minimal mocking)"
     )
 
-
-@pytest.fixture(autouse=True)
-def mock_flatpak_binary(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch):
-    """Provide a mock flatpak binary to prevent real flatpak execution during tests.
-
-    This fixture creates a fake flatpak script that logs calls instead of executing
-    actual flatpak commands. This ensures tests don't run real flatpaks when they
-    execute generated wrapper scripts.
-
-    The mock flatpak:
-    - Logs all calls to a file for debugging
-    - Returns appropriate exit codes for common commands
-    - Simulates flatpak list, info, and run commands
-
-    Yields path to mock flatpak log file for inspection if needed.
-    """
-    # Create a mock flatpak binary
+@pytest.fixture(scope="session")
+def mock_flatpak_binary_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Create the mock flatpak binary once per session."""
     mock_bin_dir = tmp_path_factory.mktemp("mock_bin")
     flatpak_path = mock_bin_dir / "flatpak"
     flatpak_log = mock_bin_dir / "flatpak_calls.log"
 
-    # Create the mock flatpak script
     flatpak_script = f"""#!/bin/sh
 # Mock flatpak binary for testing - prevents real flatpak execution
 
@@ -107,12 +92,10 @@ echo "$(date -Iseconds): flatpak $@" >> "{flatpak_log}"
 # Handle common flatpak commands
 case "$1" in
     list)
-        # Simulate flatpak list output
         echo "org.mozilla.Firefox\tlatest\tstable\tflathub"
         exit 0
         ;;
     info)
-        # Simulate flatpak info output
         if [ -n "$2" ]; then
             echo "ID: $2"
             echo "Ref: app/$2/x86_64/stable"
@@ -124,17 +107,13 @@ case "$1" in
         exit 1
         ;;
     run)
-        # Simulate flatpak run - don't actually launch anything
         if [ -n "$2" ]; then
-            # Simulate failure for unknown apps (make mock more realistic)
             case "$2" in
                 org.mozilla.Firefox|org.mozilla.firefox|com.google.Chrome|org.gimp.GIMP)
-                    # Known test apps - simulate successful run
                     echo "Mock flatpak run: $@" >> "{flatpak_log}"
                     exit 0
                     ;;
                 *)
-                    # Unknown apps - simulate "not installed" error
                     echo "error: app/$2/x86_64/master not installed" >&2
                     exit 1
                     ;;
@@ -143,12 +122,10 @@ case "$1" in
         exit 1
         ;;
     override)
-        # Simulate flatpak override command
         echo "Mock flatpak override: $@" >> "{flatpak_log}"
         exit 0
         ;;
     *)
-        # Unknown command
         echo "Mock flatpak: unknown command $1" >> "{flatpak_log}"
         exit 1
         ;;
@@ -157,14 +134,28 @@ esac
 
     flatpak_path.write_text(flatpak_script)
     flatpak_path.chmod(0o755)
+    return mock_bin_dir
 
-    # Prepend mock bin dir to PATH
+
+@pytest.fixture(autouse=True)
+def mock_flatpak_binary(mock_flatpak_binary_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Provide a mock flatpak binary to prevent real flatpak execution during tests.
+
+    This fixture creates a fake flatpak script that logs calls instead of executing
+    actual flatpak commands. This ensures tests don't run real flatpaks when they
+    execute generated wrapper scripts.
+
+    The mock flatpak:
+    - Logs all calls to a file for debugging
+    - Returns appropriate exit codes for common commands
+    - Simulates flatpak list, info, and run commands
+    Yields path to mock flatpak log file for inspection if needed.
+    """
+    mock_bin_dir = mock_flatpak_binary_path
+    flatpak_log = mock_bin_dir / "flatpak_calls.log"
     old_path = os.environ.get("PATH", "")
     monkeypatch.setenv("PATH", f"{mock_bin_dir}:{old_path}")
-
     yield flatpak_log
-
-    # Cleanup is handled by tmp_path_factory automatically
 
 
 @pytest.fixture
