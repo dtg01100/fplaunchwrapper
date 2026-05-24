@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import subprocess
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -84,6 +85,7 @@ class TestPortalLauncherWaitFlagPosition:
         from lib.portal_launcher import launch_with_portal
 
         mock_run.return_value = MagicMock(returncode=0)
+        mock_run.return_value = MagicMock(spec=subprocess.CompletedProcess, returncode=0)
         launch_with_portal("org.example.App", wait=True)
 
         cmd = mock_run.call_args[0][0]
@@ -99,6 +101,7 @@ class TestPortalLauncherWaitFlagPosition:
         from lib.portal_launcher import launch_direct
 
         mock_run.return_value = MagicMock(returncode=0)
+        mock_run.return_value = MagicMock(spec=subprocess.CompletedProcess, returncode=0)
         launch_direct("org.example.App", wait=True)
 
         cmd = mock_run.call_args[0][0]
@@ -116,7 +119,7 @@ class TestPortalLauncherWaitFlagPosition:
         """Application arguments must remain after the app ID even when wait=True."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0)
+        mock_run.return_value = MagicMock(spec=subprocess.CompletedProcess, returncode=0)
         launch_with_portal("org.example.App", args=["--url", "https://example.com"], wait=True)
 
         cmd = mock_run.call_args[0][0]

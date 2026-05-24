@@ -379,6 +379,7 @@ class TestFlatpakMonitor:
         monitor = FlatpakMonitor(callback=callback)
 
         event = MagicMock()
+        event = MagicMock(spec=object)
         event.src_path = "/var/lib/flatpak/app/test"
         event.event_type = "modified"
 
@@ -685,6 +686,7 @@ class TestFlatpakMonitorIntegration:
 
         with patch("lib.flatpak_monitor.FlatpakMonitor") as mock_monitor_class:
             mock_instance = MagicMock()
+            mock_instance = MagicMock(spec=FlatpakMonitor)
             mock_monitor_class.return_value = mock_instance
             mock_instance.start_monitoring.return_value = False
 

@@ -44,7 +44,7 @@ class TestLaunchWithPortal:
             ) as mock_get,
             patch("lib.portal_launcher.subprocess.run") as mock_run,
         ):
-            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            mock_run.return_value = MagicMock(spec=subprocess.CompletedProcess, returncode=0, stdout="", stderr="")
             self._mock_get_path = mock_get
             self._mock_run = mock_run
             yield
@@ -117,7 +117,7 @@ class TestLaunchWithPortal:
         """Test that subprocess.CompletedProcess is returned."""
         from lib.portal_launcher import launch_with_portal
 
-        expected = MagicMock(returncode=0, stdout="output", stderr="")
+        expected = MagicMock(spec=subprocess.CompletedProcess, returncode=0, stdout="output", stderr="")
         self._mock_run.return_value = expected
 
         result = launch_with_portal("org.mozilla.firefox")
@@ -416,7 +416,7 @@ class TestCommandConstruction:
             ) as mock_get,
             patch("lib.portal_launcher.subprocess.run") as mock_run,
         ):
-            mock_run.return_value = MagicMock(returncode=0)
+            mock_run.return_value = MagicMock(spec=subprocess.CompletedProcess, returncode=0)
             self._mock_get_path = mock_get
             self._mock_run = mock_run
             yield
@@ -490,7 +490,7 @@ class TestErrorHandling:
             ) as mock_get,
             patch("lib.portal_launcher.subprocess.run") as mock_run,
         ):
-            mock_run.return_value = MagicMock(returncode=0)
+            mock_run.return_value = MagicMock(spec=subprocess.CompletedProcess, returncode=0)
             self._mock_get_path = mock_get
             self._mock_run = mock_run
             yield

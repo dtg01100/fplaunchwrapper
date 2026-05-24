@@ -9,6 +9,7 @@ import os
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from lib.desktop_parser import DesktopEntry
 
 
 class TestDesktopEntry:
