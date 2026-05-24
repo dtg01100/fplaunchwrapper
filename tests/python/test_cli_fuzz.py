@@ -287,32 +287,32 @@ class TestCLIEdgeCases:
 
     def test_empty_arguments(self):
         """CLI should handle empty argument list gracefully."""
-        result = run_cli()
+        result = run_cli_inproc()
         assert result.returncode in (0, 1, 64, 127)
         assert "Traceback" not in result.stderr
 
     def test_null_bytes_in_arguments(self):
         """CLI should not crash on null bytes."""
-        result = run_cli("launch", "org\x00.example")
+        result = run_cli_inproc("launch", "org\x00.example")
         assert result.returncode in (0, 1, 2, 64, 127)
 
     def test_very_long_arguments(self):
         """CLI should handle very long arguments."""
         long_arg = "x" * 10000
-        result = run_cli("launch", long_arg)
+        result = run_cli_inproc("launch", long_arg)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr
 
     def test_unicode_in_arguments(self):
         """CLI should handle unicode in arguments."""
-        result = run_cli("launch", "org.example.世界")
+        result = run_cli_inproc("launch", "org.example.世界")
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "UnicodeError" not in result.stderr
 
     def test_path_traversal_is_sanitized(self):
         """CLI should sanitize path traversal attempts."""
         for args in [["launch", "../../../etc/passwd"], ["generate", "../../../etc/passwd"]]:
-            result = run_cli(*args)
+            result = run_cli_inproc(*args)
             assert result.returncode in (0, 1, 2, 64, 127)
             if result.returncode == 0:
                 assert "/etc/passwd" not in result.stdout or "Warning" in result.stderr
@@ -325,14 +325,14 @@ class TestCLIEdgeCases:
             ["launch", "org.example$(whoami)"],
             ["launch", "org.example|cat /etc/passwd"],
         ]:
-            result = run_cli(*args)
+            result = run_cli_inproc(*args)
             assert result.returncode in (0, 1, 2, 64, 127)
             assert "root:" not in result.stdout.lower()
 
     def test_repeated_arguments(self):
         """CLI should handle repeated arguments."""
         args = ["launch", "org.example"] * 10
-        result = run_cli(*args)
+        result = run_cli_inproc(*args)
         assert result.returncode in (0, 1, 2, 64, 127)
 
     def test_environment_variable_injection(self):

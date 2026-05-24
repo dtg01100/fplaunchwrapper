@@ -12,7 +12,40 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from types import SimpleNamespace
+
 import lib.cli as cli_module
+
+
+def _module_help_text(module_name: str) -> SimpleNamespace:
+    """Get --help text from an argparse module in-process (no subprocess).
+
+    Imports the module and calls its ``main()`` with ``--help``,
+    capturing stdout and catching the expected ``SystemExit(0)``.
+    Returns a SimpleNamespace with ``returncode``, ``stdout``, and
+    ``stderr`` (mimics ``subprocess.CompletedProcess`` for callers).
+    """
+    import importlib
+    import io
+
+    mod = importlib.import_module(module_name)
+
+    old_argv = sys.argv
+    old_stdout = sys.stdout
+    sys.argv = [module_name, "--help"]
+    sys.stdout = io.StringIO()
+
+    try:
+        mod.main()
+        returncode = 0
+    except SystemExit as e:
+        returncode = e.code if e.code is not None else 0
+    finally:
+        stdout = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+        sys.argv = old_argv
+
+    return SimpleNamespace(returncode=returncode, stdout=stdout, stderr="")
 
 
 @pytest.fixture
@@ -88,13 +121,7 @@ class TestHelpSupport:
             # Convert script path to module name (e.g., lib/config_manager.py -> lib.config_manager)
             module_name = script_path.replace("/", ".").replace(".py", "")
 
-            result = subprocess.run(
-                [sys.executable, "-m", module_name, "--help"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                cwd=Path(__file__).parent.parent.parent,
-            )
+            result = _module_help_text(module_name)
 
             # Should exit successfully
             assert result.returncode == 0, (
@@ -202,26 +229,14 @@ class TestHelpCompleteness:
 
     def test_launch_help_shows_usage_examples(self):
         """Test launch.py help includes usage examples."""
-        result = subprocess.run(
-            [sys.executable, "-m", "lib.launch", "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            cwd=Path(__file__).parent.parent.parent,
-        )
+        result = _module_help_text("lib.launch")
 
         assert result.returncode == 0
         assert "example" in result.stdout.lower() or "usage" in result.stdout.lower()
 
     def test_config_help_shows_all_actions(self):
         """Test config_manager.py help shows all actions."""
-        result = subprocess.run(
-            [sys.executable, "-m", "lib.config_manager", "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            cwd=Path(__file__).parent.parent.parent,
-        )
+        result = _module_help_text("lib.config_manager")
 
         assert result.returncode == 0
         # Should mention key actions
@@ -232,39 +247,21 @@ class TestHelpCompleteness:
 
     def test_generate_help_shows_directory_argument(self):
         """Test generate.py help mentions directory argument."""
-        result = subprocess.run(
-            [sys.executable, "-m", "lib.generate", "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            cwd=Path(__file__).parent.parent.parent,
-        )
+        result = _module_help_text("lib.generate")
 
         assert result.returncode == 0
         assert "bin" in result.stdout.lower() or "directory" in result.stdout.lower()
 
     def test_cleanup_help_shows_dry_run_option(self):
         """Test cleanup.py help mentions dry-run option."""
-        result = subprocess.run(
-            [sys.executable, "-m", "lib.cleanup", "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            cwd=Path(__file__).parent.parent.parent,
-        )
+        result = _module_help_text("lib.cleanup")
 
         assert result.returncode == 0
         assert "dry-run" in result.stdout.lower() or "dry_run" in result.stdout
 
     def test_systemd_help_shows_setup_information(self):
         """Test systemd_setup.py help mentions setup information."""
-        result = subprocess.run(
-            [sys.executable, "-m", "lib.systemd_setup", "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            cwd=Path(__file__).parent.parent.parent,
-        )
+        result = _module_help_text("lib.systemd_setup")
 
         assert result.returncode == 0
         # Should mention systemd or timer
