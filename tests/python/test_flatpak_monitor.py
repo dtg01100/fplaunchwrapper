@@ -175,7 +175,8 @@ class TestFlatpakMonitor:
         mock_observer.stop.assert_called_once()
         mock_observer.join.assert_called_once()
 
-    def test_monitor_directory_detection(self) -> None:
+    @patch("lib.flatpak_monitor.Observer")
+    def test_monitor_directory_detection(self, mock_observer_class: Mock) -> None:
         """Test detection of Flatpak directories to monitor."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
@@ -468,7 +469,8 @@ class TestFlatpakMonitor:
         monitor_none = FlatpakMonitor(callback=None, bin_dir=str(self.temp_dir / "bin"))
         assert monitor_none.callback is None
 
-    def test_monitor_path_validation(self) -> None:
+    @patch("lib.flatpak_monitor.Observer")
+    def test_monitor_path_validation(self, mock_observer_class: Mock) -> None:
         """Test monitor path validation."""
         if not FlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
