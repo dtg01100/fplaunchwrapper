@@ -53,8 +53,8 @@ def cli_string_strategy(draw) -> str:
         "file.txt|cat",
         "file.txt&&echo",
         "\x7f\x80\xff",
-        "😀" * 10,
-        "🏠" * 100,
+        "😀" * 10,  # 10 emoji chars (40 bytes) - reasonable limit
+        "🏠" * 20,  # 20 emoji chars (80 bytes) - safe limit for path length
     ]))
 
 

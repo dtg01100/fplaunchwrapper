@@ -13,9 +13,54 @@ from pathlib import Path
 
 __all__ = [
     "validate_app_id",
+    "validate_wrapper_name",
     "check_path_traversal",
     "should_process_event",
 ]
+
+
+MAX_WRAPPER_NAME_LENGTH = 255
+# Linux path length limit is typically 4096, reserve space for bin_dir prefix
+MAX_PATH_OVERHEAD = 512  # Reserve for bin_dir + wrapper prefix + extension
+# Stricter limit for CLI commands to prevent path length issues
+MAX_CLI_WRAPPER_NAME = 128
+
+def validate_wrapper_name(name: str, max_total_length: int = MAX_WRAPPER_NAME_LENGTH) -> tuple[bool, str]:
+    """Validate a wrapper name (script filename).
+
+    Args:
+        name: The wrapper name to validate
+        max_total_length: Maximum allowed length for the wrapper name (default: 255)
+
+    Returns:
+        Tuple of (is_valid, error_message)
+        If valid, error_message is empty string
+    """
+    if not name or not name.strip():
+        return False, "Empty wrapper name provided"
+
+    # Check length (filesystem limits)
+    if len(name) > max_total_length:
+        return False, f"Wrapper name too long: {len(name)} chars (max {max_total_length})"
+
+    # Wrapper names must be valid POSIX filename
+    # Invalid characters: / \0 and path separators
+    invalid_chars = ['/', '\\', '\0']
+    for char in invalid_chars:
+        if char in name:
+            return False, f"Invalid character in wrapper name: '{char}'"
+
+    # Names shouldn't start with - (often interpreted as options)
+    if name.startswith('-'):
+        return False, "Wrapper name cannot start with hyphen"
+
+    # Hidden files (starting with .) should be handled carefully
+    if name.startswith('.') and len(name) > 1:
+        # Allow . to work as wrapper name, but warn about hidden files
+        # This is a security consideration - hidden wrappers can be unexpected
+        pass
+
+    return True, ""
 
 
 def validate_app_id(app_id: str) -> tuple[bool, str]:

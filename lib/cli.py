@@ -338,6 +338,13 @@ def launch(
 @click.pass_context
 def remove(ctx: click.Context, name: str, force: bool) -> int:
     """Remove a wrapper by name."""
+    # Validate wrapper name to prevent OSError: File name too long
+    from lib.validation import validate_wrapper_name, MAX_CLI_WRAPPER_NAME
+    is_valid, error_msg = validate_wrapper_name(name, max_total_length=MAX_CLI_WRAPPER_NAME)
+    if not is_valid:
+        console_err.print(f"[red]Error:[/red] {error_msg}")
+        return 1
+
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
     manager = WrapperManager(
         config_dir=ctx.obj.get("config_dir"),
@@ -413,6 +420,13 @@ def monitor(ctx: click.Context, daemon: bool) -> int:
 @click.pass_context
 def set_pref(ctx: click.Context, wrapper_name: str, preference: str) -> int:
     """Set launch preference for a wrapper (system|flatpak or a Flatpak ID)."""
+    # Validate wrapper name to prevent OSError: File name too long
+    from lib.validation import validate_wrapper_name, MAX_CLI_WRAPPER_NAME
+    is_valid, error_msg = validate_wrapper_name(wrapper_name, max_total_length=MAX_CLI_WRAPPER_NAME)
+    if not is_valid:
+        console_err.print(f"[red]Error:[/red] {error_msg}")
+        return 1
+
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
     manager = WrapperManager(
         config_dir=ctx.obj.get("config_dir"),

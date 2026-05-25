@@ -429,7 +429,13 @@ class EnhancedConfigManager:
         )
 
         if "blocklist" in data:
-            self.config.blocklist = list(data["blocklist"])
+            blocklist_data = data["blocklist"]
+            if isinstance(blocklist_data, list):
+                self.config.blocklist = blocklist_data
+            elif isinstance(blocklist_data, (tuple, set, frozenset)):
+                self.config.blocklist = list(blocklist_data)
+            else:
+                self.config.blocklist = []
 
         if "permission_presets" in data:
             presets_data = data["permission_presets"]
