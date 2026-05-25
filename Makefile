@@ -32,7 +32,16 @@ info: $(INFO_PAGES)
 
 $(INFO_DIR)/fplaunchwrapper.info: $(MAN1_SOURCES) $(MAN7_SOURCES) docs/info/fplaunchwrapper.texi
 	@mkdir -p $(INFO_DIR)
-	makeinfo --output=$@ docs/info/fplaunchwrapper.texi
+	@if command -v makeinfo >/dev/null 2>&1; then \
+		makeinfo --output=$@ docs/info/fplaunchwrapper.texi; \
+	else \
+		echo "Warning: makeinfo not found, skipping info page generation"; \
+	fi
+
+# Alternative: build info pages using a script or external tool
+$(INFO_DIR)/fplaunchwrapper.info-texinfo: $(MAN1_SOURCES) $(MAN7_SOURCES) docs/info/fplaunchwrapper.texi
+	@mkdir -p $(INFO_DIR)
+	texi2any -o $(INFO_DIR) docs/info/fplaunchwrapper.texi || echo "texinfo not available"
 
 # Install man pages (for testing)
 install-man: man

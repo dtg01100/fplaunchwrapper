@@ -9,6 +9,13 @@ BUILD_DIR="build/rpm"
 
 echo "Building RPM package for $PACKAGE_NAME version $VERSION"
 
+# Check for rpmbuild
+if ! command -v rpmbuild >/dev/null 2>&1; then
+    echo "Warning: rpmbuild not found. Install rpm-build package to build RPM packages."
+    echo "Skipping RPM build..."
+    exit 0
+fi
+
 # Clean and create build directories
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
