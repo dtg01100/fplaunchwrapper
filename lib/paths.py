@@ -138,7 +138,11 @@ def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Pat
         Resolved bin directory path
     """
     if explicit_dir:
-        return Path(explicit_dir).expanduser()
+        try:
+            return Path(explicit_dir).expanduser()
+        except (RuntimeError, ValueError):
+            # RuntimeError: HOME not set; ValueError: embedded null byte
+            return Path(explicit_dir)
 
     if config_dir:
         bin_dir_file = config_dir / "bin_dir"
@@ -146,7 +150,11 @@ def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Pat
             if bin_dir_file.exists():
                 bin_path = bin_dir_file.read_text().strip()
                 if bin_path:
-                    return Path(bin_path).expanduser()
+                    try:
+                        return Path(bin_path).expanduser()
+                    except (RuntimeError, ValueError):
+                        # RuntimeError: HOME not set; ValueError: embedded null byte
+                        return Path(bin_path)
         except (OSError, UnicodeDecodeError):
             pass
 

@@ -212,14 +212,13 @@ class TestUninstallCommandFuzz:
 class TestInfoCommandFuzz:
     """Fuzz tests for the info command."""
 
-    @given(app_name=cli_string_strategy())
+    @given(app_name=st.text(max_size=50).filter(lambda x: x and not x.startswith("-")))
     @settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_info_handles_various_app_names(self, app_name):
         """info command should handle various inputs."""
         result = run_cli_inproc("info", app_name)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr
-
 
 class TestConfigCommandFuzz:
     """Fuzz tests for the config command."""

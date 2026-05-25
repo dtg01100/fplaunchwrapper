@@ -50,7 +50,7 @@ def canonicalize_path_no_resolve(path: str | Path) -> Path | None:
 
         return Path(os.path.normpath(path_str))
 
-    except (TypeError, ValueError, OSError):
+    except (TypeError, ValueError, OSError, RuntimeError):
         return None
 
 
@@ -78,7 +78,7 @@ def validate_home_dir(dir_path: str | Path | None) -> str | None:
             return str(abs_dir)
 
         return None
-    except (TypeError, ValueError, OSError):
+    except (TypeError, ValueError, OSError, RuntimeError):
         return None
 
 

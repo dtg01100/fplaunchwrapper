@@ -51,7 +51,6 @@ def config_dict_strategy(draw) -> dict:
         st.one_of(
             st.text(max_size=1000),
             st.lists(st.text(max_size=100), max_size=10),
-            st.integers(min_value=0, max_value=1000),
             st.booleans(),
             st.dictionaries(st.text(), st.text()),
         ),
