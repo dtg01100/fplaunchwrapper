@@ -43,10 +43,13 @@ except ImportError:
 console = Console()
 
 
+console = Console()
+
+MAX_BACKUP_FILES = 1000
+
+
 @dataclass
 class CleanupConfig:
-    """Configuration for WrapperCleanup operations."""
-
     bin_dir: str | None = None
     config_dir: str | None = None
     data_dir: str | None = None
@@ -122,6 +125,31 @@ class WrapperCleanup(LoggingMixin):
             "preferences": [],
             "data_files": [],
         }
+
+    def _run_systemctl(self, *args: str, timeout: int = 30) -> subprocess.CompletedProcess:
+        """Run a systemctl command with common options."""
+        return subprocess.run(
+            ["systemctl", "--user"] + list(args),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+
+    def _run_crontab(
+        self, *args: str, input_text: str | None = None, timeout: int = 10
+    ) -> subprocess.CompletedProcess:
+        """Run a crontab command with common options."""
+        cmd = ["crontab"] + list(args)
+        kwargs: dict[str, object] = {
+            "check": False,
+            "capture_output": True,
+            "text": True,
+            "timeout": timeout,
+        }
+        if input_text is not None:
+            kwargs["input"] = input_text
+        return subprocess.run(cmd, **kwargs)  # type: ignore[arg-type]
 
     def _get_systemd_unit_dir(self) -> Path:
         """Get systemd user unit directory."""
@@ -263,13 +291,7 @@ class WrapperCleanup(LoggingMixin):
             return
 
         try:
-            result = subprocess.run(
-                [crontab_path, "-l"],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
+            result = self._run_crontab("-l")
             if result.returncode == 0:
                 # Look for any cron entries related to fplaunchwrapper
                 cron_lines = []
@@ -314,13 +336,7 @@ class WrapperCleanup(LoggingMixin):
         if not crontab_path:
             return False
         try:
-            result = subprocess.run(
-                [crontab_path, "-l"],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
+            result = self._run_crontab("-l")
             if result.returncode == 0:
                 return "fplaunch-generate" in str(result.stdout)
         except (subprocess.CalledProcessError, OSError):
@@ -407,13 +423,19 @@ class WrapperCleanup(LoggingMixin):
                     )
                 )
                 data_files = self.cleanup_items["data_files"]
-                if len(data_files) > 1000:
+                if len(data_files) > MAX_BACKUP_FILES:
                     self.log(
-                        f"Warning: Backup limited to 1000 of {len(data_files)} data files",
+                        f"Warning: Backup limited to {MAX_BACKUP_FILES} "
+                        f"of {len(data_files)} data files",
                         "warning",
                     )
                 backup_errors.extend(
-                    self._backup_items(data_files[:1000], "data", "data file", backup_root)
+                    self._backup_items(
+                        data_files[:MAX_BACKUP_FILES],
+                        "data",
+                        "data file",
+                        backup_root,
+                    )
                 )
                 if backup_errors:
                     for err in backup_errors:
@@ -436,7 +458,7 @@ class WrapperCleanup(LoggingMixin):
                 for pref in self.cleanup_items["preferences"]:
                     self._remove_file(pref, f"Removing preference: {pref}")
             if self.remove_data or self.remove_data is None:
-                for df in self.cleanup_items["data_files"][:1000]:
+                for df in self.cleanup_items["data_files"][:MAX_BACKUP_FILES]:
                     self._remove_file(df, f"Removing data file: {df}")
             if (self.remove_prefs or self.remove_prefs is None) and (
                 self.remove_data or self.remove_data is None
@@ -454,45 +476,25 @@ class WrapperCleanup(LoggingMixin):
         """Stop, disable and remove systemd units."""
         if not self.cleanup_items["systemd_units"]:
             return
-
         systemctl_path = shutil.which("systemctl")
         if systemctl_path:
             self.log("Stopping and disabling systemd units...")
             if not self.dry_run:
-                subprocess.run(
-                    [
-                        systemctl_path,
-                        "--user",
-                        "stop",
-                        "fplaunch-wrapper.path",
-                        "fplaunch-wrapper.timer",
-                        "fplaunch-wrapper.service",
-                    ],
-                    check=False,
-                    capture_output=True,
-                    timeout=30,
+                self._run_systemctl(
+                    "stop",
+                    "fplaunch-wrapper.path",
+                    "fplaunch-wrapper.timer",
+                    "fplaunch-wrapper.service",
                 )
 
-                subprocess.run(
-                    [
-                        systemctl_path,
-                        "--user",
-                        "disable",
-                        "fplaunch-wrapper.path",
-                        "fplaunch-wrapper.timer",
-                        "fplaunch-wrapper.service",
-                    ],
-                    check=False,
-                    capture_output=True,
-                    timeout=30,
+                self._run_systemctl(
+                    "disable",
+                    "fplaunch-wrapper.path",
+                    "fplaunch-wrapper.timer",
+                    "fplaunch-wrapper.service",
                 )
 
-                subprocess.run(
-                    [systemctl_path, "--user", "daemon-reload"],
-                    check=False,
-                    capture_output=True,
-                    timeout=30,
-                )
+                self._run_systemctl("daemon-reload")
 
         for unit_path in self.cleanup_items["systemd_units"]:
             self._remove_file(unit_path, f"Removing systemd unit: {unit_path}")
@@ -507,26 +509,13 @@ class WrapperCleanup(LoggingMixin):
             self.log("Removing cron entries...")
             if not self.dry_run:
                 try:
-                    result = subprocess.run(
-                        [crontab_path, "-l"],
-                        check=False,
-                        capture_output=True,
-                        text=True,
-                        timeout=10,
-                    )
+                    result = self._run_crontab("-l")
                     if result.returncode == 0:
                         current_cron = result.stdout
                         new_cron = "\n".join(
                             line for line in current_cron.split("\n") if "fplaunch" not in line
                         )
-                        subprocess.run(
-                            [crontab_path, "-"],
-                            check=False,
-                            input=new_cron,
-                            text=True,
-                            capture_output=True,
-                            timeout=10,
-                        )
+                        self._run_crontab("-", input_text=new_cron)
                 except (subprocess.CalledProcessError, OSError):
                     pass
 

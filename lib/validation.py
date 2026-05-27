@@ -20,12 +20,14 @@ __all__ = [
 
 
 MAX_WRAPPER_NAME_LENGTH = 255
-# Linux path length limit is typically 4096, reserve space for bin_dir prefix
-MAX_PATH_OVERHEAD = 512  # Reserve for bin_dir + wrapper prefix + extension
-# Stricter limit for CLI commands to prevent path length issues
+MAX_PATH_OVERHEAD = 512
 MAX_CLI_WRAPPER_NAME = 128
 
-def validate_wrapper_name(name: str, max_total_length: int = MAX_WRAPPER_NAME_LENGTH) -> tuple[bool, str]:
+
+def validate_wrapper_name(
+    name: str,
+    max_total_length: int = MAX_WRAPPER_NAME_LENGTH,
+) -> tuple[bool, str]:
     """Validate a wrapper name (script filename).
 
     Args:

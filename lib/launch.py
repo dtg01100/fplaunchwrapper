@@ -53,14 +53,15 @@ except ImportError:
         pass
 
 
+DEFAULT_CACHE_TTL = 300.0
 _FLATPAK_ID_CACHE: dict[str, tuple[str, float]] = {}
 _CACHE_TTL_ENV = os.environ.get("FPWRAPPER_CACHE_TTL", "300")
 try:
     _CACHE_TTL_SECONDS = float(_CACHE_TTL_ENV)
     if _CACHE_TTL_SECONDS <= 0:
-        _CACHE_TTL_SECONDS = 300.0
+        _CACHE_TTL_SECONDS = DEFAULT_CACHE_TTL
 except ValueError:
-    _CACHE_TTL_SECONDS = 300.0
+    _CACHE_TTL_SECONDS = DEFAULT_CACHE_TTL
 _CACHE_LOCK = threading.Lock()
 
 

@@ -39,9 +39,10 @@ WatchdogEventHandler: Any
 WatchdogObserver: Any
 WATCHDOG_AVAILABLE: bool
 
+
 try:
-    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler  # type: ignore[no-redef]
-    from watchdog.observers import Observer as WatchdogObserver  # type: ignore[no-redef]
+    from watchdog.events import FileSystemEventHandler as WatchdogEventHandler
+    from watchdog.observers import Observer as WatchdogObserver
 
     WATCHDOG_AVAILABLE = True
 except (ImportError, AttributeError):

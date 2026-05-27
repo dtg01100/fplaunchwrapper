@@ -149,7 +149,11 @@ def safe_launch_check(
 
     if is_test_environment():
         if _is_direct_browser_launch(app_name):
-            logging.warning("safety: blocked direct browser launch in test environment: %s", app_name)
+
+            logging.warning(
+                "safety: blocked direct browser launch in test environment: %s",
+                app_name,
+            )
             return False
         return True
 

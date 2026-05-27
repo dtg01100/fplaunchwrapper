@@ -153,6 +153,7 @@ class WrapperConfig:
         None  # Overrides hook_failure_mode_default for post-launch
     )
 
+
 class EnhancedConfigManager:
     """Enhanced configuration management with type safety, validation,
     migration, and templating support.
