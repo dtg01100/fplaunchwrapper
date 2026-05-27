@@ -138,10 +138,10 @@ class WrapperCleanup(LoggingMixin):
 
     def _run_crontab(
         self, *args: str, input_text: str | None = None, timeout: int = 10
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[str]:
         """Run a crontab command with common options."""
         cmd = ["crontab"] + list(args)
-        kwargs: dict[str, object] = {
+        kwargs: dict[str, str | bool | int | None] = {
             "check": False,
             "capture_output": True,
             "text": True,
