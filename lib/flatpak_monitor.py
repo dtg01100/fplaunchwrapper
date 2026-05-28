@@ -53,9 +53,10 @@ except ImportError:
     WatchdogObserver = object
 
 
-# Alias so the rest of the module uses a consistent name (type: ignore needed
-# because WatchdogObserver may be `object` at runtime when watchdog is absent)
-_observer_cls: Any = WatchdogObserver
+def _get_observer_cls() -> Any:
+    """Return the current Observer class (supports runtime patch for tests)."""
+    return Observer
+
 
 # Backward-compatible alias for tests that patch Observer directly
 Observer = WatchdogObserver
@@ -245,12 +246,13 @@ class FlatpakMonitor:
 
     def start_monitoring(self) -> bool:
         """Start monitoring for Flatpak changes."""
-        if not WATCHDOG_AVAILABLE or _observer_cls is None:
+        observer_cls = _get_observer_cls()
+        if not WATCHDOG_AVAILABLE or observer_cls is None:
             logger.error("Watchdog library not available")
             return False
 
         try:
-            self.observer = _observer_cls() if _observer_cls is not None else None
+            self.observer = observer_cls() if observer_cls is not None else None
 
             event_handler = FlatpakEventHandler(
                 callback=self._on_flatpak_change,
