@@ -41,20 +41,24 @@ WATCHDOG_AVAILABLE: bool
 
 
 try:
-    from watchdog.events import (  # type: ignore[no-redef]
-        FileSystemEventHandler as WatchdogEventHandler,
-    )
-    from watchdog.observers import (  # type: ignore[no-redef]
-        Observer as WatchdogObserver,
-    )
+    from watchdog.events import FileSystemEventHandler
+    from watchdog.observers import Observer
 
     WATCHDOG_AVAILABLE = True
-except (ImportError, AttributeError):
+    WatchdogEventHandler = FileSystemEventHandler
+    WatchdogObserver = Observer
+except ImportError:
     WATCHDOG_AVAILABLE = False
+    WatchdogEventHandler = object
+    WatchdogObserver = object
 
 
-# Runtime observer class (None when watchdog not present)
-Observer: Any = WatchdogObserver
+# Alias so the rest of the module uses a consistent name (type: ignore needed
+# because WatchdogObserver may be `object` at runtime when watchdog is absent)
+_observer_cls: Any = WatchdogObserver
+
+# Backward-compatible alias for tests that patch Observer directly
+Observer = WatchdogObserver
 
 
 # For runtime we select a base handler that is the watchdog class when present,
@@ -241,12 +245,12 @@ class FlatpakMonitor:
 
     def start_monitoring(self) -> bool:
         """Start monitoring for Flatpak changes."""
-        if not WATCHDOG_AVAILABLE or Observer is None:
+        if not WATCHDOG_AVAILABLE or _observer_cls is None:
             logger.error("Watchdog library not available")
             return False
 
         try:
-            self.observer = Observer() if Observer is not None else None
+            self.observer = _observer_cls() if _observer_cls is not None else None
 
             event_handler = FlatpakEventHandler(
                 callback=self._on_flatpak_change,

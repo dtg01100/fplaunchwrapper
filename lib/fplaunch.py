@@ -12,7 +12,7 @@ from .safety import is_wrapper_file as safe_launch_check  # noqa: F401
 safety = safety_mod
 
 
-def main():
+def main() -> int:
     """Main entry point."""
     try:
         from .cli import main as cli_main
@@ -20,7 +20,16 @@ def main():
         if cli_main is not None:
             return cli_main()
         return 1
-    except (ImportError, AttributeError):
+    except ImportError as e:
+        import os
+        sys.stderr.write(
+            f"fplaunchwrapper: failed to import CLI module: {e}\n"
+            f"  PYTHONPATH={os.environ.get('PYTHONPATH', '<unset>')}\n"
+            f"  Check that fplaunchwrapper is installed correctly.\n"
+        )
+        return 1
+    except AttributeError as e:
+        sys.stderr.write(f"fplaunchwrapper: {e}\n")
         return 1
 
 

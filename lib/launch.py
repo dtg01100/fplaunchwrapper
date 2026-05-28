@@ -39,18 +39,7 @@ from .validation import validate_app_id
 logger = logging.getLogger(__name__)
 
 
-try:
-    from .exceptions import AppNotFoundError, LaunchBlockedError, LaunchError
-except ImportError:
-
-    class AppNotFoundError(Exception):  # type: ignore[no-redef]
-        pass
-
-    class LaunchBlockedError(Exception):  # type: ignore[no-redef]
-        pass
-
-    class LaunchError(Exception):  # type: ignore[no-redef]
-        pass
+from .exceptions import AppNotFoundError, LaunchBlockedError, LaunchError
 
 
 DEFAULT_CACHE_TTL = 300.0
