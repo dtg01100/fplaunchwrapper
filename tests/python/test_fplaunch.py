@@ -22,7 +22,7 @@ class TestFplaunchModule:
         from lib import fplaunch
 
         result = fplaunch.safe_launch_check("test-app")
-        assert result is True or result is False
+        assert isinstance(result, bool)
 
 
 class TestFplaunchMain:

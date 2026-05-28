@@ -324,7 +324,7 @@ class TestIntegrationWorkflows:
         result = manager.set_preference("corrupted", "flatpak")
         # Should either succeed (overwrite) or fail gracefully
         # WrapperManager may fail for corrupted file, verify behavior
-        assert result is True or result is False  # Depends on implementation
+        assert isinstance(result, bool)  # Depends on implementation
 
         # Test with very long names/values
         long_name = "a" * 200  # Very long app name
@@ -334,7 +334,7 @@ class TestIntegrationWorkflows:
         long_value = "flatpak" * 1000  # Very long preference value
         result = manager.set_preference("test", long_value)
         # Long value may fail due to validation (must be auto/flatpak/system)
-        assert result is True or result is False  # Depends on validation strictness
+        assert isinstance(result, bool)  # Depends on validation strictness
 
 
 if __name__ == "__main__":

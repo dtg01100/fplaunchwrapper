@@ -419,7 +419,7 @@ class TestWrapperGeneratorReal:
         result = gen.generate_wrapper("....")
 
         # May succeed or fail depending on sanitization, just verify no crash
-        assert result is True or result is False
+        assert isinstance(result, bool)
 
     def test_generate_wrapper_name_collision(self) -> None:
         """Test generate_wrapper() handles name collisions."""
