@@ -16,8 +16,7 @@ from typing import Any
 
 from .config_constants import HOOK_FAILURE_MODES
 from .config_models import AppPreferences, WrapperConfig
-from .config_validation import PYDANTIC_AVAILABLE
-
+from .config_validation import PYDANTIC_AVAILABLE, PydanticAppPreferences
 BaseModel: Any
 Field: Any
 ValidationError: Any
