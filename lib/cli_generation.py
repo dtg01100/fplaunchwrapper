@@ -35,8 +35,8 @@ def generate(ctx: "Context", bin_dir: str | Path | None) -> int:
         emit_mode=ctx.obj.get("emit", False),
         emit_verbose=ctx.obj.get("emit_verbose", False),
     )
-    return generator.run()
-
+    result: int = generator.run()
+    return result
 
 @click.command(name="list")
 @click.argument("app_name", required=False)

@@ -31,4 +31,4 @@ def run_crontab(
     }
     if input_text is not None:
         kwargs["input"] = input_text
-    return subprocess.run(cmd, **kwargs)  # type: ignore[arg-type]
+    return subprocess.run(cmd, **kwargs)

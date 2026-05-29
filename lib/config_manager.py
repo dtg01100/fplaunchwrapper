@@ -89,9 +89,7 @@ from .paths import (  # noqa: E402
 try:
     from .config_validation import PydanticWrapperConfig
 except ImportError:
-    PydanticWrapperConfig = None
-
-
+    PydanticWrapperConfig = None  # type: ignore[assignment, misc]
 class EnhancedConfigManager:
     """Enhanced configuration management with type safety, validation, migration, and templating support."""
 

@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Pydantic validation models for fplaunchwrapper configuration.
-
-These models are only available when pydantic is installed.
-"""
+"""Pydantic validation models for fplaunchwrapper configuration."""
 
 from __future__ import annotations
 
@@ -12,51 +9,54 @@ from typing import Any
 
 from .config_constants import HOOK_FAILURE_MODES
 
-# Pydantic is optional. Use Any for all pydantic types to avoid static type conflicts.
-# This allows the module to work whether pydantic is installed or not.
-BaseModel: Any
-Field: Any
-field_validator: Any
+# Pydantic is optional. Provide shims when not available.
+PYDANTIC_AVAILABLE = False
+BaseModel: Any = object
+Field: Any = Any
+field_validator: Any = Any
 
-try:
-    from pydantic import Field as _Field
-    from pydantic import field_validator as _field_validator
 
-    Field = _Field
-    field_validator = _field_validator
-except ImportError:
-    # Pydantic is optional. Provide minimal shims.
+def _create_field_shim() -> Any:
+    """Create a minimal Field shim for non-pydantic environments."""
     class _RuntimeField:
         def __init__(self, *args, **kwargs):
-            pass
+            self.default = kwargs.get("default")
+            self.default_factory = kwargs.get("default_factory")
+            self.pattern = kwargs.get("pattern")
+            self.ge = kwargs.get("ge")
 
         def __call__(self, *args, **kwargs):
             return _RuntimeField()
 
+    return _RuntimeField()
+
+
+def _create_field_validator_shim() -> Any:
+    """Create a minimal field_validator shim for non-pydantic environments."""
     class _RuntimeFieldValidator:
         def __init__(self, *args, **kwargs):
-            pass
+            self.fields = args[0] if args else []
 
-        def __call__(self, *args, **kwargs):
-            return _RuntimeFieldValidator()
+        def __call__(self, func):
+            return func
 
-    Field = _RuntimeField
-    field_validator = _RuntimeFieldValidator
+    return _RuntimeFieldValidator()
 
 
-# Check if pydantic is available at runtime
-PYDANTIC_AVAILABLE: bool
+# Try to import pydantic
 try:
+    from pydantic import Field as _Field
     from pydantic import BaseModel as _BaseModel
+    from pydantic import field_validator as _field_validator
 
     BaseModel = _BaseModel
+    Field = _Field
+    field_validator = _field_validator
     PYDANTIC_AVAILABLE = True
 except ImportError:
-    # Minimal shim when pydantic is not available
-    class BaseModel:
-        pass
-
-    PYDANTIC_AVAILABLE = False
+    # Pydantic not available - use shims
+    Field = _create_field_shim()
+    field_validator = _create_field_validator_shim()
 
 
 if PYDANTIC_AVAILABLE:
@@ -111,8 +111,6 @@ if PYDANTIC_AVAILABLE:
         @classmethod
         def validate_script_path(cls, v):
             if v:
-                # Substitute template variables before checking existence
-                # This handles paths like ${HOME}/scripts/pre-launch.sh
                 substituted = v
                 for var_name, var_value in [
                     ("HOME", str(Path.home())),
@@ -131,19 +129,15 @@ if PYDANTIC_AVAILABLE:
                     substituted = substituted.replace(f"${{{var_name}}}", var_value)
                     substituted = substituted.replace(f"${var_name}", var_value)
 
-                # Check if script file exists after template substitution
                 try:
                     if not Path(substituted).is_file():
                         msg = f"Script file does not exist: {v} (resolved: {substituted})"
                         raise ValueError(msg)
                 except PermissionError as exc:
-                    # Can't check file existence - treat as if it doesn't exist
                     msg = f"Script file does not exist or is not accessible: {v}"
                     raise ValueError(msg) from exc
-                # Note: We resolve the path BEFORE the loop to catch symlinks that might
-                # point outside sensitive directories (e.g., /bin -> /usr/bin)
+
                 script_path = Path(substituted).resolve()
-                # Define sensitive directories that scripts should not access
                 sensitive_dirs = [
                     Path("/etc"),
                     Path("/usr"),
@@ -155,25 +149,18 @@ if PYDANTIC_AVAILABLE:
                     Path("/dev"),
                     Path("/root"),
                 ]
-                # Check if script is in a sensitive directory
                 for sensitive_dir in sensitive_dirs:
-                    # Resolve both paths so that symlinked system directories
-                    # (e.g. /root -> /var/roothome) are correctly matched.
                     resolved_sensitive = sensitive_dir.resolve()
                     in_sensitive = False
                     try:
                         script_path.relative_to(resolved_sensitive)
                         in_sensitive = True
                     except (ValueError, PermissionError):
-                        # relative_to() raises ValueError when path is not under
-                        # resolved_sensitive — that is the expected "not a match" case.
-                        # PermissionError can occur when stat() fails on inaccessible dirs
-                        # like /root when running as non-root user.
                         pass
                     if in_sensitive:
                         msg = f"Script path is in a sensitive system directory: {v}"
                         raise ValueError(msg)
-                # Additional check: ensure script is executable
+
                 if not os.access(substituted, os.X_OK):
                     msg = f"Script file is not executable: {v} (resolved: {substituted})"
                     raise ValueError(msg)
@@ -194,36 +181,38 @@ if PYDANTIC_AVAILABLE:
         active_profile: str = Field(default="default")
         permission_presets: dict[str, list[str]] = Field(default_factory=dict)
         schema_version: int = Field(default=1, ge=0)
-        cron_interval: int = Field(default=6, ge=1)  # Minimum 1 hour interval
-        enable_notifications: bool = Field(
-            default=True,
-        )  # Enable desktop notifications for update failures
-        # Global hook failure mode defaults
+        cron_interval: int = Field(default=6, ge=1)
+        enable_notifications: bool = Field(default=True)
         hook_failure_mode_default: str = Field(default="warn")
-        pre_launch_failure_mode_default: str | None = Field(default=None)
-        post_launch_failure_mode_default: str | None = Field(default=None)
+        pre_launch_failure_mode_default: str = Field(default="abort")
+        post_launch_failure_mode_default: str = Field(default="warn")
+        hook_failure_modes: dict[str, str] = Field(default_factory=dict)
+        allow_portal_fallback: bool = Field(default=True)
+        prefer_portal: bool = Field(default=False)
+        verify_launches: bool = Field(default=True)
+        launch_timeout: int = Field(default=30, ge=1)
+        notification_level: str = Field(
+            default="info",
+            pattern="^(debug|info|warning|error|none)$",
+        )
+        log_rotation_size: int = Field(default=10, ge=1)
+        log_retention_days: int = Field(default=7, ge=1)
+        wrapper_template: str = Field(default="")
+        custom_env_prefix: str = Field(default="")
+        enable_profiling: bool = Field(default=False)
 
-        model_config = {"extra": "forbid"}
-
-        @field_validator("hook_failure_mode_default")
+        @field_validator("log_level")
         @classmethod
-        def validate_hook_failure_mode_default(cls, v):
-            """Validate hook failure mode values."""
-            if v is None or v == "":
-                return "warn"
-            if v not in HOOK_FAILURE_MODES:
-                msg = f"Invalid failure mode '{v}'. Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
+        def validate_log_level(cls, v):
+            if v not in ("DEBUG", "INFO", "WARN", "ERROR"):
+                msg = f"Invalid log level '{v}'. Must be one of: DEBUG, INFO, WARN, ERROR"
                 raise ValueError(msg)
             return v
 
-        @field_validator(
-            "pre_launch_failure_mode_default",
-            "post_launch_failure_mode_default",
-        )
+        @field_validator("cron_interval")
         @classmethod
-        def validate_optional_failure_mode(cls, v):
-            """Validate optional hook failure mode values."""
-            if v is not None and v not in HOOK_FAILURE_MODES:
-                msg = f"Invalid failure mode '{v}'. Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
+        def validate_cron_interval(cls, v):
+            if v < 1:
+                msg = f"Invalid cron interval '{v}'. Must be at least 1 hour"
                 raise ValueError(msg)
             return v
