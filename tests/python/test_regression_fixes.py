@@ -49,7 +49,7 @@ class TestValidateScriptPathSecurityBypass:
     )
     def test_sensitive_directories_are_rejected(self, pydantic_app_prefs_class, path):
         """Scripts in sensitive system directories must raise ValueError."""
-        from pydantic import ValidationError
+        from lib.config_manager import ValidationError
         # Patch Path.is_file() so the sensitive-dir guard is the only thing
         # standing between us and a ValidationError. Path.is_file() internally
         # uses stat().st_mode, so we patch pathlib.Path.is_file directly.
