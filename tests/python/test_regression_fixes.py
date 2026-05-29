@@ -24,18 +24,16 @@ import pytest
 
 class TestValidateScriptPathSecurityBypass:
     """validate_script_path must reject scripts in sensitive directories."""
-
     @pytest.fixture()
     def pydantic_app_prefs_class(self):
         """Return PydanticAppPreferences or skip if pydantic is unavailable."""
         try:
-            # Access the inner class through the module-level attribute
             import lib.config_manager as cm
-
+            if cm.PydanticAppPreferences is None:
+                pytest.skip("PydanticAppPreferences not available (pydantic not installed)")
             return cm.PydanticAppPreferences
         except (ImportError, AttributeError):
             pytest.skip("PydanticAppPreferences not available")
-
     @pytest.mark.parametrize(
         "path",
         [
