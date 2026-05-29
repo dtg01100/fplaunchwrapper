@@ -54,7 +54,7 @@ def notify_send_available() -> bool:
             capture_output=True,
             text=True,
         )
-        return result.returncode == 0
+        return not result.returncode
     except Exception:
         return False
 
@@ -109,7 +109,7 @@ def send_notification(
             safe_message,
         ]
         result = subprocess.run(cmd, check=False, capture_output=True, text=True)
-        return result.returncode == 0
+        return not result.returncode
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.exception("Failed to send notification: %s", e)

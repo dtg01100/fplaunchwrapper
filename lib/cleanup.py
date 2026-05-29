@@ -28,6 +28,7 @@ from .paths import (
     get_default_data_dir,
     get_systemd_unit_dir,
 )
+from .subprocess_helpers import run_crontab, run_systemctl
 
 is_wrapper_file: Callable[[str | Path], bool] | None = None
 UTILS_AVAILABLE = False
@@ -125,31 +126,6 @@ class WrapperCleanup(LoggingMixin):
             "preferences": [],
             "data_files": [],
         }
-
-    def _run_systemctl(self, *args: str, timeout: int = 30) -> subprocess.CompletedProcess:
-        """Run a systemctl command with common options."""
-        return subprocess.run(
-            ["systemctl", "--user"] + list(args),
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-
-    def _run_crontab(
-        self, *args: str, input_text: str | None = None, timeout: int = 10
-    ) -> subprocess.CompletedProcess[str]:
-        """Run a crontab command with common options."""
-        cmd = ["crontab"] + list(args)
-        kwargs: dict[str, str | bool | int | None] = {
-            "check": False,
-            "capture_output": True,
-            "text": True,
-            "timeout": timeout,
-        }
-        if input_text is not None:
-            kwargs["input"] = input_text
-        return subprocess.run(cmd, **kwargs)  # type: ignore[arg-type]
 
     def _get_systemd_unit_dir(self) -> Path:
         """Get systemd user unit directory."""
@@ -291,7 +267,7 @@ class WrapperCleanup(LoggingMixin):
             return
 
         try:
-            result = self._run_crontab("-l")
+            result = run_crontab("-l")
             if result.returncode == 0:
                 # Look for any cron entries related to fplaunchwrapper
                 cron_lines = []
@@ -336,7 +312,7 @@ class WrapperCleanup(LoggingMixin):
         if not crontab_path:
             return False
         try:
-            result = self._run_crontab("-l")
+            result = run_crontab("-l")
             if result.returncode == 0:
                 return "fplaunch-generate" in str(result.stdout)
         except (subprocess.CalledProcessError, OSError):
@@ -480,21 +456,21 @@ class WrapperCleanup(LoggingMixin):
         if systemctl_path:
             self.log("Stopping and disabling systemd units...")
             if not self.dry_run:
-                self._run_systemctl(
+                run_systemctl(
                     "stop",
                     "fplaunch-wrapper.path",
                     "fplaunch-wrapper.timer",
                     "fplaunch-wrapper.service",
                 )
 
-                self._run_systemctl(
+                run_systemctl(
                     "disable",
                     "fplaunch-wrapper.path",
                     "fplaunch-wrapper.timer",
                     "fplaunch-wrapper.service",
                 )
 
-                self._run_systemctl("daemon-reload")
+                run_systemctl("daemon-reload")
 
         for unit_path in self.cleanup_items["systemd_units"]:
             self._remove_file(unit_path, f"Removing systemd unit: {unit_path}")
@@ -509,13 +485,13 @@ class WrapperCleanup(LoggingMixin):
             self.log("Removing cron entries...")
             if not self.dry_run:
                 try:
-                    result = self._run_crontab("-l")
+                    result = run_crontab("-l")
                     if result.returncode == 0:
                         current_cron = result.stdout
                         new_cron = "\n".join(
                             line for line in current_cron.split("\n") if "fplaunch" not in line
                         )
-                        self._run_crontab("-", input_text=new_cron)
+                        run_crontab("-", input_text=new_cron)
                 except (subprocess.CalledProcessError, OSError):
                     pass
 

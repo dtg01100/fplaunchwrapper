@@ -340,6 +340,7 @@ def remove(ctx: click.Context, name: str, force: bool) -> int:
     """Remove a wrapper by name."""
     # Validate wrapper name to prevent OSError: File name too long
     from lib.validation import validate_wrapper_name, MAX_CLI_WRAPPER_NAME
+
     is_valid, error_msg = validate_wrapper_name(name, max_total_length=MAX_CLI_WRAPPER_NAME)
     if not is_valid:
         console_err.print(f"[red]Error:[/red] {error_msg}")
@@ -422,6 +423,7 @@ def set_pref(ctx: click.Context, wrapper_name: str, preference: str) -> int:
     """Set launch preference for a wrapper (system|flatpak or a Flatpak ID)."""
     # Validate wrapper name to prevent OSError: File name too long
     from lib.validation import validate_wrapper_name, MAX_CLI_WRAPPER_NAME
+
     is_valid, error_msg = validate_wrapper_name(wrapper_name, max_total_length=MAX_CLI_WRAPPER_NAME)
     if not is_valid:
         console_err.print(f"[red]Error:[/red] {error_msg}")
@@ -498,7 +500,7 @@ def _run_systemd_setup(
     try:
         if hasattr(setup, "run"):
             result = setup.run()
-            return 0 if result == 0 else 1
+            return 0 if not result else 1
         if hasattr(setup, "install_systemd_units"):
             result = setup.install_systemd_units()
             return 0 if result else 1
@@ -602,7 +604,7 @@ def _systemctl_command(
     if unit:
         cmd.append(unit)
     result = subprocess.run(cmd, check=False, timeout=30)
-    return 0 if result.returncode == 0 else 1
+    return 0 if not result.returncode else 1
 
 
 @systemd_group.command(name="start")
@@ -651,7 +653,7 @@ def systemd_logs(ctx: click.Context) -> int:
         console.print(result.stdout)
     if result.returncode != 0 and result.stderr:
         console_err.print(result.stderr)
-    return 0 if result.returncode == 0 else 1
+    return 0 if not result.returncode else 1
 
 
 @systemd_group.command(name="list")

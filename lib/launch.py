@@ -79,6 +79,7 @@ def is_test_environment_launch() -> bool:
     return False
 
 
+# pylint: disable=too-many-instance-attributes
 class AppLauncher:
     """Launch Flatpak applications with preference handling."""
 
@@ -535,7 +536,7 @@ class AppLauncher:
         Returns the subprocess result.
         """
         if self.debug:
-            logger.debug("Launching: %s", ' '.join(cmd))
+            logger.debug("Launching: %s", " ".join(cmd))
 
         if self.env:
             return subprocess.run(cmd, capture_output=False, env=self.env)

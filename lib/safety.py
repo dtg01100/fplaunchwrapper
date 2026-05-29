@@ -88,11 +88,7 @@ def validate_flatpak_id(flatpak_id: str) -> bool:
     if "." not in flatpak_id:
         return False
 
-    if (
-        flatpak_id.startswith(".")
-        or flatpak_id.startswith("-")
-        or flatpak_id.startswith("_")
-    ):
+    if flatpak_id.startswith(".") or flatpak_id.startswith("-") or flatpak_id.startswith("_"):
         return False
 
     if flatpak_id.endswith("."):
@@ -135,21 +131,16 @@ def _is_direct_browser_launch(app_name: str) -> bool:
     return app_name.lower() in browser_names
 
 
-def safe_launch_check(
-    app_name: str, wrapper_path: str | Path | None = None
-) -> bool:
+def safe_launch_check(app_name: str, wrapper_path: str | Path | None = None) -> bool:
     """Perform safety checks before launching an application."""
     if wrapper_path:
-        wrapper_path_obj = (
-            Path(wrapper_path) if isinstance(wrapper_path, str) else wrapper_path
-        )
+        wrapper_path_obj = Path(wrapper_path) if isinstance(wrapper_path, str) else wrapper_path
         if is_dangerous_wrapper(wrapper_path_obj):
             logging.error("safety: blocked dangerous wrapper: %s", wrapper_path)
             return False
 
     if is_test_environment():
         if _is_direct_browser_launch(app_name):
-
             logging.warning(
                 "safety: blocked direct browser launch in test environment: %s",
                 app_name,

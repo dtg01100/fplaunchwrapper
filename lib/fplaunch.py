@@ -22,6 +22,7 @@ def main() -> int:
         return 1
     except ImportError as e:
         import os
+
         sys.stderr.write(
             f"fplaunchwrapper: failed to import CLI module: {e}\n"
             f"  PYTHONPATH={os.environ.get('PYTHONPATH', '<unset>')}\n"

@@ -47,17 +47,17 @@ def validate_wrapper_name(
 
     # Wrapper names must be valid POSIX filename
     # Invalid characters: / \0 and path separators
-    invalid_chars = ['/', '\\', '\0']
+    invalid_chars = ["/", "\\", "\0"]
     for char in invalid_chars:
         if char in name:
             return False, f"Invalid character in wrapper name: '{char}'"
 
     # Names shouldn't start with - (often interpreted as options)
-    if name.startswith('-'):
+    if name.startswith("-"):
         return False, "Wrapper name cannot start with hyphen"
 
     # Hidden files (starting with .) should be handled carefully
-    if name.startswith('.') and len(name) > 1:
+    if name.startswith(".") and len(name) > 1:
         # Allow . to work as wrapper name, but warn about hidden files
         # This is a security consideration - hidden wrappers can be unexpected
         pass

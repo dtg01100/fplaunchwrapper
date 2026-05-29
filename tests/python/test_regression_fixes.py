@@ -50,19 +50,17 @@ class TestValidateScriptPathSecurityBypass:
     def test_sensitive_directories_are_rejected(self, pydantic_app_prefs_class, path):
         """Scripts in sensitive system directories must raise ValueError."""
         from pydantic import ValidationError
-
-        # Patch file-system checks so the sensitive-dir guard is the only thing
-        # standing between us and a ValidationError.
-        with patch("os.path.isfile", return_value=True), patch("os.access", return_value=True):
+        # Patch Path.is_file() so the sensitive-dir guard is the only thing
+        # standing between us and a ValidationError. Path.is_file() internally
+        # uses stat().st_mode, so we patch pathlib.Path.is_file directly.
+        with patch.object(Path, "is_file", return_value=True):
             with pytest.raises(ValidationError) as exc_info:
                 pydantic_app_prefs_class(pre_launch_script=path)
-
             assert "sensitive system directory" in str(exc_info.value)
-
     def test_user_home_script_is_accepted(self, pydantic_app_prefs_class):
         """Scripts in the user's home directory should not be rejected."""
         home = str(Path.home() / ".local" / "bin" / "pre_launch.sh")
-        with patch("os.path.isfile", return_value=True), patch("os.access", return_value=True):
+        with patch.object(Path, "is_file", return_value=True), patch("os.access", return_value=True):
             # Should not raise
             obj = pydantic_app_prefs_class(pre_launch_script=home)
             assert obj.pre_launch_script == home

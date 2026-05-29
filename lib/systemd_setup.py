@@ -21,6 +21,8 @@ from .validation import check_path_traversal, validate_app_id
 CRON_DEFAULT_HOUR = 0
 CRON_DEFAULT_INTERVAL = 6
 
+# pylint: disable=too-many-instance-attributes
+
 
 class SystemdSetup(LoggingMixin):
     """Set up systemd units for automatic wrapper management."""
@@ -171,8 +173,11 @@ WantedBy=timers.target
             if line.strip() and not line.strip().startswith("#"):
                 parts = line.split()
                 cron_hour_match = str(CRON_DEFAULT_HOUR)
-                if (len(parts) >= 6 and parts[0] == cron_hour_match
-                        and parts[1] == "*/{}".format(cron_interval)):
+                if (
+                    len(parts) >= 6
+                    and parts[0] == cron_hour_match
+                    and parts[1] == "*/{}".format(cron_interval)
+                ):
                     cron_script_path = " ".join(parts[5:])
                     if str(cron_script) in cron_script_path or cron_script.name in cron_script_path:
                         return True

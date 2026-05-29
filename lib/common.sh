@@ -36,7 +36,8 @@ _call_python_util() {
 error_exit() {
     local message="$1"
     local exit_code="${2:-1}"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     # Log error to stderr with timestamp
     echo "[$timestamp] ERROR: $message" >&2
@@ -101,7 +102,8 @@ safe_file_operation() {
 log_message() {
     local level="$1"
     local message="$2"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     # Log to stderr with level prefix
     echo "[$timestamp] [$level]: $message" >&2
@@ -135,8 +137,10 @@ enable_debug_mode() {
     debug_log "  HOME: ${HOME:-<not set>}"
     # Sanitize PATH for security (show only first and last components)
     if [ -n "${PATH:-}" ]; then
-        local first_path=$(echo "$PATH" | cut -d: -f1)
-        local last_path=$(echo "$PATH" | cut -d: -f-1)
+        local first_path
+        first_path=$(echo "$PATH" | cut -d: -f1)
+        local last_path
+        last_path=$(echo "$PATH" | cut -d: -f-1)
         if [ "$first_path" = "$last_path" ]; then
             debug_log "  PATH: $first_path"
         else
@@ -401,8 +405,10 @@ acquire_lock() {
     local pidfile="$lock_dir/$lock_name.pid"
     
     # Try to acquire lock with timeout using reliable timing
-    local start_time=$(date +%s)
-    local end_time=$((start_time + timeout_seconds))
+    local start_time
+    start_time=$(date +%s)
+    local end_time
+    end_time=$((start_time + timeout_seconds))
     while [ $(date +%s) -lt $end_time ]; do
         # Use mkdir for atomic directory creation as lock
         if mkdir "$lockfile" 2>/dev/null; then
@@ -537,7 +543,8 @@ safe_mktemp() {
     fi
     
     # Last resort: use random number with current timestamp
-    local timestamp=$(date +%s%N)
+    local timestamp
+    timestamp=$(date +%s%N)
     local random_val=$((RANDOM % 100000))
     echo "$tdir/${template//X/0}.${timestamp}.${random_val}"
 }

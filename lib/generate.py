@@ -194,7 +194,7 @@ class WrapperGenerator(LoggingMixin):
             [flatpak_path, "list", "--app", "--columns=application", "--system"],
             "Checking system Flatpak installations",
         )
-        if result_system.returncode == 0:
+        if not result_system.returncode:
             stdout_system = str(result_system.stdout).strip()
             if stdout_system:
                 for line in stdout_system.split("\n"):

@@ -1067,13 +1067,17 @@ if PYDANTIC_AVAILABLE:
                     substituted = substituted.replace(f"${var_name}", var_value)
 
                 # Check if script file exists after template substitution
-                if not Path(substituted).is_file():
-                    msg = f"Script file does not exist: {v} (resolved: {substituted})"
-                    raise ValueError(msg)
-
-                # Security check: ensure script path doesn't access sensitive locations
+                try:
+                    if not Path(substituted).is_file():
+                        msg = f"Script file does not exist: {v} (resolved: {substituted})"
+                        raise ValueError(msg)
+                except PermissionError as exc:
+                    # Can't check file existence - treat as if it doesn't exist
+                    msg = f"Script file does not exist or is not accessible: {v}"
+                    raise ValueError(msg) from exc
+                # Note: We resolve the path BEFORE the loop to catch symlinks that might
+                # point outside sensitive directories (e.g., /bin -> /usr/bin)
                 script_path = Path(substituted).resolve()
-
                 # Define sensitive directories that scripts should not access
                 sensitive_dirs = [
                     Path("/etc"),
@@ -1086,7 +1090,6 @@ if PYDANTIC_AVAILABLE:
                     Path("/dev"),
                     Path("/root"),
                 ]
-
                 # Check if script is in a sensitive directory
                 for sensitive_dir in sensitive_dirs:
                     # Resolve both paths so that symlinked system directories
@@ -1096,14 +1099,15 @@ if PYDANTIC_AVAILABLE:
                     try:
                         script_path.relative_to(resolved_sensitive)
                         in_sensitive = True
-                    except ValueError:
+                    except (ValueError, PermissionError):
                         # relative_to() raises ValueError when path is not under
                         # resolved_sensitive — that is the expected "not a match" case.
+                        # PermissionError can occur when stat() fails on inaccessible dirs
+                        # like /root when running as non-root user.
                         pass
                     if in_sensitive:
                         msg = f"Script path is in a sensitive system directory: {v}"
                         raise ValueError(msg)
-
                 # Additional check: ensure script is executable
                 if not os.access(substituted, os.X_OK):
                     msg = f"Script file is not executable: {v} (resolved: {substituted})"
