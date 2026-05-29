@@ -3,15 +3,10 @@
 
 from __future__ import annotations
 
-import logging
-
 import click
 
-# Use shared import_handler from cli_generation (imported via cli_commands)
 from lib.cli_generation import import_handler
-from lib.cli_utils import console, console_err
-
-logger = logging.getLogger(__name__)
+from lib.cli_imports import console, console_err
 
 
 @click.group(name="presets", invoke_without_command=True)
@@ -24,7 +19,7 @@ def presets_group(ctx: "click.Context") -> None:
 
 @presets_group.command(name="list")
 @click.pass_context
-def presets_list(ctx: "click.Context") -> int:
+def presets_list(ctx: "click.Context") -> int:  # pylint: disable=W0613
     """List available permission presets."""
     create_config_manager = import_handler.require(
         "lib.config_manager",
@@ -44,7 +39,7 @@ def presets_list(ctx: "click.Context") -> int:
 @presets_group.command(name="get")
 @click.argument("preset_name", required=False)
 @click.pass_context
-def presets_get(ctx: "click.Context", preset_name) -> int:
+def presets_get(ctx: "click.Context", preset_name) -> int:  # pylint: disable=W0613
     """Get a permission preset."""
     if not preset_name:
         raise click.UsageError("PRESET_NAME is required")
@@ -69,7 +64,7 @@ def presets_get(ctx: "click.Context", preset_name) -> int:
 @click.argument("preset_name")
 @click.option("-p", "--permission", multiple=True, help="Add a permission")
 @click.pass_context
-def presets_add(ctx: "click.Context", preset_name: str, permission: tuple[str, ...]) -> int:
+def presets_add(ctx: "click.Context", preset_name: str, permission: tuple[str, ...]) -> int:  # pylint: disable=W0613
     """Add a new permission preset."""
     if not permission:
         console_err.print("[red]Error:[/red] At least one permission is required")

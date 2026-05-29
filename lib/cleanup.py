@@ -49,6 +49,7 @@ console = Console()
 MAX_BACKUP_FILES = 1000
 
 
+# pylint: disable=too-many-instance-attributes
 @dataclass
 class CleanupConfig:
     bin_dir: str | None = None
@@ -79,6 +80,7 @@ class CleanupConfig:
         self.verbose_effective = bool(self.verbose) if self.verbose is not None else False
 
 
+# pylint: disable=too-many-instance-attributes
 class WrapperCleanup(LoggingMixin):
     """Clean up Flatpak wrapper artifacts.
 

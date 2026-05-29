@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 import click
@@ -88,7 +87,7 @@ def clean(ctx: click.Context) -> int:
 @click.command()
 @click.option("--daemon", is_flag=True, help="Run in daemon mode (background)")
 @click.pass_context
-def monitor(ctx: click.Context, daemon: bool) -> int:
+def monitor(ctx: click.Context, daemon: bool) -> int:  # pylint: disable=W0613
     """Start Flatpak monitoring daemon (Python backend)."""
     if ctx.obj.get("emit", False):
         console.print(

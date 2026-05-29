@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .config_constants import HOOK_FAILURE_MODES, HookFailureMode, LaunchMethod
+from .config_constants import HOOK_FAILURE_MODES
 from .config_models import AppPreferences, WrapperConfig
 from .config_validation import PYDANTIC_AVAILABLE
 
@@ -87,9 +87,8 @@ from .paths import (  # noqa: E402
 )
 
 try:
-    from .config_validation import PydanticAppPreferences, PydanticWrapperConfig
+    from .config_validation import PydanticWrapperConfig
 except ImportError:
-    PydanticAppPreferences = None
     PydanticWrapperConfig = None
 
 

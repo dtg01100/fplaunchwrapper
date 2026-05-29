@@ -89,7 +89,7 @@ if PYDANTIC_AVAILABLE:
                     if isinstance(arg, str):
                         if arg.startswith("--"):
                             if "=" in arg:
-                                key, value = arg.split("=", 1)
+                                _, value = arg.split("=", 1)
                                 for char in dangerous_chars:
                                     if char in value:
                                         msg = (

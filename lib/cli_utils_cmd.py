@@ -5,10 +5,7 @@ from __future__ import annotations
 
 import json as json_module
 import logging
-import subprocess
-import sys
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 import click
 from lib.cli_utils import console, console_err
@@ -16,7 +13,9 @@ from lib.cli_generation import import_handler
 
 if TYPE_CHECKING:
     from click import Context
+
 logger = logging.getLogger(__name__)
+
 
 @click.command()
 @click.argument("app_name")
@@ -37,7 +36,7 @@ def info(ctx: "Context", app_name: str) -> int:
 @click.command()
 @click.argument("query", required=False)
 @click.pass_context
-def search(ctx: "Context", query: Optional[str]) -> int:
+def search(ctx: "Context", query: Optional[str]) -> int:  # pylint: disable=W0613
     """Search or discover wrappers. Alias: discover."""
     WrapperManager = import_handler.require("lib.manage", "WrapperManager")
     manager = WrapperManager(
@@ -62,7 +61,7 @@ def discover(ctx: "Context", query: Optional[str]) -> int:
     return int(ctx.invoke(search, query=query))
 
 
-@click.command(name="files")
+@click.command(name="files")  # pylint: disable=R0913
 @click.argument("app_name", required=False)
 @click.option("--all", "show_all", is_flag=True, help="Show all file types")
 @click.option("--wrappers", is_flag=True, help="Show only wrapper files")
@@ -145,7 +144,7 @@ def files(
 @click.pass_context
 def manifest(ctx: "Context", app_name: str, emit: bool) -> int:
     """Show manifest information for a Flatpak application."""
-    from lib.cli import run_command  # lazy import to allow test patching
+    from lib.cli import run_command  # lazy import to allow test patching  # noqa: E501, F401
 
     if not app_name:
         console.print("[red]Error:[/red] APP_NAME is required")
@@ -172,7 +171,7 @@ def manifest(ctx: "Context", app_name: str, emit: bool) -> int:
         return 0
     except click.exceptions.Exit:
         raise
-    except Exception as e:
+    except Exception as e:  # pylint: disable=W0718
         logger.exception("Manifest command failed for %s: %s", app_name, e)
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
@@ -182,7 +181,7 @@ def manifest(ctx: "Context", app_name: str, emit: bool) -> int:
 @click.argument("action", required=False)
 @click.argument("value", required=False)
 @click.pass_context
-def config(ctx: "Context", action: Optional[str], value: Optional[str]) -> int:
+def config(ctx: "Context", action: Optional[str], value: Optional[str]) -> int:  # pylint: disable=W0613
     """Manage fplaunchwrapper configuration.
 
     \b

@@ -3,8 +3,6 @@
 
 from dataclasses import dataclass, field
 
-from .config_constants import HOOK_FAILURE_MODES, HookFailureMode, LaunchMethod
-
 
 @dataclass
 class AppPreferences:

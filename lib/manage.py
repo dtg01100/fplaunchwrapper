@@ -14,8 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from rich.table import Table
-
-from .config_manager import LaunchMethod
+from .config_constants import LaunchMethod
 from .logging_utils import LoggingMixin, console
 from .paths import resolve_bin_dir, ensure_dir
 from .safety import (
