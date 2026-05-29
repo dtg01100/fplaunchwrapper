@@ -187,6 +187,7 @@ if PYDANTIC_AVAILABLE:
         pre_launch_failure_mode_default: str = Field(default="abort")
         post_launch_failure_mode_default: str = Field(default="warn")
         hook_failure_modes: dict[str, str] = Field(default_factory=dict)
+        update_check_interval: int = Field(default=24, ge=1)
         allow_portal_fallback: bool = Field(default=True)
         prefer_portal: bool = Field(default=False)
         verify_launches: bool = Field(default=True)

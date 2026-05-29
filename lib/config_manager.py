@@ -16,7 +16,12 @@ from typing import Any
 
 from .config_constants import HOOK_FAILURE_MODES
 from .config_models import AppPreferences, WrapperConfig
-from .config_validation import PYDANTIC_AVAILABLE, PydanticAppPreferences
+from .config_validation import PYDANTIC_AVAILABLE
+# Conditionally import PydanticAppPreferences when pydantic is available
+try:
+    from .config_validation import PydanticAppPreferences
+except ImportError:
+    PydanticAppPreferences = None  # type: ignore[assignment, misc]
 BaseModel: Any
 Field: Any
 ValidationError: Any
