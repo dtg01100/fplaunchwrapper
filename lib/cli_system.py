@@ -50,6 +50,7 @@ def launch(
         app_name,
         config_dir=ctx.obj.get("config_dir"),
         bin_dir=ctx.obj.get("bin_dir"),
+        verbose=ctx.obj.get("verbose", False),
         hook_failure_mode=resolved_hook_failure,
     )
     return 0 if launcher.launch() else 1

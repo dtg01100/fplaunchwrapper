@@ -272,3 +272,68 @@ def test_manage_aliases_search_and_rm(monkeypatch):
         assert calls.get("list_wrappers")
     finally:
         sys.argv = original_argv
+
+
+def test_launch_propagates_verbose_from_global_context(
+    cli_mod, runner, monkeypatch, tmp_path
+):
+    """Regression: CLI launch must propagate --verbose and --config-dir from
+    global Click context into AppLauncher so launch verbose logging actually
+    fires when the user passes -v on the command line.
+    """
+    calls = {}
+
+    config_dir = tmp_path / "cfg"
+    config_dir.mkdir()
+
+    class FakeLauncher:
+        def __init__(
+            self,
+            app_name,
+            config_dir=None,
+            bin_dir=None,
+            args=None,
+            env=None,
+            verbose=False,
+            debug=False,
+            hook_failure_mode=None,
+        ):
+            calls["init"] = {
+                "app_name": app_name,
+                "config_dir": config_dir,
+                "bin_dir": bin_dir,
+                "verbose": verbose,
+                "hook_failure_mode": hook_failure_mode,
+            }
+
+        def launch(self):
+            calls["launch"] = True
+            return True
+
+    # import_handler.require("lib.launch", "AppLauncher") returns
+    # getattr(lib.launch, "AppLauncher") so patching the module attribute
+    # is the right mock target.
+    monkeypatch.setattr("lib.launch.AppLauncher", FakeLauncher)
+
+    result = runner.invoke(
+        cli_mod.cli,
+        [
+            "--verbose",
+            "--config-dir",
+            str(config_dir),
+            "launch",
+            "firefox",
+            "--abort-on-hook-failure",
+        ],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls["init"] == {
+        "app_name": "firefox",
+        "config_dir": str(config_dir),
+        "bin_dir": None,
+        "verbose": True,
+        "hook_failure_mode": "abort",
+    }
+    assert calls.get("launch") is True
