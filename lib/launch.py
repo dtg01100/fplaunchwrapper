@@ -584,26 +584,35 @@ class AppLauncher:
         Prevent path traversal by ensuring the resolved wrapper path is within
         the configured bin_dir. If the resolved path escapes bin_dir, treat as
         non-existent to avoid using accidental system files like /etc/passwd.
+
+        Fails closed: if the path-safety check itself raises (e.g. unresolvable
+        symlink, ValueError from a non-Path argument), treat the wrapper as
+        missing rather than falling through to the filesystem check. This
+        prevents an unvalidated path from being interpreted as a wrapper.
         """
         wrapper_path = self._get_wrapper_path(app_name)
         try:
             if not self._is_path_safe(wrapper_path, self.bin_dir):
                 return False
         except (OSError, ValueError):
-            pass
+            return False
         return wrapper_path.exists() and os.access(wrapper_path, os.X_OK)
 
     def _find_wrapper(self) -> Path | None:
         """Find the wrapper script for the application.
 
         Ensures the wrapper path does not escape the configured bin_dir.
+
+        Fails closed: if the path-safety check itself raises, return None
+        rather than returning whatever the filesystem reports at an
+        unvalidated path.
         """
         wrapper_path = self._get_wrapper_path()
         try:
             if not self._is_path_safe(wrapper_path, self.bin_dir):
                 return None
         except (OSError, ValueError, KeyError):
-            pass
+            return None
         if wrapper_path.exists() and os.access(wrapper_path, os.X_OK):
             return wrapper_path
         return None

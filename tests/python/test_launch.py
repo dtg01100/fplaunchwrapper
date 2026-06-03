@@ -1995,7 +1995,12 @@ class TestWrapperExistsFindWrapperExceptions:
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_wrapper_exists_path_safe_exception(self) -> None:
-        """Test _wrapper_exists handles path safety check exception."""
+        """Test _wrapper_exists fails closed when path safety check raises.
+
+        Even when the wrapper file appears to exist and be executable, a
+        safety-check exception must cause _wrapper_exists to return False so
+        we never invoke an unvalidated path (e.g. /etc/passwd).
+        """
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
@@ -2005,15 +2010,21 @@ class TestWrapperExistsFindWrapperExceptions:
             config_dir=str(self.config_dir),
         )
 
-        # Mock _is_path_safe to raise exception
-        with patch.object(launcher, "_is_path_safe", side_effect=ValueError("test")):
+        with patch.object(launcher, "_is_path_safe", side_effect=ValueError("test")), \
+            patch("pathlib.Path.exists", return_value=True), \
+            patch("os.access", return_value=True):
             result = launcher._wrapper_exists("test_app")
 
-            # Should return based on file existence only
-            assert result is False
+        # Fail closed: a safety-check exception must not let the filesystem
+        # check pass.
+        assert result is False
 
     def test_find_wrapper_path_safe_exception(self) -> None:
-        """Test _find_wrapper handles path safety check exception."""
+        """Test _find_wrapper fails closed when path safety check raises.
+
+        Mirrors the _wrapper_exists test: a safety-check exception must not
+        allow an unvalidated path to be returned to the caller.
+        """
         if not LibAppLauncher:
             pytest.skip("LibAppLauncher class not available")
 
@@ -2023,12 +2034,12 @@ class TestWrapperExistsFindWrapperExceptions:
             config_dir=str(self.config_dir),
         )
 
-        # Mock _is_path_safe to raise exception
-        with patch.object(launcher, "_is_path_safe", side_effect=OSError("test")):
+        with patch.object(launcher, "_is_path_safe", side_effect=OSError("test")), \
+            patch("pathlib.Path.exists", return_value=True), \
+            patch("os.access", return_value=True):
             result = launcher._find_wrapper()
 
-            # Should return None
-            assert result is None
+        assert result is None
 
 
 class TestLaunchSafetyCheckFailure:
