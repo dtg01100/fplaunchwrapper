@@ -67,6 +67,7 @@ def profiles_create(ctx: "Context", profile_name: str, copy_from: str | None) ->
         console.print(f"[green]Created profile:[/green] {profile_name}")
         return 0
     except Exception as e:  # pylint: disable=W0718
+        logger.exception("Profile command failed: %s", e)
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
 
@@ -89,6 +90,7 @@ def profiles_switch(ctx: "Context", profile_name: str) -> int:  # pylint: disabl
         console.print(f"[green]Switched to profile:[/green] {profile_name}")
         return 0
     except Exception as e:  # pylint: disable=W0718
+        logger.exception("Profile command failed: %s", e)
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
 
@@ -127,6 +129,7 @@ def profiles_export(ctx: "Context", profile_name: str, output_file: str | None) 
         console.print(f"[green]Exported profile:[/green] {profile_name} to {export_path}")
         return 0
     except Exception as e:  # pylint: disable=W0718
+        logger.exception("Profile command failed: %s", e)
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
 
@@ -152,5 +155,6 @@ def profiles_import(ctx: "Context", input_file: str, profile_name: str | None) -
         console.print(f"[green]Imported profile:[/green] {name} from {import_path}")
         return 0
     except Exception as e:  # pylint: disable=W0718
+        logger.exception("Profile command failed: %s", e)
         console_err.print(f"[red]Error:[/red] {e}")
         return 1

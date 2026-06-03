@@ -21,6 +21,7 @@ from .safety import (
     get_wrapper_id,
     is_wrapper_file,
 )
+from .validation import validate_wrapper_name
 
 
 class WrapperManager(LoggingMixin):
@@ -162,6 +163,11 @@ class WrapperManager(LoggingMixin):
             self.log("Bin directory not set", "error")
             return False
 
+        valid, err = validate_wrapper_name(name)
+        if not valid:
+            self.log(err or "Invalid wrapper name", "error")
+            return False
+
         wrapper_path = self.bin_dir / name
         if not wrapper_path.exists():
             self.log(f"Wrapper not found: {name}", "error")
@@ -212,6 +218,11 @@ class WrapperManager(LoggingMixin):
         """Set launch preference for a wrapper."""
         if self.bin_dir is None:
             self.log("Bin directory not set", "error")
+            return False
+
+        valid, err = validate_wrapper_name(name)
+        if not valid:
+            self.log(err or "Invalid wrapper name", "error")
             return False
 
         valid_preferences = {"system", "flatpak", "auto"}

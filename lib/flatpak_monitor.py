@@ -269,7 +269,7 @@ class FlatpakMonitor:
             logger.info("Flatpak monitor started successfully")
             return True
 
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
             logger.error("Failed to start Flatpak monitor: %s", e, exc_info=True)
             return False
 

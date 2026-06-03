@@ -640,7 +640,7 @@ class AppLauncher:
             if self.verbose:
                 logger.warning("Launch interrupted for %s", self.app_name)
             return False
-        except Exception:
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
             logger.exception("Error launching %s", self.app_name)
             if self.verbose:
                 logger.error("Failed to launch %s", self.app_name)

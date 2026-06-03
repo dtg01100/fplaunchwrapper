@@ -47,6 +47,7 @@ def _sanitize_notification_text(text: str) -> str:
 
 def notify_send_available() -> bool:
     """Check if notify-send command is available on the system."""
+    logger = logging.getLogger(__name__)
     try:
         result = subprocess.run(
             ["which", "notify-send"],
@@ -55,7 +56,8 @@ def notify_send_available() -> bool:
             text=True,
         )
         return not result.returncode
-    except Exception:
+    except (OSError, subprocess.SubprocessError) as e:
+        logger.debug("notify-send availability check failed: %s", e)
         return False
 
 
@@ -110,7 +112,7 @@ def send_notification(
         ]
         result = subprocess.run(cmd, check=False, capture_output=True, text=True)
         return not result.returncode
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         logger = logging.getLogger(__name__)
         logger.exception("Failed to send notification: %s", e)
         print(f"Failed to send notification: {e}", file=sys.stderr)

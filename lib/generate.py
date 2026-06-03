@@ -294,7 +294,7 @@ class WrapperGenerator(LoggingMixin):
                 post_launch_script=_format_escape(post_launch_script),
             )
 
-        except Exception as e:
+        except (OSError, KeyError, ValueError) as e:
             logger.exception("Failed to read wrapper template for %s", app_id)
             raise WrapperGenerationError(
                 app_id,
@@ -362,7 +362,7 @@ class WrapperGenerator(LoggingMixin):
 
         try:
             content = self.create_wrapper_script(wrapper_name, target_flatpak_id)
-        except Exception as e:
+        except (OSError, KeyError, ValueError, WrapperGenerationError) as e:
             logger.exception("Failed to create wrapper for %s", app_id)
             self.log(f"Failed to create wrapper for {app_id}: {e}", "error")
             return False
@@ -391,7 +391,7 @@ class WrapperGenerator(LoggingMixin):
             else:
                 self.log(f"Created wrapper: {wrapper_name}")
             return True
-        except Exception as e:
+        except OSError as e:
             logger.exception("Failed to create wrapper %s", wrapper_name)
             self.log(f"Failed to create wrapper {wrapper_name}: {e}", "error")
             return False
