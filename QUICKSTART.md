@@ -146,7 +146,8 @@ fplaunch generate ~/my-wrappers
 
 **Monitoring issues:**
 ```bash
-uv pip install watchdog
+# Install with the [monitor] extra to enable the watchdog-based daemon
+uv pip install "fplaunchwrapper[monitor]"
 fplaunch systemd enable
 ```
 

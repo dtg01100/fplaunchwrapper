@@ -26,12 +26,15 @@ classifiers = [
 dependencies = [
     # Cross-platform directory handling (stdlib pathlib used directly)
     "platformdirs>=3.0.0",
-    "watchdog>=3.0.0",
     "click>=8.1.0",
     "rich>=13.0.0",
 ]
 
 [project.optional-dependencies]
+monitor = [
+    # Filesystem monitoring (used by `fplaunch monitor` daemon)
+    "watchdog>=3.0.0",
+]
 robustness = [
     "tomli>=2.0.0",
     "tomli-w>=1.0.0",
@@ -53,6 +56,7 @@ dev = [
     "flake8>=6.0.0",
     "pylint>=3.0.0",
     "pydantic>=2.0.0",
+    "fplaunchwrapper[monitor]",
 ]
 security = [
     "cryptography>=41.0.0",
@@ -63,7 +67,7 @@ integration = [
     "xvfbwrapper>=0.2.9",
 ]
 all = [
-    "fplaunchwrapper[robustness,advanced,dev,security,integration]",
+    "fplaunchwrapper[monitor,robustness,advanced,dev,security,integration]",
 ]
 
 [project.urls]
@@ -186,16 +190,6 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = false
 strict_equality = true
-
-[[tool.mypy.overrides]]
-module = [
-    "watchdog.*",
-    "pydantic.*",
-    "tomli.*",
-    "click.*",
-    "rich.*",
-]
-ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100

@@ -341,7 +341,7 @@ Test markers: `@pytest.mark.slow`, `@pytest.mark.integration`, `@pytest.mark.sec
 | click >= 8.1.0 | CLI framework |
 | rich >= 13.0.0 | Enhanced terminal output |
 | platformdirs >= 3.0.0 | XDG directory handling |
-| watchdog >= 3.0.0 | Filesystem monitoring |
+| watchdog >= 3.0.0 | Filesystem monitoring (optional, install via `fplaunchwrapper[monitor]`) |
 
 ### Optional
 
