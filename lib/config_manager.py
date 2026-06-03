@@ -271,6 +271,7 @@ class EnhancedConfigManager:
         self.config.bin_dir = validated_config.bin_dir
         self.config.config_dir = validated_config.config_dir
         self.config.data_dir = validated_config.data_dir
+        self.config.active_profile = validated_config.active_profile
         self.config.debug_mode = validated_config.debug_mode
         self.config.log_level = validated_config.log_level
         self.config.blocklist = validated_config.blocklist
@@ -312,6 +313,9 @@ class EnhancedConfigManager:
     def _apply_unvalidated_config(self, data: dict[str, Any]) -> None:
         """Apply configuration without Pydantic validation (fallback)."""
         self.config.bin_dir = data.get("bin_dir", self.config.bin_dir)
+        self.config.active_profile = data.get(
+            "active_profile", self.config.active_profile
+        )
         self.config.debug_mode = data.get("debug_mode", self.config.debug_mode)
         self.config.log_level = data.get("log_level", self.config.log_level)
         self.config.cron_interval = data.get("cron_interval", self.config.cron_interval)
@@ -648,7 +652,14 @@ class EnhancedConfigManager:
                     if TOML_AVAILABLE:
                         with Path(profile_file).open("rb") as f:
                             data = tomli.load(f)
+                        # Preserve active_profile: the profile's persisted
+                        # data (e.g. from export_profile/import_profile) may
+                        # contain an "active_profile" field with a different
+                        # value, but the explicit set above is what we just
+                        # asked for and must not be clobbered.
+                        saved_active_profile = self.config.active_profile
                         self._parse_config_data(data)
+                        self.config.active_profile = saved_active_profile
                     return True
                 except (OSError, ValueError):
                     return False

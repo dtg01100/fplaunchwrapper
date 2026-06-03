@@ -106,6 +106,24 @@ class TestProfileCLICommands:
             success = manager.switch_profile("nonexistent")
             assert success is False
 
+    def test_switch_profile_persists_across_instances(self, temp_config_dir):
+        """Regression: switching profiles must persist to a new manager instance.
+
+        The on-disk active_profile was being ignored on reload, so every fresh
+        EnhancedConfigManager() silently reset to "default" even when the
+        config file showed otherwise.
+        """
+        with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
+            manager = EnhancedConfigManager()
+            assert manager.create_profile("work") is True
+            assert manager.switch_profile("work") is True
+            # Sanity: same instance sees the switch.
+            assert manager.get_active_profile() == "work"
+
+            reloaded_manager = EnhancedConfigManager()
+
+            assert reloaded_manager.get_active_profile() == "work"
+
     def test_get_active_profile(self, temp_config_dir):
         """Test getting active profile."""
         with patch.dict("os.environ", {"XDG_CONFIG_HOME": str(temp_config_dir)}):
