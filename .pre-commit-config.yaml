@@ -12,7 +12,7 @@ repos:
     rev: 24.1.1
     hooks:
       - id: black
-        language_version: python3.8
+        language_version: python3.12
 
   # Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -56,7 +56,7 @@ repos:
 
 # Configuration
 default_language_version:
-  python: python3.8
+  python: python3.12
 
 ci:
   autofix_commit_msg: 'chore: auto-fix linting issues'
