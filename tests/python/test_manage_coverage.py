@@ -446,8 +446,7 @@ class TestWrapperManagerMain:
     def test_main_cleanup_command(self, capsys):
         """Test main() with 'cleanup' command."""
         with patch("sys.argv", ["fplaunch-manage", "cleanup"]):
-            with patch("lib.manage.WrapperManager") as mock_cls:
-                mock_manager = mock_cls.return_value
+            with patch("lib.manage.WrapperManager"):
                 result = main()
         assert result == 0
 
@@ -474,8 +473,7 @@ class TestWrapperManagerMain:
         # We can't easily get to the 'unknown' branch since argparse rejects unknown args,
         # but with no subcommand we hit the list branch.
         with patch("sys.argv", ["fplaunch-manage"]):
-            with patch("lib.manage.WrapperManager") as mock_cls:
-                mock_manager = mock_cls.return_value
+            with patch("lib.manage.WrapperManager"):
                 result = main()
         assert result == 0
 
