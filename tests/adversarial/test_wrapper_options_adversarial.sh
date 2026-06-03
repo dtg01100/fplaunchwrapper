@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 # ⚠️  DANGER: ADVERSARIAL TEST SUITE ⚠️
-# 
+#
 # This test suite is designed to ATTACK and potentially BREAK the system.
 # It actively exploits security vulnerabilities and attempts to compromise the system.
-# 
+#
 # ⚠️  WARNING: This test is UNSAFE and should ONLY be run in:
 #   - Isolated development environments
 #   - Dedicated testing containers
@@ -26,7 +26,7 @@
 #
 # ATTACK VECTORS TESTED:
 # - Command injection through wrapper options
-# - Path traversal via config directory options  
+# - Path traversal via config directory options
 # - Privilege escalation through sandbox editing
 # - Environment variable poisoning
 # - Race conditions in script management
@@ -117,19 +117,19 @@ export CI=1
 # Create isolated test environment
 setup_adversarial_env() {
     local test_home="/tmp/fplaunch-adversarial-test-$$"
-    
+
     # Clean up any existing test directory
     rm -rf "$test_home"
-    
+
     # Create test directory structure with attack surfaces
     mkdir -p "$test_home"/{bin,.config,.local/share/applications,attack-vectors}
-    
+
     # Override environment for test isolation
     export HOME="$test_home"
     export XDG_CONFIG_HOME="$test_home/.config"
     export XDG_DATA_HOME="$test_home/.local/share"
     export PATH="$test_home/bin:$PATH"
-    
+
     # Create malicious flatpak command that logs attacks
     cat > "$test_home/bin/flatpak" << 'EOF'
 #!/usr/bin/env bash
@@ -150,12 +150,12 @@ case "$1" in
 esac
 EOF
     chmod +x "$test_home/bin/flatpak"
-    
+
     # Create attack log
     touch "$test_home/attack-log.txt"
 
     TEST_HOME="$test_home"
-    
+
     echo "$test_home"
 }
 
@@ -179,7 +179,7 @@ create_vulnerable_wrapper() {
     local name="testapp"
     local id="com.test.App"
     local bin_dir="$test_home/bin"
-    
+
     # Create wrapper script with potential vulnerabilities
     cat > "$bin_dir/$name" << EOF
 #!/usr/bin/env bash
@@ -213,7 +213,7 @@ if ! is_interactive; then
             exec "\$dir/\$NAME" "\$@"
         fi
     done
-    
+
     # If no system command found, run flatpak
     exec flatpak run "\$ID" "\$@"
 fi
@@ -380,16 +380,16 @@ fi
 # Default behavior: run flatpak
 exec flatpak run "\$ID" "\$@"
 EOF
-    
+
     chmod +x "$bin_dir/$name"
 }
 
 # ATTACK 1: Command injection through wrapper options
 test_command_injection_attacks() {
     local test_home="$1"
-    
+
     attack "Command injection through wrapper options"
-    
+
     # Test 1: Command injection in help option
     local output
     output=$("$test_home/bin/testapp" --fpwrapper-help '; rm -rf /tmp/test-file' 2>&1 || true)
@@ -398,7 +398,7 @@ test_command_injection_attacks() {
     else
         fail "Command injection in help option not blocked"
     fi
-    
+
     # Test 2: Command injection in info option
     output=$("$test_home/bin/testapp" --fpwrapper-info '| cat /etc/passwd' 2>&1 || true)
     if ! echo "$output" | grep -q "etc/passwd"; then
@@ -406,7 +406,7 @@ test_command_injection_attacks() {
     else
         fail "Command injection in info option not blocked"
     fi
-    
+
     # Test 3: Command injection in config dir option
     output=$("$test_home/bin/testapp" --fpwrapper-config-dir '&& curl malicious.com' 2>&1 || true)
     if ! echo "$output" | grep -q "malicious.com"; then
@@ -419,9 +419,9 @@ test_command_injection_attacks() {
 # ATTACK 2: Path traversal attacks
 test_path_traversal_attacks() {
     local test_home="$1"
-    
+
     attack "Path traversal attacks through config directory"
-    
+
     # Test 1: Basic path traversal
     local output
     output=$("$test_home/bin/testapp" --fpwrapper-config-dir '../../../etc' 2>&1 || true)
@@ -430,7 +430,7 @@ test_path_traversal_attacks() {
     else
         fail "Basic path traversal not blocked"
     fi
-    
+
     # Test 2: URL-encoded path traversal
     output=$("$test_home/bin/testapp" --fpwrapper-config-dir '%2e%2e%2f%2e%2e%2f%2e%2f%2e%2fetc' 2>&1 || true)
     if echo "$output" | grep -q "/tmp/fplaunch-adversarial-test"; then
@@ -438,7 +438,7 @@ test_path_traversal_attacks() {
     else
         fail "URL-encoded path traversal not blocked"
     fi
-    
+
     # Test 3: Null byte injection
     output=$("$test_home/bin/testapp" --fpwrapper-config-dir '/etc/passwd\x00' 2>&1 || true)
     if echo "$output" | grep -q "/tmp/fplaunch-adversarial-test"; then
@@ -451,9 +451,9 @@ test_path_traversal_attacks() {
 # ATTACK 3: Environment variable poisoning
 test_env_poisoning_attacks() {
     local test_home="$1"
-    
+
     attack "Environment variable poisoning attacks"
-    
+
     # Test 1: Poison XDG_CONFIG_HOME
     local output
     XDG_CONFIG_HOME="/etc" output=$("$test_home/bin/testapp" --fpwrapper-info 2>&1 || true)
@@ -462,7 +462,7 @@ test_env_poisoning_attacks() {
     else
         fail "XDG_CONFIG_HOME poisoning not blocked"
     fi
-    
+
     # Test 2: Poison XDG_DATA_HOME
     XDG_DATA_HOME="/etc" output=$("$test_home/bin/testapp" --fpwrapper-config-dir 2>&1 || true)
     if echo "$output" | grep -q "/tmp/fplaunch-adversarial-test"; then
@@ -470,7 +470,7 @@ test_env_poisoning_attacks() {
     else
         fail "XDG_DATA_HOME poisoning not blocked"
     fi
-    
+
     # Test 3: Poison PATH with malicious command
     PATH="/tmp:$PATH" output=$("$test_home/bin/testapp" --fpwrapper-info 2>&1 || true)
     if [ $? -eq 0 ]; then
@@ -483,14 +483,14 @@ test_env_poisoning_attacks() {
 # ATTACK 4: Symlink attacks on configuration files
 test_symlink_attacks() {
     local test_home="$1"
-    
+
     attack "Symlink attacks on configuration files"
-    
+
     # Create malicious symlink
     mkdir -p "$test_home/attack-vectors"
     echo "MALICIOUS CONTENT" > "$test_home/attack-vectors/malicious"
     ln -sf "$test_home/attack-vectors/malicious" "$test_home/.config/flatpak-wrappers/testapp.pref"
-    
+
     # Test if symlink attack is detected/blocked
     local output
     output=$("$test_home/bin/testapp" --fpwrapper-info 2>&1 || true)
@@ -499,7 +499,7 @@ test_symlink_attacks() {
     else
         defense "Symlink attack on preference file blocked"
     fi
-    
+
     # Test symlink attack on script files
     ln -sf "/etc/passwd" "$test_home/attack-vectors/malicious-script"
     output=$("$test_home/bin/testapp" --fpwrapper-set-pre-script "$test_home/attack-vectors/malicious-script" 2>&1 || true)
@@ -513,9 +513,9 @@ test_symlink_attacks() {
 # ATTACK 5: Race condition attacks
 test_race_condition_attacks() {
     local test_home="$1"
-    
+
     attack "Race condition attacks in script management"
-    
+
     # Create a race condition by rapidly creating/removing files
     for i in {1..10}; do
         (
@@ -526,7 +526,7 @@ test_race_condition_attacks() {
         ) &
     done
     wait
-    
+
     # Check if any race condition caused issues
     if [ -f "$test_home/attack-log.txt" ]; then
         local attack_count
@@ -542,9 +542,9 @@ test_race_condition_attacks() {
 # ATTACK 6: Resource exhaustion attacks
 test_resource_exhaustion_attacks() {
     local test_home="$1"
-    
+
     attack "Resource exhaustion attacks"
-    
+
     # Test 1: Extremely long input
     local long_input
     long_input=$(printf 'A%.0s' {1..10000})
@@ -555,7 +555,7 @@ test_resource_exhaustion_attacks() {
     else
         fail "Extremely long input attack not blocked"
     fi
-    
+
     # Test 2: Massive argument list
     local args=()
     for i in {1..1000}; do
@@ -572,9 +572,9 @@ test_resource_exhaustion_attacks() {
 # ATTACK 7: Privilege escalation attempts
 test_privilege_escalation_attacks() {
     local test_home="$1"
-    
+
     attack "Privilege escalation attempts through sandbox editing"
-    
+
     # Test 1: Try to edit sandbox with malicious permissions
     local output
     output=$(echo "--filesystem=/
@@ -585,7 +585,7 @@ test_privilege_escalation_attacks() {
     else
         fail "Sandbox editing allows non-interactive privilege escalation"
     fi
-    
+
     # Test 2: Try YOLO mode without confirmation
     output=$(echo "n" | "$test_home/bin/testapp" --fpwrapper-force-interactive --fpwrapper-sandbox-yolo 2>&1 || true)
     if echo "$output" | grep -q "Cancelled YOLO mode"; then
@@ -593,7 +593,7 @@ test_privilege_escalation_attacks() {
     else
         fail "YOLO mode allows privilege escalation without confirmation"
     fi
-    
+
     # Test 3: Try to override with malicious value
     output=$("$test_home/bin/testapp" --fpwrapper-set-override '../../../bin/sh' 2>&1 || true)
     if echo "$output" | grep -q "Error: Invalid override type"; then
@@ -606,9 +606,9 @@ test_privilege_escalation_attacks() {
 # ATTACK 8: Input validation bypasses
 test_input_validation_bypasses() {
     local test_home="$1"
-    
+
     attack "Input validation bypass attempts"
-    
+
     # Test 1: Unicode attacks
     local output
     output=$("$test_home/bin/testapp" --fpwrapper-info $'\x00\x01\x02\x03' 2>&1 || true)
@@ -617,7 +617,7 @@ test_input_validation_bypasses() {
     else
         fail "Unicode control character attack not blocked"
     fi
-    
+
     # Test 2: Format string attacks
     output=$("$test_home/bin/testapp" --fpwrapper-info '%s%s%s%s%s' 2>&1 || true)
     if [ $? -eq 0 ]; then
@@ -625,7 +625,7 @@ test_input_validation_bypasses() {
     else
         fail "Format string attack not blocked"
     fi
-    
+
     # Test 3: Shell metacharacter injection
     output=$("$test_home/bin/testapp" --fpwrapper-info '`whoami`' 2>&1 || true)
     if ! echo "$output" | grep -q "whoami"; then
@@ -638,9 +638,9 @@ test_input_validation_bypasses() {
 # ATTACK 9: File system attacks
 test_filesystem_attacks() {
     local test_home="$1"
-    
+
     attack "File system attacks through script management"
-    
+
     # Test 1: Try to write to system files
     local output
     output=$("$test_home/bin/testapp" --fpwrapper-set-pre-script '/etc/passwd' 2>&1 || true)
@@ -649,7 +649,7 @@ test_filesystem_attacks() {
     else
         fail "Writing to system files not blocked"
     fi
-    
+
     # Test 2: Try to create scripts in system directories
     output=$("$test_home/bin/testapp" --fpwrapper-set-pre-script '/usr/bin/malicious' 2>&1 || true)
     if echo "$output" | grep -q "Error: Script not found"; then
@@ -657,7 +657,7 @@ test_filesystem_attacks() {
     else
         fail "Script creation in system directories not blocked"
     fi
-    
+
     # Test 3: Try to use relative paths for directory traversal
     output=$("$test_home/bin/testapp" --fpwrapper-set-pre-script '../../../etc/malicious' 2>&1 || true)
     if echo "$output" | grep -q "Error: Script not found"; then
@@ -670,9 +670,9 @@ test_filesystem_attacks() {
 # ATTACK 10: Memory and process attacks
 test_memory_process_attacks() {
     local test_home="$1"
-    
+
     attack "Memory and process attacks"
-    
+
     # Test 1: Fork bomb attack
     local output
     output=$(":(){ :|:& };:" "$test_home/bin/testapp" --fpwrapper-info 2>&1 || true)
@@ -681,7 +681,7 @@ test_memory_process_attacks() {
     else
         fail "Fork bomb attack not blocked"
     fi
-    
+
     # Test 2: Memory exhaustion through large input
     local large_input
     large_input=$(head -c 1000000 /dev/zero | tr '\0' 'A')
@@ -699,14 +699,14 @@ main() {
     echo -e "${PURPLE}ADVERSARIAL Wrapper Options Test Suite${NC}"
     echo -e "${PURPLE}======================================${NC}"
     echo ""
-    
+
     # Setup adversarial test environment
     local test_home
     test_home=$(setup_adversarial_env)
-    
+
     # Create vulnerable wrapper for testing
     create_vulnerable_wrapper "$test_home"
-    
+
     # Run adversarial attacks
     test_command_injection_attacks "$test_home"
     test_path_traversal_attacks "$test_home"
@@ -718,11 +718,11 @@ main() {
     test_input_validation_bypasses "$test_home"
     test_filesystem_attacks "$test_home"
     test_memory_process_attacks "$test_home"
-    
+
     # Cleanup
     cleanup_adversarial_env "$test_home"
     TEST_HOME=""
-    
+
     # Results
     echo ""
     echo -e "${PURPLE}======================================${NC}"
@@ -732,7 +732,7 @@ main() {
     echo -e "${RED}Tests Failed: $FAILED${NC}"
     echo -e "${GREEN}Attacks Blocked: $ATTACKS_BLOCKED${NC}"
     echo -e "${RED}Vulnerabilities Found: $VULNERABILITIES_FOUND${NC}"
-    
+
     if [ $VULNERABILITIES_FOUND -eq 0 ]; then
         echo -e "${GREEN}All attacks blocked! System appears secure.${NC}"
         exit 0

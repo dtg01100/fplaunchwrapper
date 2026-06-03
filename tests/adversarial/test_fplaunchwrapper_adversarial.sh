@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 # ⚠️  DANGER: ADVERSARIAL FPLAUNCHWRAPPER TEST SUITE ⚠️
-# 
+#
 # This test suite ATTACKS fplaunchwrapper code to find security vulnerabilities.
 # It tests if our project properly blocks attacks and validates inputs.
-# 
+#
 # ⚠️  WARNING: This test is UNSAFE and should ONLY be run in:
 #   - Isolated development environments
 #   - Dedicated testing containers
@@ -107,19 +107,19 @@ fi
 # Create isolated test environment
 setup_adversarial_env() {
     local test_home="/tmp/fplaunch-adversarial-test-$$"
-    
+
     # Clean up any existing test directory
     rm -rf "$test_home"
-    
+
     # Create test directory structure
     mkdir -p "$test_home"/{bin,.config,.local/share/applications,attack-vectors}
-    
+
     # Override environment for test isolation
     export HOME="$test_home"
     export XDG_CONFIG_HOME="$test_home/.config"
     export XDG_DATA_HOME="$test_home/.local/share"
     export PATH="$test_home/bin:$PATH"
-    
+
     # Source fplaunchwrapper libraries for testing
     # shellcheck source=../../lib/common.sh disable=SC1091
     source "$PROJECT_ROOT/lib/common.sh"
@@ -131,7 +131,7 @@ setup_adversarial_env() {
     source "$PROJECT_ROOT/lib/env.sh"
     # shellcheck source=../../lib/alias.sh disable=SC1091
     source "$PROJECT_ROOT/lib/alias.sh"
-    
+
     # Create mock flatpak command
     cat > "$test_home/bin/flatpak" << 'EOF'
 #!/usr/bin/env bash
@@ -157,12 +157,12 @@ case "$1" in
 esac
 EOF
     chmod +x "$test_home/bin/flatpak"
-    
+
     # Create attack log
     touch "$test_home/attack-log.txt"
 
     TEST_HOME="$test_home"
-    
+
     echo "$test_home"
 }
 
@@ -183,16 +183,16 @@ trap '[[ -n "${TEST_HOME:-}" ]] && cleanup_adversarial_env "$TEST_HOME"' EXIT IN
 # ATTACK 1: Test validate_home_dir function against attacks
 test_validate_home_dir_attacks() {
     local test_home="$1"
-    
+
     attack "Testing validate_home_dir function against attacks"
-    
+
     # Test 1: Path traversal attack
     if validate_home_dir "/home/user/../../../etc" "test" 2>/dev/null; then
         fail "validate_home_dir allows path traversal"
     else
         defense "validate_home_dir blocks path traversal"
     fi
-    
+
     # Test 2: Symlink attack
     ln -sf /etc "$test_home/symlink-etc"
     if validate_home_dir "$test_home/symlink-etc" "test" 2>/dev/null; then
@@ -200,14 +200,14 @@ test_validate_home_dir_attacks() {
     else
         defense "validate_home_dir blocks symlink to system directory"
     fi
-    
+
     # Test 3: Null byte injection
     if validate_home_dir "/home/user/passwd\x00" "test" 2>/dev/null; then
         fail "validate_home_dir allows null byte injection"
     else
         defense "validate_home_dir blocks null byte injection"
     fi
-    
+
     # Test 4: URL-encoded path traversal
     if validate_home_dir "/home/user/%2e%2e%2f%2e%2e%2f%2e%2fetc" "test" 2>/dev/null; then
         fail "validate_home_dir allows URL-encoded path traversal"
@@ -219,16 +219,16 @@ test_validate_home_dir_attacks() {
 # ATTACK 2: Test is_wrapper_file function against attacks
 test_is_wrapper_file_attacks() {
     local test_home="$1"
-    
+
     attack "Testing is_wrapper_file function against attacks"
-    
+
     # Test 1: Non-file input
     if is_wrapper_file "/dev/null" 2>/dev/null; then
         fail "is_wrapper_file accepts non-file input"
     else
         defense "is_wrapper_file rejects non-file input"
     fi
-    
+
     # Test 2: Symlink attack
     echo "Not a wrapper" > "$test_home/normal-file"
     ln -sf "$test_home/normal-file" "$test_home/wrapper-symlink"
@@ -237,7 +237,7 @@ test_is_wrapper_file_attacks() {
     else
         defense "is_wrapper_file rejects symlink to non-wrapper"
     fi
-    
+
     # Test 3: Empty file
     touch "$test_home/empty-file"
     if is_wrapper_file "$test_home/empty-file" 2>/dev/null; then
@@ -250,9 +250,9 @@ test_is_wrapper_file_attacks() {
 # ATTACK 3: Test wrapper generation against malicious inputs
 test_wrapper_generation_attacks() {
     local test_home="$1"
-    
+
     attack "Testing wrapper generation against malicious inputs"
-    
+
     # Test 1: Command injection in app name
     local malicious_app="testapp; rm -rf /tmp/*"
     if fplaunch-generate "$test_home/bin" 2>/dev/null; then
@@ -265,14 +265,14 @@ test_wrapper_generation_attacks() {
     else
         defense "Wrapper generation fails on malicious input"
     fi
-    
+
     # Test 2: Path traversal in bin directory
     if fplaunch-generate "../../../bin" 2>/dev/null; then
         fail "Wrapper generation allows path traversal in bin directory"
     else
         defense "Wrapper generation blocks path traversal in bin directory"
     fi
-    
+
     # Test 3: Extremely long app name
     local long_name
     long_name=$(printf 'A%.0s' {1..1000})
@@ -288,9 +288,9 @@ test_wrapper_generation_attacks() {
 # ATTACK 4: Test preference management against attacks
 test_preference_management_attacks() {
     local test_home="$1"
-    
+
     attack "Testing preference management against attacks"
-    
+
     # Test 1: Command injection in preference value
     local malicious_pref="system; rm -rf /tmp/*"
     if set_pref "testapp" "$malicious_pref" 2>/dev/null; then
@@ -307,7 +307,7 @@ test_preference_management_attacks() {
     else
         defense "Preference management rejects malicious input"
     fi
-    
+
     # Test 2: Path traversal in app name
     if set_pref "../../../etc/testapp" "system" 2>/dev/null; then
         if [ -f "/etc/testapp.pref" ]; then
@@ -318,7 +318,7 @@ test_preference_management_attacks() {
     else
         defense "Preference management rejects path traversal in app name"
     fi
-    
+
     # Test 3: Null byte injection in preference value
     if set_pref "testapp" "system\x00malicious" 2>/dev/null; then
         local pref_content
@@ -336,9 +336,9 @@ test_preference_management_attacks() {
 # ATTACK 5: Test environment variable management against attacks
 test_env_var_management_attacks() {
     local test_home="$1"
-    
+
     attack "Testing environment variable management against attacks"
-    
+
     # Test 1: Command injection in env var value
     local malicious_env="PATH=/tmp; rm -rf /tmp/*"
     if set_env "testapp" "MALICIOUS_VAR" "$malicious_env" 2>/dev/null; then
@@ -355,7 +355,7 @@ test_env_var_management_attacks() {
     else
         defense "Environment variable management rejects malicious input"
     fi
-    
+
     # Test 2: Path traversal in app name
     if set_env "../../../etc/testapp" "VAR" "value" 2>/dev/null; then
         if [ -f "/etc/testapp.env" ]; then
@@ -366,7 +366,7 @@ test_env_var_management_attacks() {
     else
         defense "Environment variable management rejects path traversal in app name"
     fi
-    
+
     # Test 3: Shell metacharacter injection
     if set_env "testapp" "TEST_VAR" '`whoami`' 2>/dev/null; then
         local env_content
@@ -384,9 +384,9 @@ test_env_var_management_attacks() {
 # ATTACK 6: Test alias management against attacks
 test_alias_management_attacks() {
     local test_home="$1"
-    
+
     attack "Testing alias management against attacks"
-    
+
     # Test 1: Command injection in alias target
     local malicious_target="system; rm -rf /tmp/*"
     if set_alias "testapp" "$malicious_target" 2>/dev/null; then
@@ -403,7 +403,7 @@ test_alias_management_attacks() {
     else
         defense "Alias management rejects malicious input"
     fi
-    
+
     # Test 2: Path traversal in alias name
     if set_alias "../../../etc/testapp" "target" 2>/dev/null; then
         if grep -q "../../../etc/testapp" "$test_home/.config/flatpak-wrappers/aliases"; then
@@ -414,7 +414,7 @@ test_alias_management_attacks() {
     else
         defense "Alias management rejects path traversal in alias name"
     fi
-    
+
     # Test 3: Alias cycle attack
     if set_alias "testapp1" "testapp2" 2>/dev/null && set_alias "testapp2" "testapp1" 2>/dev/null; then
         # Test if cycle is detected
@@ -433,14 +433,14 @@ test_alias_management_attacks() {
 # ATTACK 7: Test wrapper script generation against attacks
 test_wrapper_script_attacks() {
     local test_home="$1"
-    
+
     attack "Testing wrapper script generation against attacks"
-    
+
     # Test 1: Malicious app ID injection
     local malicious_id="com.test.App'; rm -rf /tmp/*; echo '"
     # Create mock flatpak output
     echo "$malicious_id" > "$test_home/mock-flatpak-list"
-    
+
     if fplaunch-generate "$test_home/bin" 2>/dev/null; then
         # Check generated wrapper for malicious content
         local wrapper_file
@@ -455,13 +455,13 @@ test_wrapper_script_attacks() {
     else
         defense "Wrapper script generation rejects malicious app ID"
     fi
-    
+
     # Test 2: Script injection in app name
     local script_name
     # shellcheck disable=SC2034
     script_name=$(echo 'malicious; cat /etc/passwd' | tr -d '\n')
     echo "com.test.App" > "$test_home/mock-flatpak-list"
-    
+
     if fplaunch-generate "$test_home/bin" 2>/dev/null; then
         # Check if script name was sanitized
         local wrapper_files
@@ -479,9 +479,9 @@ test_wrapper_script_attacks() {
 # ATTACK 8: Test installation scripts against attacks
 test_installation_script_attacks() {
     local test_home="$1"
-    
+
     attack "Testing installation scripts against attacks"
-    
+
     # Test 1: Malicious BIN_DIR injection
     local malicious_bin="/tmp; rm -rf /tmp/*"
     if BIN_DIR="$malicious_bin" fplaunch-generate 2>/dev/null; then
@@ -494,7 +494,7 @@ test_installation_script_attacks() {
     else
         defense "Installation rejects malicious BIN_DIR"
     fi
-    
+
     # Test 2: Path traversal in installation directory
     if fplaunch-generate "../../../bin" 2>/dev/null; then
         if [ -f "/bin/wrapper" ]; then
@@ -505,7 +505,7 @@ test_installation_script_attacks() {
     else
         defense "Installation rejects path traversal in directory"
     fi
-    
+
     # Test 3: Environment variable poisoning during installation
     HOME="/etc" fplaunch-generate "$test_home/bin" 2>/dev/null
     if [ -f "/etc/bin/wrapper" ]; then
@@ -518,9 +518,9 @@ test_installation_script_attacks() {
 # ATTACK 9: Test cleanup functions against attacks
 test_cleanup_function_attacks() {
     local test_home="$1"
-    
+
     attack "Testing cleanup functions against attacks"
-    
+
     # Test 1: Malicious config directory
     local malicious_config="/etc; rm -rf /tmp/*"
     CONFIG_DIR="$malicious_config" cleanup_systemd_units 2>/dev/null
@@ -529,7 +529,7 @@ test_cleanup_function_attacks() {
     else
         defense "Cleanup blocks malicious CONFIG_DIR injection"
     fi
-    
+
     # Test 2: Path traversal in cleanup
     cleanup_systemd_units "../../../etc" 2>/dev/null
     if [ -f "/etc/fplaunch-update.service" ]; then
@@ -537,7 +537,7 @@ test_cleanup_function_attacks() {
     else
         defense "Cleanup blocks path traversal"
     fi
-    
+
     # Test 3: Symlink attack in cleanup
     ln -sf /etc "$test_home/fake-config"
     CONFIG_DIR="$test_home/fake-config" cleanup_systemd_units 2>/dev/null
@@ -551,9 +551,9 @@ test_cleanup_function_attacks() {
 # ATTACK 10: Test wrapper execution against attacks
 test_wrapper_execution_attacks() {
     local test_home="$1"
-    
+
     attack "Testing wrapper execution against attacks"
-    
+
     # Create a test wrapper
     cat > "$test_home/bin/testapp" << 'EOF'
 #!/usr/bin/env bash
@@ -587,7 +587,7 @@ if ! is_interactive; then
             exec "$dir/$NAME" "$@"
         fi
     done
-    
+
     # If no system command found, run flatpak
     exec flatpak run "$ID" "$@"
 fi
@@ -755,7 +755,7 @@ fi
 exec flatpak run "$ID" "$@"
 EOF
     chmod +x "$test_home/bin/testapp"
-    
+
     # Test 1: Command injection through wrapper arguments
     local output
     output=$("$test_home/bin/testapp" --fpwrapper-info '; rm -rf /tmp/*' 2>&1 || true)
@@ -764,7 +764,7 @@ EOF
     else
         defense "Wrapper execution blocks command injection in arguments"
     fi
-    
+
     # Test 2: Path traversal through config directory
     output=$("$test_home/bin/testapp" --fpwrapper-config-dir '../../../etc' 2>&1 || true)
     if echo "$output" | grep -q "/etc"; then
@@ -772,7 +772,7 @@ EOF
     else
         defense "Wrapper execution blocks path traversal in config directory"
     fi
-    
+
     # Test 3: Environment variable injection
     local output
     # shellcheck disable=SC2034
@@ -790,11 +790,11 @@ main() {
     echo -e "${PURPLE}ADVERSARIAL fplaunchwrapper Test Suite${NC}"
     echo -e "${PURPLE}======================================${NC}"
     echo ""
-    
+
     # Setup adversarial test environment
     local test_home
     test_home=$(setup_adversarial_env)
-    
+
     # Run adversarial attacks against fplaunchwrapper
     test_validate_home_dir_attacks "$test_home"
     test_is_wrapper_file_attacks "$test_home"
@@ -806,11 +806,11 @@ main() {
     test_installation_script_attacks "$test_home"
     test_cleanup_function_attacks "$test_home"
     test_wrapper_execution_attacks "$test_home"
-    
+
     # Cleanup
     cleanup_adversarial_env "$test_home"
     TEST_HOME=""
-    
+
     # Results
     echo ""
     echo -e "${PURPLE}======================================${NC}"
@@ -820,7 +820,7 @@ main() {
     echo -e "${RED}Tests Failed: $FAILED${NC}"
     echo -e "${GREEN}Attacks Blocked: $ATTACKS_BLOCKED${NC}"
     echo -e "${RED}Vulnerabilities Found: $VULNERABILITIES_FOUND${NC}"
-    
+
     if [ $VULNERABILITIES_FOUND -eq 0 ]; then
         echo -e "${GREEN}All attacks blocked! fplaunchwrapper appears secure.${NC}"
         exit 0

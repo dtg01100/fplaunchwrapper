@@ -36,7 +36,7 @@ IFS=':' read -ra PATH_DIRS <<< "$SAFE_PATH"
 for sys_dir in "${PATH_DIRS[@]}"; do
     # Skip empty directories
     [ -z "$sys_dir" ] && continue
-    
+
     # Skip dangerous patterns (directory traversal)
     case "$sys_dir" in
         *\.\.*|*\/\.\.\/|*\/\.\.$|\.\.\/\*|\/\.\.\/\*)
@@ -44,7 +44,7 @@ for sys_dir in "${PATH_DIRS[@]}"; do
             continue
             ;;
     esac
-    
+
     # Skip user directories (prevents user script execution)
     case "$sys_dir" in
         "$HOME"/*|\~/*)
@@ -52,51 +52,51 @@ for sys_dir in "${PATH_DIRS[@]}"; do
             continue
             ;;
     esac
-    
+
     # Skip paths with suspicious characters
     if [[ ! "$sys_dir" =~ ^/([a-zA-Z0-9\.\_\-]+/)*[a-zA-Z0-9\.\_\-]+$ ]]; then
         echo "SECURITY: Skipping malformed path: $sys_dir" >&2
         continue
     fi
-    
+
     # Skip excessively long paths (potential buffer overflow protection)
     if [ ${#sys_dir} -gt 256 ]; then
         echo "SECURITY: Skipping overly long path" >&2
         continue
     fi
-    
+
     # Skip if directory doesn't exist (prevents false positives)
     if [ ! -d "$sys_dir" ]; then
         continue
     fi
-    
+
     # Skip if directory is not readable (security check)
     if [ ! -r "$sys_dir" ]; then
         echo "SECURITY: Skipping unreadable directory: $sys_dir" >&2
         continue
     fi
-    
+
     candidate="$sys_dir/$NAME"
-    
+
     # Additional validation of candidate path
     # Skip if candidate path is suspicious
     if [[ "$candidate" =~ [\;\|\&\$\`\<\>] ]]; then
         echo "SECURITY: Skipping candidate with dangerous characters: $candidate" >&2
         continue
     fi
-    
+
     # Skip if candidate path is excessively long
     if [ ${#candidate} -gt 512 ]; then
         echo "SECURITY: Skipping overly long candidate path" >&2
         continue
     fi
-    
+
     # Check if this is our own wrapper script - if so, skip it
     if [ "$candidate" = "$SCRIPT_BIN_DIR/$NAME" ]; then
         echo "SECURITY: Skipping our own wrapper at $candidate" >&2
         continue
     fi
-    
+
     # Final security checks before testing file
     # Ensure candidate is within expected system directories
     case "$sys_dir" in
@@ -108,7 +108,7 @@ for sys_dir in "${PATH_DIRS[@]}"; do
             continue
             ;;
     esac
-    
+
     # Check if executable exists in this PATH directory
     if [ -f "$candidate" ] && [ -x "$candidate" ]; then
         # Additional verification: ensure file is not a symlink to wrapper location
@@ -119,13 +119,13 @@ for sys_dir in "${PATH_DIRS[@]}"; do
                 continue
             fi
         fi
-        
+
         # Verify file is owned by root or system user (additional security)
         if [ "$(stat -c %u "$candidate" 2>/dev/null)" != "0" ] && [ "$(stat -c %u "$candidate" 2>/dev/null)" != "1" ]; then
             echo "SECURITY: Skipping non-system owned file: $candidate" >&2
             continue
         fi
-        
+
         SYSTEM_EXISTS=true
         CMD_PATH="$candidate"
         echo "SECURITY: Found system binary at $candidate" >&2

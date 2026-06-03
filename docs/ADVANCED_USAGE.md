@@ -202,9 +202,9 @@ Wrappers use these checks to determine interactivity:
 ```bash
 is_interactive() {
     # Check if stdin is a terminal
-    [ -t 0 ] && 
+    [ -t 0 ] &&
     # Check if stdout is a terminal  
-    [ -t 1 ] && 
+    [ -t 1 ] &&
     # Check if not forced to desktop mode
     [ "${FPWRAPPER_FORCE:-}" != "desktop" ]
 }

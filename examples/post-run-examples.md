@@ -42,12 +42,12 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') | $WRAPPER_NAME | Exit: $EXIT_CODE | Duration
 # Handle crash scenarios
 if [ "$EXIT_CODE" -ne 0 ]; then
     echo "⚠️  $WRAPPER_NAME exited with code $EXIT_CODE"
-    
+
     # Create crash report
     CRASH_DIR="$HOME/.crash-reports"
     mkdir -p "$CRASH_DIR"
     CRASH_FILE="$CRASH_DIR/chrome-crash-$(date +%Y%m%d-%H%M%S).log"
-    
+
     echo "=== Chrome Crash Report ===" > "$CRASH_FILE"
     echo "Timestamp: $(date)" >> "$CRASH_FILE"
     echo "Exit Code: $EXIT_CODE" >> "$CRASH_FILE"
@@ -56,13 +56,13 @@ if [ "$EXIT_CODE" -ne 0 ]; then
     echo "System Info:" >> "$CRASH_FILE"
     uname -a >> "$CRASH_FILE" 2>/dev/null || echo "N/A" >> "$CRASH_FILE"
     echo "" >> "$CRASH_FILE"
-    
+
     # Check for common issues
     if command -v dmesg &> /dev/null; then
         echo "Recent kernel messages:" >> "$CRASH_FILE"
         dmesg | tail -10 >> "$CRASH_FILE" 2>/dev/null || echo "Cannot access dmesg" >> "$CRASH_FILE"
     fi
-    
+
     echo "Crash report saved to: $CRASH_FILE"
 fi
 ```
@@ -101,7 +101,7 @@ done
 # Update project statistics
 if [ -n "$WORKSPACE_DIR" ] && [ -d "$WORKSPACE_DIR" ]; then
     STATS_FILE="$WORKSPACE_DIR/.development-stats"
-    
+
     # Update daily coding time
     CURRENT_DATE=$(date '+%Y-%m-%d')
     if [ -f "$STATS_FILE" ]; then
@@ -224,7 +224,7 @@ echo "🔒 Cleaning up privacy environment for $WRAPPER_NAME..."
 # Remove isolated environment directories
 TEMP_DIRS=(
     "/tmp/${WRAPPER_NAME}-cache-$$"
-    "/tmp/${WRAPPER_NAME}-config-$$" 
+    "/tmp/${WRAPPER_NAME}-config-$$"
     "/tmp/${WRAPPER_NAME}-data-$$"
     "/tmp/${WRAPPER_NAME}-$$"
 )
@@ -266,11 +266,11 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') | $WRAPPER_NAME | Exit: $EXIT_CODE | Privacy 
 # Check for potential security issues
 if [ "$EXIT_CODE" -ne 0 ]; then
     echo "⚠️  Security alert: $WRAPPER_NAME exited abnormally (code: $EXIT_CODE)"
-    
+
     # Log security incident
     SECURITY_LOG="$HOME/.logs/security-incidents.log"
     echo "$(date '+%Y-%m-%d %H:%M:%S') | $WRAPPER_NAME | Abnormal exit: $EXIT_CODE | Action: logged" >> "$SECURITY_LOG"
-    
+
     # Optional: Send notification
     if command -v notify-send &> /dev/null; then
         notify-send "Privacy Alert" "$WRAPPER_NAME exited abnormally" -u critical
@@ -329,13 +329,13 @@ fi
 # Check for network issues
 if [ "$EXIT_CODE" -ne 0 ]; then
     echo "⚠️  Network application $WRAPPER_NAME exited with code $EXIT_CODE"
-    
+
     # Test current network connectivity
     if ping -c 1 8.8.8.8 &> /dev/null; then
         echo "✅ Network connectivity is OK"
     else
         echo "❌ Network connectivity issues detected"
-        
+
         # Log network problem
         NETWORK_LOG="$HOME/.logs/network-issues.log"
         echo "$(date '+%Y-%m-%d %H:%M:%S') | $WRAPPER_NAME | Network issue detected | Exit: $EXIT_CODE" >> "$NETWORK_LOG"

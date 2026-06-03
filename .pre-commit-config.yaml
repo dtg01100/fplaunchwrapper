@@ -39,6 +39,11 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: check-json
+        exclude: ^\.devcontainer/devcontainer\.json$
+        # devcontainer.json is JSON5 (allows // comments + trailing
+        # commas) and the upstream check-json hook only accepts
+        # strict JSON. The dev container spec doesn't have a
+        # JSON-strict validator, so we exclude it.
       - id: end-of-file-fixer
       - id: trailing-whitespace
         # Pass `--markdown-linebreak-ext` as two separate args

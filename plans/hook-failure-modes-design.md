@@ -228,11 +228,11 @@ get_hook_failure_mode() {
 # Pre-launch script execution with failure handling
 run_pre_launch_script() {
     local failure_mode=$(get_hook_failure_mode)
-    
+
     if [ -x "$PRE_SCRIPT" ]; then
         "$PRE_SCRIPT" "$NAME" "$ID" "$source" "$@"
         local hook_exit=$?
-        
+
         if [ $hook_exit -ne 0 ]; then
             case "$failure_mode" in
                 abort)
@@ -255,7 +255,7 @@ run_post_launch_script() {
     local exit_code="$1"
     local source="$2"
     local failure_mode=$(get_hook_failure_mode)
-    
+
     if [ -x "$POST_SCRIPT" ]; then
         (
             export FPWRAPPER_EXIT_CODE="$exit_code"
@@ -265,7 +265,7 @@ run_post_launch_script() {
             "$POST_SCRIPT" "$NAME" "$ID" "$source" "$exit_code" "$@"
         )
         local hook_exit=$?
-        
+
         if [ $hook_exit -ne 0 ]; then
             case "$failure_mode" in
                 abort)
@@ -325,7 +325,7 @@ run_post_launch_script() {
 
 **Issue**: Post-launch hooks run after the application exits. "Abort" doesn't make sense since the app already ran.
 
-**Resolution**: 
+**Resolution**:
 - For post-launch hooks, `abort` mode behaves like `warn` but returns the hook's exit code instead of the app's exit code
 - Document this behavioral difference clearly
 
@@ -408,7 +408,7 @@ flowchart TD
     H -->|No| J{Global default?}
     J -->|Yes| K[Use global default]
     J -->|No| L[Use built-in default: warn]
-    
+
     C --> M[Execute hook with resolved mode]
     E --> M
     G --> M

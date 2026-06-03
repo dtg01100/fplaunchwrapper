@@ -21,8 +21,8 @@ fi
 **Aggressive Testing (Trying to Break It):**
 ```bash
 # Test tries to make function fail under attack conditions
-if ! my_function_malicious_input() && 
-   ! my_function_edge_case() && 
+if ! my_function_malicious_input() &&
+   ! my_function_edge_case() &&
    ! my_function_performance_stress(); then
     echo "✓ Function is robust and secure"
 else
@@ -304,26 +304,26 @@ test_aggressive_preference_security() {
     echo "- Malicious preferences could execute arbitrary commands"
     echo "- User environment could be poisoned"
     echo "- System security could be compromised"
-    
+
     local attacks_blocked=0
     local total_attacks=0
-    
+
     # Test 1: Command injection in preference values
     ((total_attacks++))
     if assert_blocked "set_preference" "test_pref" "/tmp/evil;rm -rf /" "Command injection in preference value"; then
         ((attacks_blocked++))
     fi
-    
+
     # Test 2: Path traversal in preference names
     ((total_attacks++))
     if assert_blocked "set_preference" "../../../etc/passwd" "value" "Path traversal in preference name"; then
         ((attacks_blocked++))
     fi
-    
+
     # Report results
     echo ""
     echo "Security Test Results: $attacks_blocked/$total_attacks attacks blocked"
-    
+
     if [ $attacks_blocked -eq $total_attacks ]; then
         echo -e "${GREEN}✓${NC} ALL ATTACKS SUCCESSFULLY BLOCKED - Security is robust!"
         ((SECURITY_TESTS_PASSED++))
@@ -345,42 +345,42 @@ test_performance_and_efficiency() {
     echo "- Users experience slow response times"
     echo "- System resources are wasted"
     echo "- Large installations become unusable"
-    
+
     local tests_passed=0
     local total_tests=0
-    
+
     # Test 1: Response time for wrapper generation
     ((total_tests++))
     start_time=$(date +%s.%N)
     generate_wrapper_performance_test
     end_time=$(date +%s.%N)
     duration=$(echo "$end_time - $start_time" | bc)
-    
+
     if (( $(echo "$duration < 1.0" | bc -l) )); then
         echo "  ✓ Wrapper generation took ${duration}s (within 1s limit)"
         ((tests_passed++))
     else
         echo "  ✗ Wrapper generation took ${duration}s (too slow!)"
     fi
-    
+
     # Test 2: Memory usage during large operations
     ((total_tests++))
     memory_before=$(ps -o pid,rss -p $$ | tail -1 | awk '{print $2}')
     process_large_dataset
     memory_after=$(ps -o pid,rss -p $$ | tail -1 | awk '{print $2}')
     memory_increase=$((memory_after - memory_before))
-    
+
     if [ $memory_increase -lt 10240 ]; then  # 10MB limit
         echo "  ✓ Memory increase ${memory_increase}KB (within 10MB limit)"
         ((tests_passed++))
     else
         echo "  ✗ Memory increase ${memory_increase}KB (too much!)"
     fi
-    
+
     # Report results
     echo ""
     echo "Performance Test Results: $tests_passed/$total_tests"
-    
+
     if [ $tests_passed -eq $total_tests ]; then
         echo -e "${GREEN}✓${NC} ALL PERFORMANCE TESTS PASSED - System is efficient!"
         ((PERFORMANCE_TESTS_PASSED++))
@@ -402,34 +402,34 @@ test_comprehensive_edge_cases() {
     echo "- System crashes with unusual inputs"
     echo "- Data corruption from malformed input"
     echo "- Security vulnerabilities from edge case handling"
-    
+
     local edge_cases_passed=0
     local total_edge_cases=0
-    
+
     # Test 1: Empty string inputs
     ((total_edge_cases++))
     if assert_handles_edge_case "handle_empty_input" "" "Empty string input"; then
         ((edge_cases_passed++))
     fi
-    
+
     # Test 2: Very large input (1MB string)
     ((total_edge_cases++))
     large_input=$(printf 'A%.0s' {1..1000000})
     if assert_handles_edge_case "handle_large_input" "$large_input" "1MB input string"; then
         ((edge_cases_passed++))
     fi
-    
+
     # Test 3: Unicode and special characters
     ((total_edge_cases++))
     unicode_input="你好🌍🚀caféñáéíóú!@#$%^&*()"
     if assert_handles_edge_case "handle_unicode_input" "$unicode_input" "Unicode input"; then
         ((edge_cases_passed++))
     fi
-    
+
     # Report results
     echo ""
     echo "Edge Case Test Results: $edge_cases_passed/$total_edge_cases"
-    
+
     if [ $edge_cases_passed -eq $total_edge_cases ]; then
         echo -e "${GREEN}✓${NC} ALL EDGE CASES HANDLED - System is robust!"
         ((EDGE_CASE_TESTS_PASSED++))
@@ -461,11 +461,11 @@ test_comprehensive_example() {
     # 1. Describe what is being tested
     echo -e "\n${COLOR}Test X: [Purpose]${NC}"
     echo "[Detailed description of what this test validates]"
-    
+
     # 2. Initialize counters
     local tests_passed=0
     local total_tests=0
-    
+
     # 3. Run specific test scenarios
     # Test 1: [Scenario description]
     ((total_tests++))
@@ -475,11 +475,11 @@ test_comprehensive_example() {
     else
         echo "  ✗ [Failure description]"
     fi
-    
+
     # 4. Report results
     echo ""
     echo "Test Results: $tests_passed/$total_tests"
-    
+
     if [ $tests_passed -eq $total_tests ]; then
         echo -e "${GREEN}✓${NC} ALL TESTS PASSED - [Success message]!"
         ((TESTS_PASSED++))

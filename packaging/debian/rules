@@ -15,21 +15,21 @@ override_dh_auto_install:
 	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/*.sh
 	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/fplaunch-*
 	chmod +x debian/fplaunchwrapper/usr/lib/fplaunchwrapper/lib/*.sh
-	
+
 	# Provide user-facing commands in /usr/bin via symlinks
 	mkdir -p debian/fplaunchwrapper/usr/bin
 	ln -s ../lib/fplaunchwrapper/manage_wrappers.sh debian/fplaunchwrapper/usr/bin/fplaunch-manage
 	ln -s ../lib/fplaunchwrapper/fplaunch-generate debian/fplaunchwrapper/usr/bin/fplaunch-generate
 	ln -s ../lib/fplaunchwrapper/fplaunch-setup-systemd debian/fplaunchwrapper/usr/bin/fplaunch-setup-systemd
 	ln -s ../lib/fplaunchwrapper/fplaunch-cleanup debian/fplaunchwrapper/usr/bin/fplaunch-cleanup
-	
+
 	# Install documentation
 	mkdir -p debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper
 	cp README.md debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/
 	cp QUICKSTART.md debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/
 	cp -r examples debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/
 	[ -f RELEASE_*.md ] && cp RELEASE_*.md debian/fplaunchwrapper/usr/share/doc/fplaunchwrapper/ || true
-	
+
 	# Install man pages
 	mkdir -p debian/fplaunchwrapper/usr/share/man/man1
 	mkdir -p debian/fplaunchwrapper/usr/share/man/man7
@@ -38,13 +38,13 @@ override_dh_auto_install:
 	cp docs/man/fplaunch-setup-systemd.1 debian/fplaunchwrapper/usr/share/man/man1/
 	cp docs/man/fplaunch-cleanup.1 debian/fplaunchwrapper/usr/share/man/man1/
 	cp docs/man/fplaunchwrapper.7 debian/fplaunchwrapper/usr/share/man/man7/
-	
+
 	# Install info pages (if successfully built)
 	if [ -f docs/info/fplaunchwrapper.info ]; then \
 	  mkdir -p debian/fplaunchwrapper/usr/share/info; \
 	  cp docs/info/fplaunchwrapper.info debian/fplaunchwrapper/usr/share/info/; \
 	fi
-	
+
 	# Install bash completion
 	mkdir -p debian/fplaunchwrapper/usr/share/bash-completion/completions
 	cp fplaunch_completion.bash debian/fplaunchwrapper/usr/share/bash-completion/completions/fplaunch-manage

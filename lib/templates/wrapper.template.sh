@@ -114,16 +114,16 @@ run_pre_launch_script() {{
     local source="$1"
     shift
     local failure_mode=$(get_hook_failure_mode)
-    
+
     if [ -x "$PRE_SCRIPT" ]; then
         export FPWRAPPER_WRAPPER_NAME="$NAME"
         export FPWRAPPER_APP_ID="$ID"
         export FPWRAPPER_SOURCE="$source"
         export FPWRAPPER_HOOK_FAILURE_MODE="$failure_mode"
-        
+
         "$PRE_SCRIPT" "$NAME" "$ID" "$source" "$@"
         local hook_exit=$?
-        
+
         if [ $hook_exit -ne 0 ]; then
             case "$failure_mode" in
                 abort)
@@ -146,7 +146,7 @@ run_post_launch_script() {{
     local exit_code="$1"
     local source="$2"  # "system" or "flatpak"
     local failure_mode=$(get_hook_failure_mode)
-    
+
     if [ -x "$POST_SCRIPT" ]; then
         (
             export FPWRAPPER_EXIT_CODE="$exit_code"
@@ -157,7 +157,7 @@ run_post_launch_script() {{
             "$POST_SCRIPT" "$NAME" "$ID" "$source" "$exit_code" "$@"
         )
         local hook_exit=$?
-        
+
         if [ $hook_exit -ne 0 ]; then
             case "$failure_mode" in
                 abort)
@@ -329,22 +329,22 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
         echo "Flatpak not available - cannot edit sandbox"
         exit 1
     fi
-    
+
     if ! is_interactive; then
         echo "Error: Sandbox editing requires interactive CLI" >&2
         exit 1
     fi
-    
+
     # Check if Flatseal is installed
     if flatpak list --app 2>/dev/null | grep -q "com.github.tchx84.Flatseal"; then
         echo "Launching Flatseal for $ID..."
         flatpak run com.github.tchx84.Flatseal "$ID" 2>/dev/null &
         exit 0
     fi
-    
+
     # Check if user previously declined Flatseal installation
     FLATSEAL_DECLINED_MARKER="${{XDG_CONFIG_HOME:-$HOME/.config}}/fplaunchwrapper/flatseal_declined"
-    
+
     if [ ! -f "$FLATSEAL_DECLINED_MARKER" ]; then
         echo ""
         echo "Flatseal (GUI permissions editor) not found."
@@ -367,14 +367,14 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
                 ;;
         esac
     fi
-    
+
     # CLI fallback - Interactive permission editor
     echo ""
     echo "=========================================="
     echo "Sandbox Permissions Editor for $ID"
     echo "=========================================="
     echo ""
-    
+
     # Show current overrides
     echo "Current permissions:"
     if flatpak override --show --user "$ID" 2>/dev/null | grep -q "^\["; then
@@ -383,7 +383,7 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
         echo "  (using defaults)"
     fi
     echo ""
-    
+
     # Built-in presets
     PRESET_DEVELOPMENT="--filesystem=home --filesystem=host --device=dri --socket=x11 --socket=wayland --share=ipc"
     PRESET_MEDIA="--device=dri --socket=pulseaudio --socket=wayland --socket=x11 --share=ipc --filesystem=~/Music --filesystem=~/Videos"
@@ -391,7 +391,7 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
     PRESET_MINIMAL="--share=ipc"
     PRESET_GAMING="--device=dri --device=input --socket=pulseaudio --socket=wayland --socket=x11 --share=ipc --share=network --filesystem=~/Games"
     PRESET_OFFLINE="--device=dri --socket=pulseaudio --socket=wayland --socket=x11 --share=ipc --filesystem=home"
-    
+
     # Load custom presets from config
     CUSTOM_PRESETS=()
     if command -v python3 >/dev/null 2>&1; then
@@ -399,7 +399,7 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
             [ -n "$preset_name" ] && CUSTOM_PRESETS+=("$preset_name")
         done < <(python3 -m fplaunch.config_manager list-presets 2>/dev/null)
     fi
-    
+
     # Display menu
     echo "Select an option:"
     echo "  1) Manual entry (line-by-line)"
@@ -410,25 +410,25 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
     echo "  6) Apply preset: Gaming (graphics, input, audio, network)"
     echo "  7) Apply preset: Offline (local files, graphics, audio)"
     echo "  8) Remove specific permission"
-    
+
     menu_option=9
     for custom_preset in "${{CUSTOM_PRESETS[@]}}"; do
         echo "  $menu_option) Apply custom preset: $custom_preset"
         ((menu_option++))
     done
-    
+
     # Save the base position for standard options (after custom presets)
     standard_menu_base=$menu_option
-    
+
     echo "  $menu_option) Show current overrides"
     ((menu_option++))
     echo "  $menu_option) Reset to defaults"
     ((menu_option++))
     echo "  $menu_option) Cancel"
     echo ""
-    
+
     read -r -p "Choose option: " choice
-    
+
     case "$choice" in
         1)
             # Manual entry
@@ -445,12 +445,12 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
             echo "  --socket=wayland"
             echo "  --socket=pulseaudio"
             echo ""
-            
+
             PERMISSIONS=()
             while true; do
                 read -r -p "Permission: " perm
                 [ -z "$perm" ] && break
-                
+
                 # Validate format
                 if [[ "$perm" =~ ^--[a-z-]+(=.+)?$ ]]; then
                     PERMISSIONS+=("$perm")
@@ -458,18 +458,18 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
                     echo "  Warning: Invalid format (must start with --, e.g., --filesystem=home)"
                 fi
             done
-            
+
             if [ ${{#PERMISSIONS[@]}} -eq 0 ]; then
                 echo "No permissions entered."
                 exit 0
             fi
-            
+
             echo ""
             echo "Permissions to apply:"
             printf '  %s\n' "${{PERMISSIONS[@]}}"
             echo ""
             read -r -p "Apply these ${{#PERMISSIONS[@]}} permissions? [y/N] " confirm
-            
+
             if [[ "$confirm" =~ ^[yY]$ ]]; then
                 for perm in "${{PERMISSIONS[@]}}"; do
                     if flatpak override --user "$ID" "$perm" 2>/dev/null; then
@@ -495,14 +495,14 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
                 6) PRESET_NAME="Gaming"; PRESET_PERMS=($PRESET_GAMING) ;;
                 7) PRESET_NAME="Offline"; PRESET_PERMS=($PRESET_OFFLINE) ;;
             esac
-            
+
             echo ""
             echo "Preset: $PRESET_NAME"
             echo "Permissions:"
             printf '  %s\n' "${{PRESET_PERMS[@]}}"
             echo ""
             read -r -p "Apply these ${{#PRESET_PERMS[@]}} permissions? [y/N] " confirm
-            
+
             if [[ "$confirm" =~ ^[yY]$ ]]; then
                 for perm in "${{PRESET_PERMS[@]}}"; do
                     if flatpak override --user "$ID" "$perm" 2>/dev/null; then
@@ -523,20 +523,20 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
             echo ""
             echo "Current permissions to remove:"
             CURRENT_PERMS=$(flatpak override --show --user "$ID" 2>&1 | grep -v "^\[" | grep -v "No overrides" | awk '{{print $1}}')
-            
+
             if [ -z "$CURRENT_PERMS" ]; then
                 echo "  No custom permissions set"
                 exit 0
             fi
-            
+
             echo "$CURRENT_PERMS" | nl -ba
-            
+
             read -r -p "Enter number of permission to remove (or empty to cancel): " perm_number
             if [ -z "$perm_number" ]; then
                 echo "Cancelled."
                 exit 0
             fi
-            
+
             if [[ "$perm_number" =~ ^[0-9]+$ ]]; then
                 PERM_TO_REMOVE=$(echo "$CURRENT_PERMS" | sed -n "${{perm_number}}p")
                 if [ -n "$PERM_TO_REMOVE" ]; then
@@ -576,7 +576,7 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
             custom_index=$((choice - 9))
             if [ "$custom_index" -ge 0 ] && [ "$custom_index" -lt ${{#CUSTOM_PRESETS[@]}} ]; then
                 PRESET_NAME="${{CUSTOM_PRESETS[$custom_index]}}"
-                
+
                 # Load preset permissions
                 PRESET_PERMS=()
                 if command -v python3 >/dev/null 2>&1; then
@@ -584,19 +584,19 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
                         [ -n "$perm" ] && PRESET_PERMS+=("$perm")
                     done < <(python3 -m fplaunch.config_manager get-preset "$PRESET_NAME" 2>/dev/null)
                 fi
-                
+
                 if [ ${{#PRESET_PERMS[@]}} -eq 0 ]; then
                     echo "Failed to load preset: $PRESET_NAME"
                     exit 1
                 fi
-                
+
                 echo ""
                 echo "Custom preset: $PRESET_NAME"
                 echo "Permissions:"
                 printf '  %s\n' "${{PRESET_PERMS[@]}}"
                 echo ""
                 read -r -p "Apply these ${{#PRESET_PERMS[@]}} permissions? [y/N] " confirm
-                
+
                 if [[ "$confirm" =~ ^[yY]$ ]]; then
                     for perm in "${{PRESET_PERMS[@]}}"; do
                         if flatpak override --user "$ID" "$perm" 2>/dev/null; then
@@ -626,7 +626,7 @@ if [ "$1" = "--fpwrapper-edit-sandbox" ]; then
                 echo "This action cannot be undone!"
                 echo ""
                 read -r -p "Type 'yes' to confirm reset: " confirm
-                
+
                 if [ "$confirm" = "yes" ]; then
                     if flatpak override --user --reset "$ID" 2>/dev/null; then
                         echo "Permissions reset to defaults."
@@ -724,7 +724,7 @@ if [ "$1" = "--fpwrapper-sandbox-yolo" ]; then
                 exit 0
             fi
         fi
-        
+
         # Apply all possible permissions
         flatpak override --user "$ID" \
             --filesystem=host \

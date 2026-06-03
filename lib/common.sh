@@ -38,15 +38,15 @@ error_exit() {
     local exit_code="${2:-1}"
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    
+
     # Log error to stderr with timestamp
     echo "[$timestamp] ERROR: $message" >&2
-    
+
     # Additional logging to file if available
     if [ -n "${ERROR_LOG:-}" ] && [ -w "$ERROR_LOG" ]; then
         echo "[$timestamp] ERROR: $message" >> "$ERROR_LOG"
     fi
-    
+
     exit "$exit_code"
 }
 
@@ -54,10 +54,10 @@ error_exit() {
 safe_execute() {
     local description="$1"
     shift
-    
+
     # Log command execution
     echo "Executing: $description" >&2
-    
+
     # Execute with error handling
     if "$@"; then
         return 0
@@ -72,7 +72,7 @@ safe_file_operation() {
     local operation="$1"
     local file="$2"
     shift 2
-    
+
     case "$operation" in
         "read")
             if [ ! -r "$file" ]; then
@@ -104,10 +104,10 @@ log_message() {
     local message="$2"
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    
+
     # Log to stderr with level prefix
     echo "[$timestamp] [$level]: $message" >&2
-    
+
     # Log to file if LOG_FILE is set and writable
     if [ -n "${LOG_FILE:-}" ] && [ -w "$LOG_FILE" ]; then
         echo "[$timestamp] [$level]: $message" >> "$LOG_FILE"
@@ -171,7 +171,7 @@ ensure_config_dir() {
     # Create parent directories if they don't exist, with better error handling
     local parent_dir
     parent_dir="$(dirname "$CONFIG_DIR")"
-    
+
     # Try to create parent directory first
     if [ ! -d "$parent_dir" ]; then
         if ! mkdir -p "$parent_dir" 2>/dev/null; then
@@ -184,7 +184,7 @@ ensure_config_dir() {
             return 1
         fi
     fi
-    
+
     # Try to create config directory
     if ! mkdir -p "$CONFIG_DIR" 2>/dev/null; then
         echo "Error: Cannot create config directory: $CONFIG_DIR" >&2
@@ -195,7 +195,7 @@ ensure_config_dir() {
         echo "  export CONFIG_DIR=/path/to/your/flatpak-wrappers" >&2
         return 1
     fi
-    
+
     return 0
 }
 
@@ -235,7 +235,7 @@ cleanup_systemd_units() {
 canonicalize_path_no_resolve() {
     local path="$1"
     [ -n "$path" ] || return 1
-    
+
     # Use Python utility for robust path normalization if available
     local result
     result=$(_call_python_util canonicalize_path "$path" 2>/dev/null)
@@ -243,7 +243,7 @@ canonicalize_path_no_resolve() {
         printf '%s' "$result"
         return 0
     fi
-    
+
     # Fallback to original implementation
     # Expand tilde
     if [[ "$path" == ~* ]]; then
@@ -275,7 +275,7 @@ validate_home_dir() {
     if [ -z "$dir" ]; then
         return 1
     fi
-    
+
     # Use Python utility for robust path validation if available
     local result
     result=$(_call_python_util validate_home "$dir" 2>/dev/null)
@@ -283,7 +283,7 @@ validate_home_dir() {
         printf '%s' "$result"
         return 0
     fi
-    
+
     # Fallback to original implementation
     # Expand relative paths and tildes
     if [[ "$dir" == ~* ]]; then
@@ -320,17 +320,17 @@ validate_home_dir() {
 
 is_wrapper_file() {
     local file="$1"
-    
+
     # Basic validation first
     [ -f "$file" ] || return 1
     [ -r "$file" ] || return 1
     [ ! -L "$file" ] || return 1  # Reject symlinks
-    
+
     # Use Python utility for robust content validation if available
     if _call_python_util is_wrapper_file "$file" >/dev/null 2>&1; then
         return 0
     fi
-    
+
     # Fallback to original implementation with additional safeguards
     # Read header (first 30 lines) for faster processing
     local header
@@ -368,12 +368,12 @@ is_wrapper_file() {
 
 get_wrapper_id() {
     local file="$1"
-    
+
     # Use Python utility for robust ID extraction if available
     if _call_python_util get_wrapper_id "$file" 2>/dev/null; then
         return 0
     fi
-    
+
     # Fallback to original implementation
     [ -f "$file" ] || return 1
     local id
@@ -393,17 +393,17 @@ get_wrapper_id() {
 
 acquire_lock() {
     ensure_config_dir || return 1
-    
+
     local lock_name="${1:-fplaunch}"
     local timeout_seconds="${2:-30}"
     local lock_dir="$CONFIG_DIR/locks"
-    
+
     # Create lock directory
     mkdir -p "$lock_dir" || return 1
-    
+
     local lockfile="$lock_dir/$lock_name.lock"
     local pidfile="$lock_dir/$lock_name.pid"
-    
+
     # Try to acquire lock with timeout using reliable timing
     local start_time
     start_time=$(date +%s)
@@ -420,7 +420,7 @@ acquire_lock() {
         fi
         sleep 0.1
     done
-    
+
     echo "Timeout acquiring lock: $lock_name" >&2
     return 1
 }
@@ -434,10 +434,10 @@ release_lock() {
 release_lock_internal() {
     local lock_dir="$1"
     local lock_name="$2"
-    
+
     local lockfile="$lock_dir/$lock_name.lock"
     local pidfile="$lock_dir/$lock_name.pid"
-    
+
     # Verify this process owns the lock
     if [ -f "$pidfile" ]; then
         local lock_pid
@@ -480,14 +480,14 @@ get_temp_dir() {
 
 find_executable() {
     local cmd="$1"
-    
+
     [ -n "$cmd" ] || return 1
-    
+
     # Use Python utility for robust path resolution if available
     if _call_python_util find_executable "$cmd" 2>/dev/null; then
         return 0
     fi
-    
+
     # Fallback to original implementation
     # Absolute or relative path
     if [[ "$cmd" == */* ]]; then
@@ -514,22 +514,22 @@ find_executable() {
 safe_mktemp() {
     local template="${1:-tmp.XXXXXX}"
     local dir_param="${2:-}"
-    
+
     # Use Python utility for secure temp file creation if available
     if _call_python_util safe_mktemp "$template" "$dir_param" 2>/dev/null; then
         return 0
     fi
-    
+
     # Fallback to original implementation
     local tdir
-    
+
     # Get secure temp directory
     if [ -n "$dir_param" ] && [ -d "$dir_param" ]; then
         tdir="$dir_param"
     else
         tdir=$(get_temp_dir 2>/dev/null) || tdir="/tmp"
     fi
-    
+
     # Fallback to mktemp if available
     if command -v mktemp >/dev/null 2>&1; then
         if mktemp -p "$tdir" "$template" 2>/dev/null; then
@@ -541,7 +541,7 @@ safe_mktemp() {
             return 0
         fi
     fi
-    
+
     # Last resort: use random number with current timestamp
     local timestamp
     timestamp=$(date +%s%N)
@@ -551,12 +551,12 @@ safe_mktemp() {
 
 sanitize_id_to_name() {
     local id="$1"
-    
+
     # Use Python utility for robust name sanitization if available
     if _call_python_util sanitize_name "$id" 2>/dev/null; then
         return 0
     fi
-    
+
     # Fallback to original implementation
     local name
     name=$(printf '%s' "$id" | awk -F. '{print tolower($NF)}')

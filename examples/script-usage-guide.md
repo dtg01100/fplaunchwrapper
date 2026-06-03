@@ -21,7 +21,7 @@ mkdir -p "$TEMP_HOME"/{cache,config,data,downloads}
 
 # Set up private environment
 export XDG_CACHE_HOME="$TEMP_HOME/cache"
-export XDG_CONFIG_HOME="$TEMP_HOME/config" 
+export XDG_CONFIG_HOME="$TEMP_HOME/config"
 export XDG_DATA_HOME="$TEMP_HOME/data"
 export CHROME_DOWNLOAD_DIR="$TEMP_HOME/downloads"
 

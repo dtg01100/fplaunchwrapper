@@ -54,12 +54,12 @@ jobs:
         VERSION=${GITHUB_REF#refs/tags/v}
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "Building version $VERSION"
-    
+
     - name: Install build dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential devscripts debhelper rpm texinfo
-    
+
     - name: Install package in editable mode
       run: |
         pip install -e .
@@ -84,7 +84,7 @@ jobs:
         done
         cp -r lib/ examples/ README.md RELEASE_*.md CHANGES.md fplaunchwrapper-$VERSION/
         tar -czf fplaunchwrapper-$VERSION.tar.gz fplaunchwrapper-$VERSION
-    
+
     - name: Generate release notes
       id: release_notes
       run: |
@@ -95,7 +95,7 @@ jobs:
           echo "" >> release_notes.md
           echo "See [README.md](README.md) for installation and usage instructions." >> release_notes.md
         fi
-    
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
@@ -108,7 +108,7 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:

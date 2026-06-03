@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 # ⚠️  DANGER: ADVERSARIAL SYSTEMD TEST SUITE ⚠️
-# 
+#
 # This test suite attacks systemd integration points to find vulnerabilities.
 # It actively exploits systemd service management and timer functionality.
-# 
+#
 # ⚠️  WARNING: This test is UNSAFE and should ONLY be run in:
 #   - Isolated development environments
 #   - Dedicated testing containers
@@ -106,20 +106,20 @@ export CI=1
 # Create isolated test environment
 setup_adversarial_env() {
     local test_home="/tmp/fplaunch-systemd-adversarial-test-$$"
-    
+
     # Clean up any existing test directory
     rm -rf "$test_home"
-    
+
     # Create test directory structure with attack surfaces
     mkdir -p "$test_home"/{bin,.config/systemd/user,attack-vectors}
-    
+
     # Override environment for test isolation
     export HOME="$test_home"
     export XDG_CONFIG_HOME="$test_home/.config"
     export XDG_DATA_HOME="$test_home/.local/share"
     export PATH="$test_home/bin:$PATH"
     export SYSTEMD_UNIT_DIR="$test_home/.config/systemd/user"
-    
+
     # Create malicious systemctl command that logs attacks
     cat > "$test_home/bin/systemctl" << 'EOF'
 #!/usr/bin/env bash
@@ -221,12 +221,12 @@ case "$1" in
 esac
 EOF
     chmod +x "$test_home/bin/systemctl"
-    
+
     # Create attack log
     touch "$test_home/attack-log.txt"
 
     TEST_HOME="$test_home"
-    
+
     echo "$test_home"
 }
 
@@ -247,9 +247,9 @@ trap '[[ -n "${TEST_HOME:-}" ]] && cleanup_adversarial_env "$TEST_HOME"' EXIT IN
 # ATTACK 1: Malicious systemd service creation
 test_malicious_service_creation() {
     local test_home="$1"
-    
+
     attack "Malicious systemd service creation"
-    
+
     # Test 1: Try to create service with malicious ExecStart
     local malicious_service="$test_home/.config/systemd/user/malicious.service"
     cat > "$malicious_service" << EOF
@@ -265,7 +265,7 @@ RemainAfterExit=yes
 [Install]
 WantedBy=default.target
 EOF
-    
+
     # Try to enable the malicious service
     local output
     output=$("$test_home/bin/systemctl" --user enable malicious.service 2>&1 || true)
@@ -274,7 +274,7 @@ EOF
     else
         defense "Malicious service creation blocked"
     fi
-    
+
     # Test 2: Try to create service with path traversal
     cat > "$malicious_service" << EOF
 [Unit]
@@ -289,7 +289,7 @@ RemainAfterExit=yes
 [Install]
 WantedBy=../../../etc/systemd/system/default.target
 EOF
-    
+
     output=$("$test_home/bin/systemctl" --user enable malicious.service 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
         fail "Path traversal in service not blocked"
@@ -301,9 +301,9 @@ EOF
 # ATTACK 2: Privilege escalation through systemd
 test_privilege_escalation_attacks() {
     local test_home="$1"
-    
+
     attack "Privilege escalation through systemd"
-    
+
     # Test 1: Try to create service that escalates privileges
     local priv_service="$test_home/.config/systemd/user/priv-esc.service"
     cat > "$priv_service" << EOF
@@ -319,7 +319,7 @@ RemainAfterExit=yes
 [Install]
 WantedBy=default.target
 EOF
-    
+
     local output
     output=$("$test_home/bin/systemctl" --user enable priv-esc.service 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
@@ -327,7 +327,7 @@ EOF
     else
         defense "Privilege escalation service blocked"
     fi
-    
+
     # Test 2: Try to create service with environment variable injection
     cat > "$priv_service" << EOF
 [Unit]
@@ -344,7 +344,7 @@ RemainAfterExit=yes
 [Install]
 WantedBy=default.target
 EOF
-    
+
     output=$("$test_home/bin/systemctl" --user enable priv-esc.service 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
         fail "Environment injection service not blocked"
@@ -356,9 +356,9 @@ EOF
 # ATTACK 3: Persistence attacks
 test_persistence_attacks() {
     local test_home="$1"
-    
+
     attack "Persistence attacks through systemd"
-    
+
     # Test 1: Try to create persistent backdoor service
     local backdoor_service="$test_home/.config/systemd/user/backdoor.service"
     cat > "$backdoor_service" << EOF
@@ -375,7 +375,7 @@ RestartSec=10
 [Install]
 WantedBy=default.target
 EOF
-    
+
     local output
     output=$("$test_home/bin/systemctl" --user enable backdoor.service 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
@@ -383,7 +383,7 @@ EOF
     else
         defense "Persistent backdoor service blocked"
     fi
-    
+
     # Test 2: Try to create timer-based persistence
     local backdoor_timer="$test_home/.config/systemd/user/backdoor.timer"
     cat > "$backdoor_timer" << EOF
@@ -399,7 +399,7 @@ Unit=backdoor.service
 [Install]
 WantedBy=timers.target
 EOF
-    
+
     output=$("$test_home/bin/systemctl" --user enable backdoor.timer 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
         fail "Timer-based persistence not blocked"
@@ -411,9 +411,9 @@ EOF
 # ATTACK 4: Resource exhaustion attacks
 test_resource_exhaustion_attacks() {
     local test_home="$1"
-    
+
     attack "Resource exhaustion attacks through systemd"
-    
+
     # Test 1: Try to create service that forks infinitely
     local fork_service="$test_home/.config/systemd/user/fork-bomb.service"
     cat > "$fork_service" << EOF
@@ -429,7 +429,7 @@ Restart=always
 [Install]
 WantedBy=default.target
 EOF
-    
+
     local output
     output=$("$test_home/bin/systemctl" --user enable fork-bomb.service 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
@@ -437,7 +437,7 @@ EOF
     else
         defense "Fork bomb service blocked"
     fi
-    
+
     # Test 2: Try to create memory exhaustion service
     local memory_service="$test_home/.config/systemd/user/memory-exhaust.service"
     cat > "$memory_service" << EOF
@@ -453,7 +453,7 @@ Restart=always
 [Install]
 WantedBy=default.target
 EOF
-    
+
     output=$("$test_home/bin/systemctl" --user enable memory-exhaust.service 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
         fail "Memory exhaustion service not blocked"
@@ -465,9 +465,9 @@ EOF
 # ATTACK 5: File system attacks
 test_filesystem_attacks() {
     local test_home="$1"
-    
+
     attack "File system attacks through systemd"
-    
+
     # Test 1: Try to create service that modifies system files
     local fs_service="$test_home/.config/systemd/user/fs-attack.service"
     cat > "$fs_service" << EOF
@@ -483,7 +483,7 @@ RemainAfterExit=yes
 [Install]
 WantedBy=default.target
 EOF
-    
+
     local output
     output=$("$test_home/bin/systemctl" --user enable fs-attack.service 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
@@ -491,7 +491,7 @@ EOF
     else
         defense "File system attack service blocked"
     fi
-    
+
     # Test 2: Try to create service with symlink attacks
     ln -sf /etc/passwd "$test_home/attack-vectors/target"
     local symlink_service="$test_home/.config/systemd/user/symlink-attack.service"
@@ -508,7 +508,7 @@ RemainAfterExit=yes
 [Install]
 WantedBy=default.target
 EOF
-    
+
     output=$("$test_home/bin/systemctl" --user enable symlink-attack.service 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
         fail "Symlink attack service not blocked"
@@ -520,9 +520,9 @@ EOF
 # ATTACK 6: Network-based attacks
 test_network_attacks() {
     local test_home="$1"
-    
+
     attack "Network-based attacks through systemd"
-    
+
     # Test 1: Try to create service that exfiltrates data
     local exfil_service="$test_home/.config/systemd/user/exfil.service"
     cat > "$exfil_service" << EOF
@@ -539,7 +539,7 @@ RestartSec=60
 [Install]
 WantedBy=default.target
 EOF
-    
+
     local output
     output=$("$test_home/bin/systemctl" --user enable exfil.service 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
@@ -547,7 +547,7 @@ EOF
     else
         defense "Data exfiltration service blocked"
     fi
-    
+
     # Test 2: Try to create service that downloads malware
     local download_service="$test_home/.config/systemd/user/download.service"
     cat > "$download_service" << EOF
@@ -563,7 +563,7 @@ RemainAfterExit=yes
 [Install]
 WantedBy=default.target
 EOF
-    
+
     output=$("$test_home/bin/systemctl" --user enable download.service 2>&1 || true)
     if echo "$output" | grep -q "Mock: systemctl --user enable"; then
         fail "Malware download service not blocked"
@@ -578,11 +578,11 @@ main() {
     echo -e "${PURPLE}ADVERSARIAL Systemd Test Suite${NC}"
     echo -e "${PURPLE}======================================${NC}"
     echo ""
-    
+
     # Setup adversarial test environment
     local test_home
     test_home=$(setup_adversarial_env)
-    
+
     # Run adversarial attacks
     test_malicious_service_creation "$test_home"
     test_privilege_escalation_attacks "$test_home"
@@ -590,11 +590,11 @@ main() {
     test_resource_exhaustion_attacks "$test_home"
     test_filesystem_attacks "$test_home"
     test_network_attacks "$test_home"
-    
+
     # Cleanup
     cleanup_adversarial_env "$test_home"
     TEST_HOME=""
-    
+
     # Results
     echo ""
     echo -e "${PURPLE}======================================${NC}"
@@ -604,7 +604,7 @@ main() {
     echo -e "${RED}Tests Failed: $FAILED${NC}"
     echo -e "${GREEN}Attacks Blocked: $ATTACKS_BLOCKED${NC}"
     echo -e "${RED}Vulnerabilities Found: $VULNERABILITIES_FOUND${NC}"
-    
+
     if [ $VULNERABILITIES_FOUND -eq 0 ]; then
         echo -e "${GREEN}All systemd attacks blocked! System appears secure.${NC}"
         exit 0

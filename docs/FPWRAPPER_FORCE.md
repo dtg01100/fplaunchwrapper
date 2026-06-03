@@ -11,7 +11,7 @@ The `FPWRAPPER_FORCE` environment variable controls whether wrappers use their f
 - **Use Case**: .desktop files, system services, background processes
 - **Result**: Clean, predictable execution without wrapper interference
 
-### `FPWRAPPER_FORCE=interactive` 
+### `FPWRAPPER_FORCE=interactive`
 - **Behavior**: Force full wrapper functionality
 - **Use Case**: Scripts, testing, debugging, custom launchers
 - **Result**: All wrapper features available (prompts, preferences, etc.)
@@ -74,7 +74,7 @@ done
 # VS Code task
 {
     "label": "Firefox Debug Info",
-    "type": "shell", 
+    "type": "shell",
     "command": "firefox",
     "args": ["--fpwrapper-force-interactive", "--fpwrapper-info"]
 }
@@ -156,10 +156,10 @@ mkdir -p "$backup_dir"
 
 for app in firefox chrome thunderbird; do
     echo "Backing up $app..."
-    
+
     # Get config directory
     config_dir=$(FPWRAPPER_FORCE=interactive "$app" --fpwrapper-config-dir 2>/dev/null)
-    
+
     if [ -n "$config_dir" ] && [ -d "$config_dir" ]; then
         cp -r "$config_dir" "$backup_dir/$app-config"
         echo "✅ Backed up $app configuration"

@@ -77,12 +77,12 @@ from typing import Union
 @lru_cache(maxsize=1)
 def get_config_dir() -> Path:
     """Get the configuration directory path.
-    
+
     Resolves in order:
     1. FPWRAPPER_CONFIG_DIR environment variable
     2. XDG_CONFIG_HOME/fplaunchwrapper
     3. ~/.config/fplaunchwrapper
-    
+
     Returns:
         Path to the configuration directory
     """
@@ -90,7 +90,7 @@ def get_config_dir() -> Path:
     env_override = os.environ.get("FPWRAPPER_CONFIG_DIR")
     if env_override:
         return Path(env_override).expanduser().resolve()
-    
+
     # Use XDG specification
     xdg_config_home = os.environ.get(
         "XDG_CONFIG_HOME",
@@ -102,19 +102,19 @@ def get_config_dir() -> Path:
 @lru_cache(maxsize=1)
 def get_data_dir() -> Path:
     """Get the data directory path.
-    
+
     Resolves in order:
     1. FPWRAPPER_DATA_DIR environment variable
     2. XDG_DATA_HOME/fplaunchwrapper
     3. ~/.local/share/fplaunchwrapper
-    
+
     Returns:
         Path to the data directory
     """
     env_override = os.environ.get("FPWRAPPER_DATA_DIR")
     if env_override:
         return Path(env_override).expanduser().resolve()
-    
+
     xdg_data_home = os.environ.get(
         "XDG_DATA_HOME",
         str(Path.home() / ".local" / "share")
@@ -125,24 +125,24 @@ def get_data_dir() -> Path:
 @lru_cache(maxsize=1)
 def get_default_bin_dir() -> Path:
     """Get the default bin directory path.
-    
+
     Resolves in order:
     1. FPWRAPPER_BIN_DIR environment variable
     2. ~/bin (user's local bin directory)
-    
+
     Returns:
         Path to the default bin directory
     """
     env_override = os.environ.get("FPWRAPPER_BIN_DIR")
     if env_override:
         return Path(env_override).expanduser().resolve()
-    
+
     return Path.home() / "bin"
 
 
 def get_bin_dir_from_config() -> Path | None:
     """Read the configured bin directory from the config file.
-    
+
     Returns:
         Path to the configured bin directory, or None if not configured
     """
@@ -159,38 +159,38 @@ def get_bin_dir_from_config() -> Path | None:
 
 def resolve_bin_dir(explicit_dir: Union[str, Path, None] = None) -> Path:
     """Resolve the bin directory with full fallback chain.
-    
+
     Priority order:
     1. Explicitly provided directory
     2. Configured bin_dir from config file
     3. Default bin directory (~/bin)
-    
+
     Args:
         explicit_dir: Optional explicit bin directory path
-        
+
     Returns:
         Resolved Path to the bin directory
     """
     if explicit_dir:
         return Path(explicit_dir).expanduser().resolve()
-    
+
     configured = get_bin_dir_from_config()
     if configured:
         return configured
-    
+
     return get_default_bin_dir()
 
 
 def ensure_dir(path: Path, *, create: bool = True) -> Path:
     """Ensure a directory exists, creating it if necessary.
-    
+
     Args:
         path: Directory path to ensure
         create: If True, create the directory if it doesn't exist
-        
+
     Returns:
         The path (for chaining)
-        
+
     Raises:
         OSError: If directory creation fails
     """
@@ -201,7 +201,7 @@ def ensure_dir(path: Path, *, create: bool = True) -> Path:
 
 def get_lock_dir() -> Path:
     """Get the lock directory path.
-    
+
     Returns:
         Path to the locks directory within config dir
     """
@@ -210,7 +210,7 @@ def get_lock_dir() -> Path:
 
 def get_scripts_dir() -> Path:
     """Get the scripts directory path.
-    
+
     Returns:
         Path to the scripts directory within config dir
     """
@@ -219,7 +219,7 @@ def get_scripts_dir() -> Path:
 
 def get_systemd_unit_dir() -> Path:
     """Get the systemd user unit directory path.
-    
+
     Returns:
         Path to the systemd user unit directory
     """
@@ -440,49 +440,49 @@ from lib.paths import (
 
 class TestPathResolution:
     """Test path resolution functions."""
-    
+
     def setup_method(self):
         """Clear caches before each test."""
         clear_path_caches()
-    
+
     def test_get_config_dir_default(self, tmp_path, monkeypatch):
         """Test default config directory resolution."""
         monkeypatch.delenv("FPWRAPPER_CONFIG_DIR", raising=False)
         monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
-        
+
         result = get_config_dir()
         expected = Path.home() / ".config" / "fplaunchwrapper"
         assert result == expected
-    
+
     def test_get_config_dir_xdg_override(self, monkeypatch):
         """Test XDG_CONFIG_HOME override."""
         monkeypatch.delenv("FPWRAPPER_CONFIG_DIR", raising=False)
         monkeypatch.setenv("XDG_CONFIG_HOME", "/custom/config")
-        
+
         result = get_config_dir()
         assert result == Path("/custom/config/fplaunchwrapper")
-    
+
     def test_get_config_dir_env_override(self, monkeypatch):
         """Test FPWRAPPER_CONFIG_DIR environment override."""
         monkeypatch.setenv("FPWRAPPER_CONFIG_DIR", "/custom/path")
-        
+
         result = get_config_dir()
         assert result == Path("/custom/path")
-    
+
     def test_resolve_bin_dir_explicit(self):
         """Test explicit bin directory takes priority."""
         result = resolve_bin_dir("/explicit/bin")
         assert result == Path("/explicit/bin")
-    
+
     def test_resolve_bin_dir_from_config(self, tmp_path, monkeypatch):
         """Test reading bin_dir from config file."""
         clear_path_caches()
         config_dir = tmp_path / "config"
         config_dir.mkdir(parents=True)
         (config_dir / "bin_dir").write_text("/configured/bin")
-        
+
         monkeypatch.setenv("FPWRAPPER_CONFIG_DIR", str(config_dir))
-        
+
         result = resolve_bin_dir()
         assert result == Path("/configured/bin")
 ```
@@ -605,15 +605,15 @@ def handle_import_error(
     exit_code: int = 1,
 ) -> Callable[[F], F]:
     """Decorator to handle ImportError with standardized error message.
-    
+
     Args:
         module_name: Name of the module being imported (for error message)
         message: Custom error message (overrides default)
         exit_code: Exit code to use on failure (default: 1)
-        
+
     Returns:
         Decorated function that handles ImportError
-        
+
     Example:
         @handle_import_error("wrapper generator")
         def generate():
@@ -632,27 +632,27 @@ def handle_import_error(
                     error_msg = f"Failed to import {module_name}: {e}"
                 else:
                     error_msg = f"Failed to import required module: {e}"
-                
+
                 console_err.print(f"[red]Error:[/red] {error_msg}")
                 raise SystemExit(exit_code)
-        
+
         return wrapper  # type: ignore[return-value]
-    
+
     return decorator
 
 
 class import_or_exit:
     """Context manager for import-or-exit pattern.
-    
+
     Use when you need to import a module and exit if it fails,
     but don't want to wrap an entire function.
-    
+
     Example:
         with import_or_exit("lib.generate", "wrapper generator"):
             from lib.generate import WrapperGenerator
             generator = WrapperGenerator(...)
     """
-    
+
     def __init__(
         self,
         module_name: str = "required module",
@@ -662,17 +662,17 @@ class import_or_exit:
         self.module_name = module_name
         self.custom_message = custom_message
         self.exit_code = exit_code
-    
+
     def __enter__(self) -> "import_or_exit":
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         if exc_type is ImportError:
             if self.custom_message:
                 error_msg = self.custom_message
             else:
                 error_msg = f"Failed to import {self.module_name}: {exc_val}"
-            
+
             console_err.print(f"[red]Error:[/red] {error_msg}")
             raise SystemExit(self.exit_code)
         return None  # Don't suppress other exceptions
@@ -685,15 +685,15 @@ def safe_import(
     exit_on_failure: bool = True,
 ) -> Any:
     """Safely import a module with optional exit on failure.
-    
+
     Args:
         module: Module name to import
         error_message: Custom error message
         exit_on_failure: If True, exit on ImportError; if False, return None
-        
+
     Returns:
         The imported module, or None if exit_on_failure is False and import fails
-        
+
     Example:
         WrapperGenerator = safe_import("lib.generate", error_message="wrapper generator not available")
     """
@@ -704,12 +704,12 @@ def safe_import(
     except ImportError as e:
         if not exit_on_failure:
             return None
-        
+
         if error_message:
             msg = error_message
         else:
             msg = f"Failed to import {module}: {e}"
-        
+
         console_err.print(f"[red]Error:[/red] {msg}")
         raise SystemExit(1)
 ```
@@ -818,49 +818,49 @@ from lib.import_utils import handle_import_error, import_or_exit, safe_import
 
 class TestHandleImportError:
     """Test the handle_import_error decorator."""
-    
+
     def test_successful_import(self):
         """Test that successful imports pass through."""
         @handle_import_error("test module")
         def successful_func():
             import os
             return "success"
-        
+
         assert successful_func() == "success"
-    
+
     def test_import_error_exits(self):
         """Test that ImportError causes SystemExit."""
         @handle_import_error("test module")
         def failing_func():
             import nonexistent_module_xyz  # noqa: F401
-        
+
         with pytest.raises(SystemExit) as exc_info:
             failing_func()
-        
+
         assert exc_info.value.code == 1
-    
+
     def test_custom_exit_code(self):
         """Test custom exit code."""
         @handle_import_error("test module", exit_code=42)
         def failing_func():
             import nonexistent_module_xyz  # noqa: F401
-        
+
         with pytest.raises(SystemExit) as exc_info:
             failing_func()
-        
+
         assert exc_info.value.code == 42
 
 
 class TestImportOrExit:
     """Test the import_or_exit context manager."""
-    
+
     def test_successful_import(self):
         """Test successful import in context."""
         with import_or_exit("os module"):
             import os
-        
+
         # Should not raise
-    
+
     def test_import_error_exits(self):
         """Test that ImportError causes SystemExit."""
         with pytest.raises(SystemExit):
@@ -870,18 +870,18 @@ class TestImportOrExit:
 
 class TestSafeImport:
     """Test the safe_import function."""
-    
+
     def test_successful_import(self):
         """Test successful module import."""
         result = safe_import("os")
         import os
         assert result is os
-    
+
     def test_import_error_returns_none(self):
         """Test that ImportError returns None when exit_on_failure=False."""
         result = safe_import("nonexistent_module_xyz", exit_on_failure=False)
         assert result is None
-    
+
     def test_import_error_exits(self):
         """Test that ImportError exits when exit_on_failure=True."""
         with pytest.raises(SystemExit):
@@ -939,7 +939,7 @@ _has_python_utils() {
 _call_python_utils() {
     local func_name="$1"
     shift
-    
+
     if _has_python_utils; then
         python3 "$(_get_script_dir)/python_utils.py" "$func_name" "$@" 2>/dev/null
         return $?
@@ -953,12 +953,12 @@ _call_python_utils() {
 _call_python_utils_or_fallback() {
     local func_name="$1"
     shift
-    
+
     if _has_python_utils; then
         python3 "$(_get_script_dir)/python_utils.py" "$func_name" "$@" 2>/dev/null
         return $?
     fi
-    
+
     # Execute fallback
     "$@"
     return $?
@@ -972,7 +972,7 @@ _call_python_utils_or_fallback() {
 canonicalize_path_no_resolve() {
     local path="$1"
     [ -n "$path" ] || return 1
-    
+
     # Use Python utility for robust path normalization if available
     if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
         local result
@@ -982,7 +982,7 @@ canonicalize_path_no_resolve() {
             return 0
         fi
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -993,7 +993,7 @@ canonicalize_path_no_resolve() {
 canonicalize_path_no_resolve() {
     local path="$1"
     [ -n "$path" ] || return 1
-    
+
     # Use Python utility for robust path normalization if available
     local result
     result=$(_call_python_utils canonicalize_path "$path")
@@ -1001,7 +1001,7 @@ canonicalize_path_no_resolve() {
         printf '%s' "$result"
         return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1016,7 +1016,7 @@ validate_home_dir() {
     if [ -z "$dir" ]; then
         return 1
     fi
-    
+
     # Use Python utility for robust path validation if available
     if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
         local result
@@ -1026,7 +1026,7 @@ validate_home_dir() {
             return 0
         fi
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1039,7 +1039,7 @@ validate_home_dir() {
     if [ -z "$dir" ]; then
         return 1
     fi
-    
+
     # Use Python utility for robust path validation if available
     local result
     result=$(_call_python_utils validate_home "$dir")
@@ -1047,7 +1047,7 @@ validate_home_dir() {
         printf '%s' "$result"
         return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1059,17 +1059,17 @@ validate_home_dir() {
 ```bash
 is_wrapper_file() {
     local file="$1"
-    
+
     # Basic validation first
     [ -f "$file" ] || return 1
     [ -r "$file" ] || return 1
     [ ! -L "$file" ] || return 1  # Reject symlinks
-    
+
     # Use Python utility for robust content validation if available
     if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
         python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" is_wrapper_file "$file" >/dev/null 2>&1 && return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1079,17 +1079,17 @@ is_wrapper_file() {
 ```bash
 is_wrapper_file() {
     local file="$1"
-    
+
     # Basic validation first
     [ -f "$file" ] || return 1
     [ -r "$file" ] || return 1
     [ ! -L "$file" ] || return 1  # Reject symlinks
-    
+
     # Use Python utility for robust content validation if available
     if _has_python_utils; then
         _call_python_utils is_wrapper_file "$file" >/dev/null 2>&1 && return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1101,12 +1101,12 @@ is_wrapper_file() {
 ```bash
 get_wrapper_id() {
     local file="$1"
-    
+
     # Use Python utility for robust ID extraction if available
     if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
         python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" get_wrapper_id "$file" 2>/dev/null && return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1116,12 +1116,12 @@ get_wrapper_id() {
 ```bash
 get_wrapper_id() {
     local file="$1"
-    
+
     # Use Python utility for robust ID extraction if available
     if _has_python_utils; then
         _call_python_utils get_wrapper_id "$file" && return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1133,14 +1133,14 @@ get_wrapper_id() {
 ```bash
 find_executable() {
     local cmd="$1"
-    
+
     [ -n "$cmd" ] || return 1
-    
+
     # Use Python utility for robust path resolution if available
     if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
         python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" find_executable "$cmd" 2>/dev/null && return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1150,14 +1150,14 @@ find_executable() {
 ```bash
 find_executable() {
     local cmd="$1"
-    
+
     [ -n "$cmd" ] || return 1
-    
+
     # Use Python utility for robust path resolution if available
     if _has_python_utils; then
         _call_python_utils find_executable "$cmd" && return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1170,12 +1170,12 @@ find_executable() {
 safe_mktemp() {
     local template="${1:-tmp.XXXXXX}"
     local dir_param="${2:-}"
-    
+
     # Use Python utility for secure temp file creation if available
     if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
         python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" safe_mktemp "$template" "$dir_param" 2>/dev/null && return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1186,12 +1186,12 @@ safe_mktemp() {
 safe_mktemp() {
     local template="${1:-tmp.XXXXXX}"
     local dir_param="${2:-}"
-    
+
     # Use Python utility for secure temp file creation if available
     if _has_python_utils; then
         _call_python_utils safe_mktemp "$template" "$dir_param" && return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1203,12 +1203,12 @@ safe_mktemp() {
 ```bash
 sanitize_id_to_name() {
     local id="$1"
-    
+
     # Use Python utility for robust name sanitization if available
     if _check_python3 && [ -f "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" ]; then
         python3 "$(dirname "${BASH_SOURCE[0]}")/python_utils.py" sanitize_name "$id" 2>/dev/null && return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1218,12 +1218,12 @@ sanitize_id_to_name() {
 ```bash
 sanitize_id_to_name() {
     local id="$1"
-    
+
     # Use Python utility for robust name sanitization if available
     if _has_python_utils; then
         _call_python_utils sanitize_name "$id" && return 0
     fi
-    
+
     # Fallback to original implementation
     # ... (rest of function)
 }
@@ -1264,7 +1264,7 @@ describe "_call_python_utils" {
             skip "Python utils not available"
         fi
     }
-    
+
     test "returns 1 for nonexistent function" {
         if _has_python_utils; then
             _call_python_utils nonexistent_function_xyz
@@ -1347,11 +1347,11 @@ graph TD
     A --> F[Update generate.py]
     A --> G[Update launch.py]
     A --> H[Update manage.py]
-    
+
     I[Create lib/import_utils.py] --> J[Update cli.py]
-    
+
     K[Add shell helpers] --> L[Update common.sh functions]
-    
+
     B --> M[Run Tests]
     C --> M
     D --> M
