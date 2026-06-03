@@ -8,7 +8,7 @@ submodules. Commands are split into logical groups:
 - cli_systemd: systemd-setup and systemd-* commands
 - cli_profiles: profiles group and subcommands
 - cli_presets: presets group and subcommands
-- cli_utils_cmd: info, search/discover, files, manifest, config commands
+- cli_inspect: info, search/discover, files, manifest, config commands
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ from lib.cli_profiles import (  # noqa: E402
 from lib.cli_presets import (  # noqa: E402
     presets_group,
 )
-from lib.cli_utils_cmd import (  # noqa: E402
+from lib.cli_inspect import (  # noqa: E402
     info,
     search,
     discover,
@@ -96,8 +96,8 @@ def cli(
     ctx.obj["bin_dir"] = bin_dir
     ctx.obj["emit"] = emit
     ctx.obj["emit_verbose"] = emit_verbose
-    # Show help when CLI is invoked with no command
-    if not ctx.args:
+    # Show help only when CLI is invoked with no subcommand
+    if not ctx.invoked_subcommand:
         click.echo(ctx.get_help())
 
 

@@ -6,20 +6,26 @@ schema validation, migration, and templating.
 
 from __future__ import annotations
 
-import argparse
 import logging
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
 from .config_constants import HOOK_FAILURE_MODES
+from .config_manager_presets import BUILTIN_PRESETS
+# Re-export the CLI entry-point from its dedicated module for backward
+# compatibility with tests and external callers that import
+# ``lib.config_manager.main``.  ``config_manager_cli`` does not import
+# ``config_manager`` at module load time (it does so lazily inside
+# ``main()``), so this is not a real cyclic import.
+from .config_manager_cli import main  # noqa: F401
 from .config_models import AppPreferences, WrapperConfig
 from .config_validation import PYDANTIC_AVAILABLE
 # Conditionally import PydanticAppPreferences when pydantic is available
 try:
-    from .config_validation import PydanticAppPreferences
+    # Re-exported for tests; pylint sees no internal use.
+    from .config_validation import PydanticAppPreferences  # noqa: F401 pylint: disable=W0611
 except ImportError:
     PydanticAppPreferences = None  # type: ignore[assignment, misc]
 BaseModel: Any
@@ -559,50 +565,7 @@ class EnhancedConfigManager:
 
         return "warn"
 
-    BUILTIN_PRESETS = {
-        "development": [
-            "--filesystem=home",
-            "--filesystem=host",
-            "--device=dri",
-            "--socket=x11",
-            "--socket=wayland",
-            "--share=ipc",
-        ],
-        "media": [
-            "--device=dri",
-            "--socket=pulseaudio",
-            "--socket=wayland",
-            "--socket=x11",
-            "--share=ipc",
-            "--filesystem=~/Music",
-            "--filesystem=~/Videos",
-        ],
-        "network": [
-            "--share=network",
-            "--share=ipc",
-            "--socket=x11",
-            "--socket=wayland",
-        ],
-        "minimal": ["--share=ipc"],
-        "gaming": [
-            "--device=dri",
-            "--device=input",
-            "--socket=pulseaudio",
-            "--socket=wayland",
-            "--socket=x11",
-            "--share=ipc",
-            "--share=network",
-            "--filesystem=~/Games",
-        ],
-        "offline": [
-            "--device=dri",
-            "--socket=pulseaudio",
-            "--socket=wayland",
-            "--socket=x11",
-            "--share=ipc",
-            "--filesystem=home",
-        ],
-    }
+    BUILTIN_PRESETS = BUILTIN_PRESETS
 
     def list_permission_presets(self) -> list[str]:
         """List available permission preset names."""
@@ -786,92 +749,12 @@ def create_config_manager():
     return EnhancedConfigManager()
 
 
-def main() -> None:
-    """Command-line interface for configuration management."""
-    parser = argparse.ArgumentParser(
-        description="Manage fplaunchwrapper configuration",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  fplaunch-config init                   # Initialize configuration
-  fplaunch-config block firefox          # Block Firefox from being wrapped
-  fplaunch-config unblock firefox        # Unblock Firefox
-  fplaunch-config list-presets           # List permission presets
-  fplaunch-config get-preset gaming      # Get permissions for 'gaming' preset
-
-Commands:
-  init          Initialize default configuration
-  show          Show current configuration
-  block APP     Block application from being wrapped
-  unblock APP   Unblock application
-  list-presets  List all permission presets
-  get-preset NAME Get permissions for a specific preset
-        """,
-    )
-
-    parser.add_argument(
-        "command",
-        choices=["init", "show", "block", "unblock", "list-presets", "get-preset"],
-        help="Configuration command to execute",
-    )
-
-    parser.add_argument(
-        "value",
-        nargs="?",
-        help="Value for the command (app name for block/unblock, preset name for get-preset)",
-    )
-
-    args = parser.parse_args()
-
-    if args.command == "init":
-        config = create_config_manager()
-        config.save_config()
-        print("Configuration initialized successfully")
-
-    elif args.command == "show":
-        config = create_config_manager()
-        if config.config_file.exists():
-            print(config.config_file.read_text())
-        else:
-            print(f"No configuration file found at {config.config_file}")
-            print("Run 'fplaunch config init' to create one")
-
-    elif args.command == "block":
-        if not args.value:
-            parser.error("block command requires an app name")
-        config = create_config_manager()
-        config.add_to_blocklist(args.value)
-        print(f"Blocked {args.value}")
-
-    elif args.command == "unblock":
-        if not args.value:
-            parser.error("unblock command requires an app name")
-        config = create_config_manager()
-        config.remove_from_blocklist(args.value)
-        print(f"Unblocked {args.value}")
-
-    elif args.command == "list-presets":
-        config = create_config_manager()
-        presets = config.list_permission_presets()
-        if presets:
-            print("Available permission presets:")
-            for preset in presets:
-                print(f"  {preset}")
-        else:
-            print("No permission presets defined")
-
-    elif args.command == "get-preset":
-        if not args.value:
-            parser.error("get-preset command requires a preset name")
-        config = create_config_manager()
-        permissions = config.get_permission_preset(args.value)
-        if permissions:
-            print(f"Permissions for preset '{args.value}':")
-            for perm in permissions:
-                print(f"  {perm}")
-        else:
-            print(f"Preset '{args.value}' not found", file=sys.stderr)
-            sys.exit(1)
+__all__ = [
+    "EnhancedConfigManager",
+    "create_config_manager",
+    "main",
+    "BUILTIN_PRESETS",
+]
 
 
 if __name__ == "__main__":

@@ -61,7 +61,7 @@ from lib.cli_presets import (
     presets_add,
     presets_remove,
 )
-from lib.cli_utils_cmd import (
+from lib.cli_inspect import (
     info,
     search,
     discover,

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""CLI utility commands: info, search, discover, files, manifest, config."""
+"""CLI inspect commands: info, search, discover, files, manifest, config.
+
+These commands are read-only / diagnostic in nature: they inspect the
+current state of wrappers, configuration, and Flatpak installs.
+"""
 
 from __future__ import annotations
 
