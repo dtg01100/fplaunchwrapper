@@ -65,7 +65,7 @@ class TestNotifySendAvailable:
             pytest.skip("notifications module not available")
 
         # Mock exception
-        mock_subprocess_run.side_effect = Exception("Command failed")
+        mock_subprocess_run.side_effect = OSError("Command failed")
 
         result = notify_send_available()
         assert result is False
@@ -181,7 +181,7 @@ class TestSendNotification:
             pytest.skip("notifications module not available")
 
         # Mock exception
-        mock_subprocess_run.side_effect = Exception("notify-send crashed")
+        mock_subprocess_run.side_effect = OSError("notify-send crashed")
 
         result = send_notification("Title", "Message")
         assert result is False

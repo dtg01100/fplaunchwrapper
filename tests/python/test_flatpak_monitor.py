@@ -427,7 +427,7 @@ class TestFlatpakMonitor:
             pytest.skip("FlatpakMonitor class not available")
 
         mock_observer = Mock()
-        mock_observer.start.side_effect = Exception("Monitor error")
+        mock_observer.start.side_effect = OSError("Monitor error")
         mock_observer_class.return_value = mock_observer
 
         callback = Mock()
