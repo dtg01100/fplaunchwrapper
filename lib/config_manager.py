@@ -10,6 +10,7 @@ import logging
 import os
 import re
 from pathlib import Path
+from typing import cast
 from typing import Any
 
 from .config_constants import HOOK_FAILURE_MODES
@@ -174,8 +175,11 @@ class EnhancedConfigManager:
 
         def replace_variable(match) -> str:
             var_name = match.group(1) or match.group(2) or ""
-            replacement = self.template_variables.get(var_name, match.group(0))
-            return str(replacement) if replacement is not None else match.group(0)
+            # `template_variables` is a `dict[str, str]` populated only
+            # via `set_template_variable(name, str(value))`; the
+            # `.get()` default is `match.group(0)` which is also str.
+            # mypy still sees the value as Any, so we explicitly cast.
+            return str(cast(Any, self.template_variables.get(var_name, match.group(0))))
 
         result = re.sub(r"\$([A-Za-z0-9_]+|\{[A-Za-z0-9_]+\})", replace_variable, value)
         return result.replace(escaped_placeholder, "$")

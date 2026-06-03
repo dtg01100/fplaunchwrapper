@@ -19,11 +19,25 @@ repos:
     rev: v1.8.0
     hooks:
       - id: mypy
+        # No extra deps needed: click, pydantic, rich, watchdog, and
+        # other runtime libs ship their own type hints (PEP 561).
+        # The previous `types-all` meta-package had yanked transitive
+        # deps that broke installation on modern Python.
+        # We still need to list `click` (and rich) as additional
+        # dependencies so mypy can find them in the pre-commit venv,
+        # even though they ship their own py.typed markers.
         additional_dependencies:
-          - types-all
-          - pydantic
-          - watchdog
-        args: [--strict]
+          - click>=8.1.0
+          - rich>=13.0.0
+          - pydantic>=2.0.0
+          - tomli>=2.0.0
+          - tomli-w>=1.0.0
+          - watchdog>=3.0.0
+        # Match the local `python3 -m mypy lib/` invocation:
+        # scope is `lib/`, no `--strict` flag (the pyproject.toml
+        # [tool.mypy] section controls the actual strictness).
+        files: ^lib/
+        args: []
 
   # YAML validation
   - repo: https://github.com/pre-commit/pre-commit-hooks
