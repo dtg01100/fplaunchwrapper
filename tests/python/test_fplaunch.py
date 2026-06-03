@@ -72,6 +72,7 @@ class TestFplaunchMain:
         original_main = cli_module.main
         # Replace cli_module.main with something that raises AttributeError
         try:
+
             def _raise_attribute_error():
                 raise AttributeError("mocked attribute error")
 
@@ -94,15 +95,25 @@ class TestFplaunchDunderMain:
         """Test that running fplaunch as __main__ calls sys.exit with main's return."""
         import runpy
         import sys as real_sys
+        import warnings
 
         old_argv = real_sys.argv
         real_sys.argv = ["fplaunch"]
         try:
-            runpy.run_module(
-                "lib.fplaunch",
-                run_name="__main__",
-                alter_sys=True,
-            )
+            # Suppress the RuntimeWarning emitted when runpy re-executes a
+            # module that pytest has already imported. The warning is
+            # informational and does not affect the test's correctness.
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message=r"'lib\.fplaunch' found in sys\.modules",
+                    category=RuntimeWarning,
+                )
+                runpy.run_module(
+                    "lib.fplaunch",
+                    run_name="__main__",
+                    alter_sys=True,
+                )
         except SystemExit as e:
             # main() should call sys.exit(return_value), propagating the
             # click exit code (0 for help, 2 for usage error, etc.)
