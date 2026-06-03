@@ -8,8 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import click
-from lib.cli_generation import import_handler
-from lib.cli_imports import console, console_err
+from lib.cli_imports import console, console_err, get_config_manager
 
 if TYPE_CHECKING:
     from click import Context
@@ -29,11 +28,7 @@ def profiles_group(ctx: "Context") -> None:  # pylint: disable=W0613
 @click.pass_context
 def profiles_list(ctx: "Context") -> int:  # pylint: disable=W0613
     """List available profiles."""
-    create_config_manager = import_handler.require(
-        "lib.config_manager",
-        "create_config_manager",
-    )
-    cfg = create_config_manager()
+    cfg = get_config_manager()
     profiles = cfg.list_profiles()
     active = cfg.get_active_profile()
     for profile in profiles:
@@ -50,11 +45,7 @@ def profiles_list(ctx: "Context") -> int:  # pylint: disable=W0613
 @click.pass_context
 def profiles_create(ctx: "Context", profile_name: str, copy_from: str | None) -> int:  # pylint: disable=W0613
     """Create a new profile."""
-    create_config_manager = import_handler.require(
-        "lib.config_manager",
-        "create_config_manager",
-    )
-    cfg = create_config_manager()
+    cfg = get_config_manager()
     if profile_name in cfg.list_profiles():
         console_err.print(f"[red]Error:[/red] Profile '{profile_name}' already exists")
         return 1
@@ -77,11 +68,7 @@ def profiles_create(ctx: "Context", profile_name: str, copy_from: str | None) ->
 @click.pass_context
 def profiles_switch(ctx: "Context", profile_name: str) -> int:  # pylint: disable=W0613
     """Switch to a profile."""
-    create_config_manager = import_handler.require(
-        "lib.config_manager",
-        "create_config_manager",
-    )
-    cfg = create_config_manager()
+    cfg = get_config_manager()
     if profile_name not in cfg.list_profiles():
         console_err.print(f"[red]Error:[/red] Profile '{profile_name}' not found")
         return 1
@@ -99,11 +86,7 @@ def profiles_switch(ctx: "Context", profile_name: str) -> int:  # pylint: disabl
 @click.pass_context
 def profiles_current(ctx: "Context") -> int:  # pylint: disable=W0613
     """Show current profile."""
-    create_config_manager = import_handler.require(
-        "lib.config_manager",
-        "create_config_manager",
-    )
-    cfg = create_config_manager()
+    cfg = get_config_manager()
     current = cfg.get_active_profile()
     console.print(f"Current profile: [bold]{current}[/bold]")
     return 0
@@ -115,11 +98,7 @@ def profiles_current(ctx: "Context") -> int:  # pylint: disable=W0613
 @click.pass_context
 def profiles_export(ctx: "Context", profile_name: str, output_file: str | None) -> int:  # pylint: disable=W0613
     """Export a profile to a file."""
-    create_config_manager = import_handler.require(
-        "lib.config_manager",
-        "create_config_manager",
-    )
-    cfg = create_config_manager()
+    cfg = get_config_manager()
     if profile_name not in cfg.list_profiles():
         console_err.print(f"[red]Error:[/red] Profile '{profile_name}' not found")
         return 1
@@ -140,11 +119,7 @@ def profiles_export(ctx: "Context", profile_name: str, output_file: str | None) 
 @click.pass_context
 def profiles_import(ctx: "Context", input_file: str, profile_name: str | None) -> int:  # pylint: disable=W0613
     """Import a profile from a file."""
-    create_config_manager = import_handler.require(
-        "lib.config_manager",
-        "create_config_manager",
-    )
-    cfg = create_config_manager()
+    cfg = get_config_manager()
     import_path = Path(input_file)
     name = profile_name or import_path.stem
     if name in cfg.list_profiles():

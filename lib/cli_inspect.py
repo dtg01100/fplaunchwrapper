@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Optional
 
 import click
 from lib.cli_utils import console, console_err
-from lib.cli_generation import import_handler
+from lib.cli_imports import build_manager, get_config_manager
 
 if TYPE_CHECKING:
     from click import Context
@@ -26,13 +26,7 @@ logger = logging.getLogger(__name__)
 @click.pass_context
 def info(ctx: "Context", app_name: str) -> int:
     """Show information about a wrapper."""
-    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = WrapperManager(
-        config_dir=ctx.obj.get("config_dir"),
-        verbose=ctx.obj.get("verbose", False),
-        emit_mode=ctx.obj.get("emit", False),
-        emit_verbose=ctx.obj.get("emit_verbose", False),
-    )
+    manager = build_manager(ctx)
     success = manager.show_info(app_name)
     return 0 if success else 1
 
@@ -42,13 +36,7 @@ def info(ctx: "Context", app_name: str) -> int:
 @click.pass_context
 def search(ctx: "Context", query: Optional[str]) -> int:  # pylint: disable=W0613
     """Search or discover wrappers. Alias: discover."""
-    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = WrapperManager(
-        config_dir=ctx.obj.get("config_dir"),
-        verbose=ctx.obj.get("verbose", False),
-        emit_mode=ctx.obj.get("emit", False),
-        emit_verbose=ctx.obj.get("emit_verbose", False),
-    )
+    manager = build_manager(ctx)
     # Minimal behavior: call discover_features if available, otherwise list wrappers
     if hasattr(manager, "discover_features"):
         manager.discover_features()
@@ -88,13 +76,7 @@ def files(
 
     Without APP_NAME, lists all managed files across all apps.
     """
-    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = WrapperManager(
-        config_dir=ctx.obj.get("config_dir"),
-        verbose=ctx.obj.get("verbose", False),
-        emit_mode=ctx.obj.get("emit", False),
-        emit_verbose=ctx.obj.get("emit_verbose", False),
-    )
+    manager = build_manager(ctx)
 
     file_type = None
     if wrappers:
@@ -194,11 +176,7 @@ def config(ctx: "Context", action: Optional[str], value: Optional[str]) -> int: 
       init          Initialize configuration file
       cron-interval Get or set cron interval (in hours)
     """
-    create_config_manager = import_handler.require(
-        "lib.config_manager",
-        "create_config_manager",
-    )
-    cfg = create_config_manager()
+    cfg = get_config_manager()
     if not action or action == "show":
         config_path = cfg.config_file
         if config_path.exists():

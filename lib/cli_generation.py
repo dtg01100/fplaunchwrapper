@@ -9,14 +9,13 @@ from typing import TYPE_CHECKING
 
 import click
 from lib.cli_utils import console, console_err
-from lib.import_utils import ImportErrorHandler
+from lib.cli_imports import build_manager, import_handler
 
 if TYPE_CHECKING:
     from click import Context
 
 
 logger = logging.getLogger(__name__)
-import_handler = ImportErrorHandler(console_err)
 
 
 @click.command()
@@ -38,48 +37,45 @@ def generate(ctx: "Context", bin_dir: str | Path | None) -> int:
     result: int = generator.run()
     return result
 
+
 @click.command(name="list")
 @click.argument("app_name", required=False)
 @click.option("--all", "show_all", is_flag=True, help="List all wrappers")
 @click.pass_context
 def list_wrappers(ctx: "Context", app_name: str | None, show_all: bool) -> int:
     """List installed Flatpak wrappers or show details for one wrapper."""
-    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = WrapperManager(
-        config_dir=ctx.obj.get("config_dir"),
-        verbose=ctx.obj.get("verbose", False),
-    )
+    manager = build_manager(ctx)
 
     # Use display_wrappers for --all (for backward compatibility with test mocks)
     if show_all:
         # Try display_wrappers first (used by test mocks)
-        if hasattr(manager, 'display_wrappers'):
+        if hasattr(manager, "display_wrappers"):
             manager.display_wrappers()
             return 0
         # Or list_wrappers for real implementation
-        if hasattr(manager, 'list_wrappers'):
+        if hasattr(manager, "list_wrappers"):
             wrappers = manager.list_wrappers()
             if not wrappers:
-                console_err.print('[yellow]Warning:[/yellow] No wrappers found')
+                console_err.print("[yellow]Warning:[/yellow] No wrappers found")
                 return 0
             for w in wrappers:
                 console.print(f"[cyan]{w['name']}[/cyan]")
                 console.print(f"  ID: {w['id']}")
                 console.print(f"  Path: {w['path']}")
             return 0
-        console_err.print('[red]Error:[/red] No list method available')
+        console_err.print("[red]Error:[/red] No list method available")
         return 1
 
     if not app_name:
         # No app name given - show usage hint
-        console_err.print('[yellow]Warning:[/yellow] Use --all to list all wrappers')
+        console_err.print("[yellow]Warning:[/yellow] Use --all to list all wrappers")
         return 0
 
     # Try to find single wrapper
-    if hasattr(manager, 'list_wrappers'):
+    if hasattr(manager, "list_wrappers"):
         wrappers = manager.list_wrappers()
         for w in wrappers:
-            if w['name'] == app_name or w['id'] == app_name:
+            if w["name"] == app_name or w["id"] == app_name:
                 console.print(f"[cyan]{w['name']}[/cyan]")
                 console.print(f"  ID: {w['id']}")
                 console.print(f"  Path: {w['path']}")
@@ -142,17 +138,15 @@ def uninstall(ctx: "Context", app_name: str, remove_data: bool, emit: bool) -> i
         console_err.print(f"[red]Error:[/red] Failed to uninstall Flatpak app: {err_msg}")
         return result.returncode if result else 1
 
-    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = WrapperManager(
-        config_dir=ctx.obj.get("config_dir"),
-        verbose=ctx.obj.get("verbose", False),
-    )
+    manager = build_manager(ctx)
 
     success = manager.remove_wrapper(app_name, force=True)
     if success:
         console.print(f"[green]Removed wrapper for {app_name}[/green]")
         return 0
-    console_err.print(f"[yellow]Warning:[/yellow] Could not remove wrapper for {app_name} (may not exist)")
+    console_err.print(
+        f"[yellow]Warning:[/yellow] Could not remove wrapper for {app_name} (may not exist)"
+    )
     return 0
 
 
@@ -165,11 +159,7 @@ def remove(ctx: "Context", name: str, force: bool) -> int:
     if not force:
         console.print(f"[yellow]Removing wrapper:[/yellow] {name}")
 
-    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = WrapperManager(
-        config_dir=ctx.obj.get("config_dir"),
-        verbose=ctx.obj.get("verbose", False),
-    )
+    manager = build_manager(ctx)
 
     success = manager.remove_wrapper(name, force=force)
     if success:
@@ -187,24 +177,21 @@ def rm(ctx: "Context", name: str, force: bool) -> int:
     """Alias for remove."""
     return int(ctx.invoke(remove, name=name, force=force))
 
+
 @click.command(name="set-pref")
 @click.argument("wrapper_name")
 @click.argument("preference")
 @click.pass_context
 def set_pref(ctx: "Context", wrapper_name: str, preference: str) -> int:
     """Set launch preference for a wrapper."""
-    WrapperManager = import_handler.require("lib.manage", "WrapperManager")
-    manager = WrapperManager(
-        config_dir=ctx.obj.get("config_dir"),
-        verbose=ctx.obj.get("verbose", False),
-        emit_mode=ctx.obj.get("emit", False),
-        emit_verbose=ctx.obj.get("emit_verbose", False),
-    )
+    manager = build_manager(ctx)
     if manager.set_preference(wrapper_name, preference):
         console.print(f"[green]Set preference for {wrapper_name}:[/green] {preference}")
         return 0
     console_err.print("[red]Error:[/red] Failed to set preference")
     return 1
+
+
 @click.command(name="pref")
 @click.argument("wrapper_name")
 @click.argument("preference")
