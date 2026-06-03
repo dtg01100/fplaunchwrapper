@@ -306,6 +306,7 @@ class AppLauncher:
                     text=True,
                     timeout=30,
                     env=env,
+                    check=False,
                 )
 
                 if result.returncode != 0:
@@ -501,6 +502,7 @@ class AppLauncher:
                     capture_output=True,
                     text=True,
                     timeout=30,
+                    check=False,
                 )
                 if res.returncode == 0:
                     for line in res.stdout.strip().splitlines():
@@ -538,8 +540,8 @@ class AppLauncher:
             logger.debug("Launching: %s", " ".join(cmd))
 
         if self.env:
-            return subprocess.run(cmd, capture_output=False, env=self.env)
-        return subprocess.run(cmd, capture_output=False)
+            return subprocess.run(cmd, capture_output=False, env=self.env, check=False)
+        return subprocess.run(cmd, capture_output=False, check=False)
 
     def _get_wrapper_path(self, app_name: str | None = None) -> Path:
         """Get the wrapper path for an application."""
