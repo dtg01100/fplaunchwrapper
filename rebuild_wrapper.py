@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""One-shot maintenance script: rewrite create_wrapper_script to use .format().
+
+This is a hand-rolled migration helper kept in the repo root for
+historical reference. It is not part of the importable package and
+is not run as part of CI.
+"""
 import re
 import sys
 from pathlib import Path
