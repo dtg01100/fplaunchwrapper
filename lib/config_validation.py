@@ -18,6 +18,7 @@ field_validator: Any = Any
 
 def _create_field_shim() -> Any:
     """Create a minimal Field shim for non-pydantic environments."""
+
     class _RuntimeField:
         def __init__(self, *args, **kwargs):
             self.default = kwargs.get("default")
@@ -33,6 +34,7 @@ def _create_field_shim() -> Any:
 
 def _create_field_validator_shim() -> Any:
     """Create a minimal field_validator shim for non-pydantic environments."""
+
     class _RuntimeFieldValidator:
         def __init__(self, *args, **kwargs):
             self.fields = args[0] if args else []

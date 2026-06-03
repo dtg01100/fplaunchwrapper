@@ -15,51 +15,69 @@ from hypothesis import given, settings, HealthCheck, strategies as st
 # Strategies
 # ==========================
 
+
 @st.composite
 def toml_string_strategy(draw) -> str:
     """Generate strings that might be in TOML config."""
-    return draw(st.sampled_from([
-        "",
-        "a",
-        "x" * 100,
-        "x" * 1000,
-        "hello world",
-        "hello\\tworld",
-        'hello"world',
-        "hello\nworld",
-        "hello\rworld",
-        "hello;world",
-        "hello$world",
-        "hello世界",
-        "café",
-        "\u200b",
-        "\ufeff",
-        "'; DROP TABLE users; --",
-        "<script>alert('xss')</script>",
-        "${env:PATH}",
-        "$(whoami)",
-        "😀" * 10,
-        "x" * 10000,
-    ]))
+    return draw(
+        st.sampled_from(
+            [
+                "",
+                "a",
+                "x" * 100,
+                "x" * 1000,
+                "hello world",
+                "hello\\tworld",
+                'hello"world',
+                "hello\nworld",
+                "hello\rworld",
+                "hello;world",
+                "hello$world",
+                "hello世界",
+                "café",
+                "\u200b",
+                "\ufeff",
+                "'; DROP TABLE users; --",
+                "<script>alert('xss')</script>",
+                "${env:PATH}",
+                "$(whoami)",
+                "😀" * 10,
+                "x" * 10000,
+            ]
+        )
+    )
 
 
 @st.composite
 def config_dict_strategy(draw) -> dict:
     """Generate various config dict structures."""
-    return draw(st.dictionaries(
-        st.sampled_from(["bin_dir", "config_dir", "data_dir", "blocklist", "cron_interval", "enable_notifications", "global_preferences"]),
-        st.one_of(
-            st.text(max_size=1000),
-            st.lists(st.text(max_size=100), max_size=10),
-            st.booleans(),
-            st.dictionaries(st.text(), st.text()),
-        ),
-        max_size=10
-    ))
+    return draw(
+        st.dictionaries(
+            st.sampled_from(
+                [
+                    "bin_dir",
+                    "config_dir",
+                    "data_dir",
+                    "blocklist",
+                    "cron_interval",
+                    "enable_notifications",
+                    "global_preferences",
+                ]
+            ),
+            st.one_of(
+                st.text(max_size=1000),
+                st.lists(st.text(max_size=100), max_size=10),
+                st.booleans(),
+                st.dictionaries(st.text(), st.text()),
+            ),
+            max_size=10,
+        )
+    )
 
 
 # Fixtures
 # ==========================
+
 
 @pytest.fixture
 def temp_home(tmp_path):
@@ -76,11 +94,14 @@ def temp_home(tmp_path):
 # Tests
 # ==========================
 
+
 class TestConfigLoadFuzz:
     """Fuzz tests for config loading."""
 
     @given(bad_toml=toml_string_strategy())
-    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_load_rejects_malformed_toml(self, bad_toml, temp_home):
         """load_config should handle malformed TOML gracefully."""
         from lib.config_manager import EnhancedConfigManager
@@ -92,12 +113,14 @@ class TestConfigLoadFuzz:
             config = EnhancedConfigManager()
             try:
                 config.load_config()
-                assert hasattr(config, 'config')
+                assert hasattr(config, "config")
             except Exception:
                 pass
 
     @given(data=st.binary(max_size=10000))
-    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_load_handles_binary_data(self, data, temp_home):
         """load_config should handle binary data gracefully."""
         from lib.config_manager import EnhancedConfigManager
@@ -117,7 +140,9 @@ class TestConfigSaveFuzz:
     """Fuzz tests for config saving."""
 
     @given(config_data=config_dict_strategy())
-    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_save_handles_various_configs(self, config_data, temp_home):
         """save_config should handle various config structures."""
         from lib.config_manager import EnhancedConfigManager
@@ -143,7 +168,9 @@ class TestConfigValuesFuzz:
     """Fuzz tests for config value validation."""
 
     @given(cron_value=st.one_of(st.integers(min_value=-1000, max_value=1000), st.text()))
-    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_cron_interval_validation(self, cron_value, temp_home):
         """set_cron_interval should validate input correctly."""
         from lib.config_manager import EnhancedConfigManager
@@ -157,7 +184,9 @@ class TestConfigValuesFuzz:
                 pass
 
     @given(blocklist_item=toml_string_strategy())
-    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_blocklist_handles_various_items(self, blocklist_item, temp_home):
         """Blocklist operations should handle various inputs."""
         from lib.config_manager import EnhancedConfigManager
@@ -178,7 +207,9 @@ class TestConfigMigrationFuzz:
     """Fuzz tests for config migration."""
 
     @given(old_format=st.text(max_size=10000))
-    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_migration_handles_old_formats(self, old_format, temp_home):
         """Migration should handle various old config formats."""
         from lib.config_manager import EnhancedConfigManager
@@ -215,7 +246,9 @@ class TestProfileFuzz:
                 assert isinstance(imported, bool)
 
     @given(profile_name=toml_string_strategy())
-    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_profile_names_handled_gracefully(self, profile_name, temp_home):
         """Profile operations should handle unusual names."""
         from lib.config_manager import EnhancedConfigManager
@@ -234,7 +267,9 @@ class TestExportFuzz:
     """Fuzz tests for export functionality."""
 
     @given(profile_name=toml_string_strategy())
-    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_export_handles_various_names(self, profile_name, temp_home):
         """Export should handle various profile names."""
         from lib.config_manager import EnhancedConfigManager
@@ -266,7 +301,9 @@ class TestImportFuzz:
             assert result is False
 
     @given(content=toml_string_strategy())
-    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=10, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_import_various_contents(self, content, temp_home):
         """Import should handle various file contents."""
         from lib.config_manager import EnhancedConfigManager

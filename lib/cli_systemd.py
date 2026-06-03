@@ -157,6 +157,7 @@ def _systemctl_command(
 ) -> int:
     """Run a systemctl command with emit-mode awareness."""
     import subprocess
+
     emit_mode = ctx.obj.get("emit", False)
     if emit_mode:
         console.print(f"[yellow]EMIT: Would run systemctl {action}[/yellow]")
@@ -201,6 +202,7 @@ def systemd_reload(ctx: "Context") -> int:
 def systemd_logs(ctx: "Context") -> int:
     """View systemd service logs."""
     import subprocess
+
     emit_mode = ctx.obj.get("emit", False)
     if emit_mode:
         console.print("[yellow]EMIT: Would show systemd logs[/yellow]")

@@ -300,7 +300,9 @@ class TestSystemdSetupCmd:
         fake_setup = MagicMock()
         fake_setup.run.return_value = 0
         runner = CliRunner()
-        with patch.object(cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup):
+        with patch.object(
+            cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup
+        ):
             result = runner.invoke(cli, ["systemd-setup"], standalone_mode=False)
         assert result.return_value == 0
 
@@ -311,7 +313,9 @@ class TestSystemdSetupCmd:
         fake_setup = MagicMock(spec=["install_systemd_units"])
         fake_setup.install_systemd_units.return_value = True
         runner = CliRunner()
-        with patch.object(cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup):
+        with patch.object(
+            cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup
+        ):
             result = runner.invoke(cli, ["systemd-setup"], standalone_mode=False)
         assert result.return_value == 0
 
@@ -321,7 +325,9 @@ class TestSystemdSetupCmd:
 
         fake_setup = MagicMock(spec=[])  # no methods
         runner = CliRunner()
-        with patch.object(cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup):
+        with patch.object(
+            cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup
+        ):
             result = runner.invoke(cli, ["systemd-setup"], standalone_mode=False)
         assert result.return_value == 1
 
@@ -332,7 +338,9 @@ class TestSystemdSetupCmd:
         fake_setup = MagicMock()
         fake_setup.run.side_effect = OSError("boom")
         runner = CliRunner()
-        with patch.object(cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup):
+        with patch.object(
+            cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup
+        ):
             result = runner.invoke(cli, ["systemd-setup"], standalone_mode=False)
         assert result.return_value == 1
 
@@ -343,7 +351,9 @@ class TestSystemdSetupCmd:
         fake_setup = MagicMock()
         fake_setup.run.return_value = 0
         runner = CliRunner()
-        with patch.object(cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup):
+        with patch.object(
+            cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup
+        ):
             result = runner.invoke(cli, ["systemd"], standalone_mode=False)
         assert result.exit_code == 0
 
@@ -353,7 +363,9 @@ class TestSystemdSetupCmd:
 
         fake_setup = MagicMock(spec=[])
         runner = CliRunner()
-        with patch.object(cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup):
+        with patch.object(
+            cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup
+        ):
             result = runner.invoke(cli, ["systemd-setup"], standalone_mode=False)
         assert result.return_value == 1
 
@@ -364,7 +376,9 @@ class TestSystemdSetupCmd:
         fake_setup = MagicMock()
         fake_setup.run.side_effect = OSError("boom")
         runner = CliRunner()
-        with patch.object(cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup):
+        with patch.object(
+            cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup
+        ):
             result = runner.invoke(cli, ["systemd-setup"], standalone_mode=False)
         assert result.return_value == 1
 
@@ -395,7 +409,9 @@ class TestRunSystemdSetupDirect:
     """Test _run_systemd_setup helper invoked directly."""
 
     def _ctx(self):
-        return MagicMock(obj={"config_dir": None, "verbose": False, "emit": False, "emit_verbose": False})
+        return MagicMock(
+            obj={"config_dir": None, "verbose": False, "emit": False, "emit_verbose": False}
+        )
 
     def test_uses_run_method(self):
         """Test _run_systemd_setup uses .run() when present."""

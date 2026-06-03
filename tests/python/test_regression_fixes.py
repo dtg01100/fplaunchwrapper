@@ -24,16 +24,19 @@ import pytest
 
 class TestValidateScriptPathSecurityBypass:
     """validate_script_path must reject scripts in sensitive directories."""
+
     @pytest.fixture()
     def pydantic_app_prefs_class(self):
         """Return PydanticAppPreferences or skip if pydantic is unavailable."""
         try:
             import lib.config_manager as cm
+
             if cm.PydanticAppPreferences is None:
                 pytest.skip("PydanticAppPreferences not available (pydantic not installed)")
             return cm.PydanticAppPreferences
         except (ImportError, AttributeError):
             pytest.skip("PydanticAppPreferences not available")
+
     @pytest.mark.parametrize(
         "path",
         [
@@ -48,6 +51,7 @@ class TestValidateScriptPathSecurityBypass:
     def test_sensitive_directories_are_rejected(self, pydantic_app_prefs_class, path):
         """Scripts in sensitive system directories must raise ValueError."""
         from lib.config_manager import ValidationError
+
         # Patch Path.is_file() so the sensitive-dir guard is the only thing
         # standing between us and a ValidationError. Path.is_file() internally
         # uses stat().st_mode, so we patch pathlib.Path.is_file directly.
@@ -55,10 +59,14 @@ class TestValidateScriptPathSecurityBypass:
             with pytest.raises(ValidationError) as exc_info:
                 pydantic_app_prefs_class(pre_launch_script=path)
             assert "sensitive system directory" in str(exc_info.value)
+
     def test_user_home_script_is_accepted(self, pydantic_app_prefs_class):
         """Scripts in the user's home directory should not be rejected."""
         home = str(Path.home() / ".local" / "bin" / "pre_launch.sh")
-        with patch.object(Path, "is_file", return_value=True), patch("os.access", return_value=True):
+        with (
+            patch.object(Path, "is_file", return_value=True),
+            patch("os.access", return_value=True),
+        ):
             # Should not raise
             obj = pydantic_app_prefs_class(pre_launch_script=home)
             assert obj.pre_launch_script == home

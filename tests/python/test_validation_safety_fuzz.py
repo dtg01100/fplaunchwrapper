@@ -14,95 +14,107 @@ from hypothesis import given, settings, HealthCheck, strategies as st
 # Strategies
 # ==========================
 
+
 @st.composite
 def flatpak_id_strategy(draw) -> str:
     """Generate Flatpak IDs (valid and invalid)."""
-    return draw(st.sampled_from([
-        "",
-        "a",
-        "ab",
-        "firefox",
-        "org.mozilla.firefox",
-        "org.mozilla.firefox.stable",
-        "org.mozilla.firefox-1.0",
-        "ORG.MOZILLA.FIREFOX",
-        "org.test.app_name.with_underscores",
-        "org.test.app-name.with-dashes",
-        "org.test.app.name.with.dots",
-        "org.test.app+name+with+pluses",
-        "1.org.test.app",
-        ".org.test.app",
-        "org..test..app",
-        "org.test.",
-        "org.test.app;rm -rf",
-        "org.test.app`id`",
-        "org.test.app$(whoami)",
-        "org.test.app|cat /etc/passwd",
-        "org.test.app && echo pwned",
-        "org/\x00test/app",
-        "org/test\x00/app",
-        "org/😀/app",
-        "org/" + "x" * 200 + "/app",
-        "org/test/" + "x" * 200,
-    ]))
+    return draw(
+        st.sampled_from(
+            [
+                "",
+                "a",
+                "ab",
+                "firefox",
+                "org.mozilla.firefox",
+                "org.mozilla.firefox.stable",
+                "org.mozilla.firefox-1.0",
+                "ORG.MOZILLA.FIREFOX",
+                "org.test.app_name.with_underscores",
+                "org.test.app-name.with-dashes",
+                "org.test.app.name.with.dots",
+                "org.test.app+name+with+pluses",
+                "1.org.test.app",
+                ".org.test.app",
+                "org..test..app",
+                "org.test.",
+                "org.test.app;rm -rf",
+                "org.test.app`id`",
+                "org.test.app$(whoami)",
+                "org.test.app|cat /etc/passwd",
+                "org.test.app && echo pwned",
+                "org/\x00test/app",
+                "org/test\x00/app",
+                "org/😀/app",
+                "org/" + "x" * 200 + "/app",
+                "org/test/" + "x" * 200,
+            ]
+        )
+    )
 
 
 @st.composite
 def path_strategy(draw) -> str:
     """Generate path strings (valid and invalid)."""
-    return draw(st.sampled_from([
-        "",
-        "/",
-        "/tmp",
-        "/home/user",
-        "/home/user/.config",
-        "/home/user/.config/fplaunchwrapper",
-        "~",
-        "~/",
-        "~/bin",
-        "../../../etc",
-        "../" * 20 + "etc/passwd",
-        "/etc/passwd",
-        "/etc/../../../var/log",
-        "/home/user/../../root/.ssh",
-        "/tmp/../../../etc/shadow",
-        "x" * 100,
-        "x" * 1000,
-        "x" * 10000,
-        "/tmp/with spaces",
-        "/tmp/with\ttab",
-        "/tmp/with;semicolon",
-        "/tmp/with|pipe",
-        "/tmp/with\nnewline",
-        "/tmp/with\r\nreturn",
-        "/tmp/with\\backslash",
-        "/tmp/with\"quotes",
-        "/tmp/with'double'quotes",
-        "\\\\UNC\\path",
-        "//server/share",
-        "/tmp/../etc",
-        "/etc/./passwd",
-        "/./etc/passwd",
-        ".",
-        "..",
-        "./..",
-        "../.",
-        "/tmp/.",
-        "/tmp/..",
-        "/tmp/../..",
-        "/tmp/./..",
-        "/var/home/dlafreniere/.config/fplaunchwrapper/../../../etc/passwd",
-    ]))
+    return draw(
+        st.sampled_from(
+            [
+                "",
+                "/",
+                "/tmp",
+                "/home/user",
+                "/home/user/.config",
+                "/home/user/.config/fplaunchwrapper",
+                "~",
+                "~/",
+                "~/bin",
+                "../../../etc",
+                "../" * 20 + "etc/passwd",
+                "/etc/passwd",
+                "/etc/../../../var/log",
+                "/home/user/../../root/.ssh",
+                "/tmp/../../../etc/shadow",
+                "x" * 100,
+                "x" * 1000,
+                "x" * 10000,
+                "/tmp/with spaces",
+                "/tmp/with\ttab",
+                "/tmp/with;semicolon",
+                "/tmp/with|pipe",
+                "/tmp/with\nnewline",
+                "/tmp/with\r\nreturn",
+                "/tmp/with\\backslash",
+                '/tmp/with"quotes',
+                "/tmp/with'double'quotes",
+                "\\\\UNC\\path",
+                "//server/share",
+                "/tmp/../etc",
+                "/etc/./passwd",
+                "/./etc/passwd",
+                ".",
+                "..",
+                "./..",
+                "../.",
+                "/tmp/.",
+                "/tmp/..",
+                "/tmp/../..",
+                "/tmp/./..",
+                "/var/home/dlafreniere/.config/fplaunchwrapper/../../../etc/passwd",
+            ]
+        )
+    )
 
 
 # Tests
 # ==========================
 
+
 class TestValidateFlatpakId:
     """Fuzz tests for validate_flatpak_id."""
 
     @given(app_id=flatpak_id_strategy())
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_validate_flatpak_id_never_crashes(self, app_id):
         """validate_flatpak_id should never crash on any input."""
         from lib.safety import validate_flatpak_id
@@ -114,7 +126,9 @@ class TestValidateFlatpakId:
             pytest.fail("validate_flatpak_id raised an exception")
 
     @given(app_id=flatpak_id_strategy())
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_validate_flatpak_id_rejects_injection(self, app_id):
         """validate_flatpak_id should reject shell injection patterns."""
         from lib.safety import validate_flatpak_id
@@ -131,7 +145,9 @@ class TestValidateAppId:
     """Fuzz tests for validate_app_id."""
 
     @given(app_id=st.text(max_size=10000))
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_validate_app_id_never_crashes(self, app_id):
         """validate_app_id should never crash on any input."""
         from lib.validation import validate_app_id
@@ -144,7 +160,9 @@ class TestValidateAppId:
             pytest.fail("validate_app_id raised an exception")
 
     @given(app_id=st.text(max_size=10000))
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_validate_app_id_empty_returns_false(self, app_id):
         """Empty app IDs should be rejected."""
         from lib.validation import validate_app_id
@@ -159,14 +177,18 @@ class TestCheckPathTraversal:
 
     @given(
         path_str=path_strategy(),
-        base=st.sampled_from([
-            "/home/user/.config/fplaunchwrapper",
-            "/home/user/.local/share/fplaunchwrapper",
-            "/tmp/fplaunchwrapper",
-            str(Path.home() / ".config" / "fplaunchwrapper"),
-        ])
+        base=st.sampled_from(
+            [
+                "/home/user/.config/fplaunchwrapper",
+                "/home/user/.local/share/fplaunchwrapper",
+                "/tmp/fplaunchwrapper",
+                str(Path.home() / ".config" / "fplaunchwrapper"),
+            ]
+        ),
     )
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_check_path_traversal_never_crashes(self, path_str, base):
         """check_path_traversal should never crash."""
         from lib.validation import check_path_traversal
@@ -214,7 +236,9 @@ class TestSanitizeIdToName:
     """Fuzz tests for sanitize_id_to_name."""
 
     @given(app_id=st.text(max_size=10000))
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_sanitize_id_to_name_never_crashes(self, app_id):
         """sanitize_id_to_name should never crash."""
         from lib.python_utils import sanitize_id_to_name
@@ -228,7 +252,9 @@ class TestSanitizeIdToName:
             pytest.fail("sanitize_id_to_name raised an exception")
 
     @given(app_id=st.text(max_size=10000))
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_sanitize_id_to_name_length_bounded(self, app_id):
         """sanitize_id_to_name output should be reasonably bounded."""
         from lib.python_utils import sanitize_id_to_name
@@ -237,7 +263,9 @@ class TestSanitizeIdToName:
         assert len(result) <= 255, f"Output too long: {len(result)}"
 
     @given(app_id=st.text(max_size=10000))
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_sanitize_id_to_name_no_path_traversal(self, app_id):
         """sanitize_id_to_name should not produce path traversal characters."""
         from lib.python_utils import sanitize_id_to_name
@@ -251,19 +279,23 @@ class TestDesktopParserFuzz:
     """Fuzz tests for desktop file parsing."""
 
     @given(content=st.text(max_size=10000))
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_desktop_parser_handles_various_content(self, content):
         """Desktop parser should handle various file contents."""
         from lib.desktop_parser import DesktopEntry
 
         try:
             entry = DesktopEntry.from_string(content)
-            assert hasattr(entry, 'name') or hasattr(entry, 'exec')
+            assert hasattr(entry, "name") or hasattr(entry, "exec")
         except Exception:
             pass
 
     @given(exec_value=st.text(max_size=1000))
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_exec_substitution(self, exec_value):
         """Exec substitution should handle various values."""
         from lib.desktop_parser import DesktopEntry
@@ -275,7 +307,7 @@ Type=Application
 """
         try:
             entry = DesktopEntry.from_string(basic_desktop)
-            assert hasattr(entry, 'exec')
+            assert hasattr(entry, "exec")
         except Exception:
             pass
 
@@ -284,7 +316,9 @@ class TestPathResolution:
     """Fuzz tests for path resolution functions."""
 
     @given(path_str=path_strategy())
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_resolve_bin_dir_never_crashes(self, path_str):
         """resolve_bin_dir should never crash."""
         from lib.paths import resolve_bin_dir
@@ -297,7 +331,9 @@ class TestPathResolution:
             pass
 
     @given(path_str=st.text(max_size=1000))
-    @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_get_default_bin_dir(self, path_str):
         """get_default_bin_dir should handle various home paths."""
         from lib.paths import get_default_bin_dir

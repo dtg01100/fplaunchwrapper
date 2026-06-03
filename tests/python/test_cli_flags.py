@@ -274,9 +274,7 @@ def test_manage_aliases_search_and_rm(monkeypatch):
         sys.argv = original_argv
 
 
-def test_launch_propagates_verbose_from_global_context(
-    cli_mod, runner, monkeypatch, tmp_path
-):
+def test_launch_propagates_verbose_from_global_context(cli_mod, runner, monkeypatch, tmp_path):
     """Regression: CLI launch must propagate --verbose and --config-dir from
     global Click context into AppLauncher so launch verbose logging actually
     fires when the user passes -v on the command line.

@@ -62,9 +62,12 @@ from lib.cli_inspect import (  # noqa: E402
     manifest,
     config,
 )
+
 # Re-export utilities for backward compatibility with tests
 from lib.cli_utils import run_command  # noqa: E402, F401, W0611
 from lib.cli_generation import import_handler  # noqa: E402, F401, W0611
+
+
 @click.group(invoke_without_command=True)
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--config-dir", help="Override config directory")

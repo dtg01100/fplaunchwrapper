@@ -361,6 +361,7 @@ class TestLocking:
                 assert result is False
             finally:
                 import contextlib
+
                 with contextlib.suppress(OSError):
                     lockfile.rmdir()
                 with contextlib.suppress(OSError):

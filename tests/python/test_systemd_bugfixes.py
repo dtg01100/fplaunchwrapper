@@ -188,7 +188,6 @@ class TestReturnValueSemanticsFix:
                 result = setup.disable_systemd_units()
                 assert result is True
 
-
         finally:
             shutil.rmtree(temp_dir)
 

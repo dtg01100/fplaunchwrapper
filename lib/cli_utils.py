@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from rich.console import Console
+
 console = Console()
 console_err = Console(stderr=True)
 

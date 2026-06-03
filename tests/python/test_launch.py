@@ -2010,9 +2010,11 @@ class TestWrapperExistsFindWrapperExceptions:
             config_dir=str(self.config_dir),
         )
 
-        with patch.object(launcher, "_is_path_safe", side_effect=ValueError("test")), \
-            patch("pathlib.Path.exists", return_value=True), \
-            patch("os.access", return_value=True):
+        with (
+            patch.object(launcher, "_is_path_safe", side_effect=ValueError("test")),
+            patch("pathlib.Path.exists", return_value=True),
+            patch("os.access", return_value=True),
+        ):
             result = launcher._wrapper_exists("test_app")
 
         # Fail closed: a safety-check exception must not let the filesystem
@@ -2034,9 +2036,11 @@ class TestWrapperExistsFindWrapperExceptions:
             config_dir=str(self.config_dir),
         )
 
-        with patch.object(launcher, "_is_path_safe", side_effect=OSError("test")), \
-            patch("pathlib.Path.exists", return_value=True), \
-            patch("os.access", return_value=True):
+        with (
+            patch.object(launcher, "_is_path_safe", side_effect=OSError("test")),
+            patch("pathlib.Path.exists", return_value=True),
+            patch("os.access", return_value=True),
+        ):
             result = launcher._find_wrapper()
 
         assert result is None

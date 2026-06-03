@@ -13,6 +13,7 @@ import pytest
 try:
     from click.testing import CliRunner
     import lib.cli as cli_module
+
     HAS_CLI = True
 except ImportError:
     HAS_CLI = False
@@ -85,7 +86,9 @@ class TestProfilesCLI:
     def test_profiles_export(self, cli_runner, isolated_home, tmp_path):
         """Test exporting a profile."""
         output_file = tmp_path / "test_profile.toml"
-        result = cli_runner.invoke(cli_module.cli, ["profiles", "export", "default", str(output_file)])
+        result = cli_runner.invoke(
+            cli_module.cli, ["profiles", "export", "default", str(output_file)]
+        )
         assert result.exit_code == 0
         assert output_file.exists()
 
@@ -163,11 +166,15 @@ class TestUninstallCLI:
         """Test uninstall with --remove-data flag sets correct flag."""
         from unittest.mock import Mock, patch
 
-        with patch("subprocess.run") as mock_run, \
-             patch("lib.manage.WrapperManager") as mock_manager:
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("lib.manage.WrapperManager") as mock_manager,
+        ):
             mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
             mock_manager.return_value.remove_wrapper.return_value = True
-            result = cli_runner.invoke(cli_module.cli, ["uninstall", "--remove-data", "org.example.app"])
+            result = cli_runner.invoke(
+                cli_module.cli, ["uninstall", "--remove-data", "org.example.app"]
+            )
             assert result.exit_code == 0
             call_args = mock_run.call_args[0][0]
             assert "--delete-data" in call_args

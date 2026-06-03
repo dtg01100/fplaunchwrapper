@@ -9,7 +9,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 
-
 import pytest
 from hypothesis import given, settings, HealthCheck, strategies as st
 
@@ -17,45 +16,49 @@ from hypothesis import given, settings, HealthCheck, strategies as st
 @st.composite
 def cli_string_strategy(draw) -> str:
     """Generate various string inputs for CLI fuzzing."""
-    return draw(st.sampled_from([
-        "",
-        "a",
-        "ab",
-        "abc",
-        "x" * 10,
-        "x" * 50,
-        "x" * 100,
-        "x" * 255,
-        "x" * 1000,
-        "hello world",
-        "hello\tworld",
-        'hello"world',
-        "hello'world",
-        "hello;world",
-        "hello|world",
-        "hello&world",
-        "hello$world",
-        "hello世界",
-        "Привет",
-        "café",
-        "naïve",
-        "\u200b",
-        "\ufeff",
-        "../../../etc/passwd",
-        "../" * 10 + "etc/passwd",
-        "/etc/passwd",
-        "'; DROP TABLE users; --",
-        "<script>alert('xss')</script>",
-        "${env:PATH}",
-        "$(whoami)",
-        "`id`",
-        "file.txt;rm -rf",
-        "file.txt|cat",
-        "file.txt&&echo",
-        "\x7f\x80\xff",
-        "😀" * 10,  # 10 emoji chars (40 bytes) - reasonable limit
-        "🏠" * 20,  # 20 emoji chars (80 bytes) - safe limit for path length
-    ]))
+    return draw(
+        st.sampled_from(
+            [
+                "",
+                "a",
+                "ab",
+                "abc",
+                "x" * 10,
+                "x" * 50,
+                "x" * 100,
+                "x" * 255,
+                "x" * 1000,
+                "hello world",
+                "hello\tworld",
+                'hello"world',
+                "hello'world",
+                "hello;world",
+                "hello|world",
+                "hello&world",
+                "hello$world",
+                "hello世界",
+                "Привет",
+                "café",
+                "naïve",
+                "\u200b",
+                "\ufeff",
+                "../../../etc/passwd",
+                "../" * 10 + "etc/passwd",
+                "/etc/passwd",
+                "'; DROP TABLE users; --",
+                "<script>alert('xss')</script>",
+                "${env:PATH}",
+                "$(whoami)",
+                "`id`",
+                "file.txt;rm -rf",
+                "file.txt|cat",
+                "file.txt&&echo",
+                "\x7f\x80\xff",
+                "😀" * 10,  # 10 emoji chars (40 bytes) - reasonable limit
+                "🏠" * 20,  # 20 emoji chars (80 bytes) - safe limit for path length
+            ]
+        )
+    )
 
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
@@ -68,10 +71,13 @@ def run_cli(*args, home: str | None = None) -> subprocess.CompletedProcess:
     env["HOME"] = home or tempfile.mkdtemp()
     env["PYTHONPATH"] = str(PROJECT_DIR)
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, env=env, cwd=str(PROJECT_DIR))
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=30, env=env, cwd=str(PROJECT_DIR)
+        )
     except ValueError:
         result = subprocess.CompletedProcess(cmd, 1, "", "ValueError: embedded null byte")
     return result
+
 
 def run_cli_inproc(*args, home: str | None = None) -> SimpleNamespace:
     """Run CLI command in-process (no subprocess overhead).
@@ -87,7 +93,6 @@ def run_cli_inproc(*args, home: str | None = None) -> SimpleNamespace:
     from unittest.mock import patch
 
     from lib import cli as cli_module
-
 
     _home = home or tempfile.mkdtemp()
     out_capture = StringIO()
@@ -127,7 +132,6 @@ def run_cli_inproc(*args, home: str | None = None) -> SimpleNamespace:
     )
 
 
-
 class TestGenerateCommandFuzz:
     """Fuzz tests for the generate command."""
 
@@ -137,7 +141,9 @@ class TestGenerateCommandFuzz:
         assert result.returncode in (0, 1, 2, 64, 65, 127)
 
     @given(extra_args=st.lists(cli_string_strategy(), max_size=5))
-    @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_generate_with_extra_args(self, extra_args):
         """generate command should reject or handle arbitrary extra args."""
         result = run_cli_inproc("generate", "org.example.App", *extra_args)
@@ -148,7 +154,9 @@ class TestLaunchCommandFuzz:
     """Fuzz tests for the launch command."""
 
     @given(app_name=cli_string_strategy())
-    @settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_launch_handles_various_app_names(self, app_name):
         """launch command should handle various app_name formats gracefully."""
         result = run_cli_inproc("launch", app_name)
@@ -157,9 +165,13 @@ class TestLaunchCommandFuzz:
 
     @given(
         app_name=st.text(min_size=1, max_size=100),
-        flags=st.lists(st.sampled_from(["--abort-on-hook-failure", "--ignore-hook-failure"]), max_size=2)
+        flags=st.lists(
+            st.sampled_from(["--abort-on-hook-failure", "--ignore-hook-failure"]), max_size=2
+        ),
     )
-    @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_launch_with_flags(self, app_name, flags):
         """launch command should handle flags without crashing."""
         result = run_cli_inproc("launch", app_name, *flags)
@@ -171,7 +183,9 @@ class TestRemoveCommandFuzz:
     """Fuzz tests for the remove command."""
 
     @given(name=cli_string_strategy())
-    @settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_remove_handles_various_names(self, name):
         """remove command should handle various wrapper names."""
         result = run_cli_inproc("remove", name, "--force")
@@ -184,9 +198,11 @@ class TestInstallCommandFuzz:
 
     @given(
         app_name=cli_string_strategy(),
-        extra_args=st.lists(st.sampled_from(["--force-reinstall", "--no-pull"]), max_size=2)
+        extra_args=st.lists(st.sampled_from(["--force-reinstall", "--no-pull"]), max_size=2),
     )
-    @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_install_handles_various_inputs(self, app_name, extra_args):
         """install command should handle various inputs gracefully."""
         result = run_cli_inproc("install", app_name, *extra_args)
@@ -199,9 +215,11 @@ class TestUninstallCommandFuzz:
 
     @given(
         app_name=cli_string_strategy(),
-        extra_args=st.lists(st.sampled_from(["--remove-data", "--force"]), max_size=2)
+        extra_args=st.lists(st.sampled_from(["--remove-data", "--force"]), max_size=2),
     )
-    @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_uninstall_handles_various_inputs(self, app_name, extra_args):
         """uninstall command should handle various inputs gracefully."""
         result = run_cli_inproc("uninstall", app_name, *extra_args)
@@ -213,12 +231,15 @@ class TestInfoCommandFuzz:
     """Fuzz tests for the info command."""
 
     @given(app_name=st.text(max_size=50).filter(lambda x: x and not x.startswith("-")))
-    @settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_info_handles_various_app_names(self, app_name):
         """info command should handle various inputs."""
         result = run_cli_inproc("info", app_name)
         assert result.returncode in (0, 1, 2, 64, 127)
         assert "Traceback" not in result.stderr
+
 
 class TestConfigCommandFuzz:
     """Fuzz tests for the config command."""
@@ -228,7 +249,9 @@ class TestConfigCommandFuzz:
         key=st.text(min_size=1, max_size=50).filter(lambda x: not x.startswith("-")),
         value=st.one_of(st.none(), cli_string_strategy()),
     )
-    @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_config_subcommands(self, subcommand, key, value):
         """config subcommands should handle various inputs gracefully."""
         args = ["config", subcommand]
@@ -240,7 +263,11 @@ class TestConfigCommandFuzz:
                 args.append(value)
         result = run_cli_inproc(*args)
         assert result.returncode in (0, 1, 2, 64, 127)
-        assert "Traceback" not in result.stderr or "UsageError" in result.stderr or "NoSuchOption" in result.stderr
+        assert (
+            "Traceback" not in result.stderr
+            or "UsageError" in result.stderr
+            or "NoSuchOption" in result.stderr
+        )
 
 
 class TestSetPrefCommandFuzz:
@@ -250,7 +277,9 @@ class TestSetPrefCommandFuzz:
         app_name=cli_string_strategy(),
         preference=st.sampled_from(["system", "user", "default", "auto"]),
     )
-    @settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_set_pref_handles_various_inputs(self, app_name, preference):
         """set-pref command should handle various inputs."""
         result = run_cli_inproc("set-pref", app_name, preference)
@@ -262,9 +291,13 @@ class TestGlobalOptionsFuzz:
     """Fuzz tests for global CLI options."""
 
     @given(
-        args=st.lists(st.sampled_from(["--verbose", "-v", "--emit", "--help", "--version"]), max_size=4)
+        args=st.lists(
+            st.sampled_from(["--verbose", "-v", "--emit", "--help", "--version"]), max_size=4
+        )
     )
-    @settings(max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=8, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+    )
     def test_global_options(self, args):
         """Global options should not cause crashes."""
         result = run_cli_inproc(*args)

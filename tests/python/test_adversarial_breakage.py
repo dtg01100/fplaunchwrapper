@@ -8,6 +8,7 @@ import pytest
 
 # ── DesktopEntry edge cases ─────────────────────────────────────────────────
 
+
 class TestDesktopEntryEdgeCases:
     """Edge cases for DesktopEntry constructor and properties."""
 
@@ -45,12 +46,7 @@ class TestDesktopEntryEdgeCases:
         from lib.desktop_parser import DesktopEntry
 
         d = tmp_path / "dup.desktop"
-        d.write_text(
-            "[Desktop Entry]\n"
-            "Name=First\n"
-            "Name=Second\n"
-            "Exec=true\n"
-        )
+        d.write_text("[Desktop Entry]\nName=First\nName=Second\nExec=true\n")
         entry = DesktopEntry(d)
         assert entry.name == "Second"
 
@@ -74,10 +70,7 @@ class TestDesktopEntryEdgeCases:
         from lib.desktop_parser import DesktopEntry
 
         d = tmp_path / "cat.desktop"
-        d.write_text(
-            "[Desktop Entry]\nName=Test\nExec=true\n"
-            "Categories=Game;;Network;\n"
-        )
+        d.write_text("[Desktop Entry]\nName=Test\nExec=true\nCategories=Game;;Network;\n")
         entry = DesktopEntry(d)
         assert entry.categories == ["Game", "Network"]
 
@@ -96,11 +89,7 @@ class TestDesktopEntryEdgeCases:
 
         d = tmp_path / "comment.desktop"
         d.write_text(
-            "# This is a comment\n"
-            "[Desktop Entry]\n"
-            "# Another comment\n"
-            "Name=TestApp\n"
-            "Exec=app\n"
+            "# This is a comment\n[Desktop Entry]\n# Another comment\nName=TestApp\nExec=app\n"
         )
         entry = DesktopEntry(d)
         assert entry.name == "TestApp"
@@ -120,20 +109,14 @@ class TestDesktopEntryEdgeCases:
         from lib.desktop_parser import DesktopEntry
 
         d = tmp_path / "hidden.desktop"
-        d.write_text(
-            "[Desktop Entry]\nName=HiddenApp\nExec=true\n"
-            "Hidden=true\nNoDisplay=TRUE\n"
-        )
+        d.write_text("[Desktop Entry]\nName=HiddenApp\nExec=true\nHidden=true\nNoDisplay=TRUE\n")
         entry = DesktopEntry(d)
         assert entry.is_hidden is True
         assert entry.no_display is True
 
         # Also accept '1'
         d2 = tmp_path / "hidden2.desktop"
-        d2.write_text(
-            "[Desktop Entry]\nName=H2\nExec=true\n"
-            "Hidden=1\nNoDisplay=1\n"
-        )
+        d2.write_text("[Desktop Entry]\nName=H2\nExec=true\nHidden=1\nNoDisplay=1\n")
         entry2 = DesktopEntry(d2)
         assert entry2.is_hidden is True
         assert entry2.no_display is True
@@ -204,6 +187,7 @@ class TestDesktopEntryEdgeCases:
 
 
 # ── Validation edge cases ────────────────────────────────────────────────────
+
 
 class TestValidateAppIdEdgeCases:
     """Edge cases for validate_app_id."""
@@ -302,6 +286,7 @@ class TestValidateAppIdEdgeCases:
 
 # ── validate_flatpak_id (safety.py) edge cases ───────────────────────────────
 
+
 class TestValidateFlatpakIdEdgeCases:
     """Edge cases for validate_flatpak_id in safety.py."""
 
@@ -349,6 +334,7 @@ class TestValidateFlatpakIdEdgeCases:
 
 
 # ── sanitize_id_to_name edge cases ───────────────────────────────────────────
+
 
 class TestSanitizeIdToNameEdgeCases:
     """Edge cases for sanitize_id_to_name."""
@@ -423,6 +409,7 @@ class TestSanitizeIdToNameEdgeCases:
 
 # ── validate_home_dir edge cases ─────────────────────────────────────────────
 
+
 class TestValidateHomeDirEdgeCases:
     """Edge cases for validate_home_dir."""
 
@@ -450,6 +437,7 @@ class TestValidateHomeDirEdgeCases:
 
 
 # ── check_path_traversal edge cases ──────────────────────────────────────────
+
 
 class TestCheckPathTraversalEdgeCases:
     """Edge cases for check_path_traversal."""

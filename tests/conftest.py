@@ -30,7 +30,9 @@ def _pytest_teardown_excepthook(exc_type, exc_value, exc_tb):
         error_msg = str(exc_value)
         if "Could not obtain a node for scope" in error_msg and "Scope.Session" in error_msg:
             # Known pytest issue - log and suppress
-            sys.stderr.write("\n[WORKAROUND] Suppressed known pytest session fixture teardown error\n")
+            sys.stderr.write(
+                "\n[WORKAROUND] Suppressed known pytest session fixture teardown error\n"
+            )
             sys.stderr.flush()
             return
     _original_excepthook(exc_type, exc_value, exc_tb)
@@ -42,6 +44,7 @@ sys.excepthook = _pytest_teardown_excepthook
 # Additional workaround: monkey-patch pytest's fixture finishing to suppress the error
 try:
     from _pytest.fixtures import FixtureDef
+
     _original_finish = FixtureDef.finish
 
     def _patched_finish(self, request):
@@ -52,7 +55,9 @@ try:
             error_msg = str(e)
             if "Could not obtain a node for scope" in error_msg and "Scope.Session" in error_msg:
                 # Known pytest issue - log and suppress
-                sys.stderr.write("\n[WORKAROUND] Suppressed known pytest session fixture teardown error\n")
+                sys.stderr.write(
+                    "\n[WORKAROUND] Suppressed known pytest session fixture teardown error\n"
+                )
                 sys.stderr.flush()
                 return
             raise
@@ -75,6 +80,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", "real_execution: Tests that execute real code paths (minimal mocking)"
     )
+
 
 @pytest.fixture(scope="session", autouse=True)
 def mock_flatpak_binary_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
@@ -139,7 +145,6 @@ esac
     os.environ["PATH"] = f"{mock_bin_dir}:{old_path}"
     yield mock_bin_dir
     os.environ["PATH"] = old_path
-
 
 
 @pytest.fixture

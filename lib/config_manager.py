@@ -15,6 +15,7 @@ from typing import Any
 
 from .config_constants import HOOK_FAILURE_MODES
 from .config_manager_presets import BUILTIN_PRESETS
+
 # Re-export the CLI entry-point from its dedicated module for backward
 # compatibility with tests and external callers that import
 # ``lib.config_manager.main``.  ``config_manager_cli`` does not import
@@ -23,6 +24,7 @@ from .config_manager_presets import BUILTIN_PRESETS
 from .config_manager_cli import main  # noqa: F401
 from .config_models import AppPreferences, WrapperConfig
 from .config_validation import PYDANTIC_AVAILABLE
+
 # Conditionally import PydanticAppPreferences when pydantic is available
 try:
     # Re-exported for tests; pylint sees no internal use.
@@ -101,6 +103,8 @@ try:
     from .config_validation import PydanticWrapperConfig
 except ImportError:
     PydanticWrapperConfig = None  # type: ignore[assignment, misc]
+
+
 class EnhancedConfigManager:
     """Enhanced configuration management with type safety, validation, migration, and templating support."""
 
@@ -317,9 +321,7 @@ class EnhancedConfigManager:
     def _apply_unvalidated_config(self, data: dict[str, Any]) -> None:
         """Apply configuration without Pydantic validation (fallback)."""
         self.config.bin_dir = data.get("bin_dir", self.config.bin_dir)
-        self.config.active_profile = data.get(
-            "active_profile", self.config.active_profile
-        )
+        self.config.active_profile = data.get("active_profile", self.config.active_profile)
         self.config.debug_mode = data.get("debug_mode", self.config.debug_mode)
         self.config.log_level = data.get("log_level", self.config.log_level)
         self.config.cron_interval = data.get("cron_interval", self.config.cron_interval)
