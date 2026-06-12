@@ -181,7 +181,7 @@ class FlatpakEventHandler(_BaseFSHandler):
             for event_type, path in self.pending_events:
                 try:
                     self.callback(event_type, path)
-                except Exception as e:
+                except Exception as e:  # pylint: disable=W0718
                     logger.error(
                         "Callback failed for %s %s: %s", event_type, path, e, exc_info=True
                     )

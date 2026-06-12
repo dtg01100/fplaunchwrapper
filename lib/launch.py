@@ -347,7 +347,7 @@ class AppLauncher:
                 if outcome is False:
                     return False
 
-            except Exception as e:
+            except Exception as e:  # pylint: disable=W0718
                 all_succeeded = False
                 logger.exception("Hook %s script failed: %s", hook_type, script_path)
                 outcome = self._report_hook_error(

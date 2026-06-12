@@ -63,6 +63,7 @@ PACKAGING_TEST_RESULTS.md
 .benchmarks/
 .mypy_cache/
 .crush/
+.atomcode/
 
 # Configuration files
 .bandit

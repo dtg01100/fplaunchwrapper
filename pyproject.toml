@@ -92,7 +92,6 @@ packages = ["lib"]
 
 [tool.setuptools.package-data]
 lib = ["*.py", "templates/*.sh"]
-fplaunch = ["*.py"]
 
 [tool.black]
 line-length = 100
