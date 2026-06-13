@@ -136,13 +136,22 @@ def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Pat
 
     Returns:
         Resolved bin directory path
+
+    Note:
+        This function is total by design: it never raises on a bad
+        ``explicit_dir`` or unreadable ``bin_dir`` file. Malformed
+        input is silently dropped to the next fallback so callers
+        (and the fuzz tests that pin this contract) cannot crash.
+        Use :func:`lib.validation.validate_app_id` upstream if you
+        need to reject bad input explicitly.
     """
     if explicit_dir:
         try:
             return Path(explicit_dir).expanduser()
         except (RuntimeError, ValueError):
-            # RuntimeError: HOME not set; ValueError: embedded null byte
-            return Path(explicit_dir)
+            # RuntimeError: HOME not set; ValueError: embedded null byte.
+            # Silent fallback to default keeps the function total.
+            return get_default_bin_dir()
 
     if config_dir:
         bin_dir_file = config_dir / "bin_dir"
@@ -153,8 +162,7 @@ def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Pat
                     try:
                         return Path(bin_path).expanduser()
                     except (RuntimeError, ValueError):
-                        # RuntimeError: HOME not set; ValueError: embedded null byte
-                        return Path(bin_path)
+                        return get_default_bin_dir()
         except (OSError, UnicodeDecodeError):
             pass
 

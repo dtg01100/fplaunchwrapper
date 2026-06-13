@@ -144,6 +144,18 @@ class TestResolveBinDir:
         result = resolve_bin_dir(explicit_dir="/explicit", config_dir=tmp_path)
         assert result == Path("/explicit")
 
+    def test_explicit_dir_with_null_byte_falls_back(self) -> None:
+        """A null-byte explicit_dir must drop to the default, not silently corrupt."""
+        # "~\x00foo" triggers ValueError inside expanduser on POSIX.
+        result = resolve_bin_dir(explicit_dir="~\x00bad")
+        assert result == get_default_bin_dir()
+
+    def test_config_dir_file_with_null_byte_falls_back(self, tmp_path: Path) -> None:
+        """A bin_dir file containing a path expanduser rejects falls back too."""
+        (tmp_path / "bin_dir").write_text("~\x00bad\n")
+        result = resolve_bin_dir(config_dir=tmp_path)
+        assert result == get_default_bin_dir()
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
