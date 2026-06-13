@@ -47,19 +47,27 @@ Commands:
         help="Value for the command (app name for block/unblock, preset name for get-preset)",
     )
 
+    parser.add_argument(
+        "--config-dir",
+        default=None,
+        help="Override the configuration directory (defaults to XDG path)",
+    )
     args = parser.parse_args()
 
     # Local import to keep CLI entry-point fast and isolated from
     # the rest of the package.
     from lib.config_manager import create_config_manager
 
+    def _mgr():
+        return create_config_manager(config_dir=args.config_dir)
+
     if args.command == "init":
-        config = create_config_manager()
+        config = _mgr()
         config.save_config()
         print("Configuration initialized successfully")
 
     elif args.command == "show":
-        config = create_config_manager()
+        config = _mgr()
         if config.config_file.exists():
             print(config.config_file.read_text())
         else:
@@ -69,19 +77,19 @@ Commands:
     elif args.command == "block":
         if not args.value:
             parser.error("block command requires an app name")
-        config = create_config_manager()
+        config = _mgr()
         config.add_to_blocklist(args.value)
         print(f"Blocked {args.value}")
 
     elif args.command == "unblock":
         if not args.value:
             parser.error("unblock command requires an app name")
-        config = create_config_manager()
+        config = _mgr()
         config.remove_from_blocklist(args.value)
         print(f"Unblocked {args.value}")
 
     elif args.command == "list-presets":
-        config = create_config_manager()
+        config = _mgr()
         presets = config.list_permission_presets()
         if presets:
             print("Available permission presets:")
@@ -93,7 +101,7 @@ Commands:
     elif args.command == "get-preset":
         if not args.value:
             parser.error("get-preset command requires a preset name")
-        config = create_config_manager()
+        config = _mgr()
         permissions = config.get_permission_preset(args.value)
         if permissions:
             print(f"Permissions for preset '{args.value}':")

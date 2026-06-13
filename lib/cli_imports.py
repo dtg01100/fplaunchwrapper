@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lib.cli_utils import console, console_err  # noqa: E402  (used by ImportErrorHandler)
@@ -44,15 +45,31 @@ def build_manager(ctx: Context) -> Any:
     )
 
 
-def get_config_manager():
+def get_config_manager(config_dir: str | Path | None = None):
     """Return a config manager instance via lazy import.
 
     Replaces the three-line ``import_handler.require`` /
     ``create_config_manager()`` boilerplate previously repeated in every
     profile and preset command.
+
+    Args:
+        config_dir: Optional override for the configuration directory.
+            When ``None`` the XDG default is used.
     """
     create_config_manager = import_handler.require(
         "lib.config_manager",
         "create_config_manager",
     )
-    return create_config_manager()
+    return create_config_manager(config_dir=config_dir)
+
+
+def build_config_manager(ctx: "Context"):
+    """Build a config manager from a Click context.
+
+    Reads ``config_dir`` and the active profile name from ``ctx.obj``
+    and constructs an :class:`EnhancedConfigManager` that honours both.
+    Use this from Click commands that take ``--config-dir`` so the
+    override actually reaches the manager.
+    """
+    config_dir = ctx.obj.get("config_dir")
+    return get_config_manager(config_dir=config_dir)

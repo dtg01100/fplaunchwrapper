@@ -138,7 +138,7 @@ class TestSubcommandImportErrors:
                     "run": lambda self: 0,
                 },
             ),
-            ("lib.config_manager", "create_config_manager"): lambda: Mock(),
+            ("lib.config_manager", "create_config_manager"): lambda config_dir=None: Mock(),
             ("lib.flatpak_monitor", "main"): lambda **kwargs: None,
         }
         commands = [

@@ -110,9 +110,15 @@ class EnhancedConfigManager:
 
     CURRENT_SCHEMA_VERSION = 1
 
-    def __init__(self, app_name="fplaunchwrapper") -> None:
+    def __init__(
+        self,
+        app_name: str = "fplaunchwrapper",
+        config_dir: str | Path | None = None,
+    ) -> None:
         self.app_name = app_name
-        self.config_dir = get_default_config_dir(app_name)
+        self.config_dir = (
+            Path(config_dir) if config_dir else get_default_config_dir(app_name)
+        )
         self.data_dir = get_default_data_dir(app_name)
         self.config_file = self.config_dir / "config.toml"
         self.config = WrapperConfig()
@@ -761,9 +767,17 @@ class EnhancedConfigManager:
             return False
 
 
-def create_config_manager():
-    """Factory function for configuration manager."""
-    return EnhancedConfigManager()
+def create_config_manager(config_dir: str | Path | None = None):
+    """Factory function for configuration manager.
+
+    Args:
+        config_dir: Override the configuration directory. When provided,
+            the manager reads and writes its config file there instead
+            of the XDG default. Used by both the ``fplaunch`` Click CLI
+            and the ``fplaunch-config`` argparse entry point to honour
+            the ``--config-dir`` flag.
+    """
+    return EnhancedConfigManager(config_dir=config_dir)
 
 
 __all__ = [

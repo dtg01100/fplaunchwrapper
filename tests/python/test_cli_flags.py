@@ -139,7 +139,10 @@ def test_config_defaults_to_show(cli_mod, runner, monkeypatch):
             calls.append(f"get-preset {preset}")
             return []
 
-    monkeypatch.setattr("lib.config_manager.create_config_manager", lambda: FakeConfigManager())
+    monkeypatch.setattr(
+        "lib.config_manager.create_config_manager",
+        lambda config_dir=None: FakeConfigManager(),
+    )
 
     result = runner.invoke(cli_mod.cli, ["config"], catch_exceptions=False)
     assert result.exit_code == 0

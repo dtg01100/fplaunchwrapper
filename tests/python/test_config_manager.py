@@ -1208,6 +1208,26 @@ class TestMainFunction:
                     main()
                 assert exc_info.value.code == 1
 
+    def test_main_init_with_config_dir(self, capsys) -> None:
+        """``--config-dir X`` plumbs through create_config_manager().
+
+        Regression: previously the argparse CLI ignored the override
+        because create_config_manager() took no arguments. The
+        test asserts the manager that ``init`` wrote to lives in the
+        override directory, not the XDG default.
+        """
+        from lib.config_manager import main
+
+        with patch("pathlib.Path.home", return_value=self.temp_dir):
+            with patch(
+                "sys.argv",
+                ["fplaunch-config", "--config-dir", str(self.temp_dir), "init"],
+            ):
+                main()
+        # The config file must be created under the override dir,
+        # not under the XDG default next to the patched $HOME.
+        assert (self.temp_dir / "config.toml").exists()
+        assert not (self.temp_dir / ".config" / "fplaunchwrapper" / "config.toml").exists()
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

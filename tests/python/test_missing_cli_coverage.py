@@ -193,3 +193,68 @@ class TestManifestCLI:
             assert result.exit_code == 0
             call_args = mock_run.call_args[0][0]
             assert call_args == ["flatpak", "info", "--show-manifest", "org.example.app"]
+
+
+class TestConfigCLIHonoursConfigDir:
+    """``fplaunch --config-dir X config ...`` must reach EnhancedConfigManager.
+
+    Regression: previously the Click ``config`` command built its manager
+    via ``get_config_manager()`` (no arguments), so the
+    ``--config-dir`` global flag was silently ignored for ``show`` and
+    ``init``. The test stubs the manager and asserts the
+    ``config_dir`` argument flows through.
+    """
+
+    def test_show_passes_config_dir_to_manager(
+        self, cli_runner, isolated_home, tmp_path
+    ):
+        """``--config-dir X config show`` must build the manager with X."""
+        from unittest.mock import patch
+
+        captured = {}
+
+        class FakeConfigManager:
+            def __init__(self, config_dir=None):
+                captured["config_dir"] = config_dir
+                self.config_file = tmp_path / "config.toml"
+
+            def save_config(self):
+                pass
+
+        with patch(
+            "lib.config_manager.create_config_manager",
+            side_effect=FakeConfigManager,
+        ):
+            result = cli_runner.invoke(
+                cli_module.cli,
+                ["--config-dir", str(tmp_path), "config", "show"],
+            )
+        assert result.exit_code == 0
+        assert captured["config_dir"] == str(tmp_path)
+
+    def test_init_passes_config_dir_to_manager(
+        self, cli_runner, isolated_home, tmp_path
+    ):
+        """``--config-dir X config init`` must build the manager with X."""
+        from unittest.mock import patch
+
+        captured = {}
+
+        class FakeConfigManager:
+            def __init__(self, config_dir=None):
+                captured["config_dir"] = config_dir
+                self.config_file = tmp_path / "config.toml"
+
+            def save_config(self):
+                self.config_file.write_text("# created\n")
+
+        with patch(
+            "lib.config_manager.create_config_manager",
+            side_effect=FakeConfigManager,
+        ):
+            result = cli_runner.invoke(
+                cli_module.cli,
+                ["--config-dir", str(tmp_path), "config", "init"],
+            )
+        assert result.exit_code == 0
+        assert captured["config_dir"] == str(tmp_path)

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Optional
 
 import click
 from lib.cli_utils import console, console_err
-from lib.cli_imports import build_manager, get_config_manager
+from lib.cli_imports import build_config_manager, build_manager
 
 if TYPE_CHECKING:
     from click import Context
@@ -176,7 +176,7 @@ def config(ctx: "Context", action: Optional[str], value: Optional[str]) -> int: 
       init          Initialize configuration file
       cron-interval Get or set cron interval (in hours)
     """
-    cfg = get_config_manager()
+    cfg = build_config_manager(ctx)
     if not action or action == "show":
         config_path = cfg.config_file
         if config_path.exists():
