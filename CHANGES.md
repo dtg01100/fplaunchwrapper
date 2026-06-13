@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `uv-python-workflow` skill for managing Python development tasks
 - `[monitor]` extra to make the watchdog dependency optional
 - New `fplaunch` Python package entry point alongside the existing `lib` package
+- `--config-dir` flag on `fplaunch-config` (argparse) that was previously missing
+- `build_config_manager(ctx)` helper in `lib.cli_imports`, mirroring `build_manager(ctx)` so Click commands can honour `ctx.obj["config_dir"]`
 - Man pages for `fplaunch-config`, `fplaunch-launch`, and `fplaunch-monitor`
 
 ### Fixed
@@ -22,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Path-safety exceptions in wrapper lookup fail closed instead of silently allowing unsafe access
 - `subprocess.run` calls in `lib/launch.py` set `check=False` explicitly to avoid raising on non-zero exit
 - Stale `PydanticAppPreferences` import paths and `ValidationError` references in `config_manager`
+- `--config-dir` was silently ignored by both the `fplaunch config` (Click) and `fplaunch-config` (argparse) subcommands. `EnhancedConfigManager` and `create_config_manager()` now accept a `config_dir` argument and the Click command reads it from `ctx.obj`. Regression tests pin the new behaviour.
 - Skipped tests that were silently no-oping; full suite now runs
 - Locale-dependent test (`test_name_property`) pins `LANG=en_US`
 
