@@ -258,3 +258,75 @@ class TestConfigCLIHonoursConfigDir:
             )
         assert result.exit_code == 0
         assert captured["config_dir"] == str(tmp_path)
+
+
+class TestProfilesAndPresetsHonourConfigDir:
+    """Every ``profiles`` and ``presets`` subcommand must also honour ``--config-dir``.
+
+    The bug class is the same one fixed in the ``config`` subcommand:
+    building the manager via ``get_config_manager()`` (no args) dropped
+    the override. The fix swaps every call site to
+    ``build_config_manager(ctx)``. These tests pin that the override
+    reaches the manager for both groups.
+    """
+
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["profiles", "list"],
+            ["profiles", "create", "test"],
+            ["profiles", "switch", "default"],
+            ["profiles", "current"],
+            ["presets", "list"],
+            ["presets", "add", "p", "-p", "x11"],
+        ],
+    )
+    def test_config_dir_reaches_manager(
+        self, cli_runner, isolated_home, tmp_path, argv
+    ):
+        from unittest.mock import patch
+
+        captured = {}
+
+        class FakeConfigManager:
+            def __init__(self, config_dir=None):
+                captured["config_dir"] = config_dir
+                self.config_file = tmp_path / "config.toml"
+
+            def list_profiles(self):
+                return ["default"]
+
+            def get_active_profile(self):
+                return "default"
+
+            def create_profile(self, *_args, **_kwargs):
+                pass
+
+            def switch_profile(self, *_args, **_kwargs):
+                pass
+
+            def export_profile(self, *_args, **_kwargs):
+                pass
+
+            def import_profile(self, *_args, **_kwargs):
+                pass
+
+            def list_permission_presets(self):
+                return []
+
+            def add_permission_preset(self, *_args, **_kwargs):
+                pass
+
+            def remove_permission_preset(self, *_args, **_kwargs):
+                return True
+
+        with patch(
+            "lib.config_manager.create_config_manager",
+            side_effect=FakeConfigManager,
+        ):
+            result = cli_runner.invoke(
+                cli_module.cli,
+                ["--config-dir", str(tmp_path), *argv],
+            )
+        assert result.exit_code == 0
+        assert captured["config_dir"] == str(tmp_path)

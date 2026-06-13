@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import click
 
-from lib.cli_imports import console, console_err, get_config_manager
+from lib.cli_imports import build_config_manager, console, console_err
 
 
 @click.group(name="presets", invoke_without_command=True)
@@ -20,7 +20,7 @@ def presets_group(ctx: "click.Context") -> None:
 @click.pass_context
 def presets_list(ctx: "click.Context") -> int:  # pylint: disable=W0613
     """List available permission presets."""
-    cfg = get_config_manager()
+    cfg = build_config_manager(ctx)
     presets = cfg.list_permission_presets()
     if presets:
         console.print("Available presets:")
@@ -39,7 +39,7 @@ def presets_get(ctx: "click.Context", preset_name) -> int:  # pylint: disable=W0
     if not preset_name:
         raise click.UsageError("PRESET_NAME is required")
 
-    cfg = get_config_manager()
+    cfg = build_config_manager(ctx)
     permissions = cfg.get_permission_preset(preset_name)
     if permissions is None:
         console_err.print(f"[red]Error:[/red] Preset '{preset_name}' not found")
@@ -61,7 +61,7 @@ def presets_add(ctx: "click.Context", preset_name: str, permission: tuple[str, .
         console_err.print("[red]Error:[/red] At least one permission is required")
         return 1
 
-    cfg = get_config_manager()
+    cfg = build_config_manager(ctx)
     cfg.add_permission_preset(preset_name, list(permission))
     console.print(f"[green]Added preset:[/green] {preset_name}")
     return 0
@@ -72,7 +72,7 @@ def presets_add(ctx: "click.Context", preset_name: str, permission: tuple[str, .
 @click.pass_context
 def presets_remove(ctx, preset_name):
     """Remove a permission preset."""
-    cfg = get_config_manager()
+    cfg = build_config_manager(ctx)
     if cfg.remove_permission_preset(preset_name):
         console.print(f"[green]Removed preset:[/green] {preset_name}")
         return 0
