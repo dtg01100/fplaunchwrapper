@@ -384,16 +384,19 @@ def release_lock(lock_name: str = "fplaunch", lock_dir: Path | None = None) -> b
 
 
 def get_temp_dir() -> str:
-    """Get the best available temporary directory."""
-    temp_dir = tempfile.gettempdir()
-    if temp_dir and Path(temp_dir).is_dir() and os.access(temp_dir, os.W_OK):
-        return temp_dir
+    """Get the best available temporary directory.
 
-    fallback_cache_dir = str(Path.home() / ".cache")
-    if Path(fallback_cache_dir).is_dir() and os.access(fallback_cache_dir, os.W_OK):
-        return fallback_cache_dir
-
-    return tempfile.gettempdir()
+    Tries ``tempfile.gettempdir()`` first, then ``$HOME/.cache``. Raises
+    :class:`OSError` when neither location is writable, so callers fail
+    loudly with a clear cause instead of receiving a path they cannot use.
+    """
+    candidates = [tempfile.gettempdir(), str(Path.home() / ".cache")]
+    for candidate in candidates:
+        if candidate and Path(candidate).is_dir() and os.access(candidate, os.W_OK):
+            return candidate
+    raise OSError(
+        f"No writable temporary directory: tried {', '.join(c for c in candidates if c)}",
+    )
 
 
 if __name__ == "__main__":

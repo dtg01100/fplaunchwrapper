@@ -120,6 +120,17 @@ class TestPythonUtils:
         assert os.path.isdir(result)
         assert os.access(result, os.W_OK)
 
+    def test_get_temp_dir_raises_when_unwritable(self, monkeypatch) -> None:
+        """get_temp_dir must raise OSError when no candidate is writable."""
+        if not get_temp_dir:
+            pytest.skip("python_utils not available")
+
+        monkeypatch.setattr("os.access", lambda path, mode: False)
+        monkeypatch.setattr("pathlib.Path.is_dir", lambda self: True)
+
+        with pytest.raises(OSError, match="No writable temporary directory"):
+            get_temp_dir()
+
     def test_sanitize_string_empty(self) -> None:
         """Test sanitizing an empty string returns empty."""
         if not sanitize_string:
