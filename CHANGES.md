@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `fplaunch` Python package entry point alongside the existing `lib` package
 - `--config-dir` flag on `fplaunch-config` (argparse) that was previously missing
 - `build_config_manager(ctx)` helper in `lib.cli_imports`, mirroring `build_manager(ctx)` so Click commands can honour `ctx.obj["config_dir"]`
+- `fplaunch config` restructured to a Click group with all 7 subcommands: show, init, cron-interval, block, unblock, list-presets, get-preset
+- `fplaunch-config` (argparse) extended with the same surface (show, init, cron-interval were previously Click-only)
 - Man pages for `fplaunch-config`, `fplaunch-launch`, and `fplaunch-monitor`
 
 ### Fixed
@@ -25,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `subprocess.run` calls in `lib/launch.py` set `check=False` explicitly to avoid raising on non-zero exit
 - Stale `PydanticAppPreferences` import paths and `ValidationError` references in `config_manager`
 - `--config-dir` was silently ignored by both the `fplaunch config` (Click) and `fplaunch-config` (argparse) subcommands. `EnhancedConfigManager` and `create_config_manager()` now accept a `config_dir` argument and the Click command reads it from `ctx.obj`. Regression tests pin the new behaviour.
+- `--config-dir` was also dropped by every `profiles` and `presets` Click subcommand. All 10 callsites swapped to `build_config_manager(ctx)` so the override flows through.
 - Skipped tests that were silently no-oping; full suite now runs
 - Locale-dependent test (`test_name_property`) pins `LANG=en_US`
 
