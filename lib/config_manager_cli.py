@@ -37,14 +37,22 @@ Commands:
 
     parser.add_argument(
         "command",
-        choices=["init", "show", "block", "unblock", "list-presets", "get-preset"],
+        choices=[
+            "init",
+            "show",
+            "block",
+            "unblock",
+            "list-presets",
+            "get-preset",
+            "cron-interval",
+        ],
         help="Configuration command to execute",
     )
 
     parser.add_argument(
         "value",
         nargs="?",
-        help="Value for the command (app name for block/unblock, preset name for get-preset)",
+        help="Value for the command (app name for block/unblock, preset name for get-preset, hours for cron-interval)",
     )
 
     parser.add_argument(
@@ -52,6 +60,7 @@ Commands:
         default=None,
         help="Override the configuration directory (defaults to XDG path)",
     )
+
     args = parser.parse_args()
 
     # Local import to keep CLI entry-point fast and isolated from
@@ -110,6 +119,20 @@ Commands:
         else:
             print(f"Preset '{args.value}' not found", file=sys.stderr)
             sys.exit(1)
+
+    elif args.command == "cron-interval":
+        if not args.value:
+            config = _mgr()
+            print(f"Current cron interval: {config.get_cron_interval()} hours")
+        else:
+            try:
+                hours = int(args.value)
+            except ValueError:
+                print(f"Invalid interval value: {args.value}", file=sys.stderr)
+                sys.exit(1)
+            config = _mgr()
+            config.set_cron_interval(hours)
+            print(f"Cron interval set to {hours} hours")
 
 
 __all__ = ["main"]

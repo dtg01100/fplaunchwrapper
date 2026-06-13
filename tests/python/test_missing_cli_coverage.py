@@ -330,3 +330,93 @@ class TestProfilesAndPresetsHonourConfigDir:
             )
         assert result.exit_code == 0
         assert captured["config_dir"] == str(tmp_path)
+
+
+class TestConfigGroupSuperset:
+    """``fplaunch config`` is now a Click group with all 7 subcommands.
+
+    Mirrors the surface of the ``fplaunch-config`` argparse binary.
+    These tests pin the wiring: each subcommand must construct the
+    manager (via ``build_config_manager(ctx)``) and exit cleanly.
+    """
+
+    @staticmethod
+    def _make_fake(tmp_path, captured):
+        """Return a FakeConfigManager class that records config_dir."""
+        from unittest.mock import MagicMock
+
+        defaults = dict(
+            config_file=tmp_path / "config.toml",
+            save_config=MagicMock(),
+            add_to_blocklist=MagicMock(),
+            remove_from_blocklist=MagicMock(),
+            list_permission_presets=MagicMock(return_value=[]),
+            get_permission_preset=MagicMock(return_value=None),
+            get_cron_interval=MagicMock(return_value=24),
+            set_cron_interval=MagicMock(),
+        )
+
+        class FakeConfigManager:
+            def __init__(self, config_dir=None):
+                captured["config_dir"] = config_dir
+                for name, val in defaults.items():
+                    setattr(self, name, val)
+
+        return FakeConfigManager
+
+    def test_bare_config_defaults_to_show(
+        self, cli_runner, isolated_home, tmp_path
+    ):
+        """``fplaunch config`` (no subcommand) must invoke ``show``."""
+        from unittest.mock import patch
+
+        captured = {}
+        with patch(
+            "lib.config_manager.create_config_manager",
+            side_effect=self._make_fake(tmp_path, captured),
+        ):
+            result = cli_runner.invoke(cli_module.cli, ["config"])
+        assert result.exit_code == 0
+        assert "config_dir" in captured
+
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["config", "show"],
+            ["config", "init"],
+            ["config", "block", "firefox"],
+            ["config", "unblock", "firefox"],
+            ["config", "list-presets"],
+            ["config", "get-preset", "x"],
+            ["config", "cron-interval"],
+        ],
+    )
+    def test_subcommand_dispatches_to_manager(
+        self, cli_runner, isolated_home, tmp_path, argv
+    ):
+        """Every subcommand must construct the manager and exit 0."""
+        from unittest.mock import patch
+
+        captured = {}
+        with patch(
+            "lib.config_manager.create_config_manager",
+            side_effect=self._make_fake(tmp_path, captured),
+        ):
+            result = cli_runner.invoke(cli_module.cli, argv)
+        assert result.exit_code == 0
+
+    def test_cron_interval_set_calls_setter(
+        self, cli_runner, isolated_home, tmp_path
+    ):
+        """``config cron-interval N`` must call set_cron_interval(N)."""
+        from unittest.mock import patch
+
+        captured = {}
+        with patch(
+            "lib.config_manager.create_config_manager",
+            side_effect=self._make_fake(tmp_path, captured),
+        ):
+            result = cli_runner.invoke(
+                cli_module.cli, ["config", "cron-interval", "8"]
+            )
+        assert result.exit_code == 0

@@ -162,52 +162,125 @@ def manifest(ctx: "Context", app_name: str, emit: bool) -> int:
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
 
-
-@click.command()
-@click.argument("action", required=False)
-@click.argument("value", required=False)
+@click.group(name="config", invoke_without_command=True)
 @click.pass_context
-def config(ctx: "Context", action: Optional[str], value: Optional[str]) -> int:  # pylint: disable=W0613
+def config(ctx: "Context") -> int:  # pylint: disable=W0613
     """Manage fplaunchwrapper configuration.
 
     \b
-    Actions:
-      show          Show current configuration (default)
-      init          Initialize configuration file
-      cron-interval Get or set cron interval (in hours)
+    Subcommands:
+      show            Show current configuration (default)
+      init            Initialize configuration file
+      cron-interval   Get or set cron interval (in hours)
+      block APP       Block application from being wrapped
+      unblock APP     Unblock application
+      list-presets    List permission presets
+      get-preset NAME Get permissions for a specific preset
     """
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(config_show)
+    return 0
+
+
+@config.command("show")
+@click.pass_context
+def config_show(ctx: "Context") -> int:
+    """Show the current configuration file contents."""
     cfg = build_config_manager(ctx)
-    if not action or action == "show":
-        config_path = cfg.config_file
-        if config_path.exists():
-            console.print(f"[bold]Configuration file:[/bold] {config_path}")
-            content = config_path.read_text()
-            console.print(content)
-        else:
-            console.print(
-                f"[yellow]No configuration file found at {config_path}[/yellow]",
-            )
-            console.print("Run 'fplaunch config init' to create one")
+    config_path = cfg.config_file
+    if config_path.exists():
+        console.print(f"[bold]Configuration file:[/bold] {config_path}")
+        console.print(config_path.read_text())
+    else:
+        console.print(
+            f"[yellow]No configuration file found at {config_path}[/yellow]",
+        )
+        console.print("Run 'fplaunch config init' to create one")
+    return 0
+
+
+@config.command("init")
+@click.pass_context
+def config_init(ctx: "Context") -> int:
+    """Initialize the configuration file."""
+    cfg = build_config_manager(ctx)
+    cfg.save_config()
+    console.print("[green]✓[/green] Configuration initialized")
+    return 0
+
+
+@config.command("cron-interval")
+@click.argument("value", required=False)
+@click.pass_context
+def config_cron_interval(ctx: "Context", value: Optional[str]) -> int:
+    """Get or set the cron interval (in hours)."""
+    cfg = build_config_manager(ctx)
+    if not value:
+        interval = cfg.get_cron_interval()
+        console.print(f"Current cron interval: [bold]{interval}[/bold] hours")
         return 0
-    if action == "init":
-        cfg.save_config()
-        console.print("[green]✓[/green] Configuration initialized")
-        return 0
-    if action == "cron-interval":
-        if not value:
-            interval = cfg.get_cron_interval()
-            console.print(f"Current cron interval: [bold]{interval}[/bold] hours")
-        else:
-            try:
-                interval = int(value)
-            except ValueError:
-                console_err.print(f"[red]Error:[/red] Invalid interval value: {value}")
-                return 1
-            cfg.set_cron_interval(interval)
-            console.print(
-                f"[green]✓[/green] Cron interval set to [bold]{interval}[/bold] hours",
-            )
-        return 0
-    console_err.print(f"[red]Error:[/red] Unknown action: {action}")
-    console_err.print("Valid actions: show, init, cron-interval")
-    raise SystemExit(1)
+    try:
+        interval = int(value)
+    except ValueError:
+        console_err.print(f"[red]Error:[/red] Invalid interval value: {value}")
+        return 1
+    cfg.set_cron_interval(interval)
+    console.print(
+        f"[green]✓[/green] Cron interval set to [bold]{interval}[/bold] hours",
+    )
+    return 0
+
+
+@config.command("block")
+@click.argument("app_id")
+@click.pass_context
+def config_block(ctx: "Context", app_id: str) -> int:
+    """Block an application from being wrapped."""
+    cfg = build_config_manager(ctx)
+    cfg.add_to_blocklist(app_id)
+    console.print(f"[green]✓[/green] Blocked {app_id}")
+    return 0
+
+
+@config.command("unblock")
+@click.argument("app_id")
+@click.pass_context
+def config_unblock(ctx: "Context", app_id: str) -> int:
+    """Unblock a previously blocked application."""
+    cfg = build_config_manager(ctx)
+    cfg.remove_from_blocklist(app_id)
+    console.print(f"[green]✓[/green] Unblocked {app_id}")
+    return 0
+
+
+@config.command("list-presets")
+@click.pass_context
+def config_list_presets(ctx: "Context") -> int:
+    """List all permission presets."""
+    cfg = build_config_manager(ctx)
+    presets = cfg.list_permission_presets()
+    if presets:
+        console.print("Available permission presets:")
+        for preset in presets:
+            console.print(f"  {preset}")
+    else:
+        console.print("No permission presets defined")
+    return 0
+
+
+@config.command("get-preset")
+@click.argument("preset_name")
+@click.pass_context
+def config_get_preset(ctx: "Context", preset_name: str) -> int:
+    """Get the permissions for a specific preset."""
+    cfg = build_config_manager(ctx)
+    permissions = cfg.get_permission_preset(preset_name)
+    if permissions is None:
+        console_err.print(
+            f"[red]Error:[/red] Preset '{preset_name}' not found",
+        )
+        return 1
+    console.print(f"Permissions for preset '{preset_name}':")
+    for perm in permissions:
+        console.print(f"  {perm}")
+    return 0
