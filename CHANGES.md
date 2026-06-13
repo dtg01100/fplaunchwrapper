@@ -5,6 +5,41 @@ All notable changes to fplaunchwrapper are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `AGENTS.md` technical reference and CLIO project methodology
+- `uv-python-workflow` skill for managing Python development tasks
+- `[monitor]` extra to make the watchdog dependency optional
+- New `fplaunch` Python package entry point alongside the existing `lib` package
+- Man pages for `fplaunch-config`, `fplaunch-launch`, and `fplaunch-monitor`
+
+### Fixed
+- `get_temp_dir` now raises `OSError` when no candidate is writable, instead of returning an unwritable path
+- `resolve_bin_dir` falls back to the default bin dir when `expanduser` rejects the input (e.g. embedded null byte), instead of silently using the malformed path
+- `WrapperManager` and `AppLauncher` propagate `--verbose` and the active profile through the Click context
+- `EnhancedConfigManager` now persists the active profile across instances
+- Path-safety exceptions in wrapper lookup fail closed instead of silently allowing unsafe access
+- `subprocess.run` calls in `lib/launch.py` set `check=False` explicitly to avoid raising on non-zero exit
+- Stale `PydanticAppPreferences` import paths and `ValidationError` references in `config_manager`
+- Skipped tests that were silently no-oping; full suite now runs
+- Locale-dependent test (`test_name_property`) pins `LANG=en_US`
+
+### Changed
+- `lib/config_manager.py` split into `config_manager`, `config_models`, `config_validation`, `config_manager_cli`, `config_manager_presets`, and `config_constants`
+- `lib/cli.py` split into `cli_generation`, `cli_inspect`, `cli_profiles`, `cli_presets`, `cli_system`, `cli_systemd`, and `cli_utils`
+- `LaunchMethod` and `HookFailureMode` enums replace string-based dispatch
+- `black` replaced by `ruff format` as the sole formatter
+- `pydantic` moved from `robustness` to `dev` dependencies
+- Pre-commit hooks pinned to Python 3.12, restricted `pydocstyle` to missing-docstring rules
+- GitHub Actions updated to `actions/setup-python@v5` and `softprops/action-gh-release@v2`
+- `pyproject.toml` and `Makefile` cleaned of dead entries
+
+### Removed
+- `lib/fplaunch/` shim package (replaced by direct `lib/` package layout)
+- Stale `docs/reports/` and obsolete watchdog integration test
+- Unused mypy `[[tool.mypy.overrides]]` and stray type-ignore comments
+
 ## [1.4.0] - 2026-04-08
 
 ### Added
