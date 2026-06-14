@@ -145,7 +145,9 @@ class TestLaunchDirect:
     @pytest.fixture(autouse=True)
     def _setup_mocks(self):
         with patch("lib.portal_launcher.subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
             self._mock_run = mock_run
             yield
 
@@ -203,7 +205,7 @@ class TestLaunchDirect:
         """Test that subprocess.CompletedProcess is returned."""
         from lib.portal_launcher import launch_direct
 
-        expected = MagicMock(returncode=0, stdout="", stderr="")
+        expected = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
         self._mock_run.return_value = expected
 
         result = launch_direct("org.mozilla.firefox")
@@ -223,7 +225,9 @@ class TestLaunch:
         from lib.portal_launcher import launch
 
         mock_available.return_value = True
-        mock_portal.return_value = MagicMock(returncode=0)
+        mock_portal.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launch("org.mozilla.firefox", use_portal=True)
 
@@ -239,7 +243,9 @@ class TestLaunch:
         from lib.portal_launcher import launch
 
         mock_available.return_value = False
-        mock_direct.return_value = MagicMock(returncode=0)
+        mock_direct.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launch("org.mozilla.firefox", use_portal=True)
 
@@ -254,7 +260,9 @@ class TestLaunch:
         from lib.portal_launcher import launch
 
         mock_available.return_value = True
-        mock_direct.return_value = MagicMock(returncode=0)
+        mock_direct.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launch("org.mozilla.firefox", use_portal=False)
 
@@ -269,7 +277,9 @@ class TestLaunch:
         from lib.portal_launcher import launch
 
         mock_available.return_value = True
-        mock_portal.return_value = MagicMock(returncode=0)
+        mock_portal.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launch(
             "org.mozilla.firefox",
@@ -297,7 +307,9 @@ class TestLaunch:
         from lib.portal_launcher import launch
 
         mock_available.return_value = False
-        mock_direct.return_value = MagicMock(returncode=0)
+        mock_direct.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launch(
             "org.mozilla.firefox",

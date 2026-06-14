@@ -7,6 +7,7 @@ Tests the interaction between AppLauncher and other modules like:
 - generate (wrapper creation)
 """
 
+import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -73,9 +74,7 @@ class TestLauncherConfigManagerIntegration:
         pref_file = self.config_dir / "firefox.pref"
         pref_file.write_text("flatpak")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         launcher = AppLauncher(
             app_name="firefox",
@@ -103,9 +102,7 @@ class TestLauncherConfigManagerIntegration:
         pref_file = self.config_dir / "firefox.pref"
         pref_file.write_text("system")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         launcher = AppLauncher(
             app_name="firefox",
@@ -312,11 +309,9 @@ class TestLauncherHookScriptIntegration:
         pre_hook.write_text("#!/bin/bash\necho 'before-launch' > /tmp/hook_output.txt\nexit 0\n")
         pre_hook.chmod(0o755)
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = ""
-        mock_result.stderr = ""
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launcher = AppLauncher(
             app_name="firefox",
@@ -344,11 +339,9 @@ class TestLauncherHookScriptIntegration:
         )
         post_hook.chmod(0o755)
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = ""
-        mock_result.stderr = ""
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launcher = AppLauncher(
             app_name="firefox",
@@ -393,9 +386,7 @@ class TestLauncherEnvironmentIntegration:
             "APP_DEBUG": "true",
         }
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         launcher = AppLauncher(
             app_name="firefox",
@@ -425,9 +416,7 @@ class TestLauncherEnvironmentIntegration:
         if not AppLauncher:
             pytest.skip("AppLauncher not available")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         launcher = AppLauncher(
             app_name="firefox",

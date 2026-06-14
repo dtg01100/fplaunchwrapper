@@ -7,11 +7,12 @@ Ensures all integration tests run in complete isolation with zero side effects.
 
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 
 def _build_safe_env(isolated_home=None):
@@ -70,7 +71,9 @@ def test_integration_safety(isolated_home=None):
 
         # Test basic instantiation with mocking
         with patch("subprocess.run") as mock_run, patch("os.path.exists", return_value=True):
-            mock_run.return_value = Mock(returncode=0, stdout="safe", stderr="")
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="safe", stderr=""
+            )
 
             # Test that classes can be created safely
             generator = WrapperGenerator(

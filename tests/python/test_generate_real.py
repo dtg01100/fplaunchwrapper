@@ -198,12 +198,12 @@ class TestWrapperGeneratorReal:
         # First call (user apps)
         # Second call (system apps with duplicate)
         mock_run.side_effect = [
-            Mock(
-                returncode=0,
-                stdout="org.mozilla.firefox\ncom.google.Chrome\n",
-                stderr="",
+            subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="org.mozilla.firefox\ncom.google.Chrome\n", stderr=""
             ),
-            Mock(returncode=0, stdout="org.mozilla.firefox\norg.gimp.GIMP\n", stderr=""),
+            subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="org.mozilla.firefox\norg.gimp.GIMP\n", stderr=""
+            ),
         ]
 
         gen = WrapperGenerator(
@@ -903,11 +903,10 @@ class TestWrapperGenerationMerged:
         # Mock system having firefox installed
         def mock_run(cmd, **kwargs):
             if "command -v firefox" in " ".join(cmd):
-                result = Mock()
-                result.returncode = 0
-                result.stdout = "/usr/bin/firefox\n"
-                return result
-            return Mock(returncode=1)
+                return subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout="/usr/bin/firefox\n", stderr=""
+                )
+            return subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="")
 
         mock_subprocess.side_effect = mock_run
 

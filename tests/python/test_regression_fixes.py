@@ -88,8 +88,7 @@ class TestPortalLauncherWaitFlagPosition:
         """launch_with_portal: --wait must precede the app ID."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0)
-        mock_run.return_value = MagicMock(spec=subprocess.CompletedProcess, returncode=0)
+        mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
         launch_with_portal("org.example.App", wait=True)
 
         cmd = mock_run.call_args[0][0]
@@ -104,8 +103,7 @@ class TestPortalLauncherWaitFlagPosition:
         """launch_direct: --wait must precede the app ID."""
         from lib.portal_launcher import launch_direct
 
-        mock_run.return_value = MagicMock(returncode=0)
-        mock_run.return_value = MagicMock(spec=subprocess.CompletedProcess, returncode=0)
+        mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
         launch_direct("org.example.App", wait=True)
 
         cmd = mock_run.call_args[0][0]
@@ -123,7 +121,7 @@ class TestPortalLauncherWaitFlagPosition:
         """Application arguments must remain after the app ID even when wait=True."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(spec=subprocess.CompletedProcess, returncode=0)
+        mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
         launch_with_portal("org.example.App", args=["--url", "https://example.com"], wait=True)
 
         cmd = mock_run.call_args[0][0]
@@ -139,7 +137,7 @@ class TestPortalLauncherWaitFlagPosition:
         """When wait=False, --wait must not appear in the command."""
         from lib.portal_launcher import launch_with_portal
 
-        mock_run.return_value = MagicMock(returncode=0)
+        mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
         launch_with_portal("org.example.App", wait=False)
 
         cmd = mock_run.call_args[0][0]
@@ -218,28 +216,24 @@ class TestCronDuplicateDetection:
         setup = self._make_systemd_setup(tmp_path)
         cron_interval = 6
 
+        added_lines: list[str] = []
+
         # install_cron_job writes its script to ~/.config/cron/fplaunch-wrapper.sh
         existing_script = Path.home() / ".config" / "cron" / "fplaunch-wrapper.sh"
         existing_line = f"0 */{cron_interval} * * * {existing_script}"
 
-        added_lines: list[str] = []
-
         def fake_run(cmd, **kwargs):
-            result = MagicMock()
             if isinstance(cmd, list) and cmd[-1] == "-l":
                 # Return a crontab that already contains the entry
-                result.returncode = 0
-                result.stdout = existing_line + "\n"
-            elif isinstance(cmd, list) and cmd[-1] == "-":
+                return subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout=existing_line + "\n", stderr=""
+                )
+            if isinstance(cmd, list) and cmd[-1] == "-":
                 # Record what would be written
                 added_lines.append(kwargs.get("input", ""))
-                result.returncode = 0
-                result.stdout = ""
-            else:
-                result.returncode = 0
-                result.stdout = ""
-            return result
-
+            return subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
         with patch("shutil.which", return_value="/usr/bin/crontab"):
             with patch("subprocess.run", side_effect=fake_run):
                 setup.install_cron_job(cron_interval=cron_interval)
@@ -255,18 +249,15 @@ class TestCronDuplicateDetection:
         added_lines: list[str] = []
 
         def fake_run(cmd, **kwargs):
-            result = MagicMock()
             if cmd[-1] == "-l":
-                result.returncode = 0
-                result.stdout = ""  # empty crontab
-            elif cmd[-1] == "-":
+                return subprocess.CompletedProcess(
+                    args=cmd, returncode=0, stdout="", stderr=""
+                )
+            if cmd[-1] == "-":
                 added_lines.append(kwargs.get("input", ""))
-                result.returncode = 0
-                result.stdout = ""
-            else:
-                result.returncode = 0
-                result.stdout = ""
-            return result
+            return subprocess.CompletedProcess(
+                args=cmd, returncode=0, stdout="", stderr=""
+            )
 
         with patch.dict(os.environ, {"XDG_CONFIG_HOME": str(tmp_path)}):
             with patch("shutil.which", return_value="/usr/bin/crontab"):

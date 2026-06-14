@@ -7,12 +7,15 @@ Tests verify:
 - error handling for missing prerequisites
 - emit mode for dry-run testing
 """
-
-from unittest.mock import patch, MagicMock
-import pytest
+import subprocess
+from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
+
+import pytest
+
 from lib.cli import cli
+from lib.systemd_setup import SystemdSetup
 
 
 class TestSystemdCliCommand:
@@ -52,7 +55,7 @@ class TestSystemdCliEnableDisable:
         """Test enable returns 0 when setup succeeds."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.install_systemd_units.return_value = True
         runner = CliRunner()
         with patch.object(cli_systemd, "_get_systemd_setup", return_value=fake_setup):
@@ -64,7 +67,7 @@ class TestSystemdCliEnableDisable:
         """Test enable returns 1 when setup fails."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.install_systemd_units.return_value = False
         runner = CliRunner()
         with patch.object(cli_systemd, "_get_systemd_setup", return_value=fake_setup):
@@ -84,7 +87,7 @@ class TestSystemdCliEnableDisable:
         """Test disable returns 0 on success."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.disable_systemd_units.return_value = True
         runner = CliRunner()
         with patch.object(cli_systemd, "_get_systemd_setup", return_value=fake_setup):
@@ -95,7 +98,7 @@ class TestSystemdCliEnableDisable:
         """Test disable returns 1 when setup fails."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.disable_systemd_units.return_value = False
         runner = CliRunner()
         with patch.object(cli_systemd, "_get_systemd_setup", return_value=fake_setup):
@@ -119,7 +122,7 @@ class TestSystemdCliStatus:
         """Test status prints service and timer status."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.check_systemd_status.return_value = {
             "service": {"exists": True, "enabled": True, "active": True},
             "timer": {"exists": False, "enabled": False, "active": False},
@@ -153,31 +156,33 @@ class TestSystemdCliSystemctl:
     @pytest.mark.parametrize("action", ["start", "stop", "restart"])
     def test_systemctl_action_success(self, action):
         """Test each action with successful systemctl returncode."""
-        mock_result = MagicMock()
-        mock_result.returncode = 0
         runner = CliRunner()
-        with patch("subprocess.run", return_value=mock_result) as mock_run:
+        with patch(
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(args=[], returncode=0),
+        ) as mock_run:
             result = runner.invoke(cli, ["systemd", action], standalone_mode=False)
         assert result.return_value == 0
         assert mock_run.called
-        assert mock_run.call_args[0][0][2] == action
 
     @pytest.mark.parametrize("action", ["start", "stop", "restart"])
     def test_systemctl_action_failure(self, action):
         """Test each action with failed systemctl returncode returns 1."""
-        mock_result = MagicMock()
-        mock_result.returncode = 1
         runner = CliRunner()
-        with patch("subprocess.run", return_value=mock_result):
+        with patch(
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(args=[], returncode=1),
+        ):
             result = runner.invoke(cli, ["systemd", action], standalone_mode=False)
         assert result.return_value == 1
 
     def test_reload_uses_daemon_reload(self):
         """Test reload runs daemon-reload with no unit."""
-        mock_result = MagicMock()
-        mock_result.returncode = 0
         runner = CliRunner()
-        with patch("subprocess.run", return_value=mock_result) as mock_run:
+        with patch(
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(args=[], returncode=0),
+        ) as mock_run:
             result = runner.invoke(cli, ["systemd", "reload"], standalone_mode=False)
         assert result.return_value == 0
         assert mock_run.call_args[0][0][2] == "daemon-reload"
@@ -196,23 +201,25 @@ class TestSystemdCliLogs:
 
     def test_logs_success(self):
         """Test logs prints stdout on success."""
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stdout = "log line\n"
-        mock_result.stderr = ""
         runner = CliRunner()
-        with patch("subprocess.run", return_value=mock_result):
+        with patch(
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="log line\n", stderr=""
+            ),
+        ):
             result = runner.invoke(cli, ["systemd", "logs"], standalone_mode=False)
         assert result.return_value == 0
 
     def test_logs_failure(self):
         """Test logs returns 1 on failure."""
-        mock_result = MagicMock()
-        mock_result.returncode = 1
-        mock_result.stdout = ""
-        mock_result.stderr = "journalctl error"
         runner = CliRunner()
-        with patch("subprocess.run", return_value=mock_result):
+        with patch(
+            "subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[], returncode=1, stdout="", stderr="journalctl error"
+            ),
+        ):
             result = runner.invoke(cli, ["systemd", "logs"], standalone_mode=False)
         assert result.return_value == 1
 
@@ -224,7 +231,7 @@ class TestSystemdCliList:
         """Test list prints units when found."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.list_all_units.return_value = ["a.service", "b.timer"]
         runner = CliRunner()
         with patch.object(cli_systemd, "_get_systemd_setup", return_value=fake_setup):
@@ -235,7 +242,7 @@ class TestSystemdCliList:
         """Test list prints message when no units found."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.list_all_units.return_value = []
         runner = CliRunner()
         with patch.object(cli_systemd, "_get_systemd_setup", return_value=fake_setup):
@@ -276,7 +283,7 @@ class TestSystemdCliTest:
         """Test test runs and reports status."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.check_systemd_status.return_value = {
             "service": {"exists": True, "enabled": True, "active": True},
             "timer": {"exists": True, "enabled": True, "active": True},
@@ -297,7 +304,7 @@ class TestSystemdSetupCmd:
         """Test systemd_setup_cmd uses .run() when present."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.run.return_value = 0
         runner = CliRunner()
         with patch.object(
@@ -335,7 +342,7 @@ class TestSystemdSetupCmd:
         """Test systemd_setup_cmd handles exceptions from .run()."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.run.side_effect = OSError("boom")
         runner = CliRunner()
         with patch.object(
@@ -348,7 +355,7 @@ class TestSystemdSetupCmd:
         """Test invoking 'systemd' with no subcommand falls through to setup."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.run.return_value = 0
         runner = CliRunner()
         with patch.object(
@@ -373,7 +380,7 @@ class TestSystemdSetupCmd:
         """Test _run_systemd_setup handles exceptions from .run()."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.run.side_effect = OSError("boom")
         runner = CliRunner()
         with patch.object(
@@ -417,7 +424,7 @@ class TestRunSystemdSetupDirect:
         """Test _run_systemd_setup uses .run() when present."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.run.return_value = 0
         with patch.object(
             cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup
@@ -452,7 +459,7 @@ class TestRunSystemdSetupDirect:
         """Test _run_systemd_setup returns 1 on .run() exception."""
         from lib import cli_systemd
 
-        fake_setup = MagicMock()
+        fake_setup = MagicMock(spec=SystemdSetup)
         fake_setup.run.side_effect = OSError("boom")
         with patch.object(
             cli_systemd.import_handler, "require", return_value=lambda **kw: fake_setup

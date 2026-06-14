@@ -3,9 +3,10 @@
 
 import os
 import stat
+import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -61,10 +62,9 @@ class TestWrapperGenerator:
         mock_app = "com.example.App\tExample App\t1.0\tstable\tsystem"
 
         with patch("subprocess.run") as mock_run:
-            mock_result = MagicMock()
-            mock_result.returncode = 0
-            mock_result.stdout = mock_app
-            mock_run.return_value = mock_result
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout=mock_app
+            )
 
             # Mock the wrapper generation
             with patch.object(generator, "generate_wrapper") as mock_generate:

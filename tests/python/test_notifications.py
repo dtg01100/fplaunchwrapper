@@ -2,8 +2,8 @@
 """Comprehensive test suite for fplaunchwrapper notifications module
 Tests all notification functionality with proper mocking and fixtures.
 """
-
-from unittest.mock import Mock, patch
+import subprocess
+from unittest.mock import patch
 
 import pytest
 
@@ -31,11 +31,8 @@ class TestNotifySendAvailable:
         """Test that notify_send_available returns True when notify-send is found."""
         if not notify_send_available:
             pytest.skip("notifications module not available")
-
         # Mock successful which command
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess_run.return_value = mock_result
+        mock_subprocess_run.return_value = subprocess.CompletedProcess(args=["which"], returncode=0)
 
         result = notify_send_available()
         assert result is True
@@ -50,11 +47,8 @@ class TestNotifySendAvailable:
         """Test that notify_send_available returns False when notify-send is not found."""
         if not notify_send_available:
             pytest.skip("notifications module not available")
-
         # Mock failed which command
-        mock_result = Mock()
-        mock_result.returncode = 1  # Command not found
-        mock_subprocess_run.return_value = mock_result
+        mock_subprocess_run.return_value = subprocess.CompletedProcess(args=["which"], returncode=1)
 
         result = notify_send_available()
         assert result is False
@@ -90,11 +84,10 @@ class TestSendNotification:
         """Test basic notification sending."""
         if not send_notification:
             pytest.skip("notifications module not available")
-
         # Mock successful notify-send
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess_run.return_value = mock_result
+        mock_subprocess_run.return_value = subprocess.CompletedProcess(
+            args=["notify-send"], returncode=0
+        )
 
         result = send_notification("Test Title", "Test Message")
         assert result is True
@@ -112,10 +105,9 @@ class TestSendNotification:
         """Test notification with custom urgency."""
         if not send_notification:
             pytest.skip("notifications module not available")
-
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess_run.return_value = mock_result
+        mock_subprocess_run.return_value = subprocess.CompletedProcess(
+            args=["notify-send"], returncode=0
+        )
 
         # Test low urgency
         result = send_notification("Title", "Message", urgency="low")
@@ -139,10 +131,9 @@ class TestSendNotification:
         """Test notification with custom timeout."""
         if not send_notification:
             pytest.skip("notifications module not available")
-
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess_run.return_value = mock_result
+        mock_subprocess_run.return_value = subprocess.CompletedProcess(
+            args=["notify-send"], returncode=0
+        )
 
         result = send_notification("Title", "Message", timeout=10000)
         assert result is True
@@ -168,9 +159,9 @@ class TestSendNotification:
             pytest.skip("notifications module not available")
 
         # Mock failed notify-send
-        mock_result = Mock()
-        mock_result.returncode = 1
-        mock_subprocess_run.return_value = mock_result
+        mock_subprocess_run.return_value = subprocess.CompletedProcess(
+            args=["notify-send"], returncode=1
+        )
 
         result = send_notification("Title", "Message")
         assert result is False
@@ -208,10 +199,9 @@ class TestSendUpdateFailureNotification:
         """Test basic update failure notification."""
         if not send_update_failure_notification:
             pytest.skip("notifications module not available")
-
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess_run.return_value = mock_result
+        mock_subprocess_run.return_value = subprocess.CompletedProcess(
+            args=["notify-send"], returncode=0
+        )
 
         error_msg = "Connection timeout when checking for updates"
         result = send_update_failure_notification(error_msg)
@@ -243,10 +233,9 @@ class TestSendUpdateFailureNotification:
         """Test update failure notification with long error message."""
         if not send_update_failure_notification:
             pytest.skip("notifications module not available")
-
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess_run.return_value = mock_result
+        mock_subprocess_run.return_value = subprocess.CompletedProcess(
+            args=["notify-send"], returncode=0
+        )
 
         long_error = "This is a very long error message " * 10
         result = send_update_failure_notification(long_error)
@@ -268,10 +257,9 @@ class TestNotificationSecurity:
             patch("lib.notifications.subprocess.run") as mock_run,
             patch("lib.notifications.notify_send_available", return_value=True),
         ):
-            mock_result = Mock()
-            mock_result.returncode = 0
-            mock_run.return_value = mock_result
-
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["notify-send"], returncode=0
+            )
             # Test with potential injection attempts
             malicious_inputs = [
                 '"; rm -rf / #',
@@ -302,10 +290,9 @@ class TestNotificationSecurity:
             patch("lib.notifications.subprocess.run") as mock_run,
             patch("lib.notifications.notify_send_available", return_value=True),
         ):
-            mock_result = Mock()
-            mock_result.returncode = 0
-            mock_run.return_value = mock_result
-
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["notify-send"], returncode=0
+            )
             unicode_title = "🚀 Notification"
             unicode_message = "Unicode: áéíóú, 你好, Привет, مرحبا"
 
@@ -325,10 +312,9 @@ class TestNotificationSecurity:
             patch("lib.notifications.subprocess.run") as mock_run,
             patch("lib.notifications.notify_send_available", return_value=True),
         ):
-            mock_result = Mock()
-            mock_result.returncode = 0
-            mock_run.return_value = mock_result
-
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["notify-send"], returncode=0
+            )
             result = send_notification("", "")
             assert result is True
 
@@ -351,10 +337,9 @@ class TestNotificationEdgeCases:
             patch("lib.notifications.subprocess.run") as mock_run,
             patch("lib.notifications.notify_send_available", return_value=True),
         ):
-            mock_result = Mock()
-            mock_result.returncode = 0
-            mock_run.return_value = mock_result
-
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["notify-send"], returncode=0
+            )
             # Pass an invalid urgency - should default to "normal"
             result = send_notification("Title", "Message", urgency="invalid")
             assert result is True
@@ -371,10 +356,9 @@ class TestNotificationEdgeCases:
             patch("lib.notifications.subprocess.run") as mock_run,
             patch("lib.notifications.notify_send_available", return_value=True),
         ):
-            mock_result = Mock()
-            mock_result.returncode = 0
-            mock_run.return_value = mock_result
-
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["notify-send"], returncode=0
+            )
             result = send_notification("Title", "Message", timeout=0)
             assert result is True
 
@@ -390,10 +374,9 @@ class TestNotificationEdgeCases:
             patch("lib.notifications.subprocess.run") as mock_run,
             patch("lib.notifications.notify_send_available", return_value=True),
         ):
-            mock_result = Mock()
-            mock_result.returncode = 0
-            mock_run.return_value = mock_result
-
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["notify-send"], returncode=0
+            )
             # Negative timeout should default to 5000
             result = send_notification("Title", "Message", timeout=-5000)
             assert result is True
@@ -410,10 +393,9 @@ class TestNotificationEdgeCases:
             patch("lib.notifications.subprocess.run") as mock_run,
             patch("lib.notifications.notify_send_available", return_value=True),
         ):
-            mock_result = Mock()
-            mock_result.returncode = 0
-            mock_run.return_value = mock_result
-
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["notify-send"], returncode=0
+            )
             long_message = "x" * 10000  # 10KB message
             result = send_notification("Title", long_message)
             assert result is True
@@ -434,20 +416,18 @@ class TestNotificationIntegration:
 
         with patch("lib.notifications.subprocess.run") as mock_run:
             # Mock which command (availability check)
-            which_result = Mock()
-            which_result.returncode = 0
+            which_result = subprocess.CompletedProcess(args=["which"], returncode=0)
 
             # Mock notify-send command
-            notify_result = Mock()
-            notify_result.returncode = 0
+            notify_result = subprocess.CompletedProcess(args=["notify-send"], returncode=0)
 
             # Set up the mock to return different results for different calls
             def side_effect(*args, **kwargs):
                 if args[0][0] == "which":
                     return which_result
-                elif args[0][0] == "notify-send":
+                if args[0][0] == "notify-send":
                     return notify_result
-                return Mock(returncode=1)
+                return subprocess.CompletedProcess(args=list(args[0]), returncode=1)
 
             mock_run.side_effect = side_effect
 
@@ -465,10 +445,7 @@ class TestNotificationIntegration:
 
         with patch("lib.notifications.subprocess.run") as mock_run:
             # Mock which command to return failure
-            which_result = Mock()
-            which_result.returncode = 1
-
-            mock_run.return_value = which_result
+            mock_run.return_value = subprocess.CompletedProcess(args=["which"], returncode=1)
 
             # Check availability
             is_available = notify_send_available()

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Pytest tests for fplaunchwrapper emit functionality."""
 
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -69,10 +70,9 @@ class TestEmitFunctionality:
     @patch("subprocess.run")
     def test_generate_emit_mode(self, mock_subprocess, temp_env) -> None:
         """Test wrapper generation in emit mode."""
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "org.mozilla.firefox"
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=["flatpak", "list"], returncode=0, stdout="org.mozilla.firefox"
+        )
 
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -94,10 +94,8 @@ class TestEmitFunctionality:
 
     @patch("subprocess.run")
     def test_generate_emit_verbose_mode(self, mock_subprocess, temp_env) -> None:
-        """Test wrapper generation with emit verbose."""
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        """Test wrapper generation in emit verbose."""
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),

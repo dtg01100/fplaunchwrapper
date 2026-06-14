@@ -11,6 +11,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -260,17 +261,13 @@ class TestGeneratedLauncherIntegration:
 
     def test_launcher_executes_generated_wrapper(self) -> None:
         """Test that AppLauncher can execute generated wrappers."""
-        from unittest.mock import Mock, patch
-
         from lib.launch import AppLauncher
 
         with (
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_result = Mock()
-            mock_result.returncode = 0
-            mock_run.return_value = mock_result
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
             launcher = AppLauncher(
                 app_name="firefox",
@@ -284,8 +281,6 @@ class TestGeneratedLauncherIntegration:
 
     def test_generated_wrapper_with_safety_check(self) -> None:
         """Test that generated wrappers interact with safety checks."""
-        from unittest.mock import Mock, patch
-
         from lib.launch import AppLauncher
 
         # Create a safety check failure scenario
@@ -293,9 +288,7 @@ class TestGeneratedLauncherIntegration:
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=False),
         ):
-            mock_result = Mock()
-            mock_result.returncode = 1
-            mock_run.return_value = mock_result
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=1)
 
             launcher = AppLauncher(
                 app_name="firefox",

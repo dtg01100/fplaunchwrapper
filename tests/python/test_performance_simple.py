@@ -6,11 +6,12 @@ Simple Performance Testing for fplaunchwrapper - Safe and Isolated
 import os
 import shutil
 import statistics
+import subprocess
 import tempfile
 import time
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 try:
     from lib.generate import WrapperGenerator
@@ -101,7 +102,9 @@ def run_performance_tests(isolated_home=None):
     # Test wrapper generation
     def generation_test(i):
         with patch("subprocess.run") as mock_run, patch("os.path.exists", return_value=True):
-            mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="success", stderr=""
+            )
             generator = WrapperGenerator(
                 bin_dir=str(env.bin_dir / f"test_{i}"),
                 config_dir=str(env.config_dir),
@@ -122,7 +125,9 @@ def run_performance_tests(isolated_home=None):
             patch("pathlib.Path.read_text", return_value=str(env.bin_dir)),
             patch("pathlib.Path.is_file", return_value=True),
         ):
-            mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="success", stderr=""
+            )
             manager = WrapperManager(config_dir=str(env.config_dir), verbose=False, emit_mode=True)
             manager.set_preference(f"app_{i}", "flatpak")
             return manager.get_preference(f"app_{i}")

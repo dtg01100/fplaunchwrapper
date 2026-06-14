@@ -6,6 +6,7 @@ using Click CLI testing framework.
 """
 
 import io
+import subprocess
 
 import pytest
 
@@ -164,13 +165,15 @@ class TestUninstallCLI:
 
     def test_uninstall_with_data_removal(self, cli_runner, isolated_home):
         """Test uninstall with --remove-data flag sets correct flag."""
-        from unittest.mock import Mock, patch
+        from unittest.mock import patch
 
         with (
             patch("subprocess.run") as mock_run,
             patch("lib.manage.WrapperManager") as mock_manager,
         ):
-            mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
             mock_manager.return_value.remove_wrapper.return_value = True
             result = cli_runner.invoke(
                 cli_module.cli, ["uninstall", "--remove-data", "org.example.app"]
@@ -185,10 +188,12 @@ class TestManifestCLI:
 
     def test_manifest_calls_flatpak_correctly(self, cli_runner, isolated_home):
         """Test manifest command calls flatpak info --show-manifest."""
-        from unittest.mock import patch, Mock
+        from unittest.mock import patch
 
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
             result = cli_runner.invoke(cli_module.cli, ["manifest", "org.example.app"])
             assert result.exit_code == 0
             call_args = mock_run.call_args[0][0]

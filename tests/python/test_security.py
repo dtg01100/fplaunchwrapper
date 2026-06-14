@@ -3,9 +3,10 @@
 Tests the security features of fplaunchwrapper.
 """
 
+import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 
 from lib.generate import WrapperGenerator
@@ -142,7 +143,7 @@ class TestSecurity:
             config_dir=str(self.config_dir),
         )
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = Mock(returncode=0)
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
             launch_result = adversarial_launcher.launch()
 
         # Verify the result — should be True (current impl doesn't block path traversal)
@@ -170,7 +171,7 @@ class TestSecurity:
             config_dir=str(self.config_dir),
         )
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = Mock(returncode=0)
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
             launch_result = sanitized_launcher.launch()
 
         # Verify the result (should succeed with sanitized app name)

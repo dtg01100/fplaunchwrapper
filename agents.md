@@ -52,10 +52,11 @@ def temp_env(self, tmp_path):
 **Mock external commands:**
 
 ```python
-# GOOD: Mocks subprocess.run for external commands
 @patch("subprocess.run")
 def test_flatpak_command(self, mock_run):
-    mock_run.return_value = Mock(returncode=0, stdout="app.id\n", stderr="")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=["flatpak", "list"], returncode=0, stdout="app.id\n"
+    )
     # test code...
 ```
 
@@ -155,7 +156,9 @@ def test_with_env(self, monkeypatch):
 @patch("lib.generate.find_executable")
 def test_flatpak_mock(self, mock_find, mock_run):
     mock_find.return_value = "/usr/bin/flatpak"
-    mock_run.return_value = Mock(returncode=0, stdout="app.id\n", stderr="")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=["flatpak", "list"], returncode=0, stdout="app.id\n"
+    )
 ```
 
 ## Code Quality Checklist

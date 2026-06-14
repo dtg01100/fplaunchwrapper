@@ -9,10 +9,11 @@ This test file validates fixes for critical bugs found during code review:
 """
 
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 import pytest
 
 
@@ -74,9 +75,8 @@ class TestBoundsCheckingFix:
 
             with patch("shutil.which", return_value="/usr/bin/systemctl"):
                 with patch("subprocess.run") as mock_run:
-                    mock_run.return_value = Mock(
-                        returncode=0,
-                        stdout="MalformedOutput",
+                    mock_run.return_value = subprocess.CompletedProcess(
+                        args=[], returncode=0, stdout="MalformedOutput"
                     )
 
                     status = setup.check_systemd_status()
@@ -104,9 +104,8 @@ class TestBoundsCheckingFix:
 
             with patch("shutil.which", return_value="/usr/bin/systemctl"):
                 with patch("subprocess.run") as mock_run:
-                    mock_run.return_value = Mock(
-                        returncode=0,
-                        stdout="",
+                    mock_run.return_value = subprocess.CompletedProcess(
+                        args=[], returncode=0, stdout=""
                     )
 
                     status = setup.check_systemd_status()
@@ -183,7 +182,7 @@ class TestReturnValueSemanticsFix:
             setup = SystemdSetup(emit_mode=False)
             setup.systemd_unit_dir = temp_dir / "nonexistent"
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
                 result = setup.disable_systemd_units()
                 assert result is True
@@ -206,7 +205,7 @@ class TestReturnValueSemanticsFix:
             (systemd_dir / "flatpak-wrappers.service").write_text("[Unit]\n")
 
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
                 result = setup.disable_systemd_units()
 
             assert result is True

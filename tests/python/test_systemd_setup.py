@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 import pytest
 
 
@@ -232,12 +232,12 @@ class TestAppServiceEnableDisable:
 
             # First enable the service to create files
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
                 setup.enable_app_service("org.example.firefox")
 
             # Now disable it
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
                 result = setup.disable_app_service("org.example.firefox")
 
             assert result is True
@@ -305,7 +305,7 @@ class TestSystemdSetupRealistic:
 
             # Now disable (with mocked systemctl)
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
                 result = setup.disable_systemd_units()
 
             assert result is True
@@ -351,7 +351,9 @@ class TestCronFallback:
 
                 with patch("subprocess.run") as mock_run:
                     # First call: crontab -l returns empty (no existing cron)
-                    mock_run.return_value = Mock(returncode=1, stdout="")
+                    mock_run.return_value = subprocess.CompletedProcess(
+                        args=[], returncode=1, stdout="", stderr=""
+                    )
 
                     result = setup.install_cron_job()
 

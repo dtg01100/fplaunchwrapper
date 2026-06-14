@@ -4,9 +4,10 @@ Tests complete integration workflows using proper mocking.
 """
 
 import os
+import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -51,10 +52,9 @@ class TestIntegrationWorkflows:
     def test_complete_wrapper_lifecycle(self, mock_subprocess, temp_env) -> None:
         """Test complete wrapper lifecycle - replaces Test 1."""
         # Mock flatpak command
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "org.mozilla.firefox"
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=["flatpak", "list"], returncode=0, stdout="org.mozilla.firefox"
+        )
 
         # Step 1: Generate wrapper
         generator = WrapperGenerator(
@@ -118,12 +118,13 @@ class TestIntegrationWorkflows:
     def test_multiple_wrappers_collision_handling(self, mock_subprocess, temp_env) -> None:
         """Test multiple wrappers with collision handling - replaces Test 2."""
         # Mock flatpak command returning multiple apps
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = (
-            "com.google.chrome\ncom.microsoft.edge\norg.mozilla.firefox\ncom.example.browser"
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=["flatpak", "list"],
+            returncode=0,
+            stdout=(
+                "com.google.chrome\ncom.microsoft.edge\norg.mozilla.firefox\ncom.example.browser"
+            ),
         )
-        mock_subprocess.return_value = mock_result
 
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -175,9 +176,7 @@ class TestIntegrationWorkflows:
     def test_preference_override_workflow(self, mock_subprocess, temp_env) -> None:
         """Test preference override and fallback workflow - replaces Test 3."""
         # Mock flatpak command
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         manager = WrapperManager(
             config_dir=str(temp_env["config_dir"]),
@@ -263,17 +262,12 @@ class TestIntegrationWorkflows:
         def mock_run(cmd, **kwargs):
             cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
             if "command -v firefox" in cmd_str:
-                result = Mock()
-                result.returncode = 0
-                result.stdout = "/usr/bin/firefox\n"
-                return result
+                return subprocess.CompletedProcess(
+                    args=cmd, returncode=0, stdout="/usr/bin/firefox\n"
+                )
             if "command -v chrome" in cmd_str:
-                result = Mock()
-                result.returncode = 1  # Not found
-                return result
-            result = Mock()
-            result.returncode = 0
-            return result
+                return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="")
+            return subprocess.CompletedProcess(args=cmd, returncode=0)
 
         mock_subprocess.side_effect = mock_run
 

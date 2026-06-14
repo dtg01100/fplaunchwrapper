@@ -3,9 +3,10 @@
 Replace old bash implementation tests with pytest equivalents.
 """
 
+import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -45,10 +46,9 @@ class TestWrapperGeneration:
             pytest.skip("WrapperGenerator not available")
 
         # Mock flatpak command
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "org.mozilla.firefox\ncom.google.chrome"
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=["flatpak", "list"], returncode=0, stdout="org.mozilla.firefox\ncom.google.chrome"
+        )
 
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -88,10 +88,9 @@ class TestWrapperGeneration:
         existing_wrapper.chmod(0o755)
 
         # Mock flatpak command returning app with same name
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "com.visualstudio.code"
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=["flatpak", "list"], returncode=0, stdout="com.visualstudio.code"
+        )
 
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -121,10 +120,9 @@ class TestWrapperGeneration:
         blocklist_file.write_text("org.mozilla.firefox\n")
 
         # Mock flatpak command
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "org.mozilla.firefox\ncom.google.chrome"
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=["flatpak", "list"], returncode=0, stdout="org.mozilla.firefox\ncom.google.chrome"
+        )
 
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -189,9 +187,7 @@ class TestWrapperGeneration:
         env_file.write_text("export TEST_VAR=test_value\n")
 
         # Mock flatpak command
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -227,9 +223,7 @@ class TestWrapperGeneration:
         pre_script.chmod(0o755)
 
         # Mock flatpak command
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),
@@ -262,9 +256,7 @@ class TestWrapperGeneration:
         pref_file.write_text("flatpak\n")
 
         # Mock flatpak command
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         generator = WrapperGenerator(
             bin_dir=str(temp_env["bin_dir"]),

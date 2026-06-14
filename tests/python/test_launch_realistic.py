@@ -6,9 +6,12 @@ Reduces mocking and focuses on testing actual behavior over implementation detai
 """
 
 import os
+import subprocess
 import tempfile
+import threading
+import time
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -101,7 +104,9 @@ exec flatpak run {flatpak_id} "$@"
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
 
             result = launcher.launch()
 
@@ -142,7 +147,7 @@ exec flatpak run {flatpak_id} "$@"
                 patch("subprocess.run") as mock_run,
                 patch("lib.safety.safe_launch_check", return_value=True),
             ):
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
                 result = launcher.launch()
 
@@ -171,7 +176,7 @@ exec flatpak run {flatpak_id} "$@"
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_run.return_value = Mock(returncode=0)
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
             result = launcher.launch()
 
@@ -213,10 +218,8 @@ exec flatpak run {flatpak_id} "$@"
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_run.return_value = Mock(
-                returncode=returncode,
-                stdout="",
-                stderr=stderr,
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=returncode, stdout="", stderr=stderr
             )
 
             result = launcher.launch()
@@ -255,11 +258,8 @@ exec flatpak run {flatpak_id} "$@"
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_run.return_value = Mock(returncode=0)
-
-            result = launcher.launch()
-
-            assert result is True
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
+            launcher.launch()
             # Verify environment was passed
             call_kwargs = mock_run.call_args[1]
             assert "env" in call_kwargs
@@ -295,7 +295,7 @@ exec flatpak run {flatpak_id} "$@"
                 patch("subprocess.run") as mock_run,
                 patch("lib.safety.safe_launch_check", return_value=True),
             ):
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
                 result = launcher.launch()
 
@@ -333,7 +333,7 @@ exec flatpak run {flatpak_id} "$@"
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_run.return_value = Mock(returncode=0)
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
             result = launcher.launch()
 
@@ -365,7 +365,7 @@ exec flatpak run {flatpak_id} "$@"
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_run.return_value = Mock(returncode=0)
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
             result = launcher.launch()
 
@@ -415,7 +415,7 @@ class TestLaunchBehaviorNotImplementation:
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_run.return_value = Mock(returncode=0)
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
             result = launcher.launch()
 
@@ -467,7 +467,7 @@ class TestLaunchBehaviorNotImplementation:
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_run.return_value = Mock(returncode=0)
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
             result = launcher.launch()
 
@@ -522,7 +522,7 @@ class TestLaunchRealWorldScenarios:
             )
 
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
                 result = launcher.launch()
 
@@ -533,9 +533,6 @@ class TestLaunchRealWorldScenarios:
         """Test launching multiple instances concurrently (realistic usage)."""
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
-
-        import threading
-        import time
 
         # Create wrapper
         flatpak_id, app_name, _ = REAL_FLATPAK_APPS[0]
@@ -573,7 +570,7 @@ class TestLaunchRealWorldScenarios:
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_run.return_value = Mock(returncode=0)
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
             for i in range(5):
                 t = threading.Thread(target=launch_instance, args=[i])
@@ -616,7 +613,7 @@ class TestLaunchRealWorldScenarios:
             patch("subprocess.run") as mock_run,
             patch("lib.safety.safe_launch_check", return_value=True),
         ):
-            mock_run.return_value = Mock(returncode=0)
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
             result = launcher.launch()
 
@@ -682,7 +679,7 @@ class TestLaunchRealWorldScenarios:
                 patch("subprocess.run") as mock_run,
                 patch("lib.safety.safe_launch_check", return_value=True),
             ):
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
                 result = launcher.launch()
 

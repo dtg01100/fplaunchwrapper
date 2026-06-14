@@ -8,6 +8,7 @@ and integration scenarios.
 
 import os
 import signal
+import subprocess
 import tempfile
 import threading
 import time
@@ -379,7 +380,6 @@ class TestFlatpakMonitor:
         callback = Mock()
         monitor = FlatpakMonitor(callback=callback)
 
-        event = MagicMock()
         event = MagicMock(spec=object)
         event.src_path = "/var/lib/flatpak/app/test"
         event.event_type = "modified"
@@ -687,7 +687,6 @@ class TestFlatpakMonitorIntegration:
         callback = Mock()
 
         with patch("lib.flatpak_monitor.FlatpakMonitor") as mock_monitor_class:
-            mock_instance = MagicMock()
             mock_instance = MagicMock(spec=FlatpakMonitor)
             mock_monitor_class.return_value = mock_instance
             mock_instance.start_monitoring.return_value = False
@@ -708,10 +707,9 @@ class TestFlatpakMonitorIntegration:
         if not start_flatpak_monitoring:
             pytest.skip("start_flatpak_monitoring function not available")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "org.mozilla.firefox"
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="org.mozilla.firefox"
+        )
 
         mock_observer = Mock()
         mock_observer_class.return_value = mock_observer

@@ -6,6 +6,7 @@ All operations are completely isolated in temporary directories with full mockin
 """
 
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -80,7 +81,9 @@ class TestSafeIntegrationWorkflows:
                 return_value=isolated_env["home_dir"],
             ),
         ):
-            mock_run.return_value = Mock(returncode=0, stdout="cleaned", stderr="")
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="cleaned", stderr=""
+            )
 
             cleaner = WrapperCleanup(
                 bin_dir=str(isolated_env["bin_dir"]),
@@ -119,7 +122,9 @@ class TestSafeIntegrationWorkflows:
             ),
             patch("pathlib.Path.home", return_value=isolated_env["home_dir"]),
         ):
-            mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
             mock_popen.return_value = Mock()
 
             # Create bin_dir file for AppLauncher
@@ -157,7 +162,9 @@ class TestCLISafeIntegration:
             ),
             patch("sys.stdout"),
         ):
-            mock_run.return_value = Mock(returncode=0, stdout="generated", stderr="")
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="generated", stderr=""
+            )
 
             # This would normally call cli_main() but we can't import it safely
             # Instead, verify that our mocking approach works for CLI testing

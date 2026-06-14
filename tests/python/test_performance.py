@@ -3,10 +3,11 @@
 Tests the performance of fplaunchwrapper under load.
 """
 
+import subprocess
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from lib.cleanup import WrapperCleanup
 from lib.generate import WrapperGenerator
@@ -112,7 +113,7 @@ class TestPerformance:
         for app_name in apps:
             launcher = AppLauncher(app_name=app_name, config_dir=str(self.config_dir))
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
                 launch_result = launcher.launch()
                 results.append(launch_result)
         end_time = time.time()
@@ -178,7 +179,7 @@ class TestPerformance:
         results = []
         for _ in range(num_launches):
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
                 launch_result = launcher.launch()
                 results.append(launch_result)
         end_time = time.time()
@@ -242,7 +243,7 @@ class TestPerformance:
                 app_name=app_name, config_dir=str(self.config_dir), bin_dir=str(self.bin_dir)
             )
             with patch("subprocess.run") as mock_run:
-                mock_run.return_value = Mock(returncode=0)
+                mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
                 launch_result = launcher.launch()
                 assert launch_result is True
 

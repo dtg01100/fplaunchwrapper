@@ -72,11 +72,9 @@ class TestApplicationLauncher:
             pytest.skip("AppLauncher class not available")
 
         # Mock successful execution
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = ""
-        mock_result.stderr = ""
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launcher = AppLauncher(
             app_name="firefox",
@@ -118,9 +116,7 @@ class TestLaunchEdgeCases:
             pytest.skip("AppLauncher class not available")
 
         # Mock successful flatpak execution
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         # Test different Flatpak app ID formats
         flatpak_app_ids = [
@@ -156,9 +152,7 @@ class TestLaunchEdgeCases:
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         # Test with different architectures
         architectures = ["x86_64", "aarch64", "i386"]
@@ -182,9 +176,7 @@ class TestLaunchEdgeCases:
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         # Test with environment variables
         test_env_vars = {
@@ -218,9 +210,7 @@ class TestLaunchEdgeCases:
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         # Create a large environment with many variables
         large_env = {f"VAR_{i}": f"value_{i}" for i in range(100)}
@@ -338,9 +328,7 @@ class TestLaunchEdgeCases:
 
         import threading
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         results = []
         errors = []
@@ -406,9 +394,7 @@ class TestLaunchEdgeCases:
         if not AppLauncher:
             pytest.skip("AppLauncher class not available")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_subprocess.return_value = mock_result
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         # Test with various resource limits
         _ = {
@@ -604,7 +590,9 @@ exit 0
         from unittest.mock import patch
 
         with patch("lib.config_manager.create_config_manager") as mock_config:
-            mock_prefs = Mock()
+            from lib.config_models import AppPreferences
+
+            mock_prefs = Mock(spec=AppPreferences)
             mock_prefs.pre_launch_script = str(external_script)
             mock_config.return_value.get_app_preferences.return_value = mock_prefs
 
@@ -994,10 +982,9 @@ class TestRunHookScriptsFailureModes:
             pytest.skip("LibAppLauncher class not available")
 
         self._create_hook_script(hook_type)
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = ""
-        mock_result.stderr = ""
+        mock_result = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
         mock_run.side_effect = lambda *a, **kw: error_factory(mock_result)
 
         launcher = self._make_launcher(hook_failure_mode=failure_mode)
@@ -1014,11 +1001,9 @@ class TestRunHookScriptsFailureModes:
             pytest.skip("LibAppLauncher class not available")
 
         self._create_hook_script("pre")
-        mock_result = Mock()
-        mock_result.returncode = 1
-        mock_result.stdout = ""
-        mock_result.stderr = "hook error"
-        mock_run.return_value = mock_result
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="", stderr="hook error"
+        )
 
         launcher = self._make_launcher(hook_failure_mode="abort")
         with patch.object(launcher, "_get_effective_failure_mode", return_value="abort"):
@@ -1034,11 +1019,9 @@ class TestRunHookScriptsFailureModes:
 
         caplog.set_level("INFO")
         self._create_hook_script("pre")
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "hook stdout output"
-        mock_result.stderr = ""
-        mock_run.return_value = mock_result
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="hook stdout output", stderr=""
+        )
 
         launcher = self._make_launcher(verbose=True)
         with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
@@ -1054,11 +1037,9 @@ class TestRunHookScriptsFailureModes:
             pytest.skip("LibAppLauncher class not available")
 
         self._create_hook_script("pre")
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = ""
-        mock_result.stderr = ""
-        mock_run.return_value = mock_result
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launcher = self._make_launcher()
         with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
@@ -1077,11 +1058,9 @@ class TestRunHookScriptsFailureModes:
             pytest.skip("LibAppLauncher class not available")
 
         self._create_hook_script("post")
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = ""
-        mock_result.stderr = ""
-        mock_run.return_value = mock_result
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launcher = self._make_launcher()
         with patch.object(launcher, "_get_effective_failure_mode", return_value="warn"):
@@ -1119,7 +1098,7 @@ class TestMainCLIArgumentParsing:
         """Test --verbose flag is parsed correctly."""
         with patch("sys.argv", ["fplaunch-launch", "--verbose", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1134,7 +1113,7 @@ class TestMainCLIArgumentParsing:
         """Test --debug flag is parsed correctly."""
         with patch("sys.argv", ["fplaunch-launch", "--debug", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1148,7 +1127,7 @@ class TestMainCLIArgumentParsing:
         """Test --config-dir option is parsed correctly."""
         with patch("sys.argv", ["fplaunch-launch", "--config-dir", "/custom/config", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1162,7 +1141,7 @@ class TestMainCLIArgumentParsing:
         """Test --bin-dir option is parsed correctly."""
         with patch("sys.argv", ["fplaunch-launch", "--bin-dir", "/custom/bin", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1176,7 +1155,7 @@ class TestMainCLIArgumentParsing:
         """Test --hook-failure abort is parsed correctly."""
         with patch("sys.argv", ["fplaunch-launch", "--hook-failure", "abort", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1190,7 +1169,7 @@ class TestMainCLIArgumentParsing:
         """Test --hook-failure warn is parsed correctly."""
         with patch("sys.argv", ["fplaunch-launch", "--hook-failure", "warn", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1204,7 +1183,7 @@ class TestMainCLIArgumentParsing:
         """Test --hook-failure ignore is parsed correctly."""
         with patch("sys.argv", ["fplaunch-launch", "--hook-failure", "ignore", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1218,7 +1197,7 @@ class TestMainCLIArgumentParsing:
         """Test --abort-on-hook-failure shorthand is parsed correctly."""
         with patch("sys.argv", ["fplaunch-launch", "--abort-on-hook-failure", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1232,7 +1211,7 @@ class TestMainCLIArgumentParsing:
         """Test --ignore-hook-failure shorthand is parsed correctly."""
         with patch("sys.argv", ["fplaunch-launch", "--ignore-hook-failure", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1249,7 +1228,7 @@ class TestMainCLIArgumentParsing:
             ["fplaunch-launch", "firefox", "--new-window", "--private-window"],
         ):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1263,7 +1242,7 @@ class TestMainCLIArgumentParsing:
         """Test that launch failure returns exit code 1."""
         with patch("sys.argv", ["fplaunch-launch", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = False
                 mock_launcher_class.return_value = mock_instance
 
@@ -1275,7 +1254,7 @@ class TestMainCLIArgumentParsing:
         """Test that successful launch returns exit code 0."""
         with patch("sys.argv", ["fplaunch-launch", "firefox"]):
             with patch("lib.launch.AppLauncher") as mock_launcher_class:
-                mock_instance = Mock()
+                mock_instance = Mock(spec=AppLauncher)
                 mock_instance.launch.return_value = True
                 mock_launcher_class.return_value = mock_instance
 
@@ -1887,10 +1866,11 @@ class TestResolveFlatpakId:
         mock_find.return_value = "/usr/bin/flatpak"
 
         # Mock subprocess.run to return flatpak list output
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "org.mozilla.firefox\ncom.google.Chrome\n"
-        mock_run.return_value = mock_result
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="org.mozilla.firefox\ncom.google.Chrome\n",
+        )
 
         launcher = LibAppLauncher(
             app_name="firefox",
@@ -1960,9 +1940,7 @@ class TestExecuteLaunchDebugMode:
             pytest.skip("LibAppLauncher class not available")
 
         caplog.set_level("DEBUG")
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_run.return_value = mock_result
+        mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         launcher = LibAppLauncher(
             app_name="firefox",
@@ -2133,11 +2111,9 @@ class TestLaunchHookFailureVerbose:
         caplog.set_level("INFO")
         self._create_hook_script("pre")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "hook stdout output"
-        mock_result.stderr = ""
-        mock_run.return_value = mock_result
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="hook stdout output", stderr=""
+        )
 
         launcher = LibAppLauncher(
             app_name="test_app",
@@ -2160,9 +2136,7 @@ class TestLaunchHookFailureVerbose:
 
         self._create_hook_script("post")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_run.return_value = mock_result
+        mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
 
         launcher = LibAppLauncher(
             app_name="test_app",
@@ -2293,11 +2267,9 @@ class TestHookScriptDebugOutput:
         caplog.set_level("DEBUG")
         self._create_hook_script("pre")
 
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = ""
-        mock_result.stderr = ""
-        mock_run.return_value = mock_result
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
 
         launcher = LibAppLauncher(
             app_name="test_app",

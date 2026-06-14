@@ -461,7 +461,7 @@ class TestParseFlatpakDesktopFiles:
 
         mock_find.return_value = [Path("/fake/app.desktop")]
 
-        mock_entry = MagicMock()
+        mock_entry = MagicMock(spec=DesktopEntry)
         mock_entry.flatpak_id = "org.example.app"
         mock_entry.name = "Example App"
         mock_entry_class.return_value = mock_entry
@@ -479,7 +479,7 @@ class TestParseFlatpakDesktopFiles:
 
         mock_find.return_value = [Path("/fake/org.example.app.desktop")]
 
-        mock_entry = MagicMock()
+        mock_entry = MagicMock(spec=DesktopEntry)
         mock_entry.flatpak_id = None
         mock_entry.name = "Example App"
         mock_entry_class.return_value = mock_entry
@@ -494,7 +494,7 @@ class TestParseFlatpakDesktopFiles:
         """Test default search locations when no flatpak_dir specified."""
         from lib.desktop_parser import parse_flatpak_desktop_files
 
-        mock_home = MagicMock()
+        mock_home = MagicMock(spec=Path)
         mock_home.__truediv__ = lambda self, key: Path(f"/home/user/.local/share/{key}")
         mock_path.home.return_value = mock_home
 
@@ -560,7 +560,7 @@ class TestGetAppMetadata:
         """Test that entries are fetched when not provided."""
         from lib.desktop_parser import get_app_metadata
 
-        mock_entry = MagicMock()
+        mock_entry = MagicMock(spec=DesktopEntry)
         mock_entry.name = "Fetched App"
         mock_entry.comment = None
         mock_entry.icon = "icon"
