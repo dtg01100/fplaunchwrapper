@@ -361,7 +361,6 @@ class TestOutputCapture:
         (isolated_home.bin_dir / "firefox").chmod(0o755)
 
         # Redirect console output
-        output = StringIO()
         with patch.object(console, "print") as mock_print:
             manager = WrapperManager(
                 config_dir=str(isolated_home.config_dir),
@@ -411,7 +410,7 @@ class TestOutputCapture:
         # We need to patch at the location where it's used (lib.manage module)
         # Since it's imported inside the function, we mock the whole Prompt class
         with patch("rich.prompt.Confirm.ask", return_value=True):
-            result = manager.remove_wrapper("firefox", force=False)
+            manager.remove_wrapper("firefox", force=False)
             # If force=False and no Confirm mock triggered, it would ask
             # With our mock, it should proceed
 
