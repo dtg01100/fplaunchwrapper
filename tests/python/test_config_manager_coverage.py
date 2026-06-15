@@ -1118,10 +1118,10 @@ class TestLoadConfigErrorPaths:
             manager.load_config()
 
     def test_invalid_hook_failure_mode_raises_validation_error(self, manager):
+        pytest.importorskip("pydantic")
         from lib.exceptions import ConfigValidationError
         import tomli_w
 
-        pytest.importorskip("pydantic")
         manager.config_file.parent.mkdir(parents=True, exist_ok=True)
         # ``cron_interval`` has a Pydantic ``ge=1`` validator; 0 is invalid
         tomli_w.dump(
@@ -1160,12 +1160,11 @@ class TestParseConfigDataValidationError:
     def test_pydantic_validation_error_is_rewrapped(
         self, manager, monkeypatch
     ):
+        pytest.importorskip("pydantic")
         from lib.exceptions import ConfigValidationError
         from pydantic import ValidationError as PydanticValidationError
 
         from lib.config_manager import PydanticWrapperConfig
-
-        pytest.importorskip("pydantic")
 
         def fake_init(self, **kwargs):  # noqa: ARG001 - match Pydantic signature
             raise PydanticValidationError.from_exception_data(
