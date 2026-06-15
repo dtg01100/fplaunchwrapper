@@ -104,6 +104,7 @@ class TestSystemdSubcommands:
     @pytest.mark.parametrize("subcommand", SYSTEMD_SUBCOMMANDS)
     def test_systemd_subcommand_appears_in_help(self, runner, subcommand):
         result = runner.invoke(cli, ["systemd", "--help"])
+        assert result.exit_code == 0
         assert subcommand in result.output.lower()
 
 
@@ -132,6 +133,7 @@ class TestProfilesSubcommands:
     @pytest.mark.parametrize("subcommand", PROFILES_SUBCOMMANDS)
     def test_profiles_subcommand_appears_in_help(self, runner, subcommand):
         result = runner.invoke(cli, ["profiles", "--help"])
+        assert result.exit_code == 0
         assert subcommand in result.output.lower()
 
     def test_profiles_list_default(self, runner):
@@ -176,6 +178,7 @@ class TestPresetsSubcommands:
     @pytest.mark.parametrize("subcommand", PRESETS_SUBCOMMANDS)
     def test_presets_subcommand_appears_in_help(self, runner, subcommand):
         result = runner.invoke(cli, ["presets", "--help"])
+        assert result.exit_code == 0
         assert subcommand in result.output.lower()
 
     def test_presets_list_default(self, runner):
