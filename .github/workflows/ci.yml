@@ -27,7 +27,7 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install --system -e ".[monitor]"
-        uv pip install --system pytest pytest-mock pytest-timeout pytest-xdist tomli tomli-w hypothesis
+        uv pip install --system 'pytest<9.1.0' pytest-mock pytest-timeout pytest-xdist tomli tomli-w hypothesis
 
     - name: Run Python tests
       env:
