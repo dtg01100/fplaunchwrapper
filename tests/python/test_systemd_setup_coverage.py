@@ -1027,33 +1027,29 @@ class TestFindWrapperScript:
             shutil.rmtree(parent_bin)
 
     def test_init_finds_via_common_path(self):
-        """If the script is in a common location, ``_find_wrapper_script`` returns that path."""
+        """If the script is in a common location, ``_find_wrapper_script`` returns that path.
+
+        With shutil.which patched to return None, the function iterates over
+        common_paths and returns the first one where Path.is_file() AND
+        os.access() succeed. The test patches both; the first common_path
+        candidate matches.
+        """
         from lib.systemd_setup import SystemdSetup
 
         parent_bin, bin_dir = _make_bin_dir()
         try:
             with patch("shutil.which", return_value=None):
-                # First call to Path.is_file returns True (matching common path);
-                # subsequent calls return False.
-                def is_file_side_effect(self):  # noqa: ARG001 - signature
-                    return True
-
-                with patch("pathlib.Path.is_file", is_file_side_effect):
+                with patch("pathlib.Path.is_file", return_value=True), \
+                     patch("os.access", return_value=True):
                     setup = SystemdSetup(
                         bin_dir=str(bin_dir),
                         wrapper_script=None,
                         emit_mode=True,
                     )
 
-            # The exact path returned depends on which iteration of the loop
-            # matches first; assert that we got one of the well-known candidates
-            # rather than the bare name.
-            assert setup.wrapper_script in {
-                "/usr/bin/fplaunch-generate",
-                "/usr/local/bin/fplaunch-generate",
-                str(Path("~/bin/fplaunch-generate").expanduser()),
-                str(Path("~/.local/bin/fplaunch-generate").expanduser()),
-            }
+            # The function returns the first matching common_paths entry when
+            # the file exists and is executable.
+            assert setup.wrapper_script == "/usr/bin/fplaunch-generate"
         finally:
             shutil.rmtree(parent_bin)
 
