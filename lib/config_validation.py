@@ -84,29 +84,29 @@ if PYDANTIC_AVAILABLE:
         @field_validator("custom_args")
         @classmethod
         def validate_custom_args(cls, v):
-            """Validate custom arguments for security."""
-            if v:
-                dangerous_chars = [";", "&", "|", "`", "$", "(", ")", "<", ">", '"', "'", "\\"]
-                for arg in v:
-                    if isinstance(arg, str):
-                        if arg.startswith("--"):
-                            if "=" in arg:
-                                _, value = arg.split("=", 1)
-                                for char in dangerous_chars:
-                                    if char in value:
-                                        msg = (
-                                            f"Custom argument value contains "
-                                            f"dangerous character '{char}': {arg}"
-                                        )
-                                        raise ValueError(msg)
-                        else:
-                            for char in dangerous_chars:
-                                if char in arg:
-                                    msg = (
-                                        f"Custom argument contains "
-                                        f"dangerous character '{char}': {arg}"
-                                    )
-                                    raise ValueError(msg)
+            """Validate custom arguments for security.
+
+            Rejects any custom arg (whether ``--flag=value`` or bare ``--flag``)
+            that contains a shell-metacharacter. Non-string entries are
+            skipped (the type validator handles them).
+            """
+            if not v:
+                return v
+            dangerous_chars = [";", "&", "|", "`", "$", "(", ")", "<", ">", '"', "'", "\\"]
+            for arg in v:
+                if not isinstance(arg, str):
+                    continue
+                if "=" in arg:
+                    _, value = arg.split("=", 1)
+                else:
+                    value = arg
+                for char in dangerous_chars:
+                    if char in value:
+                        msg = (
+                            f"Custom argument contains dangerous character "
+                            f"'{char}': {arg}"
+                        )
+                        raise ValueError(msg)
             return v
 
         @field_validator("pre_launch_script", "post_launch_script")

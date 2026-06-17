@@ -427,16 +427,27 @@ class TestConfigValidationCoverage:
     def test_validate_custom_args_dangerous_char_in_flag(self) -> None:
         """A bare ``--flag<bad>`` arg (no =) is also rejected.
 
-        Skipped: the validator's else-branch (lines 102-109) only inspects
-        characters AFTER the ``=``. A bare flag like ``--flag|pipe`` has
-        no ``=``, so the dangerous char is not detected. This is a known
-        validator limitation, not a test bug. The dangerous-char-in-VALUE
-        case is covered by test_validate_custom_args_dangerous_char_in_value.
+        Regression test: the validator previously had a logic bug where
+        bare ``--flag`` args (no ``=``) were not checked for dangerous
+        characters because the ``else:`` clause of ``if "=" in arg:`` was
+        at the wrong indentation level. The fix restructures the check
+        so ``value = arg.split("=", 1)[1] if "=" in arg else arg`` and
+        then dangerous_chars are scanned against the chosen value.
         """
-        pytest.skip(
-            "bare-flag dangerous-char detection is not implemented in the "
-            "validator; only the --key=value form is checked"
-        )
+        pytest.importorskip("pydantic")
+        from pydantic import ValidationError
+
+        from lib.config_validation import PydanticAppPreferences
+
+        bad_arg = "--flag|pipe"
+        with pytest.raises(ValidationError) as exc_info:
+            PydanticAppPreferences(custom_args=[bad_arg])
+        # Confirm the error mentions the dangerous char (|).
+        assert "|" in str(exc_info.value)
+        # Also exercise every other dangerous char in a bare-flag form.
+        for char in [";", "&", "`", "$", "(", ")", "<", ">", '"', "'", "\\"]:
+            with pytest.raises(ValidationError):
+                PydanticAppPreferences(custom_args=[f"--flag{char}tail"])
 
     def test_validate_custom_args_safe_flag_with_equals(self) -> None:
         """A safe ``--key=val`` with no dangerous chars is accepted."""
