@@ -29,24 +29,19 @@ from .paths import (
     get_systemd_unit_dir,
 )
 from .subprocess_helpers import run_crontab, run_systemctl
+from .python_utils import is_wrapper_file
 
-is_wrapper_file: Callable[[str | Path], bool] | None = None
-UTILS_AVAILABLE = False
-
-try:
-    from .safety import is_wrapper_file as _is_wrapper_file
-
-    is_wrapper_file = _is_wrapper_file
-    UTILS_AVAILABLE = True
-except ImportError:
-    pass
-
-console = Console()
+# Legacy shim kept for backward compatibility with tests. The original
+# try/except ImportError dance around ``safety.is_wrapper_file`` is gone;
+# ``python_utils.is_wrapper_file`` always succeeds (this package depends
+# on it transitively).
+UTILS_AVAILABLE = True
 
 MAX_BACKUP_FILES = 1000
 
+console = Console()
 
-# pylint: disable=too-many-instance-attributes
+
 @dataclass
 class CleanupConfig:
     bin_dir: str | None = None
@@ -75,7 +70,6 @@ class CleanupConfig:
             self.assume_yes or self.force or bool(os.environ.get("FPWRAPPER_FORCE"))
         )
         self.verbose_effective = bool(self.verbose) if self.verbose is not None else False
-
 
 # pylint: disable=too-many-instance-attributes
 class WrapperCleanup(LoggingMixin):
@@ -247,17 +241,31 @@ class WrapperCleanup(LoggingMixin):
             for comp_file in fish_completion_dir.glob("*fplaunch*"):
                 self.cleanup_items["completion_files"].append(comp_file)
 
-        # System-wide completion directories (for user-installed completions)
-        system_completion_dirs = [
-            Path("/usr/local/share/bash-completion/completions"),
-            Path("/usr/local/share/zsh/site-functions"),
-            Path("/usr/local/share/fish/vendor_completions.d"),
-        ]
-
-        for comp_dir in system_completion_dirs:
-            if comp_dir.exists():
-                for comp_file in comp_dir.glob("*fplaunch*"):
-                    self.cleanup_items["completion_files"].append(comp_file)
+        # System-wide completion directories. Only touch them when
+        # euid == 0 (the project never runs ``cleanup`` as root for
+        # a single user), or skip them entirely otherwise; a non-root
+        # user with write access to ``/usr/local`` would otherwise be
+        # able to delete unrelated ``*fplaunch*`` files. We also use
+        # specific filename patterns instead of ``*fplaunch*`` so we
+        # don't catch third-party tools whose names happen to start
+        # with the same prefix.
+        if os.geteuid() == 0:
+            system_completion_patterns = {
+                Path("/usr/local/share/bash-completion/completions"): [
+                    "fplaunch_completion.bash",
+                ],
+                Path("/usr/local/share/zsh/site-functions"): ["_fplaunch"],
+                Path("/usr/local/share/fish/vendor_completions.d"): [
+                    "fplaunch.fish",
+                ],
+            }
+            for comp_dir, names in system_completion_patterns.items():
+                if not comp_dir.exists():
+                    continue
+                for name in names:
+                    comp_file = comp_dir / name
+                    if comp_file.exists():
+                        self.cleanup_items["completion_files"].append(comp_file)
 
     def _scan_cron_entries(self) -> None:
         """Scan for all fplaunchwrapper-related cron entries."""
@@ -276,9 +284,8 @@ class WrapperCleanup(LoggingMixin):
 
                 if cron_lines:
                     self.cleanup_items["cron_entries"].extend(cron_lines)
-        except (subprocess.CalledProcessError, OSError):
+        except (OSError, subprocess.TimeoutExpired):
             pass
-
     # Backward-compat method used by tests
     def _identify_artifacts(self) -> list[Path]:
         """Identify artifacts to be cleaned (wrappers, preferences, data files)."""
@@ -312,10 +319,10 @@ class WrapperCleanup(LoggingMixin):
             return False
         try:
             result = run_crontab("-l")
-            if result.returncode == 0:
-                return "fplaunch-generate" in str(result.stdout)
-        except (subprocess.CalledProcessError, OSError):
-            pass
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        if result.returncode == 0:
+            return "fplaunch-generate" in str(result.stdout)
         return False
 
     def log(self, message: str, level: str = "info") -> None:
@@ -443,7 +450,7 @@ class WrapperCleanup(LoggingMixin):
             self.log("Cleanup complete.")
             return not getattr(self, "had_errors", False)
 
-        except (OSError, subprocess.CalledProcessError, ValueError) as e:
+        except (OSError, subprocess.TimeoutExpired, ValueError) as e:
             self.log(f"Cleanup failed: {e}", "error")
             return False
 
@@ -475,24 +482,46 @@ class WrapperCleanup(LoggingMixin):
             self._remove_file(unit_path, f"Removing systemd unit: {unit_path}")
 
     def _cleanup_cron_entries(self) -> None:
-        """Remove cron entries."""
+        """Remove cron entries.
+
+        ``crontab -l`` is treated as authoritative: if it fails, we abort
+        the cron cleanup rather than overwriting the user's crontab.
+        A previous version of this code used an empty string for a
+        failed ``crontab -l`` and then ``crontab -`` overwrote the
+        user's crontab with the (now empty) ``new_cron``.
+        """
         if not self.cleanup_items["cron_entries"]:
             return
 
         crontab_path = shutil.which("crontab")
-        if crontab_path:
-            self.log("Removing cron entries...")
-            if not self.dry_run:
-                try:
-                    result = run_crontab("-l")
-                    if result.returncode == 0:
-                        current_cron = result.stdout
-                        new_cron = "\n".join(
-                            line for line in current_cron.split("\n") if "fplaunch" not in line
-                        )
-                        run_crontab("-", input_text=new_cron)
-                except (subprocess.CalledProcessError, OSError):
-                    pass
+        if not crontab_path:
+            return
+        self.log("Removing cron entries...")
+        if self.dry_run:
+            return
+        try:
+            result = run_crontab("-l")
+        except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+            self.log(f"Cannot read existing crontab; aborting: {e}", "error")
+            return
+        if result.returncode != 0:
+            self.log(
+                f"Cannot read existing crontab (rc={result.returncode}); "
+                "aborting cleanup to avoid clobbering the user's crontab.",
+                "error",
+            )
+            return
+        new_cron = "\n".join(
+            line for line in result.stdout.split("\n") if "fplaunch" not in line
+        )
+        write_result = run_crontab("-", input_text=new_cron)
+        if write_result.returncode != 0:
+            self.log(
+                f"crontab write failed (rc={write_result.returncode}); "
+                "the user's crontab may have been left untouched (good) "
+                "or partially updated.",
+                "error",
+            )
 
     def _cleanup_wrappers_and_scripts(self) -> None:
         """Remove wrappers, symlinks, and scripts."""
@@ -544,15 +573,46 @@ class WrapperCleanup(LoggingMixin):
             )
 
     def _remove_file(self, path: Path, description: str) -> None:
-        """Remove a file with logging."""
-        self.log(description)
-        if not self.dry_run:
-            try:
-                path.unlink(missing_ok=True)
-            except OSError as e:
-                self.log(f"Warning: Failed to remove {path}: {e}", "warning")
-                self.had_errors = True
+        """Remove a file with logging.
 
+        Defends against symlink-redirect attacks: a non-root user with
+        write access to a shared directory could plant a symlink at
+        ``~/bin/firefox`` -> ``~/.ssh/authorized_keys`` and have
+        ``cleanup`` unlink the target. We verify the path is a regular
+        file owned by the current user before unlinking.
+        """
+        self.log(description)
+        if self.dry_run:
+            return
+        try:
+            # O_NOFOLLOW + stat ownership check before unlink.
+            try:
+                fd = os.open(str(path), os.O_PATH | os.O_NOFOLLOW)
+            except OSError as e:
+                self.log(f"Warning: refusing to remove non-regular file {path}: {e}", "warning")
+                self.had_errors = True
+                return
+            try:
+                st = os.fstat(fd)
+                import stat as _stat
+                if not _stat.S_ISREG(st.st_mode):
+                    self.log(f"Warning: refusing to remove non-regular file {path}", "warning")
+                    self.had_errors = True
+                    return
+                if st.st_uid != os.getuid():
+                    self.log(
+                        f"Warning: refusing to remove file owned by "
+                        f"uid={st.st_uid}: {path}",
+                        "warning",
+                    )
+                    self.had_errors = True
+                    return
+            finally:
+                os.close(fd)
+            path.unlink(missing_ok=True)
+        except OSError as e:
+            self.log(f"Warning: Failed to remove {path}: {e}", "warning")
+            self.had_errors = True
     def _remove_directory(self, path: Path, description: str) -> None:
         """Remove a directory with logging."""
         self.log(description)
@@ -586,7 +646,7 @@ class WrapperCleanup(LoggingMixin):
 
         except (
             OSError,
-            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
             ValueError,
             KeyboardInterrupt,
         ) as e:
@@ -606,9 +666,8 @@ class WrapperCleanup(LoggingMixin):
             if self.dry_run:
                 return True
             return bool(self.perform_cleanup())
-        except (OSError, subprocess.CalledProcessError, ValueError, KeyboardInterrupt):
+        except (OSError, subprocess.TimeoutExpired, ValueError, KeyboardInterrupt):
             return False
-
     def cleanup_all(self) -> bool:
         """Simulate cleanup all for testing."""
         self.log("Simulating cleanup of all wrappers")

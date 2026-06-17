@@ -26,7 +26,7 @@ _call_python_util() {
     local func="$1"
     shift
     if _has_python_utils; then
-        python3 "$(_get_script_dir)/python_utils.py" "$func" "$@"
+        python3 "$(_get_script_dir)/python_utils_cli.py" "$func" "$@"
         return $?
     fi
     return 1

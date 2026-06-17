@@ -232,21 +232,18 @@ class TestSetPreferenceBranches:
     def test_set_preference_oserror_returns_false(
         self, temp_env: dict[str, Path]
     ) -> None:
-        """An OSError while writing the .pref file should return False (lines 257-259)."""
+        """An OSError while writing the .pref file should return False."""
         _make_wrapper(temp_env["bin_dir"], "firefox")
         mgr = _make_manager(temp_env)
-        pref_path = temp_env["config_dir"] / "firefox.pref"
+        # The atomic write path calls ``tempfile.mkstemp``; raising OSError
+        # there is what causes ``set_preference`` to return False.
+        import tempfile as _tempfile
 
-        real_write_text = Path.write_text
+        def fake_mkstemp(*args, **kwargs):
+            raise OSError("synthetic disk full")
 
-        def _raise(self: Path, *args: object, **kwargs: object) -> int:
-            if self == pref_path:
-                raise OSError("synthetic disk full")
-            return real_write_text(self, *args, **kwargs)
-
-        with patch.object(Path, "write_text", _raise):
+        with patch.object(_tempfile, "mkstemp", fake_mkstemp):
             assert mgr.set_preference("firefox", "system") is False
-
 
 # ---------------------------------------------------------------------------
 # set_preference_all

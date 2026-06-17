@@ -616,7 +616,10 @@ class TestManifestCommand:
         We exercise this by patching ``run_command`` directly to return
         ``None`` - the same path that emit mode takes inside the helper.
         """
-        with patch("lib.cli.run_command", return_value=None) as mock_rc:
+        # Patch the symbol as imported into ``lib.cli_inspect`` rather than
+        # the original source module — Python import semantics bind the
+        # name into the importer's namespace at import time.
+        with patch("lib.cli_inspect.run_command", return_value=None) as mock_rc:
             result = cli_runner.invoke(
                 manifest_cmd,
                 ["org.example.app"],

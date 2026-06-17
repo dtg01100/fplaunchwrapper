@@ -123,17 +123,17 @@ class TestSaveConfigErrors:
     def test_save_config_raises_config_permission_error_on_oserror(
         self, manager, monkeypatch
     ):
-        real_open = Path.open
+        # The atomic write path calls ``tempfile.mkstemp``; raising OSError
+        # there is what causes ``save_config`` to surface a
+        # ``ConfigPermissionError`` to the caller.
+        import tempfile as _tempfile
 
-        def fake_open(self, *args, **kwargs):
-            if "wb" in args and str(self).endswith("config.toml"):
-                raise OSError("disk full")
-            return real_open(self, *args, **kwargs)
+        def fake_mkstemp(*args, **kwargs):
+            raise OSError("disk full")
 
-        monkeypatch.setattr(Path, "open", fake_open)
+        monkeypatch.setattr(_tempfile, "mkstemp", fake_mkstemp)
         with pytest.raises(ConfigPermissionError):
             manager.save_config()
-
     def test_save_config_raises_config_parse_error_on_serialization_failure(
         self, manager, monkeypatch
     ):
@@ -314,18 +314,18 @@ class TestLoadFallbackConfigEdgeCases:
 
 class TestSaveFallbackConfigOSError:
     def test_write_oserror_raises_config_permission_error(self, manager, monkeypatch):
-        real_write_text = Path.write_text
+        # The atomic write path calls ``tempfile.mkstemp``; raising OSError
+        # there is what causes the fallback save to surface
+        # ``ConfigPermissionError`` to the caller.
+        import tempfile as _tempfile
 
-        def fake_write_text(self, *args, **kwargs):
-            if str(self) == str(manager.config_file):
-                raise OSError("disk full")
-            return real_write_text(self, *args, **kwargs)
+        def fake_mkstemp(*args, **kwargs):
+            raise OSError("disk full")
 
-        monkeypatch.setattr(Path, "write_text", fake_write_text)
+        monkeypatch.setattr(_tempfile, "mkstemp", fake_mkstemp)
         with patch("lib.config_manager.TOML_AVAILABLE", False):
             with pytest.raises(ConfigPermissionError):
                 manager._save_fallback_config()
-
 
 # --------------------------------------------------------------------------- #
 # set_app_preferences / blocklist save errors  (lines 517-521, 529-530,
@@ -800,16 +800,15 @@ class TestExportProfile:
 
     def test_export_oserror_returns_false(self, manager, tmp_path, monkeypatch):
         out = tmp_path / "default.toml"
-        real_open = Path.open
+        # The atomic write path calls ``tempfile.mkstemp``; raising OSError
+        # there is what causes ``export_profile`` to return False.
+        import tempfile as _tempfile
 
-        def fake_open(self, *args, **kwargs):
-            if str(self) == str(out):
-                raise OSError("disk full")
-            return real_open(self, *args, **kwargs)
+        def fake_mkstemp(*args, **kwargs):
+            raise OSError("disk full")
 
-        monkeypatch.setattr(Path, "open", fake_open)
+        monkeypatch.setattr(_tempfile, "mkstemp", fake_mkstemp)
         assert manager.export_profile("default", out) is False
-
 
 # --------------------------------------------------------------------------- #
 # import_profile  (lines 751-767)

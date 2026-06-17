@@ -850,7 +850,10 @@ echo "testapp executed"
         )
 
         assert result.returncode == 0
-        assert "flatpak-run:run org.mozilla.firefox --arg" in result.stdout
+        # The wrapper now passes ``--`` between the flatpak ID and the user
+        # args so a flag like ``--filesystem=host`` is not silently widened
+        # at the flatpak layer (see review finding C1).
+        assert "flatpak-run:run -- org.mozilla.firefox --arg" in result.stdout
 
     def test_sandbox_and_run_flags_hit_flatpak(self, generated_wrapper) -> None:
         self._run_wrapper(generated_wrapper, "--fpwrapper-sandbox-yolo")
@@ -860,7 +863,9 @@ echo "testapp executed"
         log_content = generated_wrapper["flatpak_log"].read_text()
         assert "override --user org.mozilla.firefox --filesystem=host" in log_content
         assert "override --reset org.mozilla.firefox" in log_content
-        assert "run --no-sandbox org.mozilla.firefox --version" in log_content
+        # Same C1 fix: ``--`` separates the flatpak ID from the user args
+        # even on the ``--no-sandbox`` path.
+        assert "run --no-sandbox -- org.mozilla.firefox --version" in log_content
 
     def test_edit_sandbox_and_preference_flags(self, generated_wrapper) -> None:
         """Test --fpwrapper-edit-sandbox and preference setting in non-interactive mode."""

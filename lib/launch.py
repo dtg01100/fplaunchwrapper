@@ -347,7 +347,7 @@ class AppLauncher:
                 if outcome is False:
                     return False
 
-            except Exception as e:  # pylint: disable=W0718
+            except (ValueError, RuntimeError, subprocess.SubprocessError) as e:
                 all_succeeded = False
                 logger.exception("Hook %s script failed: %s", hook_type, script_path)
                 outcome = self._report_hook_error(
@@ -359,7 +359,6 @@ class AppLauncher:
                 )
                 if outcome is False:
                     return False
-
         return all_succeeded
 
     def launch_app(self, app_name: str, args: list[str] | None = None) -> bool:
@@ -510,9 +509,8 @@ class AppLauncher:
                             candidate_id = line
                             _cache_flatpak_id(self.app_name, candidate_id)
                             break
-        except (subprocess.CalledProcessError, OSError) as e:
+        except (OSError, subprocess.TimeoutExpired) as e:
             logger.debug("Failed to find flatpak ID: %s", e)
-
         return candidate_id
 
     def _build_launch_command(self, command_id: str, wrapper_path: Path | None) -> list[str]:
@@ -528,7 +526,7 @@ class AppLauncher:
         if wrapper_path:
             cmd = [command_id, *self.args]
         else:
-            cmd = ["flatpak", "run", command_id, *self.args]
+            cmd = ["flatpak", "run", "--", command_id, *self.args]
         return cmd
 
     def _execute_launch(self, cmd: list[str]) -> subprocess.CompletedProcess:

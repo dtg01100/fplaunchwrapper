@@ -4,12 +4,10 @@ This script provides secure implementations of critical operations.
 """
 
 from __future__ import annotations
-
 import contextlib
 import hashlib
 import os
 import re
-import sys
 import tempfile
 import time
 import unicodedata
@@ -301,6 +299,74 @@ def _write_pid_atomic(pidfile: Path, pid: int) -> None:
         pidfile.write_text(pid_data)
 
 
+def atomic_write_text(
+    target: Path,
+    content: str,
+    *,
+    mode: int | None = None,
+    encoding: str = "utf-8",
+) -> None:
+    r"""Atomically write ``content`` to ``target``.
+
+    Writes to a sibling temp file in the same directory, fsyncs, then
+    ``os.replace``\ s onto ``target``. ``os.replace`` is atomic on POSIX
+    and refuses to follow a symlink at the destination, defeating the
+    TOCTOU window where an attacker plants a symlink between an existence
+    check and a write.
+
+    On failure, the temp file is cleaned up and the original ``target``
+    is left untouched. ``mode`` (e.g. ``0o600``) is applied to the
+    destination after the rename.
+    """
+    target = Path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path_str = tempfile.mkstemp(
+        prefix=f".{target.name}.",
+        suffix=".tmp",
+        dir=str(target.parent),
+    )
+    tmp_path = Path(tmp_path_str)
+    try:
+        with os.fdopen(fd, "w", encoding=encoding) as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, target)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            tmp_path.unlink()
+        raise
+    if mode is not None:
+        with contextlib.suppress(OSError):
+            target.chmod(mode)
+
+
+def atomic_write_bytes(target: Path, content: bytes, *, mode: int | None = None) -> None:
+    """Atomically write ``content`` to ``target``. See :func:`atomic_write_text`."""
+    target = Path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path_str = tempfile.mkstemp(
+        prefix=f".{target.name}.",
+        suffix=".tmp",
+        dir=str(target.parent),
+    )
+    tmp_path = Path(tmp_path_str)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, target)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            tmp_path.unlink()
+        raise
+    if mode is not None:
+        with contextlib.suppress(OSError):
+            target.chmod(mode)
+
+
+
 def _cleanup_stale_lock(lockfile: Path, pidfile: Path, stale_timeout: int = 60) -> bool:
     """Check if lock is stale and clean it up if the process is dead.
 
@@ -398,48 +464,8 @@ def get_temp_dir() -> str:
         f"No writable temporary directory: tried {', '.join(c for c in candidates if c)}",
     )
 
+# The ``if __name__ == "__main__"`` CLI harness lived here for years; it
+# was a 44-line argv-dispatch ladder mixing exit codes and types. It has
+# moved to ``lib.python_utils_cli`` so this module can stay a pure library.
+# ``lib/common.sh`` has been updated to invoke the new module.
 
-if __name__ == "__main__":
-    # Command line interface for testing
-    if len(sys.argv) < 2:
-        sys.exit(1)
-
-    operation = sys.argv[1]
-
-    if operation == "canonicalize_path":
-        if len(sys.argv) != 3:
-            sys.exit(1)
-        result: Any = canonicalize_path_no_resolve(sys.argv[2])
-    elif operation == "validate_home":
-        if len(sys.argv) != 3:
-            sys.exit(1)
-        result = validate_home_dir(sys.argv[2])
-    elif operation == "sanitize_name":
-        if len(sys.argv) != 3:
-            sys.exit(1)
-        result = sanitize_id_to_name(sys.argv[2])
-    elif operation == "find_executable":
-        if len(sys.argv) != 3:
-            sys.exit(1)
-        result = find_executable(sys.argv[2])
-    elif operation == "is_wrapper_file":
-        if len(sys.argv) != 3:
-            sys.exit(1)
-        result = is_wrapper_file(sys.argv[2])
-    elif operation == "get_wrapper_id":
-        if len(sys.argv) != 3:
-            sys.exit(1)
-        result = get_wrapper_id(sys.argv[2])
-    elif operation == "safe_mktemp":
-        if len(sys.argv) < 3:
-            sys.exit(1)
-        result = safe_mktemp(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
-    else:
-        sys.exit(1)
-
-    # Print result if not None
-    if result is None:
-        sys.exit(1)
-    if isinstance(result, bool):
-        sys.exit(0 if result else 1)
-    print(result)

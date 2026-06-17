@@ -53,16 +53,14 @@ from .exceptions import (
 from .paths import ensure_dir
 from .python_utils import (
     acquire_lock,
+    atomic_write_text,
     find_executable,
+    get_wrapper_id,
+    is_wrapper_file,
     release_lock,
     sanitize_id_to_name,
 )
 from .logging_utils import LoggingMixin
-from .safety import (
-    get_wrapper_id,
-    is_wrapper_file,
-)
-
 console = _Console()
 logger = logging.getLogger(__name__)
 
@@ -412,8 +410,12 @@ class WrapperGenerator(LoggingMixin):
             return True
 
         try:
-            wrapper_path.write_text(content)
-            wrapper_path.chmod(0o755)
+            # Atomic write via temp file + os.replace to defeat symlink-redirect
+            # TOCTOU. ``atomic_write_text`` writes to a sibling temp file in
+            # the same directory and ``os.replace``\ s onto the destination,
+            # which is atomic on POSIX and refuses to follow a symlink at the
+            # destination.
+            atomic_write_text(wrapper_path, content, mode=0o755)
             if wrapper_existed:
                 self.log(f"Updated wrapper: {wrapper_name}")
             else:

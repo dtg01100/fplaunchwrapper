@@ -32,6 +32,7 @@ Targeted gap regions (line numbers from coverage report):
 from __future__ import annotations
 
 import importlib
+import os
 import shutil
 import subprocess
 import sys
@@ -42,7 +43,6 @@ from unittest.mock import patch
 import pytest
 
 from lib.cleanup import CleanupConfig, WrapperCleanup, main
-
 
 @pytest.fixture
 def temp_env(monkeypatch):
@@ -97,19 +97,18 @@ class TestSafetyImportFallback:
         sys.modules["lib.safety"] = _FakeSafety()
         try:
             reloaded = importlib.reload(orig_cleanup)
-            assert reloaded.UTILS_AVAILABLE is False
-            assert reloaded.is_wrapper_file is None
+            # ``UTILS_AVAILABLE`` is always True now: ``lib.cleanup`` imports
+            # ``is_wrapper_file`` directly from ``lib.python_utils`` (not via
+            # the ``lib.safety`` re-export shim). The old ``try/except
+            # ImportError`` fallback that would have set this to False is gone.
+            assert reloaded.UTILS_AVAILABLE is True
+            assert reloaded.is_wrapper_file is not None
         finally:
             if orig_safety is not None:
                 sys.modules["lib.safety"] = orig_safety
             else:
                 sys.modules.pop("lib.safety", None)
             importlib.reload(orig_cleanup)
-            if orig_cleanup is not None:
-                sys.modules["lib.cleanup"] = orig_cleanup
-            globals()["WrapperCleanup"] = sys.modules["lib.cleanup"].WrapperCleanup
-            globals()["CleanupConfig"] = sys.modules["lib.cleanup"].CleanupConfig
-            globals()["main"] = sys.modules["lib.cleanup"].main
 
 
 # === 158-159: FileNotFoundError in _scan_wrapper_directory =================
@@ -193,30 +192,32 @@ class TestScanCompletionSystemDirs:
         """A fplaunch file in a 'system' completion dir is found."""
         sys_dir = temp_env["temp_dir"] / "bash_comp"
         sys_dir.mkdir(parents=True)
-        comp_file = sys_dir / "fplaunch-system"
+        # The narrowed scanner (review finding M17) only matches the
+        # documented filename for each shell, not a generic ``*fplaunch*``
+        # glob that could match unrelated third-party files.
+        comp_file = sys_dir / "fplaunch_completion.bash"
         comp_file.write_text("x")
-
         target_str = "/usr/local/share/bash-completion/completions"
+        target_file = "/usr/local/share/bash-completion/completions/fplaunch_completion.bash"
         real_exists = Path.exists
-        real_glob = Path.glob
 
         def fake_exists(self):
-            if str(self) == target_str:
+            s = str(self)
+            if s == target_str or s == target_file:
                 return True
             return real_exists(self)
 
-        def fake_glob(self, pattern):
-            if str(self) == target_str:
-                return [comp_file]
-            return list(real_glob(self, pattern))
-
         cleanup = make_cleanup(temp_env)
-        with patch.object(Path, "exists", fake_exists), patch.object(
-            Path, "glob", fake_glob
+        with (
+            patch.object(Path, "exists", fake_exists),
+            patch.object(os, "geteuid", return_value=0),
         ):
             cleanup._scan_completion_files()
 
-        assert comp_file in cleanup.cleanup_items["completion_files"]
+        # The scanner (review finding M17) only matches the documented
+        # filename ``fplaunch_completion.bash`` in the system bash
+        # completion dir.
+        assert Path(target_file) in cleanup.cleanup_items["completion_files"]
 
 
 # === 304-305: get_cleanup_summary =========================================
@@ -389,7 +390,9 @@ class TestCleanupCronEntries:
             cleanup._cleanup_cron_entries()
 
     def test_crontab_l_nonzero(self, temp_env):
-        """When crontab -l returns non-zero, the new crontab is not installed."""
+        """When ``crontab -l`` returns non-zero, the new code aborts the
+        cleanup entirely without calling ``crontab -`` (which would have
+        overwritten the user's crontab with the filtered contents)."""
         cleanup = make_cleanup(temp_env, dry_run=False)
         cleanup.cleanup_items["cron_entries"] = ["line"]
         result = subprocess.CompletedProcess(
@@ -399,6 +402,7 @@ class TestCleanupCronEntries:
             "lib.cleanup.run_crontab", return_value=result
         ) as mock_run:
             cleanup._cleanup_cron_entries()
+        # Exactly one read; no write.
         assert mock_run.call_count == 1
 
 

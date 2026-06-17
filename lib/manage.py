@@ -17,7 +17,8 @@ from rich.table import Table
 from .config_constants import LaunchMethod
 from .logging_utils import LoggingMixin, console
 from .paths import resolve_bin_dir, ensure_dir
-from .safety import (
+from .python_utils import (
+    atomic_write_text,
     get_wrapper_id,
     is_wrapper_file,
 )
@@ -249,7 +250,8 @@ class WrapperManager(LoggingMixin):
         try:
             if self.config_dir is not None:
                 pref_file = self.config_dir / f"{name}.pref"
-                pref_file.write_text(preference)
+                # Atomic write defeats symlink-redirect TOCTOU at <config_dir>/<name>.pref.
+                atomic_write_text(pref_file, preference, mode=0o600)
                 self.log(f"Preference for {name} set to {preference}", "success")
             else:
                 self.log(f"Preference for {name} set to {preference} (emit mode)", "emit")

@@ -903,9 +903,12 @@ class TestInstallCronJob:
             def run_side_effect(cmd, *args, **kwargs):
                 calls.append(list(cmd))
                 if cmd[1:] == ["-l"]:
-                    # ``-l`` returns 1 (no existing crontab).
+                    # ``-l`` returns 0 with empty body (no existing cron).
+                    # The previous version of this test had ``returncode=1``,
+                    # but the new ``install_cron_job`` aborts on a failed
+                    # ``crontab -l`` to avoid clobbering the user's crontab.
                     return subprocess.CompletedProcess(
-                        args=cmd, returncode=1, stdout="", stderr=""
+                        args=cmd, returncode=0, stdout="", stderr=""
                     )
                 return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
@@ -924,7 +927,6 @@ class TestInstallCronJob:
         finally:
             shutil.rmtree(parent)
             shutil.rmtree(parent_bin)
-
     def test_cron_install_oserror_returns_false(self):
         """If the cron script write raises ``OSError``, ``install_cron_job`` returns False."""
         from lib.systemd_setup import SystemdSetup
@@ -1103,6 +1105,7 @@ class TestMain:
                     str(bin_dir),
                     "--script",
                     str(bin_dir / "fplaunch-generate"),
+                    "--emit",
                 ],
             )
 

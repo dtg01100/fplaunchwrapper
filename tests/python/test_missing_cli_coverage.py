@@ -176,12 +176,12 @@ class TestUninstallCLI:
             )
             mock_manager.return_value.remove_wrapper.return_value = True
             result = cli_runner.invoke(
-                cli_module.cli, ["uninstall", "--remove-data", "org.example.app"]
+                cli_module.cli,
+                ["uninstall", "--yes", "--remove-data", "org.example.app"],
             )
             assert result.exit_code == 0
             call_args = mock_run.call_args[0][0]
             assert "--delete-data" in call_args
-
 
 class TestManifestCLI:
     """Test manifest CLI command."""

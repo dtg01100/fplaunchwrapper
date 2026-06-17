@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import logging
+import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import click
-from lib.cli_utils import console, console_err
+from lib.cli_utils import console, console_err, run_command
 from lib.cli_imports import build_manager, import_handler
 
 if TYPE_CHECKING:
@@ -16,6 +18,31 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _require_yes(ctx: "Context", *, assume_yes: bool, action: str) -> bool:
+    """Return True if the user (or env) has confirmed the destructive action.
+
+    Rules:
+    * ``--yes`` (``assume_yes=True``) ⇒ always confirmed.
+    * ``FPWRAPPER_FORCE=1`` env var ⇒ always confirmed (CI parity).
+    * Non-interactive stdin (no TTY) ⇒ refuse and return False.
+    * Otherwise prompt on stderr; if user declines, return False.
+    """
+    if assume_yes or os.environ.get("FPWRAPPER_FORCE") == "1":
+        return True
+    if not sys.stdin.isatty():
+        console_err.print(
+            f"[red]Error:[/red] {action} requires an interactive terminal or "
+            f"--yes (or FPWRAPPER_FORCE=1).",
+        )
+        return False
+    confirmed: bool = click.confirm(
+        f"{action}; continue?",
+        default=False,
+        err=True,
+    )
+    return confirmed
 
 
 @click.command()
@@ -88,14 +115,39 @@ def list_wrappers(ctx: "Context", app_name: str | None, show_all: bool) -> int:
 @click.command()
 @click.argument("app_name")
 @click.option("--emit", is_flag=True, help="Emit only (dry run)")
+@click.option(
+    "--yes",
+    "-y",
+    "assume_yes",
+    is_flag=True,
+    help="Assume yes to flatpak's install prompt (otherwise prompts on TTY)",
+)
 @click.pass_context
-def install(ctx: "Context", app_name: str, emit: bool) -> int:
+def install(
+    ctx: "Context", app_name: str, emit: bool, assume_yes: bool
+) -> int:
     """Install a Flatpak application and generate a wrapper for it."""
-    from lib.cli import run_command  # lazy import to allow test patching
 
     emit_mode = emit or ctx.obj.get("emit", False)
+    # Only pass -y to flatpak when the user has confirmed. A previous version
+    # of this code unconditionally passed -y, which made a single typo
+    # (``fplaunch install firefoxx``) silently install from a typo'd ID.
+    flatpak_cmd = ["flatpak", "install"]
+    if assume_yes or os.environ.get("FPWRAPPER_FORCE") == "1":
+        flatpak_cmd.append("-y")
+    elif not sys.stdin.isatty():
+        console_err.print(
+            "[red]Error:[/red] install requires an interactive terminal or --yes.",
+        )
+        return 1
+    elif not click.confirm(
+        f"Install Flatpak app '{app_name}'?", default=False, err=True
+    ):
+        console.print("Install cancelled.")
+        return 1
+    flatpak_cmd.append(app_name)
     result = run_command(
-        ["flatpak", "install", "-y", app_name],
+        flatpak_cmd,
         f"Installing Flatpak app: {app_name}",
         emit_mode=emit_mode,
     )
@@ -117,18 +169,46 @@ def install(ctx: "Context", app_name: str, emit: bool) -> int:
 
 @click.command()
 @click.argument("app_name")
-@click.option("--remove-data", is_flag=True, help="Remove application data")
+@click.option(
+    "--remove-data",
+    is_flag=True,
+    help="PERMANENTLY remove user data and the wrapper; cannot be undone",
+)
 @click.option("--emit", is_flag=True, help="Emit only (dry run)")
+@click.option(
+    "--yes",
+    "-y",
+    "assume_yes",
+    is_flag=True,
+    help="Assume yes to flatpak's uninstall prompt (otherwise prompts on TTY)",
+)
 @click.pass_context
-def uninstall(ctx: "Context", app_name: str, remove_data: bool, emit: bool) -> int:
+def uninstall(
+    ctx: "Context", app_name: str, remove_data: bool, emit: bool, assume_yes: bool
+) -> int:
     """Uninstall a Flatpak application and remove its wrapper."""
-    from lib.cli import run_command  # lazy import to allow test patching
-
     emit_mode = emit or ctx.obj.get("emit", False)
+    if not assume_yes and not sys.stdin.isatty() and os.environ.get("FPWRAPPER_FORCE") != "1":
+        console_err.print(
+            "[red]Error:[/red] uninstall requires an interactive terminal or --yes.",
+        )
+        return 1
+    if not assume_yes and not click.confirm(
+        f"Uninstall Flatpak app '{app_name}'"
+        + (" AND remove user data" if remove_data else "")
+        + "?",
+        default=False,
+        err=True,
+    ):
+        console.print("Uninstall cancelled.")
+        return 1
 
-    uninstall_cmd = ["flatpak", "uninstall", "-y", app_name]
+    uninstall_cmd = ["flatpak", "uninstall"]
+    if assume_yes or os.environ.get("FPWRAPPER_FORCE") == "1":
+        uninstall_cmd.append("-y")
     if remove_data:
         uninstall_cmd.append("--delete-data")
+    uninstall_cmd.append(app_name)
 
     result = run_command(
         uninstall_cmd, f"Uninstalling Flatpak app: {app_name}", emit_mode=emit_mode
@@ -140,6 +220,9 @@ def uninstall(ctx: "Context", app_name: str, remove_data: bool, emit: bool) -> i
 
     manager = build_manager(ctx)
 
+    # Distinguish "wrapper removed successfully" from "wrapper did not exist
+    # but flatpak uninstall succeeded" — the latter is a 0, the former is
+    # also a 0; a real removal failure (OSError) is a 1.
     success = manager.remove_wrapper(app_name, force=True)
     if success:
         console.print(f"[green]Removed wrapper for {app_name}[/green]")
@@ -156,12 +239,19 @@ def uninstall(ctx: "Context", app_name: str, remove_data: bool, emit: bool) -> i
 @click.pass_context
 def remove(ctx: "Context", name: str, force: bool) -> int:
     """Remove a wrapper by name."""
-    if not force:
-        console.print(f"[yellow]Removing wrapper:[/yellow] {name}")
-
+    if not force and not sys.stdin.isatty() and not os.environ.get("FPWRAPPER_FORCE"):
+        console_err.print(
+            "[red]Error:[/red] remove requires an interactive terminal or --force.",
+        )
+        return 1
+    if not force and not click.confirm(
+        f"Remove wrapper '{name}'?", default=False, err=True
+    ):
+        console.print("Remove cancelled.")
+        return 1
     manager = build_manager(ctx)
 
-    success = manager.remove_wrapper(name, force=force)
+    success = manager.remove_wrapper(name, force=True)
     if success:
         console.print(f"[green]Removed wrapper:[/green] {name}")
         return 0

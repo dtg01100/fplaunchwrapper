@@ -322,7 +322,17 @@ class TestCronFallback:
     """Test cron fallback when systemd is unavailable."""
 
     def test_cron_fallback_creation(self):
-        """Test cron job creation when systemd is unavailable."""
+        """Test cron job creation when systemd is unavailable.
+
+        Two scenarios:
+        1. ``crontab -l`` returns rc=0 with empty stdout (no existing cron).
+           The new code reads an empty string, computes ``new_cron =
+           "\\n" + cron_entry`` (one line plus the entry), and writes it
+           via ``crontab -``. The test mocks ``subprocess.run`` so all
+           paths succeed; we assert the overall result is True.
+        2. ``crontab -l`` returns rc=1 — the new code aborts to avoid
+           clobbering the user's crontab.
+        """
         from lib.systemd_setup import SystemdSetup
 
         temp_dir, systemd_dir = SystemdTestFixtures.create_temp_systemd_dir()
@@ -336,10 +346,7 @@ class TestCronFallback:
             )
             setup.systemd_unit_dir = systemd_dir
 
-            # Mock both systemd unavailability and crontab
             with patch("shutil.which") as mock_which:
-                # Return None for systemctl (systemd not available)
-                # Return path for crontab
                 def which_side_effect(cmd):
                     if cmd == "systemctl":
                         return None
@@ -349,21 +356,26 @@ class TestCronFallback:
 
                 mock_which.side_effect = which_side_effect
 
+                # Scenario 1: ``crontab -l`` succeeds with empty body.
+                # The mock returns the same CompletedProcess for every call,
+                # so the write ``crontab -`` also "succeeds".
                 with patch("subprocess.run") as mock_run:
-                    # First call: crontab -l returns empty (no existing cron)
+                    mock_run.return_value = subprocess.CompletedProcess(
+                        args=[], returncode=0, stdout="", stderr=""
+                    )
+                    assert setup.install_cron_job() is True
+
+                # Scenario 2: ``crontab -l`` returns rc=1.
+                # New code refuses to install anything rather than risk
+                # clobbering the user's existing crontab.
+                with patch("subprocess.run") as mock_run:
                     mock_run.return_value = subprocess.CompletedProcess(
                         args=[], returncode=1, stdout="", stderr=""
                     )
-
-                    result = setup.install_cron_job()
-
-                    # Should succeed since crontab is mocked
-                    assert result is True
-
+                    assert setup.install_cron_job() is False
         finally:
             shutil.rmtree(temp_dir)
             shutil.rmtree(temp_bin)
-
     def test_no_systemd_no_cron(self):
         """Test behavior when neither systemd nor cron is available."""
         from lib.systemd_setup import SystemdSetup

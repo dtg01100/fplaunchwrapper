@@ -14,16 +14,18 @@ from unittest.mock import patch
 
 import pytest
 
-from lib.safety import (
+from lib.python_utils import (
     canonicalize_path_no_resolve,
-    is_dangerous_wrapper,
-    is_test_environment,
     is_wrapper_file,
-    safe_launch_check,
     sanitize_id_to_name,
     sanitize_string,
-    validate_flatpak_id,
     validate_home_dir,
+)
+from lib.safety import (
+    is_dangerous_wrapper,
+    is_test_environment,
+    safe_launch_check,
+    validate_flatpak_id,
 )
 
 

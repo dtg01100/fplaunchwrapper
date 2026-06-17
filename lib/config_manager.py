@@ -21,6 +21,7 @@ from .config_manager_presets import BUILTIN_PRESETS
 # ``lib.config_manager.main``.  ``config_manager_cli`` does not import
 # ``main()``), so this is not a real cyclic import.
 from .config_manager_cli import main  # noqa: F401
+from .python_utils import atomic_write_bytes, atomic_write_text
 from .config_models import AppPreferences, WrapperConfig
 from .config_validation import (
     PYDANTIC_AVAILABLE,
@@ -242,8 +243,10 @@ class EnhancedConfigManager:
             ensure_dir(Path(self.config_file).parent)
             if TOML_AVAILABLE:
                 data = self._serialize_config()
-                with Path(self.config_file).open("wb") as f:
-                    tomli_w.dump(data, f)
+                import io
+                buf = io.BytesIO()
+                tomli_w.dump(data, buf)
+                atomic_write_bytes(Path(self.config_file), buf.getvalue(), mode=0o600)
             else:
                 self._save_fallback_config()
             Path(self.config_file).chmod(0o600)
@@ -571,7 +574,7 @@ class EnhancedConfigManager:
                 f"enable_notifications={self.config.enable_notifications}",
                 f"hook_failure_mode_default={self.config.hook_failure_mode_default}",
             ]
-            self.config_file.write_text("\n".join(lines) + "\n")
+            atomic_write_text(Path(self.config_file), "\n".join(lines) + "\n", mode=0o600)
         except OSError as e:
             raise ConfigPermissionError(
                 f"Cannot write configuration file {self.config_file}: {e}",
@@ -735,11 +738,11 @@ class EnhancedConfigManager:
             if copy_from and copy_from != "default":
                 source_file = profiles_dir / f"{copy_from}.toml"
                 if source_file.exists():
-                    profile_file.write_text(source_file.read_text())
+                    atomic_write_text(profile_file, source_file.read_text(), mode=0o600)
                 else:
-                    profile_file.write_text("")
+                    atomic_write_text(profile_file, "", mode=0o600)
             else:
-                profile_file.write_text("")
+                atomic_write_text(profile_file, "", mode=0o600)
 
             return True
         except OSError:
@@ -819,8 +822,10 @@ class EnhancedConfigManager:
                     content = profile_text
 
             if TOML_AVAILABLE and isinstance(content, dict):
-                with Path(export_path).open("wb") as f:
-                    tomli_w.dump(content, f)
+                import io
+                buf = io.BytesIO()
+                tomli_w.dump(content, buf)
+                atomic_write_bytes(Path(export_path), buf.getvalue(), mode=0o600)
             elif isinstance(content, dict):
                 lines = ["# fplaunchwrapper profile export (fallback format)"]
                 if "bin_dir" in content:
@@ -837,9 +842,9 @@ class EnhancedConfigManager:
                     lines.append(
                         f"hook_failure_mode_default={content['hook_failure_mode_default']}"
                     )
-                export_path.write_text("\n".join(lines) + "\n")
+                atomic_write_text(Path(export_path), "\n".join(lines) + "\n", mode=0o600)
             else:
-                export_path.write_text(content)
+                atomic_write_text(Path(export_path), content, mode=0o600)
 
             return True
         except (OSError, ValueError):
@@ -858,7 +863,7 @@ class EnhancedConfigManager:
                 return False
 
             profile_file = profiles_dir / f"{profile_name}.toml"
-            profile_file.write_text(import_path.read_text())
+            atomic_write_text(profile_file, import_path.read_text(), mode=0o600)
             return True
         except OSError:
             return False

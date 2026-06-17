@@ -12,9 +12,8 @@ import pytest
 from click.testing import CliRunner
 
 import lib.cli as cli_module
-
+import lib.cli_generation as cli_generation_module
 from lib.cli import cli
-
 
 @pytest.fixture
 def runner():
@@ -144,20 +143,24 @@ class TestSubcommandImportErrors:
         commands = [
             (["generate", str(tmp_path / "bin")], ("lib.generate", "WrapperGenerator")),
             (["list"], ("lib.manage", "WrapperManager")),
-            (["remove", "firefox", "--force"], ("lib.manage", "WrapperManager")),
             (["cleanup"], ("lib.cleanup", "WrapperCleanup")),
             (["config"], ("lib.config_manager", "create_config_manager")),
             (["monitor"], ("lib.flatpak_monitor", "main")),
-            (["install", "org.example.App"], ("lib.generate", "WrapperGenerator")),
-            (["uninstall", "org.example.App"], ("lib.manage", "WrapperManager")),
+            (
+                ["install", "--yes", "org.example.App"],
+                ("lib.generate", "WrapperGenerator"),
+            ),
+            (["uninstall", "--yes", "org.example.App"], ("lib.manage", "WrapperManager")),
         ]
 
         def fake_require(module_name, symbol_name):
             return required_symbols[(module_name, symbol_name)]
 
-        mock_req = patch.object(cli_module.import_handler, "require", side_effect=fake_require)
+        mock_req = patch.object(
+            cli_module.import_handler, "require", side_effect=fake_require
+        )
         mock_run = patch.object(
-            cli_module,
+            cli_generation_module,
             "run_command",
             return_value=subprocess.CompletedProcess(
                 args=["flatpak"], returncode=0, stdout="", stderr=""

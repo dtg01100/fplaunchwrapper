@@ -312,16 +312,15 @@ class TestGenerateWrapperWriteErrors:
             bin_dir=tmp_path / "bin",
             config_dir=tmp_path / "cfg",
         )
-        real_write_text = Path.write_text
+        # The atomic wrapper-write path calls ``tempfile.mkstemp``; raising
+        # OSError there is what makes ``generate_wrapper`` return False.
+        import tempfile as _tempfile
 
-        def _boom(self: Path, *args: object, **kwargs: object) -> int:
-            if self.parent == gen.bin_dir:
-                raise OSError("write failed")
-            return real_write_text(self, *args, **kwargs)
+        def fake_mkstemp(*args, **kwargs):
+            raise OSError("write failed")
 
-        with patch.object(Path, "write_text", _boom):
+        with patch.object(_tempfile, "mkstemp", fake_mkstemp):
             assert gen.generate_wrapper("com.example.foo") is False
-
 
 # ---------------------------------------------------------------------------
 # Lines 408, 416, 420-426, 435-442, 447, 464, 469, 483-485: cleanup

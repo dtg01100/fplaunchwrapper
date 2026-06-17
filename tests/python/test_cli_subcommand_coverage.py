@@ -47,7 +47,7 @@ def _fake_manager(
     ``list_wrappers`` as a sentinel ``_OMIT`` to make the manager report
     ``hasattr(manager, "list_wrappers") == False``.
     """
-    mgr = MagicMock(spec=["list_wrappers", "remove_wrapper"])
+    mgr = MagicMock(spec=["list_wrappers", "remove_wrapper", "bin_dir"])
     if list_wrappers is _OMIT:
         del mgr.list_wrappers
     elif list_wrappers is not None:
@@ -195,19 +195,20 @@ class TestUninstallWrapperMissing:
         warning and exit 0, not 1."""
         mgr = _fake_manager(remove_wrapper=False)
         with (
-            patch.object(cli_module, "run_command", return_value=_ok_proc()),
+            patch.object(
+                cli_generation_module, "run_command", return_value=_ok_proc()
+            ),
             patch.object(cli_generation_module, "build_manager", return_value=mgr),
         ):
             result = runner.invoke(
                 cli,
-                ["uninstall", "org.example.NotInstalled"],
+                ["uninstall", "--yes", "org.example.NotInstalled"],
                 standalone_mode=False,
             )
         assert result.return_value == 0
         mgr.remove_wrapper.assert_called_once_with(
             "org.example.NotInstalled", force=True
         )
-
 
 class TestRegisterGenerationCommands:
     """Cover :func:`lib.cli_generation.register_commands` (lines 206-213)."""

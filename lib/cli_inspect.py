@@ -12,7 +12,7 @@ import logging
 from typing import TYPE_CHECKING, Optional
 
 import click
-from lib.cli_utils import console, console_err
+from lib.cli_utils import console, console_err, run_command
 from lib.cli_imports import build_config_manager, build_manager
 
 if TYPE_CHECKING:
@@ -130,7 +130,6 @@ def files(
 @click.pass_context
 def manifest(ctx: "Context", app_name: str, emit: bool) -> int:
     """Show manifest information for a Flatpak application."""
-    from lib.cli import run_command  # lazy import to allow test patching  # noqa: E501, F401
 
     if not app_name:
         console.print("[red]Error:[/red] APP_NAME is required")

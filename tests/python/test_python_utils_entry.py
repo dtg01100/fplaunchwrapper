@@ -54,24 +54,20 @@ def _run_entry_point(*args: str) -> tuple[int, str]:
     Returns ``(exit_code, stdout)``. ``exit_code`` is the integer passed
     to ``sys.exit`` (or 0 if the script returned normally).
     """
-    old_argv = sys.argv
-    old_stdout = sys.stdout
-    sys.argv = ["lib.python_utils", *args]
+    sys.argv = ["lib.python_utils_cli", *args]
     sys.stdout = io.StringIO()
     # Drop any cached import so runpy executes the module cleanly as
     # ``__main__`` without RuntimeWarning about cached modules.
-    sys.modules.pop("lib.python_utils", None)
+    sys.modules.pop("lib.python_utils_cli", None)
     try:
-        runpy.run_module("lib.python_utils", run_name="__main__")
+        runpy.run_module("lib.python_utils_cli", run_name="__main__")
         return 0, sys.stdout.getvalue()
     except SystemExit as exc:
         code = exc.code
         if isinstance(code, int):
             return code, sys.stdout.getvalue()
         return 1, sys.stdout.getvalue()
-    finally:
-        sys.argv = old_argv
-        sys.stdout = old_stdout
+
 
 
 def _write_wrapper(path: Path, content: str = VALID_WRAPPER, executable: bool = True) -> Path:

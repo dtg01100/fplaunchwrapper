@@ -460,6 +460,7 @@ class TestCommandConstruction:
             "run",
             "--wait",
             "com.example.app",
+            "--",
             "--flag",
             "value",
         ]
@@ -489,11 +490,11 @@ class TestCommandConstruction:
             "run",
             "--wait",
             "com.example.app",
+            "--",
             "--arg1",
         ]
         assert kwargs["cwd"] == "/work/dir"
         assert kwargs["env"]["KEY"] == "VALUE"
-
 
 class TestErrorHandling:
     """Tests for error handling and edge cases."""
@@ -537,14 +538,30 @@ class TestErrorHandling:
         """Test that empty args list works correctly."""
         from lib.portal_launcher import launch_with_portal
 
+        # Reset the mock so the side-effect from
+        # ``test_handles_subprocess_errors`` does not poison this test.
+        self._mock_run.side_effect = None
+        self._mock_run.return_value = MagicMock(
+            spec=subprocess.CompletedProcess, returncode=0
+        )
         launch_with_portal("org.test.app", args=[])
 
         cmd = self._mock_run.call_args[0][0]
-        assert cmd[-1] == "org.test.app"
+        # ``--`` is always inserted between the app ID and the user args.
+        # With ``args=[]`` the resulting cmd is
+        # ``[spawn_path, "--host", "flatpak", "run", flatpak_id, "--"]``,
+        # so ``cmd[-2]`` is the app ID and ``cmd[-1]`` is the separator.
+        assert cmd[-1] == "--"
+        assert cmd[-2] == "org.test.app"
 
     def test_special_characters_in_args(self) -> None:
         """Test that special characters in args are preserved."""
         from lib.portal_launcher import launch_with_portal
+
+        self._mock_run.side_effect = None
+        self._mock_run.return_value = MagicMock(
+            spec=subprocess.CompletedProcess, returncode=0
+        )
 
         launch_with_portal(
             "org.test.app",

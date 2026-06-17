@@ -113,14 +113,18 @@ case "$1" in
         exit 1
         ;;
     run)
-        if [ -n "$2" ]; then
-            case "$2" in
+        # Walk past the optional ``--`` end-of-options marker that wrappers
+        # pass so a flag like ``--filesystem=host`` cannot widen the sandbox.
+        shift 1
+        while [ "$1" = "--" ]; do shift; done
+        if [ -n "$1" ]; then
+            case "$1" in
                 org.mozilla.Firefox|org.mozilla.firefox|com.google.Chrome|org.gimp.GIMP)
-                    echo "Mock flatpak run: $@" >> "{flatpak_log}"
+                    echo "Mock flatpak run: org.mozilla.firefox $@" >> "{flatpak_log}"
                     exit 0
                     ;;
                 *)
-                    echo "error: app/$2/x86_64/master not installed" >&2
+                    echo "error: app/$1/x86_64/master not installed" >&2
                     exit 1
                     ;;
             esac

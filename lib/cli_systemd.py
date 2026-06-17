@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import TYPE_CHECKING, Any
 
 import click
@@ -122,12 +123,26 @@ def systemd_enable(ctx: "Context") -> int:
 
 
 @systemd_group.command(name="disable")
+@click.option(
+    "--yes",
+    "-y",
+    "assume_yes",
+    is_flag=True,
+    help="Assume yes to deleting systemd unit files (otherwise prompts on TTY)",
+)
 @click.pass_context
-def systemd_disable(ctx: "Context") -> int:
-    """Disable the systemd service."""
+def systemd_disable(ctx: "Context", assume_yes: bool) -> int:
+    """Disable the systemd service and remove its unit files."""
     setup = _get_systemd_setup(ctx)
     if setup is None:
         console_err.print("[red]Error:[/red] systemd_setup module not available")
+        return 1
+    if not assume_yes and not os.environ.get("FPWRAPPER_FORCE") and not click.confirm(
+        "Disable systemd units and remove their unit files?",
+        default=False,
+        err=True,
+    ):
+        console.print("Disable cancelled.")
         return 1
     return 0 if setup.disable_systemd_units() else 1
 

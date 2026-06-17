@@ -91,7 +91,9 @@ class TestSystemdCliEnableDisable:
         fake_setup.disable_systemd_units.return_value = True
         runner = CliRunner()
         with patch.object(cli_systemd, "_get_systemd_setup", return_value=fake_setup):
-            result = runner.invoke(cli, ["systemd", "disable"], standalone_mode=False)
+            result = runner.invoke(
+                cli, ["systemd", "disable", "--yes"], standalone_mode=False
+            )
         assert result.return_value == 0
 
     def test_systemd_disable_failure(self):
@@ -102,9 +104,10 @@ class TestSystemdCliEnableDisable:
         fake_setup.disable_systemd_units.return_value = False
         runner = CliRunner()
         with patch.object(cli_systemd, "_get_systemd_setup", return_value=fake_setup):
-            result = runner.invoke(cli, ["systemd", "disable"], standalone_mode=False)
+            result = runner.invoke(
+                cli, ["systemd", "disable", "--yes"], standalone_mode=False
+            )
         assert result.return_value == 1
-
     def test_systemd_disable_module_unavailable(self):
         """Test disable returns 1 when module missing."""
         from lib import cli_systemd

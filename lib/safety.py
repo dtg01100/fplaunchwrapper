@@ -24,31 +24,21 @@ from .exceptions import (
     SafetyError,
 )
 
-from .python_utils import (
-    canonicalize_path_no_resolve,
-    get_wrapper_id,
-    is_wrapper_file,
-    sanitize_id_to_name,
-    sanitize_string,
-    validate_home_dir,
-)
-
-UTILS_IMPORTED = True
+# ``sanitize_string`` is re-exported here because historical callers (and
+# fuzz tests in ``tests/python/test_module_fuzz.py``) imported it via
+# ``lib.safety``. The implementation lives in ``lib.python_utils``.
+from .python_utils import sanitize_string
 
 __all__ = [
     "ForbiddenNameError",
     "InvalidFlatpakIdError",
     "PathTraversalError",
     "SafetyError",
-    "canonicalize_path_no_resolve",
-    "get_wrapper_id",
+    "is_dangerous_wrapper",
     "is_test_environment",
-    "is_wrapper_file",
     "safe_launch_check",
-    "sanitize_id_to_name",
     "sanitize_string",
     "validate_flatpak_id",
-    "validate_home_dir",
 ]
 
 

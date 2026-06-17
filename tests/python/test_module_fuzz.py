@@ -35,11 +35,11 @@ from lib.validation import (
 from lib.safety import (
     validate_flatpak_id,
     sanitize_string,
-    is_wrapper_file,
-    get_wrapper_id,
     is_test_environment,
 )
 from lib.python_utils import (
+    get_wrapper_id,
+    is_wrapper_file,
     sanitize_id_to_name,
     canonicalize_path_no_resolve,
     validate_home_dir,

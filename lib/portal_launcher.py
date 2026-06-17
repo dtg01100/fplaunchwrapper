@@ -60,6 +60,7 @@ def launch_with_portal(
         cmd.append("--wait")
 
     cmd.append(flatpak_id)
+    cmd.append("--")
 
     if args:
         cmd.extend(args)
@@ -105,6 +106,7 @@ def launch_direct(
         cmd.append("--wait")
 
     cmd.append(flatpak_id)
+    cmd.append("--")
 
     if args:
         cmd.extend(args)
@@ -169,11 +171,11 @@ def get_launch_command(
     if use_portal and is_portal_launcher_available():
         spawn_path = _get_flatpak_spawn_path()
         if spawn_path:
-            cmd = [spawn_path, "--host", "flatpak", "run", flatpak_id]
+            cmd = [spawn_path, "--host", "flatpak", "run", flatpak_id, "--"]
         else:
-            cmd = ["flatpak", "run", flatpak_id]
+            cmd = ["flatpak", "run", flatpak_id, "--"]
     else:
-        cmd = ["flatpak", "run", flatpak_id]
+        cmd = ["flatpak", "run", flatpak_id, "--"]
 
     if args:
         cmd.extend(args)

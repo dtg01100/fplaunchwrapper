@@ -7,10 +7,9 @@ Main entry point for all operations.
 import sys
 
 from . import safety as safety_mod
-from .safety import safe_launch_check  # noqa: F401, W0611
+from .safety import safe_launch_check  # noqa: F401  (re-exported for back-compat)
 
 safety = safety_mod
-
 
 def main() -> int:
     """Main entry point."""

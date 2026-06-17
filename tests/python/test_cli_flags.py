@@ -73,7 +73,7 @@ def test_remove_alias_rm(cli_mod, runner, monkeypatch):
     def fake_run_command(cmd, description="", show_output=True, emit_mode=False):
         return subprocess.CompletedProcess(cmd, 0, "", "")
 
-    monkeypatch.setattr("lib.cli.run_command", fake_run_command)
+    monkeypatch.setattr("lib.cli_utils.run_command", fake_run_command)
 
     class FakeManager:
         def __init__(self, **kwargs):
