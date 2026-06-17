@@ -24,6 +24,7 @@ from .config_manager_cli import main  # noqa: F401
 from .config_models import AppPreferences, WrapperConfig
 from .config_validation import (
     PYDANTIC_AVAILABLE,
+    SecurityValidationError,
     _validate_custom_args_safety,
     _validate_failure_mode_safety,
     _validate_script_path_safety,
@@ -295,12 +296,16 @@ class EnhancedConfigManager:
         else:
             try:
                 self._apply_unvalidated_config(processed_data)
-            except ValueError as e:
-                # The pure-Python safety helpers raise ValueError; surface
-                # as ConfigValidationError for consistency with the pydantic
-                # path. (Pydantic itself catches ValueError from field
-                # validators and re-wraps as ValidationError, which we
-                # then catch above.)
+            except SecurityValidationError as e:
+                # The pure-Python safety helpers raise
+                # SecurityValidationError (a ValueError subclass) on
+                # dangerous input. Surface as ConfigValidationError for
+                # consistency with the pydantic path. Catching the
+                # specific subclass (not bare ValueError) means an
+                # unrelated ValueError from elsewhere in the unvalidated
+                # path (e.g. a future int() parse error) propagates as a
+                # real exception rather than being silently re-labeled as
+                # a security validation failure.
                 raise ConfigValidationError(
                     f"Configuration validation failed: {e}",
                 ) from e

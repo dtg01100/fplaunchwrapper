@@ -18,6 +18,20 @@ from typing import Any
 
 from .config_constants import HOOK_FAILURE_MODES
 
+
+class SecurityValidationError(ValueError):
+    """Raised by the pure-Python safety helpers in this module.
+
+    Subclasses ValueError so that Pydantic field validators (which only
+    catch ValueError and re-wrap as ValidationError) handle these the
+    same way they handled the original inline validator bodies. The
+    unvalidated path in `config_manager._parse_config_data` catches this
+    specific class -- NOT bare ValueError -- so an unexpected ValueError
+    from elsewhere in the unvalidated path (e.g. a future int() parse
+    error) propagates as a real exception rather than being silently
+    re-labeled as a security validation failure.
+    """
+
 # Constants used by both the Pydantic validators and the unvalidated
 # fallback path. Pulled out of method bodies so a single change updates
 # both enforcement sites.
@@ -47,7 +61,7 @@ def _validate_failure_mode_safety(v: str | None) -> str | None:
             f"Invalid failure mode '{v}'. "
             f"Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
         )
-        raise ValueError(msg)
+        raise SecurityValidationError(msg)
     return v
 
 
@@ -71,7 +85,7 @@ def _validate_custom_args_safety(v: list[str]) -> list[str]:
                     f"Custom argument contains dangerous character "
                     f"'{char}': {arg}"
                 )
-                raise ValueError(msg)
+                raise SecurityValidationError(msg)
     return v
 
 
@@ -104,10 +118,10 @@ def _validate_script_path_safety(v: str | None) -> str | None:
     try:
         if not Path(substituted).is_file():
             msg = f"Script file does not exist: {v} (resolved: {substituted})"
-            raise ValueError(msg)
+            raise SecurityValidationError(msg)
     except PermissionError as exc:
         msg = f"Script file does not exist or is not accessible: {v}"
-        raise ValueError(msg) from exc
+        raise SecurityValidationError(msg) from exc
 
     script_path = Path(substituted).resolve()
     for sensitive_dir in SENSITIVE_DIRS:
@@ -129,11 +143,11 @@ def _validate_script_path_safety(v: str | None) -> str | None:
             pass
         if in_sensitive:
             msg = f"Script path is in a sensitive system directory: {v}"
-            raise ValueError(msg)
+            raise SecurityValidationError(msg)
 
     if not os.access(substituted, os.X_OK):
         msg = f"Script file is not executable: {v} (resolved: {substituted})"
-        raise ValueError(msg)
+        raise SecurityValidationError(msg)
 
     return v
 
@@ -289,6 +303,7 @@ __all__ = [
     "Field",
     "PYDANTIC_AVAILABLE",
     "SENSITIVE_DIRS",
+    "SecurityValidationError",
     "_validate_custom_args_safety",
     "_validate_failure_mode_safety",
     "_validate_script_path_safety",
