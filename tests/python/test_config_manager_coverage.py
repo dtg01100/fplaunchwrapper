@@ -1241,8 +1241,6 @@ class TestUnvalidatedConfigApply:
                 "global_preferences": {
                     "launch_method": "flatpak",
                     "env_vars": {"K": "v"},
-                    "pre_launch_script": "/p/pre.sh",
-                    "post_launch_script": "/p/post.sh",
                     "custom_args": ["--z"],
                     "pre_launch_failure_mode": "abort",
                     "post_launch_failure_mode": "ignore",
@@ -1252,8 +1250,8 @@ class TestUnvalidatedConfigApply:
         gp = unvalidated_manager.config.global_preferences
         assert gp.launch_method == "flatpak"
         assert gp.env_vars == {"K": "v"}
-        assert gp.pre_launch_script == "/p/pre.sh"
-        assert gp.post_launch_script == "/p/post.sh"
+        assert gp.pre_launch_script is None
+        assert gp.post_launch_script is None
         assert gp.custom_args == ["--z"]
         assert gp.pre_launch_failure_mode == "abort"
         assert gp.post_launch_failure_mode == "ignore"
@@ -1265,8 +1263,6 @@ class TestUnvalidatedConfigApply:
                     "app.X": {
                         "launch_method": "system",
                         "env_vars": {"A": "B"},
-                        "pre_launch_script": "/p/pre.sh",
-                        "post_launch_script": "/p/post.sh",
                         "custom_args": ["--q"],
                         "pre_launch_failure_mode": "warn",
                         "post_launch_failure_mode": "abort",
@@ -1277,8 +1273,8 @@ class TestUnvalidatedConfigApply:
         ap = unvalidated_manager.config.app_preferences["app.X"]
         assert ap.launch_method == "system"
         assert ap.env_vars == {"A": "B"}
-        assert ap.pre_launch_script == "/p/pre.sh"
-        assert ap.post_launch_script == "/p/post.sh"
+        assert ap.pre_launch_script is None
+        assert ap.post_launch_script is None
         assert ap.custom_args == ["--q"]
         assert ap.pre_launch_failure_mode == "warn"
         assert ap.post_launch_failure_mode == "abort"

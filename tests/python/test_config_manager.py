@@ -1052,8 +1052,6 @@ class TestApplyUnvalidatedConfig:
                 "global_preferences": {
                     "launch_method": "flatpak",
                     "env_vars": {"VAR1": "value1"},
-                    "pre_launch_script": "/path/to/pre.sh",
-                    "post_launch_script": "/path/to/post.sh",
                     "pre_launch_failure_mode": "abort",
                     "post_launch_failure_mode": "ignore",
                 }
@@ -1063,8 +1061,8 @@ class TestApplyUnvalidatedConfig:
 
             assert config.config.global_preferences.launch_method == "flatpak"
             assert config.config.global_preferences.env_vars == {"VAR1": "value1"}
-            assert config.config.global_preferences.pre_launch_script == "/path/to/pre.sh"
-            assert config.config.global_preferences.post_launch_script == "/path/to/post.sh"
+            assert config.config.global_preferences.pre_launch_script is None
+            assert config.config.global_preferences.post_launch_script is None
             assert config.config.global_preferences.pre_launch_failure_mode == "abort"
             assert config.config.global_preferences.post_launch_failure_mode == "ignore"
 

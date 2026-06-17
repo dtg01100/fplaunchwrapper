@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Pydantic validation models for fplaunchwrapper configuration."""
+"""Pydantic validation models for fplaunchwrapper configuration.
+
+Pydantic is the primary validator when available. The validation logic
+is split into pure-Python helpers (`_validate_*_safety`) that the
+Pydantic field validators call, and that the unvalidated path in
+`config_manager._apply_unvalidated_config` also calls. This means the
+security model is enforced identically in both paths — there is no
+"degraded mode" where dangerous inputs slip through when Pydantic is
+absent.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +17,126 @@ from pathlib import Path
 from typing import Any
 
 from .config_constants import HOOK_FAILURE_MODES
+
+# Constants used by both the Pydantic validators and the unvalidated
+# fallback path. Pulled out of method bodies so a single change updates
+# both enforcement sites.
+DANGEROUS_CHARS = [";", "&", "|", "`", "$", "(", ")", "<", ">", '"', "'", "\\"]
+SENSITIVE_DIRS = [
+    Path("/etc"),
+    Path("/usr"),
+    Path("/bin"),
+    Path("/sbin"),
+    Path("/boot"),
+    Path("/sys"),
+    Path("/proc"),
+    Path("/dev"),
+    Path("/root"),
+]
+
+
+def _validate_failure_mode_safety(v: str | None) -> str | None:
+    """Reject hook failure-mode values that are not in HOOK_FAILURE_MODES.
+
+    Pure function, no pydantic dependency. Called from both the
+    Pydantic field validator and the unvalidated path in
+    `config_manager._apply_unvalidated_config`.
+    """
+    if v is not None and v not in HOOK_FAILURE_MODES:
+        msg = (
+            f"Invalid failure mode '{v}'. "
+            f"Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
+        )
+        raise ValueError(msg)
+    return v
+
+
+def _validate_custom_args_safety(v: list[str]) -> list[str]:
+    """Reject any custom arg containing a shell-metacharacter.
+
+    Both ``--key=value`` and bare ``--flag`` forms are checked. The
+    dangerous char must appear in the value (after the ``=``) or in
+    the whole arg (when no ``=``). Pure function; called from both
+    the Pydantic validator and the unvalidated path.
+    """
+    if not v:
+        return v
+    for arg in v:
+        if not isinstance(arg, str):
+            continue
+        value = arg.split("=", 1)[1] if "=" in arg else arg
+        for char in DANGEROUS_CHARS:
+            if char in value:
+                msg = (
+                    f"Custom argument contains dangerous character "
+                    f"'{char}': {arg}"
+                )
+                raise ValueError(msg)
+    return v
+
+
+def _validate_script_path_safety(v: str | None) -> str | None:
+    """Reject pre/post-launch scripts that are missing, non-executable,
+    or in a sensitive system directory.
+
+    Pure function; called from both the Pydantic validator and the
+    unvalidated path.
+    """
+    if not v:
+        return v
+    substituted = v
+    for var_name, var_value in [
+        ("HOME", str(Path.home())),
+        (
+            "XDG_CONFIG_HOME",
+            os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
+        ),
+        (
+            "XDG_DATA_HOME",
+            os.environ.get(
+                "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+            ),
+        ),
+    ]:
+        substituted = substituted.replace(f"${{{var_name}}}", var_value)
+        substituted = substituted.replace(f"${var_name}", var_value)
+
+    try:
+        if not Path(substituted).is_file():
+            msg = f"Script file does not exist: {v} (resolved: {substituted})"
+            raise ValueError(msg)
+    except PermissionError as exc:
+        msg = f"Script file does not exist or is not accessible: {v}"
+        raise ValueError(msg) from exc
+
+    script_path = Path(substituted).resolve()
+    for sensitive_dir in SENSITIVE_DIRS:
+        try:
+            resolved_sensitive = sensitive_dir.resolve()
+        except (OSError, RuntimeError):
+            # /proc, /sys, etc. can fail to resolve on some platforms;
+            # skip them rather than crashing the validator.
+            continue
+        # relative_to raises ValueError when the path is NOT under
+        # sensitive_dir (the common case). We want to continue the loop
+        # in that case, so use a flag rather than try/except ValueError
+        # (which would also swallow our own "in_sensitive" raise below).
+        in_sensitive = False
+        try:
+            script_path.relative_to(resolved_sensitive)
+            in_sensitive = True
+        except ValueError:
+            pass
+        if in_sensitive:
+            msg = f"Script path is in a sensitive system directory: {v}"
+            raise ValueError(msg)
+
+    if not os.access(substituted, os.X_OK):
+        msg = f"Script file is not executable: {v} (resolved: {substituted})"
+        raise ValueError(msg)
+
+    return v
+
 
 # Pydantic is optional. Provide shims when not available.
 PYDANTIC_AVAILABLE = False
@@ -75,99 +204,32 @@ if PYDANTIC_AVAILABLE:
         @field_validator("pre_launch_failure_mode", "post_launch_failure_mode")
         @classmethod
         def validate_failure_mode(cls, v):
-            """Validate hook failure mode values."""
-            if v is not None and v not in HOOK_FAILURE_MODES:
-                msg = f"Invalid failure mode '{v}'. Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
-                raise ValueError(msg)
-            return v
+            """Validate hook failure mode values.
+
+            Delegates to the pure-Python helper so the unvalidated path
+            enforces the same rule.
+            """
+            return _validate_failure_mode_safety(v)
 
         @field_validator("custom_args")
         @classmethod
         def validate_custom_args(cls, v):
             """Validate custom arguments for security.
 
-            Rejects any custom arg (whether ``--flag=value`` or bare ``--flag``)
-            that contains a shell-metacharacter. Non-string entries are
-            skipped (the type validator handles them).
+            Delegates to the pure-Python helper so the unvalidated path
+            enforces the same rule.
             """
-            if not v:
-                return v
-            dangerous_chars = [";", "&", "|", "`", "$", "(", ")", "<", ">", '"', "'", "\\"]
-            for arg in v:
-                if not isinstance(arg, str):
-                    continue
-                if "=" in arg:
-                    _, value = arg.split("=", 1)
-                else:
-                    value = arg
-                for char in dangerous_chars:
-                    if char in value:
-                        msg = (
-                            f"Custom argument contains dangerous character "
-                            f"'{char}': {arg}"
-                        )
-                        raise ValueError(msg)
-            return v
+            return _validate_custom_args_safety(v)
 
         @field_validator("pre_launch_script", "post_launch_script")
         @classmethod
         def validate_script_path(cls, v):
-            if v:
-                substituted = v
-                for var_name, var_value in [
-                    ("HOME", str(Path.home())),
-                    (
-                        "XDG_CONFIG_HOME",
-                        os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
-                    ),
-                    (
-                        "XDG_DATA_HOME",
-                        os.environ.get(
-                            "XDG_DATA_HOME",
-                            str(Path.home() / ".local" / "share"),
-                        ),
-                    ),
-                ]:
-                    substituted = substituted.replace(f"${{{var_name}}}", var_value)
-                    substituted = substituted.replace(f"${var_name}", var_value)
+            """Validate pre/post-launch script paths.
 
-                try:
-                    if not Path(substituted).is_file():
-                        msg = f"Script file does not exist: {v} (resolved: {substituted})"
-                        raise ValueError(msg)
-                except PermissionError as exc:
-                    msg = f"Script file does not exist or is not accessible: {v}"
-                    raise ValueError(msg) from exc
-
-                script_path = Path(substituted).resolve()
-                sensitive_dirs = [
-                    Path("/etc"),
-                    Path("/usr"),
-                    Path("/bin"),
-                    Path("/sbin"),
-                    Path("/boot"),
-                    Path("/sys"),
-                    Path("/proc"),
-                    Path("/dev"),
-                    Path("/root"),
-                ]
-                for sensitive_dir in sensitive_dirs:
-                    resolved_sensitive = sensitive_dir.resolve()
-                    in_sensitive = False
-                    try:
-                        script_path.relative_to(resolved_sensitive)
-                        in_sensitive = True
-                    except (ValueError, PermissionError):
-                        pass
-                    if in_sensitive:
-                        msg = f"Script path is in a sensitive system directory: {v}"
-                        raise ValueError(msg)
-
-                if not os.access(substituted, os.X_OK):
-                    msg = f"Script file is not executable: {v} (resolved: {substituted})"
-                    raise ValueError(msg)
-
-            return v
+            Delegates to the pure-Python helper so the unvalidated path
+            enforces the same rule.
+            """
+            return _validate_script_path_safety(v)
 
     class PydanticWrapperConfig(BaseModel):
         bin_dir: str = Field(default="")
@@ -219,3 +281,16 @@ if PYDANTIC_AVAILABLE:
                 msg = f"Invalid cron interval '{v}'. Must be at least 1 hour"
                 raise ValueError(msg)
             return v
+
+
+__all__ = [
+    "BaseModel",
+    "DANGEROUS_CHARS",
+    "Field",
+    "PYDANTIC_AVAILABLE",
+    "SENSITIVE_DIRS",
+    "_validate_custom_args_safety",
+    "_validate_failure_mode_safety",
+    "_validate_script_path_safety",
+    "field_validator",
+]

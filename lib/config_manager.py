@@ -19,11 +19,15 @@ from .config_manager_presets import BUILTIN_PRESETS
 # Re-export the CLI entry-point from its dedicated module for backward
 # compatibility with tests and external callers that import
 # ``lib.config_manager.main``.  ``config_manager_cli`` does not import
-# ``config_manager`` at module load time (it does so lazily inside
 # ``main()``), so this is not a real cyclic import.
 from .config_manager_cli import main  # noqa: F401
 from .config_models import AppPreferences, WrapperConfig
-from .config_validation import PYDANTIC_AVAILABLE
+from .config_validation import (
+    PYDANTIC_AVAILABLE,
+    _validate_custom_args_safety,
+    _validate_failure_mode_safety,
+    _validate_script_path_safety,
+)
 
 # Conditionally import PydanticAppPreferences when pydantic is available
 try:
@@ -35,6 +39,7 @@ BaseModel: Any
 Field: Any
 ValidationError: Any
 field_validator: Any
+
 try:
     from pydantic import (
         BaseModel as _BaseModel,
@@ -266,7 +271,17 @@ class EnhancedConfigManager:
             raise ConfigMigrationError(f"Failed to migrate configuration: {e}") from e
 
     def _parse_config_data(self, data: dict[str, Any]) -> None:
-        """Parse configuration data with validation and variable substitution."""
+        """Parse configuration data with validation and variable substitution.
+
+        Two paths:
+          - pydantic path (preferred): wraps everything in a Pydantic model
+            which enforces field-level constraints (pattern, ge, etc.) and
+            delegates field-validator functions to the same pure-Python
+            helpers the unvalidated path uses.
+          - unvalidated path: skips Pydantic field constraints, but calls
+            the security-critical helpers directly. The security model is
+            identical in both paths.
+        """
         processed_data = self._process_config_value(data)
 
         if PYDANTIC_AVAILABLE and PydanticWrapperConfig is not None:
@@ -278,7 +293,17 @@ class EnhancedConfigManager:
                     f"Configuration validation failed: {e}",
                 ) from e
         else:
-            self._apply_unvalidated_config(processed_data)
+            try:
+                self._apply_unvalidated_config(processed_data)
+            except ValueError as e:
+                # The pure-Python safety helpers raise ValueError; surface
+                # as ConfigValidationError for consistency with the pydantic
+                # path. (Pydantic itself catches ValueError from field
+                # validators and re-wraps as ValidationError, which we
+                # then catch above.)
+                raise ConfigValidationError(
+                    f"Configuration validation failed: {e}",
+                ) from e
 
     def _apply_validated_config(self, validated_config: "PydanticWrapperConfig") -> None:
         """Apply validated configuration from Pydantic model."""
@@ -325,7 +350,16 @@ class EnhancedConfigManager:
         self.config.permission_presets = validated_config.permission_presets
 
     def _apply_unvalidated_config(self, data: dict[str, Any]) -> None:
-        """Apply configuration without Pydantic validation (fallback)."""
+        """Apply configuration without Pydantic validation (fallback).
+
+        Used when Pydantic is not installed (PYDANTIC_AVAILABLE is False).
+        The Pydantic field-level constraints (log_level pattern, cron_interval
+        range, etc.) are NOT enforced here — they are not security-critical.
+        The security-critical checks (dangerous chars in custom args, script
+        path safety, hook failure mode validity) ARE enforced via the same
+        pure-Python helpers that the Pydantic validators call, so the
+        security model is identical in both paths.
+        """
         self.config.bin_dir = data.get("bin_dir", self.config.bin_dir)
         self.config.active_profile = data.get("active_profile", self.config.active_profile)
         self.config.debug_mode = data.get("debug_mode", self.config.debug_mode)
@@ -360,26 +394,56 @@ class EnhancedConfigManager:
 
         if "global_preferences" in data:
             gp_data = data["global_preferences"]
+            # Security: run the same safety helpers the Pydantic validators
+            # use. Raises ConfigValidationError on dangerous input.
+            custom_args = list(gp_data.get("custom_args", []))
+            _validate_custom_args_safety(custom_args)
+            pre_launch_script = _validate_script_path_safety(
+                gp_data.get("pre_launch_script")
+            )
+            post_launch_script = _validate_script_path_safety(
+                gp_data.get("post_launch_script")
+            )
+            pre_launch_failure_mode = _validate_failure_mode_safety(
+                gp_data.get("pre_launch_failure_mode")
+            )
+            post_launch_failure_mode = _validate_failure_mode_safety(
+                gp_data.get("post_launch_failure_mode")
+            )
             self.config.global_preferences = AppPreferences(
                 launch_method=gp_data.get("launch_method", "auto"),
                 env_vars=dict(gp_data.get("env_vars", {})),
-                pre_launch_script=gp_data.get("pre_launch_script"),
-                post_launch_script=gp_data.get("post_launch_script"),
-                custom_args=list(gp_data.get("custom_args", [])),
-                pre_launch_failure_mode=gp_data.get("pre_launch_failure_mode"),
-                post_launch_failure_mode=gp_data.get("post_launch_failure_mode"),
+                pre_launch_script=pre_launch_script,
+                post_launch_script=post_launch_script,
+                custom_args=custom_args,
+                pre_launch_failure_mode=pre_launch_failure_mode,
+                post_launch_failure_mode=post_launch_failure_mode,
             )
 
         if "app_preferences" in data:
             for app_id, pref_data in data["app_preferences"].items():
+                custom_args = list(pref_data.get("custom_args", []))
+                _validate_custom_args_safety(custom_args)
+                pre_launch_script = _validate_script_path_safety(
+                    pref_data.get("pre_launch_script")
+                )
+                post_launch_script = _validate_script_path_safety(
+                    pref_data.get("post_launch_script")
+                )
+                pre_launch_failure_mode = _validate_failure_mode_safety(
+                    pref_data.get("pre_launch_failure_mode")
+                )
+                post_launch_failure_mode = _validate_failure_mode_safety(
+                    pref_data.get("post_launch_failure_mode")
+                )
                 self.config.app_preferences[app_id] = AppPreferences(
                     launch_method=pref_data.get("launch_method", "auto"),
                     env_vars=dict(pref_data.get("env_vars", {})),
-                    pre_launch_script=pref_data.get("pre_launch_script"),
-                    post_launch_script=pref_data.get("post_launch_script"),
-                    custom_args=list(pref_data.get("custom_args", [])),
-                    pre_launch_failure_mode=pref_data.get("pre_launch_failure_mode"),
-                    post_launch_failure_mode=pref_data.get("post_launch_failure_mode"),
+                    pre_launch_script=pre_launch_script,
+                    post_launch_script=post_launch_script,
+                    custom_args=custom_args,
+                    pre_launch_failure_mode=pre_launch_failure_mode,
+                    post_launch_failure_mode=post_launch_failure_mode,
                 )
 
     def _serialize_config(self) -> dict[str, Any]:
