@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `fplaunch config` restructured to a Click group with all 7 subcommands: show, init, cron-interval, block, unblock, list-presets, get-preset
 - `fplaunch-config` (argparse) extended with the same surface (show, init, cron-interval were previously Click-only)
 - Man pages for `fplaunch-config`, `fplaunch-launch`, and `fplaunch-monitor`
+- Comprehensive test coverage: 16 new test files (10,211 lines) targeting every previously-under-covered module. 594 new tests, raising the total from 1462 to 2056 (+2 skipped) and bringing total lib coverage from 51% to 99%
 
 ### Fixed
 - `get_temp_dir` now raises `OSError` when no candidate is writable, instead of returning an unwritable path
@@ -30,13 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--config-dir` was also dropped by every `profiles` and `presets` Click subcommand. All 10 callsites swapped to `build_config_manager(ctx)` so the override flows through.
 - Skipped tests that were silently no-oping; full suite now runs
 - Locale-dependent test (`test_name_property`) pins `LANG=en_US`
+- CI: pinned `pytest<9.1.0` in `pyproject.toml` and `.github/workflows/ci.yml` to avoid a pytest 9.1.0 regression in `_pytest/fixtures.SubRequest.__init__` that raised `Could not obtain a node for scope "Scope.Session"` on autouse session-scope fixtures. Affected 808 tests across 30+ files; the existing conftest.py workaround for pytest 9.0.x remains effective. PyPI has no 9.2.x or 10.x release yet, so bumping higher is not an option; remove the upper bound once pytest ships a fixed release.
+- Pydantic-dependent tests in `test_config_manager_coverage.py` now use `pytest.importorskip("pydantic")` so they skip cleanly in the `.[monitor]` install used by CI, instead of crashing with `ModuleNotFoundError`
+- Pre-existing ruff warnings in `test_rich_output.py` (two F841 unused-locals, one W292 missing newline) cleaned up
 
 ### Changed
 - `lib/config_manager.py` split into `config_manager`, `config_models`, `config_validation`, `config_manager_cli`, `config_manager_presets`, and `config_constants`
 - `lib/cli.py` split into `cli_generation`, `cli_inspect`, `cli_profiles`, `cli_presets`, `cli_system`, `cli_systemd`, and `cli_utils`
 - `LaunchMethod` and `HookFailureMode` enums replace string-based dispatch
 - `black` replaced by `ruff format` as the sole formatter
-- `pydantic` moved from `robustness` to `dev` dependencies
+- `pydantic` moved from `robustness` to `dev` dependencies (pydantic remains a soft runtime dep — the `_parse_config_data` validator path is guarded by `PYDANTIC_AVAILABLE` and falls back to the unvalidated path when pydantic is absent)
 - Pre-commit hooks pinned to Python 3.12, restricted `pydocstyle` to missing-docstring rules
 - GitHub Actions updated to `actions/setup-python@v5` and `softprops/action-gh-release@v2`
 - `pyproject.toml` and `Makefile` cleaned of dead entries
