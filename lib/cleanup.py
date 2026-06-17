@@ -43,9 +43,6 @@ except ImportError:
 
 console = Console()
 
-
-console = Console()
-
 MAX_BACKUP_FILES = 1000
 
 

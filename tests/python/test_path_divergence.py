@@ -91,6 +91,14 @@ class TestTopLevelFieldDivergence:
     def test_pydantic_path_resets_to_default_when_field_missing(
         self, validated_manager, field, default
     ) -> None:
+        # The whole point of this test is to pin the pydantic path's
+        # behavior. If pydantic isn't importable the test is meaningless
+        # (we'd be silently exercising the unvalidated path). Skip with a
+        # clear reason so CI without pydantic doesn't report a misleading
+        # failure.
+        from lib.config_manager import PYDANTIC_AVAILABLE
+        if not PYDANTIC_AVAILABLE:
+            pytest.skip("pydantic not installed; pydantic-path test not applicable")
         # Set the field to a non-default value, then load a config that
         # does NOT include this field. The pydantic path should reset to
         # the model default.

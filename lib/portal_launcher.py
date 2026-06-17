@@ -74,6 +74,7 @@ def launch_with_portal(
         cwd=cwd,
         capture_output=True,
         text=True,
+        check=False,
     )
 
 
@@ -118,6 +119,7 @@ def launch_direct(
         cwd=cwd,
         capture_output=True,
         text=True,
+        check=False,
     )
 
 

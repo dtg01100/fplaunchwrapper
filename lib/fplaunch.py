@@ -7,7 +7,7 @@ Main entry point for all operations.
 import sys
 
 from . import safety as safety_mod
-from .safety import is_wrapper_file as safe_launch_check  # noqa: F401
+from .safety import safe_launch_check  # noqa: F401, W0611
 
 safety = safety_mod
 
