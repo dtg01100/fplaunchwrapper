@@ -175,6 +175,30 @@ run_post_launch_script() {{
     fi
 }}
 
+is_script_path_safe() {{
+    # Reject pre/post-launch scripts that target sensitive system
+    # directories or are symlinks. Mirrors lib.config_validation
+    # _validate_script_path_safety so the template-side path matches
+    # the validator the Python side runs. Returns 0 if safe, 1 if not.
+    local script_path="$1"
+    local resolved
+    # Resolve to absolute, follow symlinks, dereference. readlink -f is
+    # in coreutils and on every system fplaunchwrapper targets; fall back
+    # to the input unchanged if it fails.
+    if command -v readlink >/dev/null 2>&1; then
+        resolved=$(readlink -f "$script_path" 2>/dev/null) || resolved="$script_path"
+    else
+        resolved="$script_path"
+    fi
+    case "$resolved" in
+        /etc/*|/usr/*|/bin/*|/sbin/*|/boot/*|/sys/*|/proc/*|/dev/*|/root/*)
+            echo "[fplaunchwrapper] Refusing to install script in sensitive system directory: $resolved" >&2
+            return 1
+            ;;
+    esac
+    return 0
+}}
+
 set_pre_script() {{
     local script_path="$1"
     if [ -z "$script_path" ]; then
@@ -183,6 +207,13 @@ set_pre_script() {{
     fi
     if [ ! -f "$script_path" ]; then
         echo "Script not found: $script_path" >&2
+        exit 1
+    fi
+    if [ -L "$script_path" ]; then
+        echo "Refusing to install a symlink as a pre-launch script: $script_path" >&2
+        exit 1
+    fi
+    if ! is_script_path_safe "$script_path"; then
         exit 1
     fi
     mkdir -p "$HOOK_DIR"
@@ -200,6 +231,13 @@ set_post_script() {{
     fi
     if [ ! -f "$script_path" ]; then
         echo "Script not found: $script_path" >&2
+        exit 1
+    fi
+    if [ -L "$script_path" ]; then
+        echo "Refusing to install a symlink as a post-run script: $script_path" >&2
+        exit 1
+    fi
+    if ! is_script_path_safe "$script_path"; then
         exit 1
     fi
     mkdir -p "$HOOK_DIR"
@@ -658,10 +696,39 @@ if [ "$1" = "--fpwrapper-set-post-script" ]; then
     set_post_script "$2"
 fi
 
+# Refuse to delete a script that lives outside the per-app hook dir.
+# PRE_SCRIPT / POST_SCRIPT may have been redirected to a configured
+# external path (see the CONFIG_SCRIPT_* overrides near the top), and
+# `rm` would then happily remove an unrelated user file. This guard
+# ensures the remove command only touches files inside HOOK_DIR.
+is_path_in_hook_dir() {{
+    local target="$1"
+    local hook_dir
+    hook_dir=$(cd "$HOOK_DIR" 2>/dev/null && pwd) || return 1
+    local resolved
+    if command -v readlink >/dev/null 2>&1; then
+        resolved=$(readlink -f "$target" 2>/dev/null) || resolved="$target"
+    else
+        # Fallback: realpath-style via cd, which is good enough for
+        # the non-symlink case.
+        resolved=$(cd "$(dirname "$target")" 2>/dev/null && pwd)/$(basename "$target") || return 1
+    fi
+    case "$resolved" in
+        "$hook_dir"/*) return 0 ;;
+        "$hook_dir") return 0 ;;
+    esac
+    return 1
+}}
+
 if [ "$1" = "--fpwrapper-remove-pre-script" ]; then
     if [ -f "$PRE_SCRIPT" ]; then
-        rm "$PRE_SCRIPT"
-        echo "Pre-launch script removed"
+        if is_path_in_hook_dir "$PRE_SCRIPT"; then
+            rm "$PRE_SCRIPT"
+            echo "Pre-launch script removed"
+        else
+            echo "[fplaunchwrapper] Refusing to remove script outside $HOOK_DIR: $PRE_SCRIPT" >&2
+            exit 1
+        fi
     else
         echo "No pre-launch script configured"
     fi
@@ -670,8 +737,13 @@ fi
 
 if [ "$1" = "--fpwrapper-remove-post-script" ]; then
     if [ -f "$POST_SCRIPT" ]; then
-        rm "$POST_SCRIPT"
-        echo "Post-run script removed"
+        if is_path_in_hook_dir "$POST_SCRIPT"; then
+            rm "$POST_SCRIPT"
+            echo "Post-run script removed"
+        else
+            echo "[fplaunchwrapper] Refusing to remove script outside $HOOK_DIR: $POST_SCRIPT" >&2
+            exit 1
+        fi
     else
         echo "No post-run script configured"
     fi

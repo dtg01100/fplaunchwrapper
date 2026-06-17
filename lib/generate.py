@@ -260,6 +260,7 @@ class WrapperGenerator(LoggingMixin):
             post_launch_script = ""
             try:
                 from .config_manager import create_config_manager
+                from .config_validation import _validate_script_path_safety
 
                 config = create_config_manager()
                 failure_mode = getattr(
@@ -271,6 +272,33 @@ class WrapperGenerator(LoggingMixin):
                 prefs = config.get_app_preferences(wrapper_name)
                 pre_launch_script = prefs.pre_launch_script or ""
                 post_launch_script = prefs.post_launch_script or ""
+                # Defense in depth: re-validate the script paths just before
+                # baking them into the wrapper. set_app_preferences now
+                # validates, but a config that was written before that
+                # change, or tampered with on disk, could still carry an
+                # unsafe value. We log a warning and drop the unsafe path
+                # rather than aborting generation, so a stale config entry
+                # doesn't break wrapper regeneration for the whole app.
+                if pre_launch_script:
+                    try:
+                        _validate_script_path_safety(pre_launch_script)
+                    except Exception as e:
+                        logger.warning(
+                            "Dropping unsafe pre_launch_script for %s: %s",
+                            wrapper_name,
+                            e,
+                        )
+                        pre_launch_script = ""
+                if post_launch_script:
+                    try:
+                        _validate_script_path_safety(post_launch_script)
+                    except Exception as e:
+                        logger.warning(
+                            "Dropping unsafe post_launch_script for %s: %s",
+                            wrapper_name,
+                            e,
+                        )
+                        post_launch_script = ""
             except OSError:
                 pass
 

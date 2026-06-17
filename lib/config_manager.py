@@ -582,7 +582,35 @@ class EnhancedConfigManager:
         return self.config.app_preferences.get(app_id, self.config.global_preferences)
 
     def set_app_preferences(self, app_id: str, prefs: AppPreferences) -> None:
-        """Set preferences for a specific app."""
+        """Set preferences for a specific app.
+
+        Validates pre/post-launch script paths before persisting so a
+        programmatic caller can't bypass the security checks that
+        _parse_config_data runs on file-based config loads. Existing
+        values that fail validation are rejected with
+        ``SecurityValidationError``; ``None`` and missing paths are
+        always allowed (they mean "no script").
+        """
+        # Defense in depth: re-run the same validator _parse_config_data
+        # uses, so any caller of this public method gets the same
+        # security guarantees as a file-based config load. _parse_config_data
+        # already calls these helpers; this catches callers (CLI subcommands,
+        # tests, third-party tools) that bypass the parser.
+        if prefs.pre_launch_script is not None:
+            _validate_script_path_safety(prefs.pre_launch_script)
+        if prefs.post_launch_script is not None:
+            _validate_script_path_safety(prefs.post_launch_script)
+        # Failure-mode fields are also restricted to HOOK_FAILURE_MODES by
+        # the validator; _parse_config_data enforces it, so we mirror that
+        # here. None means "inherit from global default" and is allowed.
+        if prefs.pre_launch_failure_mode is not None:
+            _validate_failure_mode_safety(prefs.pre_launch_failure_mode)
+        if prefs.post_launch_failure_mode is not None:
+            _validate_failure_mode_safety(prefs.post_launch_failure_mode)
+        # custom_args: same security rule as the parser.
+        if prefs.custom_args:
+            _validate_custom_args_safety(list(prefs.custom_args))
+
         self.config.app_preferences[app_id] = prefs
         try:
             self.save_config()

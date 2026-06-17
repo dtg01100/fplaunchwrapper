@@ -21,6 +21,7 @@ from lib.config_manager import (
     EnhancedConfigManager,
 )
 from lib.config_models import AppPreferences
+from lib.config_validation import SecurityValidationError
 from lib.exceptions import ConfigMigrationError, ConfigPermissionError
 
 
@@ -367,6 +368,121 @@ class TestMutationSaveErrors:
         manager.remove_from_blocklist("test.app")
         # Removed in memory despite save failure
         assert "test.app" not in manager.config.blocklist
+
+
+# --------------------------------------------------------------------------- #
+# set_app_preferences validation
+#
+# Pin the security contract: programmatic callers of set_app_preferences
+# must not be able to persist a script path / custom arg / failure mode
+# that the file-based parser would reject. _parse_config_data already
+# runs these checks; set_app_preferences mirrors them so direct API
+# callers (CLI subcommands, third-party tools, tests) can't bypass them.
+# --------------------------------------------------------------------------- #
+
+
+class TestSetAppPreferencesValidation:
+    """set_app_preferences must enforce the same security checks as
+    _parse_config_data, so a programmatic caller can't write a config
+    entry that a file load would have rejected.
+    """
+
+    def test_safe_real_script_path_is_accepted(self, manager, tmp_path):
+        script = tmp_path / "pre.sh"
+        script.write_text("#!/bin/sh\nexit 0\n")
+        script.chmod(0o755)
+        manager.set_app_preferences(
+            "test.App",
+            AppPreferences(pre_launch_script=str(script)),
+        )
+        assert manager.config.app_preferences["test.App"].pre_launch_script == str(script)
+
+    def test_none_script_path_is_accepted(self, manager):
+        # None means "no script" — explicitly allowed by the validator.
+        manager.set_app_preferences("test.App", AppPreferences())
+        assert manager.config.app_preferences["test.App"].pre_launch_script is None
+
+    @pytest.mark.parametrize(
+        "bad_path",
+        ["/etc/passwd", "/usr/bin/env", "/bin/sh", "/sbin/init",
+         "/root/.bashrc", "/proc/version", "/sys/kernel"],
+    )
+    def test_sensitive_dir_script_path_is_rejected(self, manager, bad_path, monkeypatch):
+        # The validator also requires the file to exist and be executable,
+        # so we patch is_file/access to keep the test focused on the
+        # sensitive-dir rule (the same pattern test_regression_fixes.py
+        # uses for the same validator).
+        from lib import config_manager
+        monkeypatch.setattr("os.path.isfile", lambda _p: True)
+        monkeypatch.setattr("os.access", lambda _p, _m: True)
+        monkeypatch.setattr(config_manager.Path, "is_file", lambda self: True)
+        monkeypatch.setattr(config_manager.Path, "resolve", lambda self: self)
+        with pytest.raises(SecurityValidationError) as exc_info:
+            manager.set_app_preferences(
+                "test.App", AppPreferences(pre_launch_script=bad_path)
+            )
+        assert "sensitive system directory" in str(exc_info.value)
+
+    def test_nonexistent_script_path_is_rejected(self, manager, tmp_path):
+        missing = tmp_path / "does-not-exist.sh"
+        with pytest.raises(SecurityValidationError) as exc_info:
+            manager.set_app_preferences(
+                "test.App", AppPreferences(pre_launch_script=str(missing))
+            )
+        assert "does not exist" in str(exc_info.value)
+
+    def test_unsafe_custom_args_are_rejected(self, manager):
+        # Custom args go through the same dangerous-char check as the
+        # file parser. set_app_preferences must reject shell
+        # metacharacters so a programmatic caller can't sneak them in.
+        with pytest.raises(SecurityValidationError):
+            manager.set_app_preferences(
+                "test.App",
+                AppPreferences(custom_args=["--filesystem=;rm -rf /"]),
+            )
+
+    def test_safe_custom_args_are_accepted(self, manager):
+        manager.set_app_preferences(
+            "test.App",
+            AppPreferences(custom_args=["--filesystem=home", "--socket=x11"]),
+        )
+        assert manager.config.app_preferences["test.App"].custom_args == [
+            "--filesystem=home",
+            "--socket=x11",
+        ]
+
+    def test_invalid_failure_mode_is_rejected(self, manager):
+        with pytest.raises(SecurityValidationError):
+            manager.set_app_preferences(
+                "test.App",
+                AppPreferences(pre_launch_failure_mode="nuke"),
+            )
+
+    @pytest.mark.parametrize("mode", ["abort", "warn", "ignore"])
+    def test_valid_failure_modes_are_accepted(self, manager, mode):
+        manager.set_app_preferences(
+            "test.App", AppPreferences(pre_launch_failure_mode=mode)
+        )
+        assert (
+            manager.config.app_preferences["test.App"].pre_launch_failure_mode == mode
+        )
+
+    def test_none_failure_mode_is_accepted(self, manager):
+        # None means "inherit from global default" and is the default.
+        manager.set_app_preferences("test.App", AppPreferences())
+        assert (
+            manager.config.app_preferences["test.App"].pre_launch_failure_mode is None
+        )
+
+    def test_failed_validation_does_not_persist(self, manager, monkeypatch):
+        # If validation raises, the previous value must remain in place.
+        # We start with a clean state and verify the failed write didn't
+        # leave a partial entry.
+        with pytest.raises(SecurityValidationError):
+            manager.set_app_preferences(
+                "test.App", AppPreferences(pre_launch_script="/etc/passwd")
+            )
+        assert "test.App" not in manager.config.app_preferences
 
 
 # --------------------------------------------------------------------------- #
@@ -862,14 +978,26 @@ class TestSerializeConfigExtended:
         data = manager._serialize_config()
         assert "post_launch_failure_mode_default" not in data
 
-    def test_serializes_app_preferences_with_all_optional_fields(self, manager):
+    def test_serializes_app_preferences_with_all_optional_fields(
+        self, manager, tmp_path
+    ):
+        # Use real on-disk scripts so the post-set_app_preferences
+        # security validator (which requires scripts to exist and be
+        # executable) accepts them. This test exercises the serializer,
+        # not the validator.
+        pre_script = tmp_path / "pre.sh"
+        post_script = tmp_path / "post.sh"
+        pre_script.write_text("#!/bin/sh\nexit 0\n")
+        pre_script.chmod(0o755)
+        post_script.write_text("#!/bin/sh\nexit 0\n")
+        post_script.chmod(0o755)
         manager.set_app_preferences(
             "test.App",
             AppPreferences(
                 launch_method="flatpak",
                 env_vars={"FOO": "bar"},
-                pre_launch_script="/p/pre.sh",
-                post_launch_script="/p/post.sh",
+                pre_launch_script=str(pre_script),
+                post_launch_script=str(post_script),
                 custom_args=["--quiet"],
                 pre_launch_failure_mode="abort",
                 post_launch_failure_mode="ignore",
@@ -880,10 +1008,11 @@ class TestSerializeConfigExtended:
         assert app_data["launch_method"] == "flatpak"
         assert app_data["env_vars"] == {"FOO": "bar"}
         assert app_data["custom_args"] == ["--quiet"]
-        assert app_data["pre_launch_script"] == "/p/pre.sh"
-        assert app_data["post_launch_script"] == "/p/post.sh"
+        assert app_data["pre_launch_script"] == str(pre_script)
+        assert app_data["post_launch_script"] == str(post_script)
         assert app_data["pre_launch_failure_mode"] == "abort"
         assert app_data["post_launch_failure_mode"] == "ignore"
+
 
     def test_app_preferences_round_trip_through_disk(self, manager):
         """Set app preferences, save, reload, and verify the per-app data
