@@ -18,7 +18,19 @@ class TestFplaunchModule:
     def test_safety_exists(self) -> None:
         from lib import fplaunch
 
-        assert fplaunch.safety is not None
+        # The previous version was a one-liner
+        # ``assert fplaunch.safety is not None`` -- a vacuous check
+        # because the import on the line above would already fail if
+        # the attribute were absent. ``fplaunch.safety`` is a *module
+        # re-export* (lib.safety), not a function, so ``callable()``
+        # would be wrong. The contract is: it points at the safety
+        # module and exposes the safety_check function other code
+        # imports from it.
+        import lib.safety as safety_module
+
+        assert fplaunch.safety is safety_module
+        assert hasattr(fplaunch.safety, "safe_launch_check")
+        assert callable(fplaunch.safety.safe_launch_check)
 
     def test_safe_launch_check_is_callable(self) -> None:
         from lib import fplaunch

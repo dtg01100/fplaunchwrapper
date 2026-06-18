@@ -171,8 +171,15 @@ class TestOrphanedCompletionFileDetection:
 
             cleanup = WrapperCleanup(bin_dir=str(bin_dir), config_dir=str(config_dir), dry_run=True)
 
-            # Cleanup should be initialized with completion tracking
-            assert cleanup is not None
+            # The constructor must populate the cleanup_items dict with
+            # the categories the rest of the API walks. The previous
+            # version asserted ``cleanup is not None`` -- vacuous
+            # because the import at the top of the file already
+            # verifies the class is importable. This asserts the
+            # actual contract.
+            assert isinstance(cleanup.cleanup_items, dict)
+            assert "completion_files" in cleanup.cleanup_items
+            assert isinstance(cleanup.cleanup_items["completion_files"], list)
 
 
 class TestOrphanedManPageDetection:

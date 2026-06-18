@@ -213,13 +213,31 @@ class TestCheckPathTraversal:
         safe, error = check_path_traversal(path, base)
         assert safe is False
 
-    def test_resolves_symlinks(self) -> None:
-        """Test that symlinks are resolved before checking."""
-        # Note: This is a behavior test - actual symlink behavior depends on system
-        base = Path("/home/user")
-        path = Path("/var/home/user")  # Common symlink on some systems
-        safe, error = check_path_traversal(path, base)
-        # The result depends on whether these paths resolve to the same location
+    def test_resolves_symlinks(self, tmp_path) -> None:
+        """Test that symlinks are resolved before checking.
+
+        The previous version of this test called ``check_path_traversal``
+        and then did nothing with the result -- the docstring even
+        acknowledged "the result depends on whether these paths
+        resolve to the same location". This version creates a real
+        symlink inside a real temp dir and verifies the function
+        follows it.
+        """
+        base = tmp_path
+        real = tmp_path / "real"
+        real.mkdir()
+        link = tmp_path / "link"
+        link.symlink_to(real)
+        # The link path resolves to ``real``, which is inside ``base``,
+        # so traversal must be reported as safe regardless of whether
+        # the path string is "link" or "real".
+        safe_real, _ = check_path_traversal(real, base)
+        safe_link, _ = check_path_traversal(link, base)
+        assert safe_real is True
+        assert safe_link is True, (
+            "check_path_traversal did not resolve the symlink before "
+            "checking containment"
+        )
 
     def test_returns_tuple(self) -> None:
         """Test that check_path_traversal returns a tuple."""

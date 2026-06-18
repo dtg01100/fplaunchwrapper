@@ -9,13 +9,32 @@ from lib.logging_utils import LoggingMixin, console, console_err
 
 
 class TestConsoleInstances:
-    """Test module-level console instances."""
+    """Test module-level console instances.
 
-    def test_console_is_not_none(self) -> None:
-        assert console is not None
+    The earlier ``test_console_is_not_none`` / ``test_console_err_is_not_none``
+    were pure no-ops: the import on line 8 already raises if either
+    binding is missing. These versions assert the actual contract --
+    a Rich Console instance bound to the correct stream.
+    """
 
-    def test_console_err_is_not_none(self) -> None:
-        assert console_err is not None
+    def test_console_is_rich_console_default_stdout(self) -> None:
+        from rich.console import Console
+
+        assert isinstance(console, Console)
+        # The default console writes to sys.stdout; a non-forced-terminal
+        # console is what the rest of the codebase expects.
+        assert console.stderr is False
+
+    def test_console_err_is_rich_console_stderr(self) -> None:
+        from rich.console import Console
+
+        assert isinstance(console_err, Console)
+        assert console_err.stderr is True
+
+    def test_console_and_console_err_are_distinct(self) -> None:
+        # The two singletons must not alias the same object; otherwise
+        # an error log would land on stdout and vice versa.
+        assert console is not console_err
 
 
 class TestLoggingMixin:

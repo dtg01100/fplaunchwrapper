@@ -107,14 +107,49 @@ def test_integration_safety(isolated_home=None):
 
 
 def test_mock_completeness():
-    """Test that all external operations are properly mocked"""
-    print("🎭 Testing Mock Completeness...")
+    """Verify that no test in the safety integration suite invokes a
+    real ``subprocess.run`` against a real binary.
 
-    # List of operations that should NEVER execute in real tests
-    # This is a static check - in real CI we'd use tools to detect
-    # any unmocked dangerous operations
+    The earlier version of this test was a pure no-op (two ``print``
+    calls and no assertions). This version walks the safety test
+    surface and confirms that the operations it advertises as
+    "mocked" are actually mocked: every test that calls
+    ``subprocess.run`` must do so through ``unittest.mock.patch``.
+    """
+    import inspect
+    import re
 
-    print("✅ Mock completeness validation complete")
+    # Walk this module and the lib/ tree for any function whose
+    # source references "subprocess.run(" AND is not inside a class
+    # / function whose name contains "mock" or "patch".
+    offenders: list[str] = []
+    for module_path in [
+        Path(__file__).parent / "test_integration_safety.py",
+        Path(__file__).parent.parent.parent / "lib" / "launch.py",
+        Path(__file__).parent.parent.parent / "lib" / "generate.py",
+    ]:
+        if not module_path.exists():
+            continue
+        text = module_path.read_text()
+        for match in re.finditer(
+            r"def (\w+)\([^)]*\):[^\n]*\n((?:[ \t]+[^\n]*\n)+)", text
+        ):
+            name = match.group(1)
+            body = match.group(2)
+            if "mock" in name.lower() or "patch" in name.lower():
+                continue
+            if "subprocess.run" not in body:
+                continue
+            if "@patch" in body or "with patch" in body:
+                continue
+            offenders.append(f"{module_path.name}::{name}")
+
+    # The assertion is the *absence* of unmocked subprocess calls.
+    # Any offender is a real safety finding, not a vacuous check.
+    assert not offenders, (
+        "Found subprocess.run calls that may not be properly mocked:\n"
+        + "\n".join(offenders)
+    )
 
 
 def test_isolation_fixtures():
