@@ -420,8 +420,13 @@ class TestValidationFuzz:
             is_safe, error = check_path_traversal(path, base)
             assert isinstance(is_safe, bool)
             assert isinstance(error, str)
-        except Exception:
+        except (ValueError, OSError):
+            # Invalid path components (null bytes, etc.) are acceptable.
             pass
+        except Exception as e:
+            pytest.fail(
+                f"check_path_traversal crashed on {path_input!r}: {e}"
+            )
 
 
 # =============================================================================
@@ -837,8 +842,13 @@ class TestSecurityFuzz:
                 assert result.startswith(home), (
                     f"validate_home_dir allowed path outside HOME: {result}"
                 )
-        except Exception:
+        except (ValueError, OSError):
+            # Invalid path components (null bytes, etc.) are acceptable.
             pass
+        except Exception as e:
+            pytest.fail(
+                f"validate_home_dir crashed on {path_input!r}: {e}"
+            )
 
     @given(
         app_id=one_of(

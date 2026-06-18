@@ -282,21 +282,39 @@ class TestDesktopParserFuzz:
     @settings(
         max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
     )
-    def test_desktop_parser_handles_various_content(self, content):
+    def test_desktop_parser_handles_various_content(self, content, tmp_path):
         """Desktop parser should handle various file contents."""
         from lib.desktop_parser import DesktopEntry
 
+        # DesktopEntry is constructed from a file path, not a string --
+        # write the content to a temp file first.
+        path = tmp_path / "test.desktop"
         try:
-            entry = DesktopEntry.from_string(content)
-            assert hasattr(entry, "name") or hasattr(entry, "exec")
-        except Exception:
+            path.write_text(content, errors="replace")
+        except (OSError, UnicodeError):
+            # Some inputs (e.g. raw bytes that aren't text) cannot be
+            # written as text; writing them as bytes is the natural
+            # fallback for testing the parser's tolerance.
+            try:
+                path.write_bytes(content.encode("utf-8", errors="replace"))
+            except (OSError, UnicodeError):
+                return
+        try:
+            entry = DesktopEntry(path)
+            # The parser must always produce a valid object (name defaults
+            # to file_path.stem if the file is empty/unparseable).
+            assert entry.name is not None
+        except (OSError, IOError):
+            # Filesystem errors on tmp_path are out of scope.
             pass
+        except Exception as e:
+            pytest.fail(f"DesktopEntry crashed on content: {e}")
 
     @given(exec_value=st.text(max_size=1000))
     @settings(
         max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
     )
-    def test_exec_substitution(self, exec_value):
+    def test_exec_substitution(self, exec_value, tmp_path):
         """Exec substitution should handle various values."""
         from lib.desktop_parser import DesktopEntry
 
@@ -305,11 +323,25 @@ Name=Test App
 Exec={exec_value}
 Type=Application
 """
+        path = tmp_path / "test.desktop"
         try:
-            entry = DesktopEntry.from_string(basic_desktop)
-            assert hasattr(entry, "exec")
-        except Exception:
+            path.write_text(basic_desktop, errors="replace")
+        except (OSError, UnicodeError):
+            return
+        try:
+            entry = DesktopEntry(path)
+            # exec_command is None when Exec key is absent/empty, else a
+            # string. The parser must always return *something* for the
+            # Exec key without raising.
+            assert entry.exec_command is None or isinstance(
+                entry.exec_command, str
+            )
+        except (OSError, IOError):
             pass
+        except Exception as e:
+            pytest.fail(
+                f"DesktopEntry(exec={exec_value!r}) crashed: {e}"
+            )
 
 
 class TestPathResolution:
@@ -320,26 +352,79 @@ class TestPathResolution:
         max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
     )
     def test_resolve_bin_dir_never_crashes(self, path_str):
-        """resolve_bin_dir should never crash."""
+        """resolve_bin_dir should never crash.
+
+        resolve_bin_dir is total by design: it silently falls back to
+        the default ``~/bin`` on input that raises during ``Path()``
+        construction. A bare ``except`` would hide a real bug, so we
+        narrow the catch to the documented fallback exceptions and
+        fail the test on anything else.
+
+        The fallback path (``Path("rel").expanduser()`` without
+        ``RuntimeError``/``ValueError``) returns a *relative* path; the
+        docstring's "never raises" guarantee does not promise an
+        absolute path for arbitrary input, so we only assert
+        ``isinstance(result, Path)`` here.
+        """
         from lib.paths import resolve_bin_dir
 
         try:
             result = resolve_bin_dir(explicit_dir=path_str)
             assert isinstance(result, Path)
-            assert result.is_absolute()
-        except Exception:
+        except (RuntimeError, ValueError, OSError, UnicodeDecodeError):
+            # These are the documented recoverable inputs (e.g. null
+            # bytes in the path, HOME not set).
             pass
+        except Exception as e:
+            pytest.fail(
+                f"resolve_bin_dir crashed on {path_str!r}: {e}"
+            )
 
     @given(path_str=st.text(max_size=1000))
     @settings(
         max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
     )
-    def test_get_default_bin_dir(self, path_str):
-        """get_default_bin_dir should handle various home paths."""
+    def test_get_default_bin_dir(self, path_str, monkeypatch):
+        """get_default_bin_dir should handle various home paths.
+
+        get_default_bin_dir() has no arguments -- it reads Path.home()
+        -- so we monkey-patch Path.home() to vary the input across
+        fuzz examples. The previous version of this test called the
+        function with a ``home_path=`` kwarg it does not accept, which
+        raised ``TypeError`` and was silently swallowed by the bare
+        ``except``; the test was therefore vacuous.
+        """
+        from pathlib import Path as _Path
         from lib.paths import get_default_bin_dir
 
+        # The fuzz input is used only to choose a "home" location, not
+        # to be a literal path component. Hash it to a stable hex string
+        # so the same input yields the same fake home across examples.
+        home_token = format(abs(hash(path_str)) & 0xFFFFFFFF, "08x")
+        fake_home = _Path(f"/tmp/fplaunch_test_home_{home_token}")
+        # Resolve relative to the actual filesystem: if /tmp exists (it
+        # always does on the test runners), the fake home is concrete.
         try:
-            result = get_default_bin_dir(home_path=path_str)
-            assert isinstance(result, Path)
-        except Exception:
-            pass
+            fake_home.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            # If we cannot create the dir, skip this example rather than
+            # test something orthogonal.
+            return
+        monkeypatch.setattr(
+            _Path, "home", classmethod(lambda cls: fake_home)
+        )
+        result: _Path | None = None
+        try:
+            result = get_default_bin_dir()
+            assert isinstance(result, _Path)
+            assert result == fake_home / "bin"
+        except (RuntimeError, ValueError, OSError):
+            # On platforms where Path.home() cannot be patched to a
+            # nonexistent path, just accept the result without a
+            # strict equality check.
+            assert result is not None
+            assert isinstance(result, _Path)
+        except Exception as e:
+            pytest.fail(
+                f"get_default_bin_dir crashed on home token {home_token!r}: {e}"
+            )

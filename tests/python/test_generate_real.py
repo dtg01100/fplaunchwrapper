@@ -17,6 +17,7 @@ import pytest
 
 # Import actual implementation
 from lib.generate import WrapperGenerator, main
+from lib.config_validation import SecurityValidationError
 
 
 @pytest.mark.real_execution
@@ -690,9 +691,13 @@ class TestWrapperGenerationMerged:
             emit_mode=False,
         )
 
-        # Test that dangerous characters are handled
+        # Test that dangerous characters are handled.
+        # ``id`` is a reserved/forbidden wrapper name (see lib.exceptions
+        # FORBIDDEN_NAMES), so the "valid" test case must avoid it --
+        # otherwise generate_wrapper silently skips the name and the
+        # ``assert result is True`` branch is unreachable.
         test_cases = [
-            ("normal.app.id", True),  # Should work
+            ("org.mozilla.firefox", True),  # Should work
             ("evil;rm -rf /", False),  # Dangerous command injection
             ("evil`rm -rf /`", False),  # Command substitution
             ("evil$(rm -rf /)", False),  # Command substitution
@@ -709,9 +714,21 @@ class TestWrapperGenerationMerged:
                     # Dangerous IDs should be rejected or sanitized
                     # The exact behavior depends on the sanitization logic
                     assert isinstance(result, bool)
-            except Exception:
-                # Some dangerous inputs might cause exceptions, which is also acceptable
-                pass
+            except (ValueError, SecurityValidationError):
+                # Dangerous inputs that are caught by the input
+                # validators are acceptable: the safety layer is doing
+                # its job by raising rather than letting the unsafe
+                # value through. Anything else (AttributeError,
+                # KeyError, IndexError, OSError, ...) is a real bug
+                # and must fail the test so it gets fixed.
+                assert not should_work, (
+                    f"{app_id!r} raised on input that should have been accepted"
+                )
+            except Exception as e:  # pragma: no cover - defensive
+                pytest.fail(
+                    f"generate_wrapper({app_id!r}) crashed with "
+                    f"{type(e).__name__}: {e}"
+                )
 
     def test_invalid_name_handling(self) -> None:
         """Test invalid name handling."""
@@ -882,9 +899,14 @@ class TestWrapperGenerationMerged:
         assert removed_count == 1
 
     def test_tar_extraction_safety(self) -> None:
-        """Test tar extraction safety."""
-        # Create a "safe" tar file for testing
-        # In real implementation, this would test path traversal prevention
+        """Test tar extraction safety.
+
+        The previous version constructed a WrapperGenerator and asserted
+        ``gen is not None`` -- a vacuous check, since the import on
+        line 19 already fails if the class is missing. This version
+        asserts that the generator's attributes (used by the shell
+        template via the emission contract) match the ctor arguments.
+        """
         gen = WrapperGenerator(
             bin_dir=str(self.bin_dir),
             config_dir=str(self.config_dir),
@@ -892,13 +914,24 @@ class TestWrapperGenerationMerged:
             emit_mode=False,
         )
 
-        # The tar extraction safety is tested in the shell script
-        # Here we just verify the generator can be created without issues
-        assert gen is not None
+        # The tar extraction safety is tested in the shell script.
+        # Here we verify the generator exposes the values the ctor was
+        # given -- which is the contract the rest of the system relies
+        # on, and a constructor-only smoke test would miss.
+        assert gen.bin_dir == Path(self.bin_dir)
+        assert gen.config_dir == Path(self.config_dir)
+        assert gen.verbose is True
+        assert gen.emit_mode is False
 
     @patch("subprocess.run")
     def test_system_command_detection(self, mock_subprocess) -> None:
-        """Test system command detection."""
+        """Test system command detection.
+
+        The previous version constructed a WrapperGenerator and asserted
+        ``gen is not None``. This version exercises the system
+        command detection path and asserts the result is correctly
+        propagated through the generator's API.
+        """
 
         # Mock system having firefox installed
         def mock_run(cmd, **kwargs):
@@ -917,9 +950,21 @@ class TestWrapperGenerationMerged:
             emit_mode=False,
         )
 
-        # This tests the system command detection logic
-        # The actual implementation would check for system binaries
-        assert gen is not None
+        # Drive the system-command path that was previously just
+        # constructed-and-forgotten. run_command is the smallest unit
+        # of behaviour for "execute something and report the result";
+        # patching subprocess.run keeps the test hermetic.
+        result = gen.run_command(
+            ["command", "-v", "firefox"], description=""
+        )
+        assert result.returncode == 0
+        assert "firefox" in result.stdout
+        # A command that "isn't installed" (returncode=1) must be
+        # reported as such.
+        missing = gen.run_command(
+            ["command", "-v", "nonexistent-cmd"], description=""
+        )
+        assert missing.returncode == 1
 
     def test_additional_invalid_character_cases(self) -> None:
         """Test additional invalid character cases."""
