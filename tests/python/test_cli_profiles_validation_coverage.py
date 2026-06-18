@@ -18,6 +18,7 @@ import importlib
 import io
 import sys
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -387,23 +388,91 @@ class TestConfigValidationCoverage:
         instance = shim_cls("cron_interval")
         assert instance.fields == "cron_interval"
 
-    # ---- 58-61: ImportError branch (pydantic unavailable) ---- #
+    # ---- ImportError branch: pydantic unavailable (config_validation.py
+    #     lines 201-204) ---- #
 
-    def test_module_imports_without_pydantic_uses_shims(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_module_imports_without_pydantic_uses_shims(self) -> None:
         """Force the ``except ImportError`` branch by hiding pydantic.
 
-        Skipped: this branch (lines 58-61) only runs when pydantic is
-        unavailable. In our local + CI environments pydantic is always
-        installed, so the test cannot reach the branch without
-        uninstalling the package, which would break the rest of the suite.
-        The branch is exercised by the package-validation test job.
+        When pydantic is not importable, ``lib.config_validation`` must
+        fall back to its shim implementations of ``Field`` and
+        ``field_validator``. We exercise that branch in a subprocess so
+        the rest of the suite's module table is untouched -- reloading
+        ``lib.config_validation`` in-process would invalidate the class
+        objects other test modules (and the source modules that bind
+        ``SecurityValidationError`` at import time) hold references to.
+
+        The subprocess prints a JSON line tagged ``PROBE_RESULT:``; the
+        parent parses it and asserts on each field.
         """
-        pytest.skip(
-            "pydantic-unavailable branch is only reachable in environments "
-            "without pydantic; this is tested in the package-validation job"
+        import json
+        import subprocess
+
+        probe = (
+            "import sys, json, importlib\n"
+            "import lib.config_validation  # noqa: F401\n"
+            "_orig_pydantic = sys.modules.get('pydantic')\n"
+            "_orig_pydantic_submodules = {k: v for k, v in "
+            "list(sys.modules.items()) if k.startswith('pydantic.')}\n"
+            "_orig_validation = sys.modules.get('lib.config_validation')\n"
+            "class _PydanticBlocker:\n"
+            "    def __getattr__(self, name):\n"
+            "        raise ImportError("
+            "f'pydantic is hidden for this probe (attr {name!r})')\n"
+            "sys.modules['pydantic'] = _PydanticBlocker()\n"
+            "for k in list(_orig_pydantic_submodules):\n"
+            "    sys.modules.pop(k, None)\n"
+            "try:\n"
+            "    reloaded = importlib.reload(_orig_validation)\n"
+            "    from typing import Any\n"
+            "    out = {\n"
+            "        'PYDANTIC_AVAILABLE': reloaded.PYDANTIC_AVAILABLE,\n"
+            "        'Field_is_shim': reloaded.Field is not Any,\n"
+            "        'field_validator_is_shim': "
+            "reloaded.field_validator is not Any,\n"
+            "        'BaseModel_is_object': reloaded.BaseModel is object,\n"
+            "        'Field_callable': callable(reloaded.Field),\n"
+            "        'field_validator_callable': "
+            "callable(reloaded.field_validator),\n"
+            "        'Field_default_doesnt_raise': True,\n"
+            "    }\n"
+            "    try:\n"
+            "        _ = reloaded.Field(default='x')\n"
+            "    except Exception as e:  # pragma: no cover - defensive\n"
+            "        out['Field_default_doesnt_raise'] = False\n"
+            "        out['Field_default_error'] = repr(e)\n"
+            "    print('PROBE_RESULT:' + json.dumps(out))\n"
+            "finally:\n"
+            "    if _orig_pydantic is not None:\n"
+            "        sys.modules['pydantic'] = _orig_pydantic\n"
+            "    for k, v in _orig_pydantic_submodules.items():\n"
+            "        sys.modules[k] = v\n"
         )
+
+        result = subprocess.run(
+            [sys.executable, "-c", probe],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=Path(__file__).resolve().parent.parent.parent,
+        )
+        # Find the PROBE_RESULT line in stdout.
+        probe_line = next(
+            (line for line in result.stdout.splitlines() if line.startswith("PROBE_RESULT:")),
+            None,
+        )
+        assert probe_line is not None, (
+            f"Probe did not print a PROBE_RESULT line. stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}"
+        )
+        data = json.loads(probe_line[len("PROBE_RESULT:"):])
+        assert data["PYDANTIC_AVAILABLE"] is False
+        assert data["Field_is_shim"] is True
+        assert data["field_validator_is_shim"] is True
+        assert data["BaseModel_is_object"] is True
+        assert data["Field_callable"] is True
+        assert data["field_validator_callable"] is True
+        assert data["Field_default_doesnt_raise"] is True
 
     # ---- 97-101: validate_custom_args with --arg=value containing bad char ---- #
 

@@ -23,11 +23,10 @@ import pytest
 from lib.config_manager import EnhancedConfigManager
 
 
-# These are the field-level defaults the Pydantic model applies. The
-# unvalidated path's defaults may differ -- see the comments on each
-# field. If a future PR changes one of these in lib/config_validation.py
-# OR in lib/config_manager.py, the divergence test below will need
-# updating.
+# PYDANTIC model defaults (lib/config_validation.py PydanticWrapperConfig).
+# These are what the pydantic path resets to when a field is missing.
+# If a future PR changes one of these in lib/config_validation.py, the
+# pydantic-path test below will need updating.
 PYDANTIC_DEFAULTS = {
     "bin_dir": "",
     "active_profile": "default",
@@ -35,14 +34,26 @@ PYDANTIC_DEFAULTS = {
     "log_level": "INFO",
     "cron_interval": 6,
     "enable_notifications": True,
-    # In the unvalidated path, this is hardcoded "warn" (not stale-state),
-    # matching the Pydantic default -- so the unvalidated path resets to
-    # "warn" on a missing field, NOT to the previous value.
     "hook_failure_mode_default": "warn",
-    # In the unvalidated path, these reset to None on a missing field
-    # (not to the previous value). Matches the Pydantic default.
-    "pre_launch_failure_mode_default": None,
-    "post_launch_failure_mode_default": None,
+    "pre_launch_failure_mode_default": "abort",
+    "post_launch_failure_mode_default": "warn",
+}
+
+# UNVALIDATED path's hardcoded defaults (lib/config_manager.py
+# _apply_unvalidated_config). May differ from PYDANTIC_DEFAULTS for
+# fields where the unvalidated path uses a different literal (e.g. the
+# pre/post_launch_failure_mode_default fields reset to None because
+# data.get("x") with no default returns None on a missing key).
+UNVALIDATED_DEFAULTS = {
+    "bin_dir": "stale-string",  # preserves previous value; placeholder
+    "active_profile": "default",  # placeholder; preserves previous
+    "debug_mode": False,  # placeholder; preserves previous
+    "log_level": "INFO",  # placeholder; preserves previous
+    "cron_interval": 99,  # placeholder; preserves previous
+    "enable_notifications": True,  # placeholder; preserves previous
+    "hook_failure_mode_default": "warn",  # data.get(..., "warn")
+    "pre_launch_failure_mode_default": None,  # data.get(...) -> None
+    "post_launch_failure_mode_default": None,  # data.get(...) -> None
 }
 
 # For each field, True if the unvalidated path preserves the previous
@@ -59,6 +70,11 @@ PRESERVES_PREVIOUS_VALUE = {
     "pre_launch_failure_mode_default": False,
     "post_launch_failure_mode_default": False,
 }
+
+# The stale value to set on a field whose initial/current value is None
+# (i.e. Optional[str] fields defaulting to None). A non-None string lets
+# us prove the field was actually reset, not just left as None.
+NONE_TYPED_STALE = "stale-string"
 
 
 @pytest.fixture
@@ -107,13 +123,19 @@ class TestTopLevelFieldDivergence:
         if current is sentinel:
             pytest.skip(f"Field {field!r} is not on self.config")
 
-        # Choose a non-default sentinel value.
+        # Choose a non-default sentinel value. The dispatch also covers
+        # ``None`` -- this happens for Optional[str] fields whose
+        # current value is None (e.g. pre/post_launch_failure_mode_default
+        # on a fresh manager). A non-None stale value lets us prove the
+        # field was actually reset, not just left as None.
         if isinstance(current, bool):
             setattr(validated_manager.config, field, not current)
         elif isinstance(current, int):
             setattr(validated_manager.config, field, 99)
         elif isinstance(current, str):
             setattr(validated_manager.config, field, "stale-string")
+        elif current is None:
+            setattr(validated_manager.config, field, NONE_TYPED_STALE)
         else:
             pytest.skip(f"Field {field!r} type {type(current).__name__} not handled")
 
@@ -125,9 +147,11 @@ class TestTopLevelFieldDivergence:
             f"got {getattr(validated_manager.config, field)!r}"
         )
 
-    @pytest.mark.parametrize("field,default", list(PYDANTIC_DEFAULTS.items()))
+    @pytest.mark.parametrize(
+        "field,expected_default", list(UNVALIDATED_DEFAULTS.items())
+    )
     def test_unvalidated_path_uses_hardcoded_default_when_field_missing(
-        self, unvalidated_manager, field, default
+        self, unvalidated_manager, field, expected_default
     ) -> None:
         # Three fields (hook_failure_mode_default, pre_*, post_*) use
         # hardcoded defaults in the unvalidated path. The other six use
@@ -144,6 +168,11 @@ class TestTopLevelFieldDivergence:
             stale_value = 99
         elif isinstance(current, str):
             stale_value = "stale-string"
+        elif current is None:
+            # Optional[str] field whose current value is None. Use a
+            # non-None stale value so we can tell "reset to default"
+            # apart from "left alone".
+            stale_value = NONE_TYPED_STALE
         else:
             pytest.skip(f"Field {field!r} type {type(current).__name__} not handled")
 
@@ -157,8 +186,8 @@ class TestTopLevelFieldDivergence:
                 f"This means the unvalidated path behavior changed -- update this test."
             )
         else:
-            assert getattr(unvalidated_manager.config, field) == default, (
-                f"Expected {field!r} to reset to hardcoded default {default!r}, "
+            assert getattr(unvalidated_manager.config, field) == expected_default, (
+                f"Expected {field!r} to reset to hardcoded default {expected_default!r}, "
                 f"but it kept stale value {getattr(unvalidated_manager.config, field)!r}. "
                 f"This means the unvalidated path behavior changed -- update this test."
             )
