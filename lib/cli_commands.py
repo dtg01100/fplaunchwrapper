@@ -18,7 +18,7 @@ import sys
 from typing import Optional
 
 import click
-from lib.cli_utils import console, console_err
+from lib.cli_utils import console, console_err  # noqa: F401  (re-exported via lib.cli)
 
 try:
     from . import __version__ as FPLAUNCH_VERSION
@@ -66,6 +66,37 @@ from lib.cli_inspect import (  # noqa: E402
 # Re-export utilities for backward compatibility with tests
 from lib.cli_utils import run_command  # noqa: E402, F401, W0611
 from lib.cli_generation import import_handler  # noqa: E402, F401, W0611
+
+__all__ = [
+    "FPLAUNCH_VERSION",
+    "cli",
+    "cleanup",
+    "clean",
+    "config",
+    "console",
+    "console_err",
+    "discover",
+    "files",
+    "generate",
+    "import_handler",
+    "info",
+    "install",
+    "list_wrappers",
+    "launch",
+    "manifest",
+    "monitor",
+    "pref",
+    "presets_group",
+    "profiles_group",
+    "remove",
+    "rm",
+    "run_command",
+    "search",
+    "set_pref",
+    "systemd_group",
+    "systemd_setup_cmd",
+    "uninstall",
+]
 
 
 @click.group(invoke_without_command=True)
@@ -130,7 +161,14 @@ cli.add_command(config)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    """Entrypoint used by console scripts. Dispatch to Click."""
+    """Entrypoint used by console scripts. Dispatch to Click.
+
+    Errors are handled cleanly:
+    - Click usage errors (NoSuchOption, UsageError, BadParameter) print a
+      short error message and exit 1. No Python traceback.
+    - Unexpected exceptions log the full traceback (for diagnostics)
+      and exit 1.
+    """
     argv = argv if argv is not None else sys.argv[1:]
     try:
         result = cli.main(args=argv, prog_name="fplaunch", standalone_mode=False)
@@ -140,7 +178,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         if isinstance(code, int):
             return code
         return 1
+    except click.exceptions.ClickException as e:
+        # Click's own error classes (UsageError, NoSuchOption, BadParameter,
+        # Abort, etc.) -- standalone_mode=False raises BEFORE Click writes
+        # its formatted error, so we print e.message ourselves.
+        e.show()
+        return e.exit_code
     except Exception as e:
+        # Unexpected exception: log with traceback for diagnostics, exit 1.
         logger.exception("CLI main error: %s", e)
         console_err.print(f"[red]Error:[/red] {e}")
         return 1

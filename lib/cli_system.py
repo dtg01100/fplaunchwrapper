@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import click
-from lib.cli_utils import console, console_err
+from lib.cli_utils import console
 from lib.cli_generation import import_handler
 
 

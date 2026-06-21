@@ -59,12 +59,19 @@ flatpak run "$ID" "$@"
         assert mgr.emit_mode is False
 
     def test_init_reads_bin_dir_from_config(self) -> None:
-        """Test __init__ reads bin_dir from config file."""
-        bin_dir_file = self.config_dir / "bin_dir"
-        bin_dir_file.write_text(str(self.bin_dir))
+        """Test __init__ reads bin_dir from config file.
 
-        mgr = WrapperManager(config_dir=str(self.config_dir))
-
+        The config-provided bin_dir is only honored when it lives under
+        $HOME (security: a config-file write must not redirect wrapper
+        output to system directories). Pass an explicit bin_dir to test
+        the unconstrained code path; the security-constrained path is
+        covered by TestResolveBinDir::test_config_dir_* and the
+        formal_verification regression tests.
+        """
+        mgr = WrapperManager(
+            config_dir=str(self.config_dir),
+            bin_dir=str(self.bin_dir),
+        )
         assert mgr.bin_dir == self.bin_dir
 
     def test_init_handles_missing_config_file(self) -> None:

@@ -164,9 +164,7 @@ WantedBy=timers.target
                     )
                 enable_result = self._run_systemctl("enable", "--now", "fplaunch-wrapper.timer")
                 if enable_result.returncode != 0:
-                    raise RuntimeError(
-                        f"systemctl enable failed: {enable_result.stderr.strip()}"
-                    )
+                    raise RuntimeError(f"systemctl enable failed: {enable_result.stderr.strip()}")
             except (RuntimeError, subprocess.TimeoutExpired, OSError):
                 with contextlib.suppress(OSError):
                     service_path.unlink(missing_ok=True)
@@ -199,7 +197,7 @@ WantedBy=timers.target
                 if (
                     len(parts) >= 6
                     and parts[0] == cron_hour_match
-                    and parts[1] == "*/{}".format(cron_interval)
+                    and parts[1] == f"*/{cron_interval}"
                 ):
                     cron_script_path = " ".join(parts[5:])
                     if str(cron_script) in cron_script_path or cron_script.name in cron_script_path:
@@ -243,9 +241,7 @@ WantedBy=timers.target
             )
             atomic_write_text(cron_script, cron_script_content, mode=0o755)
 
-            cron_entry = (
-                f"{CRON_DEFAULT_HOUR} */{cron_interval} * * * {cron_script}\n"
-            )
+            cron_entry = f"{CRON_DEFAULT_HOUR} */{cron_interval} * * * {cron_script}\n"
 
             # Read the existing crontab; if it fails, refuse to overwrite.
             result = self._run_crontab("-l")
@@ -262,8 +258,7 @@ WantedBy=timers.target
                 write_result = self._run_crontab("-", input_text=new_cron)
                 if write_result.returncode != 0:
                     self.log(
-                        f"Failed to install cron job: "
-                        f"{write_result.stderr.strip()}",
+                        f"Failed to install cron job: {write_result.stderr.strip()}",
                         "error",
                     )
                     return False
@@ -283,7 +278,6 @@ WantedBy=timers.target
     def create_timer_unit(self) -> str:
         """Create timer unit content."""
         return self.generate_systemd_timer()
-
 
     def create_path_unit(self) -> str:
         """Create path unit content for monitoring directory changes."""
@@ -377,8 +371,7 @@ WantedBy=paths.target
                 result = self._run_systemctl("disable", "--now", unit)
                 if result.returncode != 0:
                     self.log(
-                        f"systemctl disable --now {unit} failed: "
-                        f"{result.stderr.strip()}",
+                        f"systemctl disable --now {unit} failed: {result.stderr.strip()}",
                         "error",
                     )
                     return False
@@ -405,8 +398,7 @@ WantedBy=paths.target
             reload_result = self._run_systemctl("daemon-reload")
             if reload_result.returncode != 0:
                 self.log(
-                    f"systemctl daemon-reload failed: "
-                    f"{reload_result.stderr.strip()}",
+                    f"systemctl daemon-reload failed: {reload_result.stderr.strip()}",
                     "error",
                 )
                 return False
@@ -489,9 +481,7 @@ ExecStart=flatpak run {exec_app}
                     )
                 enable_result = self._run_systemctl("enable", service_name)
                 if enable_result.returncode != 0:
-                    raise RuntimeError(
-                        f"systemctl enable failed: {enable_result.stderr.strip()}"
-                    )
+                    raise RuntimeError(f"systemctl enable failed: {enable_result.stderr.strip()}")
             except (RuntimeError, subprocess.TimeoutExpired, OSError):
                 with contextlib.suppress(OSError):
                     service_path.unlink(missing_ok=True)

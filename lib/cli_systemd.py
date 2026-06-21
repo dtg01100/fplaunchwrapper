@@ -137,10 +137,14 @@ def systemd_disable(ctx: "Context", assume_yes: bool) -> int:
     if setup is None:
         console_err.print("[red]Error:[/red] systemd_setup module not available")
         return 1
-    if not assume_yes and not os.environ.get("FPWRAPPER_FORCE") and not click.confirm(
-        "Disable systemd units and remove their unit files?",
-        default=False,
-        err=True,
+    if (
+        not assume_yes
+        and not os.environ.get("FPWRAPPER_FORCE")
+        and not click.confirm(
+            "Disable systemd units and remove their unit files?",
+            default=False,
+            err=True,
+        )
     ):
         console.print("Disable cancelled.")
         return 1

@@ -47,14 +47,20 @@ def validate_wrapper_name(
 
     # Wrapper names must be valid POSIX filename
     # Invalid characters: / \0 and path separators
-    invalid_chars = ["/", "\\", "\0"]
+    invalid_chars = ["/", "\\", "\0", "\n", "\r"]
     for char in invalid_chars:
         if char in name:
-            return False, f"Invalid character in wrapper name: '{char}'"
+            return False, f"Invalid character in wrapper name: '{char!r}'"
 
     # Names shouldn't start with - (often interpreted as options)
     if name.startswith("-"):
         return False, "Wrapper name cannot start with hyphen"
+
+    # Reject consecutive dots (..) — these collide with path-traversal
+    # semantics and are never expected in a real wrapper name. The lone
+    # name ".." is the parent-directory reference and is also rejected.
+    if ".." in name:
+        return False, f"Wrapper name contains '..': {name!r}"
 
     # Hidden files (starting with .) should be handled carefully
     if name.startswith(".") and len(name) > 1:
@@ -90,9 +96,10 @@ def validate_app_id(app_id: str) -> tuple[bool, str]:
 
     # Platform/runtime IDs may use // for version format (e.g., org.freedesktop.Platform//21.08)
     # Check this BEFORE the main regex since it contains /
+    # Must contain exactly one occurrence of // — not /// or more.
     has_platform_version = "//" in app_id
-
-    # Validate: only allow letters, digits, dot, underscore, hyphen, and optionally /
+    if has_platform_version and app_id.count("/") != 2:
+        return False, f"Invalid app_id: {app_id} (only single // allowed for platform versions)"
     # for platform/runtime version format (e.g., org.freedesktop.Platform//21.08)
     # Must start with a letter (not digit, dot, hyphen, underscore)
     if has_platform_version:
@@ -106,6 +113,11 @@ def validate_app_id(app_id: str) -> tuple[bool, str]:
     if "." not in app_id:
         return False, f"Invalid app_id: {app_id} (must contain a dot for reverse-DNS format)"
 
+    # Flatpak IDs must not contain consecutive dots (..) — could be confused with
+    # path traversal and is not a valid reverse-DNS component.
+    if ".." in app_id:
+        return False, f"Invalid app_id: {app_id} (consecutive dots not allowed)"
+
     # Standalone / is not allowed (only // for platform versions)
     if "/" in app_id and "//" not in app_id:
         return False, (
@@ -117,7 +129,6 @@ def validate_app_id(app_id: str) -> tuple[bool, str]:
 
 def check_path_traversal(path: str | Path, base_dir: Path) -> tuple[bool, str]:
     """Check if a path attempts to traverse outside its base directory.
-
     Args:
         path: The path to check
         base_dir: The base directory that path should be contained within
@@ -132,10 +143,21 @@ def check_path_traversal(path: str | Path, base_dir: Path) -> tuple[bool, str]:
     """
     try:
         path = Path(path) if not isinstance(path, Path) else path
-        # Check for symlinks in the path that might escape base_dir
+        # Reject paths with leading/trailing whitespace — these confuse
+        # resolvers (e.g. " /etc/passwd" becomes "<base>/ /etc/passwd"
+        # which Path considers "inside base"). The intent of the caller
+        # is path-traversal; reject it.
+        path_str = str(path)
+        if path_str != path_str.strip():
+            return False, f"Path contains whitespace: {path_str!r}"
+        # Resolve relative paths against base_dir, not cwd — otherwise
+        # `check_path_traversal("safe/path", base_dir)` would compare against
+        # the cwd's resolved path, which is unrelated to base_dir.
+        if not path.is_absolute():
+            path = base_dir / path
+        # Resolve symlinks to prevent symlink attacks
         resolved_path = path.resolve()
         resolved_base = base_dir.resolve()
-
         # Verify the path is within base_dir
         resolved_path.relative_to(resolved_base)
         return True, ""

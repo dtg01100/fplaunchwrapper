@@ -6,6 +6,7 @@ Replaces fplaunch-manage bash script with Python implementation.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import re
 import shutil
@@ -252,6 +253,17 @@ class WrapperManager(LoggingMixin):
                 pref_file = self.config_dir / f"{name}.pref"
                 # Atomic write defeats symlink-redirect TOCTOU at <config_dir>/<name>.pref.
                 atomic_write_text(pref_file, preference, mode=0o600)
+                # Concurrent remove: if the wrapper disappeared between the
+                # existence check and the write, the .pref would otherwise
+                # dangle (point at a missing binary). Detect this and clean up.
+                if not wrapper_path.exists():
+                    with contextlib.suppress(OSError):
+                        pref_file.unlink()
+                    self.log(
+                        f"Wrapper removed concurrently; not setting preference: {name}",
+                        "warning",
+                    )
+                    return False
                 self.log(f"Preference for {name} set to {preference}", "success")
             else:
                 self.log(f"Preference for {name} set to {preference} (emit mode)", "emit")

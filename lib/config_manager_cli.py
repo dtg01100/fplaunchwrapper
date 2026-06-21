@@ -52,7 +52,10 @@ Commands:
     parser.add_argument(
         "value",
         nargs="?",
-        help="Value for the command (app name for block/unblock, preset name for get-preset, hours for cron-interval)",
+        help=(
+            "Value for the command (app name for block/unblock, "
+            "preset name for get-preset, hours for cron-interval)"
+        ),
     )
 
     parser.add_argument(

@@ -61,6 +61,7 @@ from .python_utils import (
     sanitize_id_to_name,
 )
 from .logging_utils import LoggingMixin
+
 console = _Console()
 logger = logging.getLogger(__name__)
 
@@ -533,7 +534,7 @@ class WrapperGenerator(LoggingMixin):
                     return 0
 
                 success_count = 0
-                created, updated, skipped = self.generate_wrappers(apps)
+                created, updated, _skipped = self.generate_wrappers(apps)
                 success_count = created + updated
 
                 self.cleanup_obsolete_wrappers(apps)

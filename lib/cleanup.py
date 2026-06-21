@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-from collections.abc import Callable
 import os
 import shutil
 import subprocess
@@ -70,6 +69,7 @@ class CleanupConfig:
             self.assume_yes or self.force or bool(os.environ.get("FPWRAPPER_FORCE"))
         )
         self.verbose_effective = bool(self.verbose) if self.verbose is not None else False
+
 
 # pylint: disable=too-many-instance-attributes
 class WrapperCleanup(LoggingMixin):
@@ -286,6 +286,7 @@ class WrapperCleanup(LoggingMixin):
                     self.cleanup_items["cron_entries"].extend(cron_lines)
         except (OSError, subprocess.TimeoutExpired):
             pass
+
     # Backward-compat method used by tests
     def _identify_artifacts(self) -> list[Path]:
         """Identify artifacts to be cleaned (wrappers, preferences, data files)."""
@@ -511,9 +512,7 @@ class WrapperCleanup(LoggingMixin):
                 "error",
             )
             return
-        new_cron = "\n".join(
-            line for line in result.stdout.split("\n") if "fplaunch" not in line
-        )
+        new_cron = "\n".join(line for line in result.stdout.split("\n") if "fplaunch" not in line)
         write_result = run_crontab("-", input_text=new_cron)
         if write_result.returncode != 0:
             self.log(
@@ -595,14 +594,14 @@ class WrapperCleanup(LoggingMixin):
             try:
                 st = os.fstat(fd)
                 import stat as _stat
+
                 if not _stat.S_ISREG(st.st_mode):
                     self.log(f"Warning: refusing to remove non-regular file {path}", "warning")
                     self.had_errors = True
                     return
                 if st.st_uid != os.getuid():
                     self.log(
-                        f"Warning: refusing to remove file owned by "
-                        f"uid={st.st_uid}: {path}",
+                        f"Warning: refusing to remove file owned by uid={st.st_uid}: {path}",
                         "warning",
                     )
                     self.had_errors = True
@@ -613,6 +612,7 @@ class WrapperCleanup(LoggingMixin):
         except OSError as e:
             self.log(f"Warning: Failed to remove {path}: {e}", "warning")
             self.had_errors = True
+
     def _remove_directory(self, path: Path, description: str) -> None:
         """Remove a directory with logging."""
         self.log(description)
@@ -668,6 +668,7 @@ class WrapperCleanup(LoggingMixin):
             return bool(self.perform_cleanup())
         except (OSError, subprocess.TimeoutExpired, ValueError, KeyboardInterrupt):
             return False
+
     def cleanup_all(self) -> bool:
         """Simulate cleanup all for testing."""
         self.log("Simulating cleanup of all wrappers")

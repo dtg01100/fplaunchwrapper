@@ -198,7 +198,11 @@ class TestSecurity:
         result = generator.generate_wrapper(app_name)
         assert result is True
 
-        manager = WrapperManager(config_dir=str(self.config_dir), verbose=True)
+        manager = WrapperManager(
+            config_dir=str(self.config_dir),
+            bin_dir=str(self.bin_dir),
+            verbose=True,
+        )
 
         sanitized_app_name = "test_app"
         result = manager.set_preference(sanitized_app_name, "flatpak")

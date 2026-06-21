@@ -32,10 +32,29 @@ class SecurityValidationError(ValueError):
     re-labeled as a security validation failure.
     """
 
+
 # Constants used by both the Pydantic validators and the unvalidated
 # fallback path. Pulled out of method bodies so a single change updates
 # both enforcement sites.
-DANGEROUS_CHARS = [";", "&", "|", "`", "$", "(", ")", "<", ">", '"', "'", "\\"]
+DANGEROUS_CHARS = [
+    ";",
+    "&",
+    "|",
+    "`",
+    "$",
+    "(",
+    ")",
+    "<",
+    ">",
+    '"',
+    "'",
+    "\\",
+    "\n",
+    "\r",
+    "\t",
+    " ",
+    "\0",
+]
 SENSITIVE_DIRS = [
     Path("/etc"),
     Path("/usr"),
@@ -57,10 +76,7 @@ def _validate_failure_mode_safety(v: str | None) -> str | None:
     `config_manager._apply_unvalidated_config`.
     """
     if v is not None and v not in HOOK_FAILURE_MODES:
-        msg = (
-            f"Invalid failure mode '{v}'. "
-            f"Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
-        )
+        msg = f"Invalid failure mode '{v}'. Must be one of: {', '.join(HOOK_FAILURE_MODES)}"
         raise SecurityValidationError(msg)
     return v
 
@@ -81,10 +97,7 @@ def _validate_custom_args_safety(v: list[str]) -> list[str]:
         value = arg.split("=", 1)[1] if "=" in arg else arg
         for char in DANGEROUS_CHARS:
             if char in value:
-                msg = (
-                    f"Custom argument contains dangerous character "
-                    f"'{char}': {arg}"
-                )
+                msg = f"Custom argument contains dangerous character '{char}': {arg}"
                 raise SecurityValidationError(msg)
     return v
 
@@ -107,9 +120,7 @@ def _validate_script_path_safety(v: str | None) -> str | None:
         ),
         (
             "XDG_DATA_HOME",
-            os.environ.get(
-                "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
-            ),
+            os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share")),
         ),
     ]:
         substituted = substituted.replace(f"${{{var_name}}}", var_value)
@@ -157,6 +168,7 @@ PYDANTIC_AVAILABLE = False
 BaseModel: Any = object
 Field: Any = Any
 field_validator: Any = Any
+ValidationError: Any = Any
 
 
 def _create_field_shim() -> Any:
@@ -188,20 +200,26 @@ def _create_field_validator_shim() -> Any:
     return _RuntimeFieldValidator()
 
 
-# Try to import pydantic
 try:
     from pydantic import Field as _Field
     from pydantic import BaseModel as _BaseModel
     from pydantic import field_validator as _field_validator
+    from pydantic import ValidationError as _ValidationError
 
     BaseModel = _BaseModel
     Field = _Field
     field_validator = _field_validator
+    ValidationError = _ValidationError
     PYDANTIC_AVAILABLE = True
 except ImportError:
     # Pydantic not available - use shims
     Field = _create_field_shim()
     field_validator = _create_field_validator_shim()
+
+    class _RuntimeValidationError(Exception):
+        pass
+
+    ValidationError = _RuntimeValidationError
 
 
 if PYDANTIC_AVAILABLE:
@@ -304,6 +322,7 @@ __all__ = [
     "PYDANTIC_AVAILABLE",
     "SENSITIVE_DIRS",
     "SecurityValidationError",
+    "ValidationError",
     "_validate_custom_args_safety",
     "_validate_failure_mode_safety",
     "_validate_script_path_safety",

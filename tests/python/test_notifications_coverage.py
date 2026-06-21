@@ -314,6 +314,7 @@ class TestMainEntryPoint:
 
             old_argv = sys.argv
             old_stdout = sys.stdout
+            old_module = sys.modules.get("lib.notifications")
             sys.argv = argv
             sys.stdout = io.StringIO()
             # Remove cached module so runpy.run_module re-executes it cleanly
@@ -325,6 +326,15 @@ class TestMainEntryPoint:
                 output = sys.stdout.getvalue()
                 sys.stdout = old_stdout
                 sys.argv = old_argv
+                # Restore original module so subsequent tests see the same
+                # module object they imported at test-file load time. Without
+                # this, the next test that does `patch("lib.notifications.X")`
+                # re-imports a fresh module and the patch never applies to
+                # already-imported function references in the test file.
+                if old_module is not None:
+                    sys.modules["lib.notifications"] = old_module
+                else:
+                    sys.modules.pop("lib.notifications", None)
             return output
 
     def test_test_subcommand_path(self) -> None:
@@ -358,6 +368,7 @@ class TestMainEntryPoint:
 
             old_argv = sys.argv
             old_stdout = sys.stdout
+            old_module = sys.modules.get("lib.notifications")
             sys.argv = ["lib.notifications", "test"]
             sys.stdout = io.StringIO()
             sys.modules.pop("lib.notifications", None)
@@ -367,7 +378,11 @@ class TestMainEntryPoint:
                 output = sys.stdout.getvalue()
                 sys.stdout = old_stdout
                 sys.argv = old_argv
-
+                # Restore original module (see _run_as_main for rationale).
+                if old_module is not None:
+                    sys.modules["lib.notifications"] = old_module
+                else:
+                    sys.modules.pop("lib.notifications", None)
         assert "Testing notify-send availability..." in output
         assert "notify-send available: False" in output
         # No notification was attempted, so this line should not appear

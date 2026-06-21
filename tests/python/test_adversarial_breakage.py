@@ -227,12 +227,16 @@ class TestValidateAppIdEdgeCases:
         valid, _ = validate_app_id("_test.App")
         assert valid is False
 
-    def test_double_dot_allowed(self):
-        """Double dots are technically allowed by the regex."""
+    def test_double_dot_rejected(self):
+        """Double dots (..) must be rejected — they're path-traversal-adjacent.
+        (Previously this test asserted the opposite; the validation has
+        been tightened to reject `..` as a security measure.)"""
         from lib.validation import validate_app_id
 
-        valid, msg = validate_app_id("org..test")
-        assert valid is True, msg
+        valid, _ = validate_app_id("org..test")
+        assert valid is False, (
+            "Consecutive dots (..) must be rejected as path-traversal-adjacent"
+        )
 
     def test_no_dot_rejected(self):
         """IDs without a dot should be rejected."""

@@ -161,6 +161,7 @@ def manifest(ctx: "Context", app_name: str, emit: bool) -> int:
         console_err.print(f"[red]Error:[/red] {e}")
         return 1
 
+
 @click.group(name="config", invoke_without_command=True)
 @click.pass_context
 def config(ctx: "Context") -> int:  # pylint: disable=W0613

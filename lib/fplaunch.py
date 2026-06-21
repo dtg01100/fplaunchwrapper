@@ -9,7 +9,14 @@ import sys
 from . import safety as safety_mod
 from .safety import safe_launch_check  # noqa: F401  (re-exported for back-compat)
 
+__all__ = [
+    "main",
+    "safe_launch_check",
+    "safety",
+]
+
 safety = safety_mod
+
 
 def main() -> int:
     """Main entry point."""

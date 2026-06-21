@@ -43,7 +43,7 @@ def profiles_list(ctx: "Context") -> int:  # pylint: disable=W0613
 @click.argument("profile_name")
 @click.option("--copy-from", help="Copy configuration from existing profile")
 @click.pass_context
-def profiles_create(ctx: "Context", profile_name: str, copy_from: str | None) -> int:  # pylint: disable=W0613
+def profiles_create(ctx: "Context", profile_name: str, copy_from: str | None) -> int:  # pylint: disable=W0613  # noqa: E501
     """Create a new profile."""
     cfg = build_config_manager(ctx)
     if profile_name in cfg.list_profiles():
@@ -96,7 +96,7 @@ def profiles_current(ctx: "Context") -> int:  # pylint: disable=W0613
 @click.argument("profile_name")
 @click.argument("output_file", required=False)
 @click.pass_context
-def profiles_export(ctx: "Context", profile_name: str, output_file: str | None) -> int:  # pylint: disable=W0613
+def profiles_export(ctx: "Context", profile_name: str, output_file: str | None) -> int:  # pylint: disable=W0613  # noqa: E501
     """Export a profile to a file."""
     cfg = build_config_manager(ctx)
     if profile_name not in cfg.list_profiles():
@@ -117,7 +117,7 @@ def profiles_export(ctx: "Context", profile_name: str, output_file: str | None) 
 @click.argument("input_file")
 @click.argument("profile_name", required=False)
 @click.pass_context
-def profiles_import(ctx: "Context", input_file: str, profile_name: str | None) -> int:  # pylint: disable=W0613
+def profiles_import(ctx: "Context", input_file: str, profile_name: str | None) -> int:  # pylint: disable=W0613  # noqa: E501
     """Import a profile from a file."""
     cfg = build_config_manager(ctx)
     import_path = Path(input_file)

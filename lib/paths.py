@@ -126,13 +126,18 @@ def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Pat
     """Resolve the bin directory with fallback chain.
 
     Resolution order:
-    1. Explicit directory if provided
-    2. Read from config_dir/bin_dir file if it exists
+    1. Explicit directory if provided (trusted — caller passed it directly)
+    2. Read from config_dir/bin_dir file if it exists, BUT only if the
+       resolved path is under the user's HOME (otherwise fall through to
+       the default). This prevents an attacker who can write to the
+       config directory from redirecting wrapper output to ``/etc`` or
+       any other system location.
     3. Default ~/bin
 
     Args:
-        explicit_dir: Explicitly provided bin directory
+        explicit_dir: Explicitly provided bin directory (trusted)
         config_dir: Configuration directory to read bin_dir from
+                    (untrusted — values are validated)
 
     Returns:
         Resolved bin directory path
@@ -145,6 +150,8 @@ def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Pat
         Use :func:`lib.validation.validate_app_id` upstream if you
         need to reject bad input explicitly.
     """
+    home = Path.home().resolve()
+
     if explicit_dir:
         try:
             return Path(explicit_dir).expanduser()
@@ -160,9 +167,18 @@ def resolve_bin_dir(explicit_dir: Optional[str] = None, config_dir: Optional[Pat
                 bin_path = bin_dir_file.read_text().strip()
                 if bin_path:
                     try:
-                        return Path(bin_path).expanduser()
-                    except (RuntimeError, ValueError):
+                        candidate = Path(bin_path).expanduser().resolve()
+                    except (RuntimeError, ValueError, OSError):
                         return get_default_bin_dir()
+                    # Security: only accept the config-provided path if it
+                    # lives under the user's HOME. A config-file write
+                    # should not be able to redirect wrapper output to
+                    # system directories like /etc or /usr.
+                    try:
+                        candidate.relative_to(home)
+                    except ValueError:
+                        return get_default_bin_dir()
+                    return candidate
         except (OSError, UnicodeDecodeError):
             pass
 

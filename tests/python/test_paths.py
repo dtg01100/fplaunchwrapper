@@ -122,7 +122,11 @@ class TestResolveBinDir:
         bin_dir_file = tmp_path / "bin_dir"
         bin_dir_file.write_text("/from/config/file\n")
         result = resolve_bin_dir(config_dir=tmp_path)
-        assert result == Path("/from/config/file")
+        # /from/config/file is outside $HOME, so it must be rejected;
+        # the function falls through to the default ~/bin.
+        assert result == Path.home() / "bin", (
+            f"Expected fallback to ~/bin for path outside $HOME, got {result}"
+        )
 
     def test_config_dir_with_empty_file(self, tmp_path: Path) -> None:
         bin_dir_file = tmp_path / "bin_dir"

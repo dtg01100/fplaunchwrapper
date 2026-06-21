@@ -8,9 +8,28 @@ providing better sandbox awareness and file picker integration.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from typing import Optional
+
+
+# Reject flatpak_ids that could be interpreted as command-line flags by
+# flatpak-spawn / flatpak. A real Flatpak ID always starts with a letter
+# (reverse-DNS) and contains no whitespace, no leading hyphen, and no shell
+# metacharacters. Without this guard, an attacker-controlled app_id could
+# inject arbitrary flags (e.g. ``--help`` or ``--env=LD_PRELOAD=...``).
+_FLATPAK_ID_SAFE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9._+-]*$")
+
+
+def _check_flatpak_id_safe(flatpak_id: str) -> None:
+    """Raise ValueError if ``flatpak_id`` is unsafe to pass positionally."""
+    if not isinstance(flatpak_id, str) or not flatpak_id:
+        raise ValueError(f"flatpak_id must be a non-empty string, got {flatpak_id!r}")
+    if not _FLATPAK_ID_SAFE_RE.match(flatpak_id):
+        raise ValueError(
+            f"Unsafe flatpak_id {flatpak_id!r}: must match {_FLATPAK_ID_SAFE_RE.pattern}"
+        )
 
 
 def _get_flatpak_spawn_path() -> Optional[str]:
@@ -46,8 +65,10 @@ def launch_with_portal(
         CompletedProcess result
 
     Raises:
+        ValueError: If flatpak_id is unsafe to pass positionally.
         FileNotFoundError: If flatpak-spawn is not available
     """
+    _check_flatpak_id_safe(flatpak_id)
     spawn_path = _get_flatpak_spawn_path()
     if not spawn_path:
         raise FileNotFoundError(
@@ -99,7 +120,11 @@ def launch_direct(
 
     Returns:
         CompletedProcess result
+
+    Raises:
+        ValueError: If flatpak_id is unsafe to pass positionally.
     """
+    _check_flatpak_id_safe(flatpak_id)
     cmd = ["flatpak", "run"]
 
     if wait:
@@ -145,6 +170,9 @@ def launch(
 
     Returns:
         CompletedProcess result
+
+    Raises:
+        ValueError: If flatpak_id is unsafe to pass positionally.
     """
     if use_portal and is_portal_launcher_available():
         return launch_with_portal(flatpak_id, args, env_overrides, cwd, wait)
@@ -167,7 +195,11 @@ def get_launch_command(
 
     Returns:
         Command as list of strings
+
+    Raises:
+        ValueError: If flatpak_id is unsafe to pass positionally.
     """
+    _check_flatpak_id_safe(flatpak_id)
     if use_portal and is_portal_launcher_available():
         spawn_path = _get_flatpak_spawn_path()
         if spawn_path:

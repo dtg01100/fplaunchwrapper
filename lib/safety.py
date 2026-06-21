@@ -71,6 +71,10 @@ def validate_flatpak_id(flatpak_id: str) -> bool:
     Valid IDs: org.mozilla.Firefox, com.example.App123
     Must contain at least one dot, only alphanumeric, hyphens, underscores, dots.
     Must start with a letter.
+
+    Rejects ``..`` (consecutive dots) for the same reason as
+    :func:`lib.validation.validate_app_id`: it collides with path-traversal
+    semantics and is never a valid reverse-DNS component.
     """
     if not flatpak_id or not isinstance(flatpak_id, str):
         return False
@@ -82,6 +86,9 @@ def validate_flatpak_id(flatpak_id: str) -> bool:
         return False
 
     if flatpak_id.endswith("."):
+        return False
+
+    if ".." in flatpak_id:
         return False
 
     return bool(re.match(r"^[A-Za-z][A-Za-z0-9._-]*$", flatpak_id))

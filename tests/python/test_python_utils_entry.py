@@ -55,6 +55,7 @@ def _run_entry_point(*args: str) -> tuple[int, str]:
     to ``sys.exit`` (or 0 if the script returned normally).
     """
     sys.argv = ["lib.python_utils_cli", *args]
+    old_stdout = sys.stdout
     sys.stdout = io.StringIO()
     # Drop any cached import so runpy executes the module cleanly as
     # ``__main__`` without RuntimeWarning about cached modules.
@@ -67,7 +68,12 @@ def _run_entry_point(*args: str) -> tuple[int, str]:
         if isinstance(code, int):
             return code, sys.stdout.getvalue()
         return 1, sys.stdout.getvalue()
-
+    finally:
+        # Always restore the real stdout. Without this, any subsequent
+        # test that uses Click's CliRunner sees a StringIO as the
+        # "previous" stdout, which CliRunner then restores back to,
+        # silently swallowing subsequent test output.
+        sys.stdout = old_stdout
 
 
 def _write_wrapper(path: Path, content: str = VALID_WRAPPER, executable: bool = True) -> Path:

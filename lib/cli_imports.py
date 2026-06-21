@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from lib.cli_utils import console, console_err  # noqa: E402  (used by ImportErrorHandler)
+from lib.cli_utils import console, console_err  # noqa: E402,F401,E501  (re-export for cli/presets/profiles)
 from lib.import_utils import ImportErrorHandler
 
 # Shared import-handler used by every CLI module. Centralized here so test
@@ -14,11 +14,20 @@ from lib.import_utils import ImportErrorHandler
 import_handler = ImportErrorHandler(console_err)
 
 # Re-export run_command from cli_utils for backward compatibility
-from lib.cli_utils import run_command  # noqa: E402, F401
+from lib.cli_utils import run_command  # noqa: E402,F401
+
+__all__ = [
+    "build_config_manager",
+    "build_manager",
+    "console",
+    "console_err",
+    "get_config_manager",
+    "import_handler",
+    "run_command",
+]
 
 if TYPE_CHECKING:
     from click import Context
-    from lib.manage import WrapperManager
     from typing import Any
 
 

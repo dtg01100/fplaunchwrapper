@@ -123,9 +123,7 @@ def list_wrappers(ctx: "Context", app_name: str | None, show_all: bool) -> int:
     help="Assume yes to flatpak's install prompt (otherwise prompts on TTY)",
 )
 @click.pass_context
-def install(
-    ctx: "Context", app_name: str, emit: bool, assume_yes: bool
-) -> int:
+def install(ctx: "Context", app_name: str, emit: bool, assume_yes: bool) -> int:
     """Install a Flatpak application and generate a wrapper for it."""
 
     emit_mode = emit or ctx.obj.get("emit", False)
@@ -140,9 +138,7 @@ def install(
             "[red]Error:[/red] install requires an interactive terminal or --yes.",
         )
         return 1
-    elif not click.confirm(
-        f"Install Flatpak app '{app_name}'?", default=False, err=True
-    ):
+    elif not click.confirm(f"Install Flatpak app '{app_name}'?", default=False, err=True):
         console.print("Install cancelled.")
         return 1
     flatpak_cmd.append(app_name)
@@ -244,9 +240,7 @@ def remove(ctx: "Context", name: str, force: bool) -> int:
             "[red]Error:[/red] remove requires an interactive terminal or --force.",
         )
         return 1
-    if not force and not click.confirm(
-        f"Remove wrapper '{name}'?", default=False, err=True
-    ):
+    if not force and not click.confirm(f"Remove wrapper '{name}'?", default=False, err=True):
         console.print("Remove cancelled.")
         return 1
     manager = build_manager(ctx)

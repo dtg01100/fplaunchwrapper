@@ -12,7 +12,6 @@ import tempfile
 import time
 import unicodedata
 from pathlib import Path
-from typing import Any
 
 from .paths import get_default_config_dir, get_lock_dir, ensure_dir
 
@@ -149,7 +148,11 @@ def sanitize_id_to_name(id_str: str) -> str:
     """Sanitize a Flatpak ID to a safe name."""
     try:
         name = id_str.rsplit(".", maxsplit=1)[-1].lower()
-
+        # If the ID ends with '.', rsplit returns '' — fall back to full ID
+        # so trailing dots don't cause different outputs for logically-equivalent
+        # inputs (e.g. 'org.foo.bar' vs 'org.foo.bar.').
+        if not name and id_str.endswith("."):
+            name = id_str.lower()
         try:
             name = unicodedata.normalize("NFKD", name)
             name = "".join(c for c in name if not unicodedata.combining(c))
@@ -366,7 +369,6 @@ def atomic_write_bytes(target: Path, content: bytes, *, mode: int | None = None)
             target.chmod(mode)
 
 
-
 def _cleanup_stale_lock(lockfile: Path, pidfile: Path, stale_timeout: int = 60) -> bool:
     """Check if lock is stale and clean it up if the process is dead.
 
@@ -464,8 +466,8 @@ def get_temp_dir() -> str:
         f"No writable temporary directory: tried {', '.join(c for c in candidates if c)}",
     )
 
+
 # The ``if __name__ == "__main__"`` CLI harness lived here for years; it
 # was a 44-line argv-dispatch ladder mixing exit codes and types. It has
 # moved to ``lib.python_utils_cli`` so this module can stay a pure library.
 # ``lib/common.sh`` has been updated to invoke the new module.
-

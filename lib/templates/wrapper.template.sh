@@ -88,6 +88,20 @@ run_single_launch() {{
             run_post_launch_script "$exit_code" "system"
             exit "$exit_code"
         else
+            # Re-scan PATH for a system binary — the global SYSTEM_EXISTS
+            # may be stale (set before wrapper was first on PATH, or in
+            # non-interactive early dispatch where set_system_info ran
+            # without this dispatch context).
+            IFS=: read -ra _PATH_DIRS <<< "$PATH"
+            for _dir in "${{_PATH_DIRS[@]}}"; do
+                [ -z "$_dir" ] && continue
+                if [ -x "$_dir/$NAME" ] && [ "$_dir/$NAME" != "$SCRIPT_BIN_DIR/$NAME" ]; then
+                    "$_dir/$NAME" "$@"
+                    local exit_code=$?
+                    run_post_launch_script "$exit_code" "system"
+                    exit "$exit_code"
+                fi
+            done
             echo "System binary not found; falling back to flatpak for this launch." >&2
             flatpak run -- "$ID" "$@"
             local exit_code=$?
@@ -268,7 +282,30 @@ if [ "$1" = "--fpwrapper-launch" ]; then
             echo "Invalid choice for --fpwrapper-launch: $2 (use system|flatpak)" >&2
             exit 1
             ;;
+        *)
+            echo "Invalid choice for --fpwrapper-launch: $2 (use system|flatpak)" >&2
+            exit 1
+            ;;
     esac
+fi
+
+# --fpwrapper-force is a documented shorthand for --fpwrapper-launch with the
+# same arguments (f|d -> flatpak|desktop alias for system). Kept in sync with
+# COMMAND_REFERENCE.md "Generated Wrapper Options" section.
+if [ "$1" = "--fpwrapper-force" ]; then
+    if [ -z "$2" ]; then
+        echo "Usage: $NAME --fpwrapper-force {{f|d}}" >&2
+        exit 1
+    fi
+    case "$2" in
+        f|flatpak) ONE_SHOT_PREF="flatpak" ;;
+        d|desktop|system) ONE_SHOT_PREF="system" ;;
+        *)
+            echo "Invalid choice for --fpwrapper-force: $2 (use {{f|d}})" >&2
+            exit 1
+            ;;
+    esac
+    shift 2
 fi
 
 # Force interactive mode

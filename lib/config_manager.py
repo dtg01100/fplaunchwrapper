@@ -26,60 +26,18 @@ from .config_models import AppPreferences, WrapperConfig
 from .config_validation import (
     PYDANTIC_AVAILABLE,
     SecurityValidationError,
+    ValidationError,
     _validate_custom_args_safety,
     _validate_failure_mode_safety,
     _validate_script_path_safety,
 )
 
-# Conditionally import PydanticAppPreferences when pydantic is available
+# Conditionally import PydanticAppPreferences when pydantic is available.
+# Re-exported for tests; pylint sees no internal use.
 try:
-    # Re-exported for tests; pylint sees no internal use.
     from .config_validation import PydanticAppPreferences  # noqa: F401 pylint: disable=W0611
 except ImportError:
     PydanticAppPreferences = None  # type: ignore[assignment, misc]
-BaseModel: Any
-Field: Any
-ValidationError: Any
-field_validator: Any
-
-try:
-    from pydantic import (
-        BaseModel as _BaseModel,
-        Field as _Field,
-        ValidationError as _ValidationError,
-        field_validator as _field_validator,
-    )
-
-    BaseModel, Field, ValidationError, field_validator = (
-        _BaseModel,
-        _Field,
-        _ValidationError,
-        _field_validator,
-    )
-except ImportError:
-
-    class _RuntimeBaseModel:
-        def __init__(self, *args, **kwargs):
-            pass
-
-    def _RuntimeField(*_args, **_kwargs):
-        return None
-
-    def _RuntimeFieldValidator(*_args, **_kwargs):
-        def _decorator(fn):
-            return fn
-
-        return _decorator
-
-    class _RuntimeValidationError(Exception):
-        pass
-
-    BaseModel, Field, field_validator, ValidationError = (
-        _RuntimeBaseModel,
-        _RuntimeField,
-        _RuntimeFieldValidator,
-        _RuntimeValidationError,
-    )
 
 tomli: Any = None
 tomli_w: Any = None
@@ -113,7 +71,11 @@ except ImportError:
 
 
 class EnhancedConfigManager:
-    """Enhanced configuration management with type safety, validation, migration, and templating support."""
+    """Enhanced configuration management.
+
+    Provides type safety, validation, migration, and templating support
+    for the fplaunchwrapper configuration layer.
+    """
 
     CURRENT_SCHEMA_VERSION = 1
 
@@ -123,9 +85,7 @@ class EnhancedConfigManager:
         config_dir: str | Path | None = None,
     ) -> None:
         self.app_name = app_name
-        self.config_dir = (
-            Path(config_dir) if config_dir else get_default_config_dir(app_name)
-        )
+        self.config_dir = Path(config_dir) if config_dir else get_default_config_dir(app_name)
         self.data_dir = get_default_data_dir(app_name)
         self.config_file = self.config_dir / "config.toml"
         self.config = WrapperConfig()
@@ -244,6 +204,7 @@ class EnhancedConfigManager:
             if TOML_AVAILABLE:
                 data = self._serialize_config()
                 import io
+
                 buf = io.BytesIO()
                 tomli_w.dump(data, buf)
                 atomic_write_bytes(Path(self.config_file), buf.getvalue(), mode=0o600)
@@ -406,12 +367,8 @@ class EnhancedConfigManager:
             # use. Raises ConfigValidationError on dangerous input.
             custom_args = list(gp_data.get("custom_args", []))
             _validate_custom_args_safety(custom_args)
-            pre_launch_script = _validate_script_path_safety(
-                gp_data.get("pre_launch_script")
-            )
-            post_launch_script = _validate_script_path_safety(
-                gp_data.get("post_launch_script")
-            )
+            pre_launch_script = _validate_script_path_safety(gp_data.get("pre_launch_script"))
+            post_launch_script = _validate_script_path_safety(gp_data.get("post_launch_script"))
             pre_launch_failure_mode = _validate_failure_mode_safety(
                 gp_data.get("pre_launch_failure_mode")
             )
@@ -432,9 +389,7 @@ class EnhancedConfigManager:
             for app_id, pref_data in data["app_preferences"].items():
                 custom_args = list(pref_data.get("custom_args", []))
                 _validate_custom_args_safety(custom_args)
-                pre_launch_script = _validate_script_path_safety(
-                    pref_data.get("pre_launch_script")
-                )
+                pre_launch_script = _validate_script_path_safety(pref_data.get("pre_launch_script"))
                 post_launch_script = _validate_script_path_safety(
                     pref_data.get("post_launch_script")
                 )
@@ -666,17 +621,18 @@ class EnhancedConfigManager:
             return env_mode
 
         prefs = self.get_app_preferences(app_id)
-        if hook_type == "pre" and prefs.pre_launch_failure_mode:
+        if hook_type == "pre" and prefs.pre_launch_failure_mode in HOOK_FAILURE_MODES:
             return prefs.pre_launch_failure_mode
-        if hook_type == "post" and prefs.post_launch_failure_mode:
+        if hook_type == "post" and prefs.post_launch_failure_mode in HOOK_FAILURE_MODES:
             return prefs.post_launch_failure_mode
 
-        if hook_type == "pre" and self.config.pre_launch_failure_mode_default:
+        if hook_type == "pre" and self.config.pre_launch_failure_mode_default in HOOK_FAILURE_MODES:
             return self.config.pre_launch_failure_mode_default
-        if hook_type == "post" and self.config.post_launch_failure_mode_default:
+        if hook_type == "post" and (
+            self.config.post_launch_failure_mode_default in HOOK_FAILURE_MODES
+        ):
             return self.config.post_launch_failure_mode_default
-
-        if self.config.hook_failure_mode_default:
+        if self.config.hook_failure_mode_default in HOOK_FAILURE_MODES:
             return self.config.hook_failure_mode_default
 
         return "warn"
@@ -823,6 +779,7 @@ class EnhancedConfigManager:
 
             if TOML_AVAILABLE and isinstance(content, dict):
                 import io
+
                 buf = io.BytesIO()
                 tomli_w.dump(content, buf)
                 atomic_write_bytes(Path(export_path), buf.getvalue(), mode=0o600)

@@ -55,7 +55,7 @@ def presets_get(ctx: "click.Context", preset_name) -> int:  # pylint: disable=W0
 @click.argument("preset_name")
 @click.option("-p", "--permission", multiple=True, help="Add a permission")
 @click.pass_context
-def presets_add(ctx: "click.Context", preset_name: str, permission: tuple[str, ...]) -> int:  # pylint: disable=W0613
+def presets_add(ctx: "click.Context", preset_name: str, permission: tuple[str, ...]) -> int:  # pylint: disable=W0613  # noqa: E501
     """Add a new permission preset."""
     if not permission:
         console_err.print("[red]Error:[/red] At least one permission is required")
