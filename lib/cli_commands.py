@@ -183,7 +183,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         # Abort, etc.) -- standalone_mode=False raises BEFORE Click writes
         # its formatted error, so we print e.message ourselves.
         e.show()
-        return e.exit_code
+        # e.exit_code is int | None per click's ClickException API.
+        return e.exit_code if isinstance(e.exit_code, int) else 1
     except Exception as e:
         # Unexpected exception: log with traceback for diagnostics, exit 1.
         logger.exception("CLI main error: %s", e)
