@@ -10,6 +10,7 @@ jobs:
   python-tests:
     name: Python Tests (Full Suite)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
     - uses: actions/checkout@v6
@@ -40,7 +41,7 @@ jobs:
         # where thread scheduling is slow. SIGALRM only delivers to the main
         # thread, so it cannot miss its target while another thread is
         # blocked in C code.
-        python3 -m pytest tests/python/ -v --timeout=120 --timeout-method=signal
+        python3 -m pytest tests/python/ --timeout=120 --timeout-method=signal
 
   package-validation:
     name: Package Installation Test
